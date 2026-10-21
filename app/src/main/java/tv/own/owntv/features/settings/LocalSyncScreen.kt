@@ -198,7 +198,7 @@ fun LocalSyncScreen(
                     tv.own.owntv.ui.stage.StageButton(stringResource(R.string.settings_close), onClick = vm::dismissError, modifier = Modifier.padding(top = 8.mpx))
                 }
             }
-            listening?.let { Box(Modifier.padding(top = 30.mpx)) { HostingCard(it, vm.deviceName) } }
+            listening?.let { Box(Modifier.padding(top = 12.mpx)) { HostingCard(it, vm.deviceName) } }
         }
 
         // Each step is a popup over the page, not a block spliced into it: a popup owns its focus.
@@ -473,21 +473,21 @@ private fun HostingCard(state: CompanionServerState.Listening, deviceName: Strin
             .width(HOSTING_CARD_WIDTH)
             .clip(RoundedCornerShape(26.mpx))
             .background(StageColors.Ink.copy(alpha = 0.05f))
-            .padding(horizontal = 18.dp, vertical = 18.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(deviceName, style = tv.own.owntv.ui.theme.stageText(32, 600), color = tv.own.owntv.ui.theme.StageColors.Text)
+        Text(deviceName, style = tv.own.owntv.ui.theme.stageText(26, 600), color = tv.own.owntv.ui.theme.StageColors.Text)
         Spacer(Modifier.height(6.dp))
         Text(
             stringResource(R.string.local_sync_host_hint),
-            style = tv.own.owntv.ui.theme.stageText(25, 400),
+            style = tv.own.owntv.ui.theme.stageText(18, 400),
             color = tv.own.owntv.ui.theme.StageColors.Muted,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(6.dp))
         Text(
             state.pin,
-            style = tv.own.owntv.ui.theme.stageText(54, 700),
+            style = tv.own.owntv.ui.theme.stageText(42, 700),
             fontWeight = FontWeight.Bold,
             color = tv.own.owntv.ui.theme.stageAccent.accent,
             letterSpacing = 8.sp,
@@ -505,7 +505,7 @@ private fun HostingCard(state: CompanionServerState.Listening, deviceName: Strin
         state.urls.forEach { url ->
             Text(
                 url,
-                style = tv.own.owntv.ui.theme.stageText(25, 400),
+                style = tv.own.owntv.ui.theme.stageText(17, 400),
                 color = tv.own.owntv.ui.theme.StageColors.Muted,
                 textAlign = TextAlign.Center,
             )
@@ -783,7 +783,7 @@ private val DestructiveRed = Color(0xFFEF4444)
  * Wide enough for [QR_SIZE] plus the card's padding, and no wider — the list beside it is what the
  * screen is for. The QR keeps its size: it is read by a phone camera from across the room.
  */
-private val HOSTING_CARD_WIDTH = 250.dp
-private val QR_SIZE = 188.dp
+private val HOSTING_CARD_WIDTH = 230.dp
+private val QR_SIZE = 140.dp
 
 private const val PIN_LENGTH = 6
