@@ -332,7 +332,13 @@ internal fun PlatformBadgeChip(tmdbId: Int?, isTv: Boolean) {
     val url = MetadataImages.logo(b.logoPath, "w185")
     if (url != null) {
         // Studio and network logos come in any colour; a light plate keeps every one of them readable.
-        Box(
+        if (b.square) {
+            // The service's own icon: square, opaque, the same shape for every one — no plate needed.
+            AsyncImage(
+                model = url, contentDescription = b.name, contentScale = ContentScale.Fit,
+                modifier = Modifier.size(34.mpx).clip(RoundedCornerShape(8.mpx)),
+            )
+        } else Box(
             Modifier.clip(RoundedCornerShape(6.mpx)).background(Color.White.copy(alpha = 0.92f)).padding(horizontal = 8.mpx, vertical = 4.mpx),
         ) {
             AsyncImage(
