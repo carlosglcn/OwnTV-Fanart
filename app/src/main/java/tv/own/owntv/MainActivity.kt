@@ -124,6 +124,7 @@ open class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        if (!isChangingConfigurations) get<tv.own.owntv.core.sync.local.AutoSyncManager>().onBackground() // glcn
         // Backgrounded (Home / another app), exited, or logged out: stop playback and free the demuxer
         // cache + decoder buffers — holding them while invisible got the process LMK-killed on real TVs.
         // Every engine: mpv, the Live engine (its audio must stop too), each Multiview tile and the hero.
@@ -133,6 +134,7 @@ open class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        get<tv.own.owntv.core.sync.local.AutoSyncManager>().onForeground() // glcn
         // Paired with onStop: bring back what was freed while backgrounded (notably the TV screensaver, which
         // kicks in during a long pause) — a VOD restored paused at its position, and a live channel re-tuned
         // to the live edge — so Play resumes instead of sitting on a dead/empty stream. No-op on fresh launch.
