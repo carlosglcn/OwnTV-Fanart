@@ -9,3 +9,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🧩 **Sync page: PIN and QR card now fits on screen**
 - 🏷️ **Platform logos: wide by default, square service icons as an option**
 - ⚡ **Platform logo appears faster**
+- 🏷️ **Studio name shown when it has no logo**
