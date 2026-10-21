@@ -152,7 +152,7 @@ val appModule = module {
             importer = get(),
         )
     }
-    viewModelOf(::LocalSyncViewModel)
+    viewModel { LocalSyncViewModel(get(), get()) }
     viewModelOf(::HomeSettingsViewModel)
     viewModelOf(::LanguageSettingsViewModel)
     viewModelOf(::OpenSubtitlesViewModel)

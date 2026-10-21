@@ -31,7 +31,17 @@ import tv.own.owntv.core.sync.local.SyncFailure
  */
 class LocalSyncViewModel(
     private val sync: LocalSyncManager,
+    private val auto: tv.own.owntv.core.sync.local.AutoSyncManager,
 ) : ViewModel() {
+
+    /** glcn: the switch for the automatic sync between paired devices. */
+    var autoSync by mutableStateOf(auto.enabled)
+        private set
+
+    fun setAutoSync(on: Boolean) {
+        auto.enabled = on
+        autoSync = on
+    }
 
     val paired: StateFlow<List<PairedDevice>> = sync.pairedDevices
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())

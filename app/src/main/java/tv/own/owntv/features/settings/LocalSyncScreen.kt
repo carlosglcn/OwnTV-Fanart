@@ -149,6 +149,17 @@ fun LocalSyncScreen(
                 modifier = Modifier.weight(1f).fillMaxHeight().focusRequester(connectFocus),
             ) { OwnTVIcon(OwnTVIcon.CHEVRON, StageColors.Muted, Modifier.size(20.mpx)) }
         }
+        if (paired.isNotEmpty()) {
+            Box(Modifier.padding(top = 20.mpx).fillMaxWidth().height(IntrinsicSize.Min)) {
+                SyncTile(
+                    icon = OwnTVIcon.REFRESH,
+                    title = stringResource(R.string.auto_sync_title),
+                    body = stringResource(R.string.auto_sync_description),
+                    onClick = { vm.setAutoSync(!vm.autoSync) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { StageSwitch(on = vm.autoSync) }
+            }
+        }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
             Column(Modifier.weight(1f)) {
