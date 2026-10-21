@@ -204,6 +204,12 @@ open class MainActivity : ComponentActivity() {
         splash.setKeepOnScreenCondition { !contentReady && SystemClock.uptimeMillis() < splashDeadline }
         pendingDeepLink = LauncherDeepLink.parse(intent.data)
         Log.d(TAG, "onCreate deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}")
+        // glcn: what a paired phone asks this TV to play arrives as a link, like a launcher tile's.
+        lifecycleScope.launch {
+            get<tv.own.owntv.core.sync.local.LocalSyncManager>().commands.collect { raw ->
+                LauncherDeepLink.parse(android.net.Uri.parse(raw))?.let { pendingDeepLink = it }
+            }
+        }
         val dbError = probeDatabase()
         if (dbError != null) {
             contentReady = true // the recovery screen IS the destination — don't hold the splash over it

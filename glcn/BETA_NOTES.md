@@ -5,3 +5,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⚡ **Guide pictures appear faster when zapping**
 - 🔄 **Automatic sync between your paired devices while the app is open**
 - 🔘 **Switch to turn automatic sync on or off**
+- 📺 **Watch on TV: send a channel, film or series from your phone to your TV**
