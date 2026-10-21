@@ -155,7 +155,7 @@ fun LocalSyncScreen(
                     icon = OwnTVIcon.REFRESH,
                     title = stringResource(R.string.auto_sync_title),
                     body = stringResource(R.string.auto_sync_description),
-                    onClick = { vm.setAutoSync(!vm.autoSync) },
+                    onClick = { vm.toggleAutoSync(!vm.autoSync) },
                     modifier = Modifier.fillMaxWidth(),
                 ) { StageSwitch(on = vm.autoSync) }
             }
