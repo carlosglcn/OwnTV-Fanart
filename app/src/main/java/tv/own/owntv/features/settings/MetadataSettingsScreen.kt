@@ -224,6 +224,16 @@ fun MetadataSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             help = settingHelp(null, sourceTitle, stringResource(R.string.settings_metadata_source_description), sourceValue, choices = modeLabels, pinnable = false)
                 .let { h -> h.copy(hints = listOf(h.hints.first(), back to content)) },
         )
+        // glcn: wide logos by default; the streaming service's own square icon on request.
+        val logoCtx = androidx.compose.ui.platform.LocalContext.current
+        var squareLogos by remember { mutableStateOf(tv.own.owntv.glcn.PlatformLogoStyle.square(logoCtx)) }
+        StageSettingRow(
+            icon = OwnTVIcon.MOVIES,
+            title = stringResource(R.string.glcn_platform_square_title),
+            desc = stringResource(R.string.glcn_platform_square_desc),
+            value = SettingValue.Switch(squareLogos),
+            onClick = { squareLogos = !squareLogos; tv.own.owntv.glcn.PlatformLogoStyle.setSquare(logoCtx, squareLogos) },
+        )
         // The language and the TMDB tier only make sense when TMDB is on (mode != Provider).
         if (mode.enrich) {
             val langTitle = stringResource(R.string.settings_metadata_language)

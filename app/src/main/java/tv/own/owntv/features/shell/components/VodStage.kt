@@ -320,19 +320,21 @@ internal fun VodMeta(
 internal fun PlatformBadgeChip(tmdbId: Int?, isTv: Boolean) {
     if (tmdbId == null || tmdbId <= 0) return
     val repo = koinInject<tv.own.owntv.core.metadata.PlatformBadgeRepository>()
+    val ctxForPrefs = androidx.compose.ui.platform.LocalContext.current
     val badge by produceState<tv.own.owntv.core.metadata.PlatformBadge?>(null, tmdbId, isTv) {
         val known = repo.peek(tmdbId, isTv)
         if (known is tv.own.owntv.core.metadata.PlatformBadgeRepository.Known.Value) { value = known.badge; return@produceState }
         value = null
         // Only a title that stays in view is asked for, so browsing quickly costs nothing.
-        kotlinx.coroutines.delay(1_200)
+        kotlinx.coroutines.delay(350)
         value = runCatching { repo.get(tmdbId, isTv) }.getOrNull()
     }
     val b = badge ?: return
-    val url = MetadataImages.logo(b.logoPath, "w185")
+    val square = remember { tv.own.owntv.glcn.PlatformLogoStyle.square(ctxForPrefs) } && b.iconPath != null
+    val url = MetadataImages.logo(if (square) b.iconPath else b.logoPath, "w185")
     if (url != null) {
         // Studio and network logos come in any colour; a light plate keeps every one of them readable.
-        if (b.square) {
+        if (square) {
             // The service's own icon: square, opaque, the same shape for every one — no plate needed.
             AsyncImage(
                 model = url, contentDescription = b.name, contentScale = ContentScale.Fit,
