@@ -36,7 +36,7 @@ fun ProgrammeArt(
     /** How far the picture's shape may differ from the box's before it is shown whole instead. */
     tolerance: Float = 0.18f,
 ) {
-    var imageRatio by remember(url) { mutableStateOf<Float?>(null) }
+    var imageRatio by remember(url) { mutableStateOf<Float?>(Memo.ratio.get(url)) }
     // glcn: the box's shape from its measured size — no subcomposition per card (BoxWithConstraints),
     // which is what a row of fifty pictures pays for on every scroll.
     var boxRatio by remember { mutableStateOf(16f / 9f) }
@@ -53,7 +53,7 @@ fun ProgrammeArt(
                 alignment = TopBias,
                 onSuccess = { s ->
                     val img = s.result.image
-                    if (img.height > 0) imageRatio = img.width.toFloat() / img.height
+                    if (img.height > 0) { imageRatio = img.width.toFloat() / img.height; Memo.ratio.put(url, imageRatio!!) }
                 },
                 modifier = Modifier.fillMaxSize(),
             )
@@ -61,8 +61,11 @@ fun ProgrammeArt(
             // glcn: a poster where a wide picture belongs. Ask TMDB for the show's own wide picture
             // (by the programme's title); without one, the poster fills the box, cropped from the top.
             val resolver: tv.own.owntv.core.metadata.ProgrammeArtResolver = org.koin.compose.koinInject()
-            val wide by androidx.compose.runtime.produceState<String?>(null, url) {
-                value = runCatching { resolver.landscapeFor(url) }.getOrNull()
+            val wide by androidx.compose.runtime.produceState<String?>(Memo.wide.get(url), url) {
+                if (value == null) {
+                    value = runCatching { resolver.landscapeFor(url) }.getOrNull()
+                    value?.let { Memo.wide.put(url, it) }
+                }
             }
             AsyncImage(
                 model = wide ?: url,
@@ -76,3 +79,9 @@ fun ProgrammeArt(
 }
 
 private val TopBias = BiasAlignment(0f, -0.4f)
+
+/** glcn: what was already learnt about a picture, so coming back to it does not wait again. */
+private object Memo {
+    val ratio = object : android.util.LruCache<String, Float>(300) {}
+    val wide = object : android.util.LruCache<String, String>(300) {}
+}

@@ -281,6 +281,7 @@ fun ChannelListOverlay(
                 modifier = Modifier.padding(start = 14.mpx, top = 14.mpx),
             )
         }
+        if (loadNow != null) NeighbourArtPrefetch(channels, focusedIndex, loadNow)
         if (unified && loadSchedule != null) {
             ZapSchedulePanel(
                 channel = channels.getOrNull(focusedIndex),
@@ -459,6 +460,32 @@ private fun ZapSchedulePanel(
         }
         if (joined && loadNow != null) {
             ZapPreviewPanel(channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth(), framed = false)
+        }
+    }
+}
+
+/**
+ * glcn: once the D-pad rests, warms the pictures of the channels just above and below the focused
+ * one (programme on air), so stepping to them shows the picture at once instead of after a fetch.
+ */
+@Composable
+private fun NeighbourArtPrefetch(
+    channels: List<ChannelEntity>,
+    focusedIndex: Int,
+    loadNow: suspend (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>,
+) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(focusedIndex, channels.size) {
+        kotlinx.coroutines.delay(350)
+        val loader = coil3.SingletonImageLoader.get(ctx)
+        for (d in intArrayOf(1, -1, 2, -2, 3)) {
+            val ch = channels.getOrNull(focusedIndex + d) ?: continue
+            val url = runCatching { loadNow(ch).first?.imageUrl }.getOrNull()?.takeIf { it.isNotBlank() } ?: continue
+            loader.enqueue(
+                coil3.request.ImageRequest.Builder(ctx).data(url)
+                    .size(coil3.size.Size(960, 540)).build(),
+            )
+            kotlinx.coroutines.delay(60)
         }
     }
 }
