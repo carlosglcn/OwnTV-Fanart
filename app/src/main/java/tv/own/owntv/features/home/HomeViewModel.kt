@@ -148,6 +148,7 @@ class HomeViewModel(
     private val favoriteDao: tv.own.owntv.core.database.dao.FavoriteDao,
     private val userDataWriter: tv.own.owntv.core.backup.UserDataWriter,
     private val reminderManager: tv.own.owntv.core.reminder.ReminderManager,
+    private val sourceRepository: tv.own.owntv.core.repository.SourceRepository,
 ) : ViewModel() {
 
     // --- glcn: "Tonight" reminders ----------------------------------------------------------------
@@ -194,6 +195,13 @@ class HomeViewModel(
                     loadHomeData(profileId)
                 }
             }
+        }
+        // glcn: what was watched on an Emby/Jellyfin server since the last sync — read a few seconds after
+        // Home is up (never at launch), at most every two minutes, and only reloads Home if something changed.
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(4_000)
+            val pid = currentProfileId() ?: return@launch
+            if (runCatching { sourceRepository.refreshEmbyWatchState(pid) }.getOrDefault(0) > 0) refresh(pid)
         }
         // Room invalidates this after the worker atomically replaces a snapshot, so Home updates even
         // when the user stays on the screen throughout a background post-sync refresh.

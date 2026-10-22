@@ -22,3 +22,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🆕 **“New” label on movies and series added in the last week**
 - 🎤 **Mic button in TV search: speak with the SHIELD remote (shown only if the TV has voice recognition)**
 - 🔢 **Episode numbers readable on light themes (white on the dark badge)**
+- 🎞️ **Emby: what you already watched (or half-watched) on the server shows up here — ✓ marks, progress bars and Continue watching**
