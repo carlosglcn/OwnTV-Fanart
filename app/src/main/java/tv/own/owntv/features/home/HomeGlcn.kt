@@ -640,14 +640,14 @@ private fun FocusInfoBlock(info: HomeFocusInfo, titleSize: Int, plotLines: Int, 
         }
         (info.plot?.takeIf { it.isNotBlank() } ?: live?.first?.description?.takeIf { it.isNotBlank() })?.let {
             Text(
-                it, style = stageText(19, 400).copy(lineHeight = (19 * 1.45f).mpxSp), color = StageColors.Text.copy(alpha = 0.72f),
+                it, style = stageText(19, 400).copy(lineHeight = (19 * 1.45f).mpxSp), color = StageColors.Text.copy(alpha = 0.88f),
                 maxLines = plotLines, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx),
             )
         }
         live?.second?.let { n ->
             Text(
                 stringResource(R.string.content_live_next) + " · " + fmt.format(java.util.Date(n.startMs)) + "  " + SportsNow.displayTitle(n.title),
-                style = stageText(17, 600), color = StageColors.Text.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = stageText(17, 600), color = StageColors.Text.copy(alpha = 0.78f), maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 14.mpx),
             )
         }
@@ -726,7 +726,7 @@ internal fun HomeInfoPanel(url: String?, info: HomeFocusInfo?, modifier: Modifie
             // glcn: level with the first row, and the same 48 from the edge as everything else.
             .padding(top = 110.mpx, bottom = 48.mpx, end = 48.mpx)
             .clip(RoundedCornerShape(28.mpx))
-            .background(Color.Black.copy(alpha = 0.38f))
+            .background(if (StageColors.Text.luminance() < 0.5f) Color.White.copy(alpha = 0.78f) else Color.Black.copy(alpha = 0.38f))
             .padding(24.mpx),
     ) {
         Box(Modifier.fillMaxWidth().height(PANEL_WIDTH * 9f / 16f - 30.mpx).clip(RoundedCornerShape(18.mpx)).background(Color.White.copy(alpha = 0.06f))) {
