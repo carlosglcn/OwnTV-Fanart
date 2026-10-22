@@ -2,6 +2,7 @@
 
 Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ **Trailers in your language first, when there is one**
+- 📺 **Channel panel: programme picture → else the channel logo → else just the text; synopsis up to 4 lines**
 - ⚡ **Guide pictures appear faster when zapping**
 - 🔄 **Automatic sync between your paired devices while the app is open**
 - 🔘 **Switch to turn automatic sync on or off**
@@ -23,3 +24,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎤 **Mic button in TV search: speak with the SHIELD remote (shown only if the TV has voice recognition)**
 - 🔢 **Episode numbers readable on light themes (white on the dark badge)**
 - 🎞️ **Emby: what you already watched (or half-watched) on the server shows up here — ✓ marks, progress bars and Continue watching**
+- 📺 **Channel panel: programme picture → else the channel logo → else just the text; synopsis up to 4 lines**

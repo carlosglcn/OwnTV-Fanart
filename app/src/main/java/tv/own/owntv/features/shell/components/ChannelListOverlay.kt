@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import tv.own.owntv.core.epg.displayLogoUrl
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -346,14 +348,31 @@ private fun ZapPreviewPanel(
             .then(if (framed) Modifier.width(620.mpx).stageGlass(StageRadii.Sheet, overContent = true).padding(18.mpx) else Modifier),
         verticalArrangement = Arrangement.spacedBy(8.mpx),
     ) {
-        p.imageUrl?.takeIf { it.isNotBlank() }?.let { url ->
+        val logo = channel?.displayLogoUrl?.takeIf { it.isNotBlank() }
+        val art = p.imageUrl?.takeIf { it.isNotBlank() }
+        if (art != null) {
             tv.own.owntv.ui.components.ProgrammeArt(
-                url = url,
+                url = art,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(if (framed) 16f / 9f else 21f / 9f)
                     .clip(RoundedCornerShape(StageRadii.Sheet)),
             )
+        } else if (logo != null) {
+            // glcn: no picture for the programme → the channel's logo; no logo either → the words alone.
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(if (framed) 120.mpx else 90.mpx)
+                    .clip(RoundedCornerShape(StageRadii.Sheet))
+                    .background(StageColors.Ink.copy(alpha = 0.06f)),
+            ) {
+                tv.own.owntv.ui.components.ChannelLogoTile(
+                    logoUrl = logo,
+                    modifier = Modifier.align(Alignment.Center).size(180.mpx, 80.mpx),
+                    fill = Color.Transparent,
+                ) { }
+            }
         }
         Text(p.title, style = stageText(24, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(

@@ -339,7 +339,7 @@ internal fun LiveStagePane(
                 now.description?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         it, style = stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp), color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
-                        maxLines = 3, overflow = TextOverflow.Ellipsis,
+                        maxLines = 4, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 18.mpx),
                     )
                 }
