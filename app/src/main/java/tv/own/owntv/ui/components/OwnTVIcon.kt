@@ -53,6 +53,8 @@ enum class OwnTVIcon {
     // glcn: "Sports now" — a football.
     // The Sports Hub's trophy (rail, Settings → Sports).
     SPORTS,
+    // glcn: the search field's voice button.
+    MIC,
 }
 
 /** Parsed once: [StageGlyphPaths] in 24-unit coordinates. */
@@ -350,6 +352,16 @@ fun OwnTVIcon(
                 drawLineStroke(p(7f, 8f), p(12f, 3f), tint, stroke)
                 drawLineStroke(p(17f, 8f), p(12f, 3f), tint, stroke)
                 drawLineStroke(p(5f, 20f), p(19f, 20f), tint, stroke)
+            }
+            OwnTVIcon.MIC -> { // A capsule on a cradle and a stem.
+                drawRoundRectStroke(p(9f, 3f), p(15f, 13f), 3f * s, tint, stroke)
+                drawLineStroke(p(6f, 11f), p(6f, 13f), tint, stroke)
+                drawLineStroke(p(6f, 13f), p(9f, 16f), tint, stroke)
+                drawLineStroke(p(9f, 16f), p(15f, 16f), tint, stroke)
+                drawLineStroke(p(15f, 16f), p(18f, 13f), tint, stroke)
+                drawLineStroke(p(18f, 13f), p(18f, 11f), tint, stroke)
+                drawLineStroke(p(12f, 16f), p(12f, 20f), tint, stroke)
+                drawLineStroke(p(9f, 20f), p(15f, 20f), tint, stroke)
             }
             OwnTVIcon.POWER -> {
                 drawLineStroke(p(12f, 3f), p(12f, 11.5f), tint, stroke)

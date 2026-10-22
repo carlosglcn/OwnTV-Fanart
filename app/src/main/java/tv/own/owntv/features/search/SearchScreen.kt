@@ -295,13 +295,36 @@ fun SearchScreen(
         } else {
             Text(stringResource(R.string.search_title), style = stageText(46, 800, (-1).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = titleModifier)
         }
+        // glcn: voice — the SHIELD remote's mic through the system recogniser; hidden when there is none.
+        val voiceCtx = androidx.compose.ui.platform.LocalContext.current
+        val voiceIntent = remember {
+            android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        }
+        val voiceOk = remember { voiceIntent.resolveActivity(voiceCtx.packageManager) != null }
+        val voicePrompt = stringResource(R.string.glcn_voice_prompt)
+        val micLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+        ) { res ->
+            val spoken = res.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+                ?: return@rememberLauncherForActivityResult
+            vm.setQuery(tv.own.owntv.core.voice.VoiceCommandParser.parse(spoken)?.query ?: spoken)
+        }
+        if (voiceOk) {
+            StageTool(
+                text = stringResource(R.string.glcn_voice_search),
+                icon = OwnTVIcon.MIC,
+                onClick = { runCatching { micLauncher.launch(android.content.Intent(voiceIntent).putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, voicePrompt)) } },
+                modifier = Modifier.padding(start = listX + listW - fx(150), top = 118.mpx),
+            )
+        }
         StageSearchField(
             query = query,
             onQueryChange = vm::setQuery,
             placeholder = stringResource(R.string.search_field_hint),
             modifier = Modifier
                 .padding(start = listX, top = 118.mpx)
-                .width(listW)
+                .width(if (voiceOk) listW - fx(162) else listW)
                 .focusRequester(fieldFocus)
                 // ▼ lands on a filter button that is on, not whichever one is nearest below.
                 .focusProperties { down = if (searching) filterEntry else if (!showingResults) jumpFocus else FocusRequester.Default },

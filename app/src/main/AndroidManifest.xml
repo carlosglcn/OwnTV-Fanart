@@ -35,6 +35,10 @@
         android:name="android.software.leanback"
         android:required="false" />
 
+    <queries>
+        <intent><action android:name="android.speech.action.RECOGNIZE_SPEECH" /></intent>
+    </queries>
+
     <application
         android:name=".OwnTVApp"
         android:allowBackup="false"

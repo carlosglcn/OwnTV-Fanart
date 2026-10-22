@@ -20,3 +20,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎬 **Home Cinema: rows fade out softly instead of a hard cut when scrolled; Movies/Series use the cover when a title has no wide picture**
 - 🖼️ **Live list: bigger channel logos and the programme poster beside its info**
 - 🆕 **“New” label on movies and series added in the last week**
+- 🎤 **Mic button in TV search: speak with the SHIELD remote (shown only if the TV has voice recognition)**
