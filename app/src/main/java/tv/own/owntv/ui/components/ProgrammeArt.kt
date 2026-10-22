@@ -58,20 +58,19 @@ fun ProgrammeArt(
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            // glcn: a poster where a wide picture belongs. Ask TMDB for the show's own wide picture
-            // (by the programme's title); without one, the poster fills the box, cropped from the top.
-            val resolver: tv.own.owntv.core.metadata.ProgrammeArtResolver = org.koin.compose.koinInject()
-            val wide by androidx.compose.runtime.produceState<String?>(Memo.wide.get(url), url) {
-                if (value == null) {
-                    value = runCatching { resolver.landscapeFor(url) }.getOrNull()
-                    value?.let { Memo.wide.put(url, it) }
-                }
-            }
+            // glcn: the guide's own picture is the one shown everywhere. A poster where a wide one belongs
+            // is shown whole over a blurred copy of itself — no second picture from another source, which
+            // could be a different show with a similar title.
             AsyncImage(
-                model = wide ?: url,
+                model = url,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                alignment = if (wide != null) Alignment.Center else TopBias,
+                modifier = Modifier.fillMaxSize().blur(24.dp).background(Color.Black.copy(alpha = 0.35f)),
+            )
+            AsyncImage(
+                model = url,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),
             )
         }

@@ -16,3 +16,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⚡ **Posters while zapping: no stale poster, and the whole stretch around the cursor is preloaded**
 - 📺 **Live player: channel and programme (with poster) on top, all controls in one full-width row**
 - 🏟️ **Watch live: only channels airing the match (or about to) — no more “usually airs” rows**
+- 🖼️ **Zap panel shows the same programme picture as the guide (no mismatched TMDB image)**
