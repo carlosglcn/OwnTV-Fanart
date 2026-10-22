@@ -1217,7 +1217,9 @@ internal fun movieTitleInfo(
         title = movie.name,
         logoUrl = tv.own.owntv.core.metadata.MetadataImages.logo(meta?.logoPath),
         backdropUrl = tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath, size = "w1280")
-            ?: movie.backdropUrl?.takeIf { it.isNotBlank() },
+            ?: movie.backdropUrl?.takeIf { it.isNotBlank() }
+            // glcn: no wide picture (yet) — the cover itself fills the hero, so the space is never empty.
+            ?: providerPoster ?: tmdbPoster,
         posterUrl = if (tmdbWins) tmdbPoster ?: providerPoster else providerPoster ?: tmdbPoster,
         year = if (tmdbWins) meta?.year ?: movie.year else movie.year ?: meta?.year,
         genres = jsonList(meta?.genresJson),

@@ -17,3 +17,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 **Live player: channel and programme (with poster) on top, all controls in one full-width row**
 - 🏟️ **Watch live: only channels airing the match (or about to) — no more “usually airs” rows**
 - 🖼️ **Zap panel shows the same programme picture as the guide (no mismatched TMDB image)**
+- 🎬 **Home Cinema: rows fade out softly instead of a hard cut when scrolled; Movies/Series use the cover when a title has no wide picture**

@@ -446,7 +446,7 @@ fun HomeScreen(
                     )
                     // glcn: rows fade out as they pass under the clock and the buttons at the top, instead of
                     // sliding beneath them in full colour. Not under Cinema, whose rows start lower anyway.
-                    .then(if (backdropStyle == 1) Modifier else Modifier.topFade(NoHeroTop))
+                    .then(if (backdropStyle == 1) Modifier.topFadeWhenScrolled(90.mpx) { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } else Modifier.topFade(NoHeroTop))
                     .onFocusChanged { if (it.hasFocus) onChildFocused() }
                     // ▶ out of the rail comes back to the card it left from (rail carry-over): every level
                     // of the list remembers its focused child.
@@ -1771,6 +1771,22 @@ private fun featuredInfo(item: tv.own.owntv.core.home.FeaturedItem): HomeFocusIn
     is tv.own.owntv.core.home.FeaturedItem.Movie -> posterInfo(item.movie, item.movie.name)
     is tv.own.owntv.core.home.FeaturedItem.Series -> posterInfo(item.series, item.series.name)
 }
+
+/**
+ * glcn: Cinema — rows scrolled up under the title area dissolve instead of ending on a hard edge. At rest
+ * (nothing scrolled) the first row's heading stays whole. Read in the draw phase: no recomposition.
+ */
+private fun Modifier.topFadeWhenScrolled(height: androidx.compose.ui.unit.Dp, scrolled: () -> Boolean): Modifier = this
+    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        if (!scrolled()) return@drawWithContent
+        val h = height.toPx()
+        drawRect(
+            Brush.verticalGradient(0f to Color.Transparent, 1f to Color.Black, startY = 0f, endY = h),
+            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+        )
+    }
 
 /** glcn: the content dissolves into the page over the top [height] (alpha mask, one offscreen layer). */
 private fun Modifier.topFade(height: androidx.compose.ui.unit.Dp): Modifier = this
