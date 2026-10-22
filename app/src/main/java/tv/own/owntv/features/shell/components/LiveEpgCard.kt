@@ -84,7 +84,7 @@ fun LiveEpgCard(
                     .border(1.dp, tv.own.owntv.ui.theme.stageAccent.accent.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
                 else Modifier,
             )
-            .padding(horizontal = 14.dp, vertical = if (compact) 6.dp else 10.dp),
+            .padding(horizontal = 14.dp, vertical = if (compact) 6.dp else if (bare) 2.dp else 10.dp),
     ) {
         val now = epg.now
         if (compact) {
@@ -134,15 +134,15 @@ fun LiveEpgCard(
                     synopsis,
                     style = MaterialTheme.typography.labelMedium,
                     color = hudInk.copy(alpha = 0.82f),
-                    maxLines = if (bare) 3 else 2,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 6.dp),
+                    modifier = Modifier.padding(top = if (bare) 3.dp else 6.dp),
                 )
             }
         }
         epg.next?.let { entry ->
             Row(
-                Modifier.padding(top = if (now != null) 8.dp else 0.dp),
+                Modifier.padding(top = if (now != null) (if (bare) 4.dp else 8.dp) else 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -171,12 +171,12 @@ fun LiveEpgCardWithArt(epg: EpgNowNext?, art: String?, modifier: Modifier = Modi
         modifier
             .clip(RoundedCornerShape(14.dp))
             .background(hudShade(0.72f))
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         tv.own.owntv.ui.components.ProgrammeArt(
             url = art,
-            modifier = Modifier.size(width = 192.dp, height = 108.dp).clip(RoundedCornerShape(10.dp)),
+            modifier = Modifier.size(width = 136.dp, height = 76.dp).clip(RoundedCornerShape(10.dp)),
         )
         LiveEpgCard(epg, bare = true)
     }

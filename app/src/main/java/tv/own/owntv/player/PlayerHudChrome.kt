@@ -409,7 +409,7 @@ internal fun BottomBar(
                     Box(Modifier.widthIn(max = 600.dp)) { side() }
                 }
             } else header()
-            Box(Modifier.fillMaxWidth().padding(vertical = 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
+            Box(Modifier.fillMaxWidth().padding(vertical = if (side != null) 4.dp else 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
         }
         // Band A — the instrument. The times are the bar's own end caps now; the separate time row is
         // gone, and on live the right cap is the state badge instead of a clock.
@@ -439,7 +439,8 @@ internal fun BottomBar(
             }
             // A live channel with no archive has no timeline to scrub, but it still has a state to
             // report — and the badge no longer lives in the top bar.
-            isLive -> {
+            // glcn: with the programme card beside the channel, the state badge sits in the tools row instead.
+            isLive && side == null -> {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { LiveStateBadge(timeshiftOffsetSec) }
                 Spacer(Modifier.height(10.dp))
             }
@@ -512,6 +513,10 @@ internal fun BottomBar(
                 }
             }
             Spacer(Modifier.weight(1f))
+            if (isLive && side != null && onScrubLive == null) {
+                LiveStateBadge(timeshiftOffsetSec)
+                Spacer(Modifier.weight(1f))
+            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 // The ORDER is core's, exactly as in the media cluster above. Each control
                 // keeps its own composable and condition; only the sequence is shared.
@@ -600,7 +605,7 @@ internal fun BottomBar(
             }
         }
     }
-    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 20.dp)) { body() }
+    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = if (side != null) 10.dp else 20.dp)) { body() }
 }
 
 private fun volumeIcon(volume: Int): OwnTVIcon = when {
