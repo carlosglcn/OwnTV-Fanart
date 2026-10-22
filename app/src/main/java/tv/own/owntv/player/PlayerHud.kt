@@ -750,7 +750,6 @@ fun PlayerHud(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
-                    liveEpgCard?.invoke()
                     PlayerClock(watchingMs = watchingWallMs?.invoke())
                 }
             } else {
@@ -818,6 +817,7 @@ fun PlayerHud(
                     onOpenDialog = { dialog = it }, onPip = onPip, onAudioMode = onAudioMode,
                     onMultiview = onMultiview, onRecordThis = onRecordThis, recordingThis = recordingThis, onBack = onBack,
                     modifier = Modifier.align(Alignment.BottomStart),
+                    side = if (isLive) liveEpgCard else null,
                     header = if (isLive) {
                         { LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack) }
                     } else null,

@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -503,24 +505,43 @@ internal fun LiveCategories(
     var localQuery by remember { mutableStateOf("") }
     val query = searchQuery ?: localQuery
     val setQuery: (String) -> Unit = onSearchQueryChange ?: { localQuery = it }
-    val visible = remember(entries, query) {
+    // glcn: entries hidden with a long press (Recent, Favourites, a playlist) — only the list, never the channels.
+    val appCtx = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    androidx.compose.runtime.remember { tv.own.owntv.glcn.HiddenCategories.ensure(appCtx) }
+    val hiddenKeys by tv.own.owntv.glcn.HiddenCategories.keys.collectAsStateWithLifecycle()
+    val hideable = remember { setOf("Favorites", "History", "Catchup") }
+    val hiddenEntries = remember(entries, hiddenKeys) { entries.indices.count { entries[it].item.key.toString().let { k -> k in hideable && k in hiddenKeys } } }
+    val visible = remember(entries, query, hiddenKeys) {
         val q = query.trim()
-        if (q.isEmpty()) entries.indices.toList() else entries.indices.filter { entries[it].label.contains(q, ignoreCase = true) }
+        entries.indices.filter { i ->
+            val k = entries[i].item.key.toString()
+            !(k in hideable && k in hiddenKeys) && (q.isEmpty() || entries[i].label.contains(q, ignoreCase = true))
+        }
     }
     val rowFocusers = remember(visible.size) { List(visible.size) { FocusRequester() } }
     val searchFocus = remember { FocusRequester() }
     // glcn: playlist rows — "All playlists" then each playlist; the active one sits open above its categories.
     val switcher = if (showPlaylists) LocalCategoryPlaylists.current?.takeIf { it.playlists.size > 1 } else null
     val allPlaylistsText = stringResource(R.string.content_all_playlists)
-    val playlistRows = remember(switcher?.playlists, allPlaylistsText) {
+    val activePlaylist = if (switcher != null && switcher.activeId > 0L) switcher.activeId else -1L
+    val allPlaylistRows = remember(switcher?.playlists, allPlaylistsText) {
         switcher?.let { listOf(-1L to allPlaylistsText) + it.playlists.map { src -> src.id to src.name } }.orEmpty()
     }
-    val activePlaylist = if (switcher != null && switcher.activeId > 0L) switcher.activeId else -1L
-    val activeRow = playlistRows.indexOfFirst { it.first == activePlaylist }.coerceAtLeast(0)
-    // Items above the first category: the search field and the playlist rows down to the open one.
-    val headerCount = if (playlistRows.isEmpty()) 1 else 1 + activeRow + 1
-    val playlistFocusers = remember(playlistRows.size) { List(playlistRows.size) { FocusRequester() } }
+    // glcn: playlists are a row of chips right under the search, never buried below hundreds of groups.
+    val playlistRows = remember(allPlaylistRows, hiddenKeys, activePlaylist) {
+        allPlaylistRows.filter { (id, _) -> id <= 0L || id == activePlaylist || tv.own.owntv.glcn.HiddenCategories.playlistKey(id) !in hiddenKeys }
+    }
+    val hiddenPlaylists = allPlaylistRows.size - playlistRows.size
+    // Items above the first category: the search field and the playlist chips.
+    val headerCount = if (playlistRows.isEmpty()) 1 else 2
     val scope = rememberCoroutineScope()
+    val entryLong: (LiveCategoryEntry, Int) -> Unit = { entry, index ->
+        val k = entry.item.key.toString()
+        if (k in hideable) {
+            tv.own.owntv.glcn.HiddenCategories.hide(appCtx, k)
+            android.widget.Toast.makeText(appCtx, R.string.glcn_category_hidden_toast, android.widget.Toast.LENGTH_SHORT).show()
+        } else onLongSelect(index)
+    }
     // CH+/− in the categories changes the selection; the highlight follows it there.
     var hasFocus by remember { mutableStateOf(false) }
     LaunchedEffect(selectedIndex) {
@@ -615,27 +636,35 @@ internal fun LiveCategories(
                     horizontalPadding = if (sheet) 16.mpx else 18.mpx,
                 )
             }
-            fun playlistItem(row: Int) {
-                val (id, name) = playlistRows[row]
-                val open = id == activePlaylist
-                item(key = "__playlist_$id") {
-                    StageSheetItem(
-                        text = name,
-                        onClick = { if (!open) switcher?.onSelect?.invoke(id) },
-                        icon = OwnTVIcon.LAYERS,
-                        selected = open,
-                        trailing = { focused ->
-                            OwnTVIcon(
-                                if (open) OwnTVIcon.CHEVRON_UP else OwnTVIcon.CHEVRON_DOWN,
-                                if (focused) a.onAccent else StageColors.Muted,
-                                Modifier.size(20.mpx),
-                            )
-                        },
-                        modifier = Modifier.padding(bottom = 2.mpx).focusRequester(playlistFocusers[row]).then(rightKey),
-                    )
+            if (playlistRows.isNotEmpty()) item(key = "__playlists__") {
+                androidx.compose.foundation.lazy.LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(start = if (sheet) 8.mpx else 0.mpx, end = if (sheet) 8.mpx else 0.mpx, bottom = if (sheet) 14.mpx else 12.mpx),
+                    horizontalArrangement = Arrangement.spacedBy(8.mpx),
+                    contentPadding = PaddingValues(horizontal = 4.mpx, vertical = 4.mpx),
+                ) {
+                    items(playlistRows.size, key = { playlistRows[it].first }) { row ->
+                        val (id, name) = playlistRows[row]
+                        val open = id == activePlaylist
+                        StageSurface(
+                            onClick = { if (!open) switcher?.onSelect?.invoke(id) },
+                            onLongClick = if (id > 0L && !open) ({
+                                tv.own.owntv.glcn.HiddenCategories.hide(appCtx, tv.own.owntv.glcn.HiddenCategories.playlistKey(id))
+                                android.widget.Toast.makeText(appCtx, R.string.glcn_category_hidden_toast, android.widget.Toast.LENGTH_SHORT).show()
+                            }) else null,
+                            radius = 22.mpx,
+                            modifier = Modifier.height(46.mpx),
+                        ) { focused ->
+                            Row(Modifier.padding(horizontal = 18.mpx).height(46.mpx), verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    name, style = stageText(18, 700), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    color = if (focused) a.onAccent else if (open) a.accent else StageColors.Muted,
+                                    modifier = Modifier.widthIn(max = 220.mpx),
+                                )
+                            }
+                        }
+                    }
                 }
             }
-            for (row in 0..activeRow) if (row < playlistRows.size) playlistItem(row)
             visible.forEachIndexed { pos, index ->
                 val entry = entries[index]
                 if (index == firstGroup && query.isBlank()) {
@@ -663,15 +692,22 @@ internal fun LiveCategories(
                                 entry.name.tags.forEach { StageTag(it, onAccent = if (focused) a.onAccent else null) }
                             },
                             trailing = entry.mark?.let { m -> { _ -> StagePlaylistMark(m) } },
-                            onLongClick = { onLongSelect(index) },
+                            onLongClick = { entryLong(entry, index) },
                             modifier = rowModifier,
                         )
                     } else {
-                        LiveColumnItem(entry, selected, onClick = { onSelect(index) }, onLongClick = { onLongSelect(index) }, modifier = rowModifier)
+                        LiveColumnItem(entry, selected, onClick = { onSelect(index) }, onLongClick = { entryLong(entry, index) }, modifier = rowModifier)
                     }
                 }
             }
-            for (row in activeRow + 1 until playlistRows.size) playlistItem(row)
+            if (query.isBlank() && (hiddenEntries > 0 || hiddenPlaylists > 0)) item(key = "__show_hidden__") {
+                StageSheetItem(
+                    text = stringResource(R.string.glcn_show_hidden_categories, hiddenEntries + hiddenPlaylists),
+                    onClick = { tv.own.owntv.glcn.HiddenCategories.showAll(appCtx) },
+                    icon = OwnTVIcon.LAYERS,
+                    modifier = Modifier.padding(top = 6.mpx).then(rightKey),
+                )
+            }
         }
         }
     }

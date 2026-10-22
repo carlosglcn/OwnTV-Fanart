@@ -332,8 +332,10 @@ private fun ZapPreviewPanel(
 ) {
     var programme by remember { mutableStateOf<Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?>(null) }
     LaunchedEffect(channel?.id) {
-        if (channel == null) { programme = null; return@LaunchedEffect }
-        kotlinx.coroutines.delay(180)
+        // glcn: the previous channel's programme goes at once — a stale poster for seconds was worse than none.
+        programme = null
+        if (channel == null) return@LaunchedEffect
+        kotlinx.coroutines.delay(60)
         programme = runCatching { loadNow(channel) }.getOrNull()
     }
     val p = programme?.first ?: return
@@ -476,16 +478,18 @@ private fun NeighbourArtPrefetch(
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(focusedIndex, channels.size) {
-        kotlinx.coroutines.delay(350)
+        kotlinx.coroutines.delay(200)
         val loader = coil3.SingletonImageLoader.get(ctx)
-        for (d in intArrayOf(1, -1, 2, -2, 3)) {
+        // glcn: the whole stretch around the cursor, nearest first, so a zap through the list never waits.
+        val order = buildList { for (d in 1..14) { add(d); add(-d) } }
+        for (d in order) {
             val ch = channels.getOrNull(focusedIndex + d) ?: continue
             val url = runCatching { loadNow(ch).first?.imageUrl }.getOrNull()?.takeIf { it.isNotBlank() } ?: continue
             loader.enqueue(
                 coil3.request.ImageRequest.Builder(ctx).data(url)
                     .size(coil3.size.Size(960, 540)).build(),
             )
-            kotlinx.coroutines.delay(60)
+            kotlinx.coroutines.delay(25)
         }
     }
 }

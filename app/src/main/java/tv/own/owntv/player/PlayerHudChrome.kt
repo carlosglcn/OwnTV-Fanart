@@ -389,6 +389,8 @@ internal fun BottomBar(
     onBack: () -> Unit, modifier: Modifier = Modifier,
     /** glcn: a row at the top of the dock — live TV puts the channel there (logo, name, stream chips). */
     header: (@Composable () -> Unit)? = null,
+    /** glcn: live TV — the programme on air, at the dock's right. */
+    side: (@Composable () -> Unit)? = null,
 ) {
     // Changes only while rewound into the archive. The film position is read lower still, by
     // [VodTimeline], so the tool buttons do not redraw every second.
@@ -396,7 +398,7 @@ internal fun BottomBar(
     // Only whether one runs: the countdown itself ticks every second, and this bar must not.
     val sleepLeft = org.koin.compose.koinInject<SleepTimer>().remainingMs.collectAsStateWithLifecycle()
     val sleepRunning by androidx.compose.runtime.remember { androidx.compose.runtime.derivedStateOf { sleepLeft.value != null } }
-    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 20.dp)) {
+    val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
         if (header != null) {
             header()
             Box(Modifier.fillMaxWidth().padding(vertical = 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
@@ -588,6 +590,17 @@ internal fun BottomBar(
                     }
                 }
             }
+        }
+    }
+    // glcn: live TV — the controls on the left, the programme on air (its picture and times) on the right.
+    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 20.dp)) {
+        if (side == null) body()
+        else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f).focusGroup(), content = body)
+            Spacer(Modifier.width(18.dp))
+            Box(Modifier.width(1.dp).height(120.dp).background(hudInk.copy(alpha = 0.10f)))
+            Spacer(Modifier.width(18.dp))
+            Box(Modifier.widthIn(max = 560.dp)) { side() }
         }
     }
 }

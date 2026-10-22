@@ -377,6 +377,23 @@ class EpgViewModel(
         runCatching { epgDao.programmeById(programmeId) }.getOrNull()
 
     init {
+        // glcn: link the channels that have no guide to a guide channel of the same name by itself, once per
+        // launch and only the confident hits — nothing to review, nothing on screen.
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(8_000)
+            if (SilentEpgMatch.ran || _matching.value) return@launch
+            runCatching {
+                val pid = settings.activeProfileId.first().takeIf { it >= 0 } ?: return@runCatching
+                val playlistIds = activeSourceIds(settings, sourceDao, pid, MediaType.LIVE)
+                if (playlistIds.isEmpty()) return@runCatching
+                SilentEpgMatch.ran = true
+                val outcome = autoMatcher.run(customize.observe(pid, MediaType.LIVE).first(), playlistIds)
+                if (outcome.hadCandidates && outcome.applied.isNotEmpty()) {
+                    saveEpgMatches(pid, outcome.applied)
+                    fillMatchedInBackground(outcome.applied.map { it.second })
+                }
+            }
+        }
         // Re-filter the grid as the user types (DB-level, so it searches ALL guide channels, not
         // just the visible rows). drop(1): the screen triggers the initial load itself.
         _query
@@ -1102,3 +1119,6 @@ class EpgViewModel(
         private const val QUERY_CHUNK = 500
     }
 }
+
+/** glcn: the silent guide matching runs once per launch, whichever screen opened first. */
+private object SilentEpgMatch { @Volatile var ran = false }
