@@ -58,19 +58,13 @@ fun ProgrammeArt(
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            // glcn: the guide's own picture is the one shown everywhere. A poster where a wide one belongs
-            // is shown whole over a blurred copy of itself — no second picture from another source, which
-            // could be a different show with a similar title.
+            // glcn: the guide's own picture, one copy, cropped from the top — never a second blurred copy
+            // behind it (on TVs without blur support it showed as repeated slices).
             AsyncImage(
                 model = url,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().blur(24.dp).background(Color.Black.copy(alpha = 0.35f)),
-            )
-            AsyncImage(
-                model = url,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
+                alignment = TopBias,
                 modifier = Modifier.fillMaxSize(),
             )
         }
