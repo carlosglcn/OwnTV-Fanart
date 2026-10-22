@@ -3,6 +3,8 @@ package tv.own.owntv.ui.stage
 import tv.own.owntv.ui.theme.stageTone
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.stringResource
+import tv.own.owntv.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -797,6 +799,8 @@ fun StagePoster(
     progress: Float? = null,
     /** A finished title: the `.ep` ✓ badge in the top corner instead of a bar. */
     watched: Boolean = false,
+    /** glcn: added to the library in the last week and not started yet — a small "New" label. */
+    fresh: Boolean = false,
     artwork: @Composable BoxScope.() -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -835,6 +839,14 @@ fun StagePoster(
                         .background(badge.copy(alpha = 0.9f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) { StageIcon(OwnTVIcon.CHECK, accent.accent, if (compact) 16.mpx else 18.mpx) }
+            } else if (fresh && (progress == null || progress <= 0f)) {
+                Text(
+                    stringResource(R.string.glcn_new_badge),
+                    style = stageText(if (compact) 12f else 13.5f, 800), color = accent.onAccent, maxLines = 1,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(8.mpx)
+                        .background(accent.accent, RoundedCornerShape(50))
+                        .padding(horizontal = if (compact) 8.mpx else 10.mpx, vertical = 3.mpx),
+                )
             } else if (progress != null && progress > 0f) {
                 Box(
                     Modifier.align(Alignment.BottomStart).fillMaxWidth().height(6.mpx)
@@ -1135,3 +1147,7 @@ val stageStillBack: Color
     @Composable
     @androidx.compose.runtime.ReadOnlyComposable
     get() = if (LocalStagePalette.current.isLight) StageColors.Ink.copy(alpha = 0.06f) else Color(0xFF0F1518)
+
+/** glcn: a title added to the library in the last seven days. */
+fun isFreshlyAdded(addedAt: Long?): Boolean =
+    addedAt != null && addedAt > 0L && System.currentTimeMillis() - addedAt in 0L..(7L * 24 * 60 * 60 * 1000)

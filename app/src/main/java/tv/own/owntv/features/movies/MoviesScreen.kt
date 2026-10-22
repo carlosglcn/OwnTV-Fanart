@@ -623,6 +623,7 @@ fun MoviesScreen(
                                         width = 196.mpx, height = 294.mpx,
                                         progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
                                         watched = done,
+                                    fresh = tv.own.owntv.ui.stage.isFreshlyAdded(movie.addedAt),
                                         onClick = { startMovie(movie) },
                                         onLongClick = { openMenu(movie, index) },
                                         modifier = Modifier
@@ -793,6 +794,7 @@ fun MoviesScreen(
                                     compact = true,
                                     progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
                                     watched = done,
+                                    fresh = tv.own.owntv.ui.stage.isFreshlyAdded(movie.addedAt),
                                     onClick = { startMovie(movie) },
                                     onLongClick = { openMenu(movie, index) },
                                     modifier = Modifier
