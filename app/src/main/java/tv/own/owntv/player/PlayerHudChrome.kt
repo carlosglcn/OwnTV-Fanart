@@ -400,7 +400,15 @@ internal fun BottomBar(
     val sleepRunning by androidx.compose.runtime.remember { androidx.compose.runtime.derivedStateOf { sleepLeft.value != null } }
     val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
         if (header != null) {
-            header()
+            // glcn: live TV — the channel on the left, the programme on air with its picture on the right,
+            // then every control in one full-width row below.
+            if (side != null) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) { header() }
+                    Spacer(Modifier.width(18.dp))
+                    Box(Modifier.widthIn(max = 600.dp)) { side() }
+                }
+            } else header()
             Box(Modifier.fillMaxWidth().padding(vertical = 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
         }
         // Band A — the instrument. The times are the bar's own end caps now; the separate time row is
@@ -592,17 +600,7 @@ internal fun BottomBar(
             }
         }
     }
-    // glcn: live TV — the controls on the left, the programme on air (its picture and times) on the right.
-    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 20.dp)) {
-        if (side == null) body()
-        else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f).focusGroup(), content = body)
-            Spacer(Modifier.width(18.dp))
-            Box(Modifier.width(1.dp).height(120.dp).background(hudInk.copy(alpha = 0.10f)))
-            Spacer(Modifier.width(18.dp))
-            Box(Modifier.widthIn(max = 560.dp)) { side() }
-        }
-    }
+    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 20.dp)) { body() }
 }
 
 private fun volumeIcon(volume: Int): OwnTVIcon = when {

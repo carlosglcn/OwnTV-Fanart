@@ -14,5 +14,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🗂️ **Playlists are a row of chips right under the category search**
 - 🙈 **Long-press OK on Recent, Favourites or a playlist to hide it; “Show hidden” brings it back**
 - ⚡ **Posters while zapping: no stale poster, and the whole stretch around the cursor is preloaded**
-- 📺 **Live player: controls on the left, programme info and poster on the right**
+- 📺 **Live player: channel and programme (with poster) on top, all controls in one full-width row**
 - 🏟️ **Watch live: only channels airing the match (or about to) — no more “usually airs” rows**
