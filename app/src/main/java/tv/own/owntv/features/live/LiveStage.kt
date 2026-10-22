@@ -151,7 +151,7 @@ internal fun LiveStageRow(
     StageRow(
         onClick = onClick,
         onLongClick = onLongClick,
-        height = 84.mpx,
+        height = 96.mpx,
         modifier = modifier.fillMaxWidth().onFocusChanged { if (it.hasFocus) onFocus() },
     ) { focused ->
         if (showNumber) {
@@ -163,7 +163,8 @@ internal fun LiveStageRow(
                 modifier = Modifier.width(50.mpx),
             )
         }
-        LivePlate(channel.displayLogoUrl, 76.mpx, 54.mpx)
+        // glcn: bigger logos — on a 75" screen the old 76×54 read as dots.
+        LivePlate(channel.displayLogoUrl, 104.mpx, 74.mpx)
         Column(Modifier.weight(1f)) {
             Text(name.name, style = stageText(22, 700), color = if (focused) StageColors.FxText else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val title = now?.title ?: nowTitle
@@ -317,7 +318,10 @@ internal fun LiveStagePane(
             }
         }
         val now = nowNext?.now
-        Column(Modifier.fillMaxWidth().padding(start = 4.mpx, end = 4.mpx, top = 34.mpx)) {
+        // glcn: the programme's picture beside its words — seen whole, never under the text.
+        val infoArt = nowNext?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() }
+        Row(Modifier.fillMaxWidth().padding(start = 4.mpx, end = 4.mpx, top = 34.mpx)) {
+        Column(Modifier.weight(1f)) {
             if (now != null) {
                 Text(now.title, style = stageText(42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(
@@ -361,6 +365,13 @@ internal fun LiveStagePane(
                     if (later != null) LiveScheduleItem(later, accentTime = false, onClick = { onOpenProgramme(later) })
                 }
             }
+        }
+        if (now != null && infoArt != null) {
+            Box(
+                Modifier.padding(start = 28.mpx, top = 6.mpx).width(180.mpx).aspectRatio(2f / 3f)
+                    .clip(RoundedCornerShape(16.mpx)).background(Color(0xFF15191C)),
+            ) { tv.own.owntv.ui.components.ProgrammeArt(url = infoArt, modifier = Modifier.fillMaxSize(), tolerance = 0.6f) }
+        }
         }
     }
 }
