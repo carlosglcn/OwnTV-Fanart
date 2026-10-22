@@ -994,7 +994,7 @@ fun StageEpisode(
             Text(
                 number,
                 style = stageText(15, 800),
-                color = StageColors.Text,
+                color = Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
