@@ -242,6 +242,7 @@ private fun SeriesGrid(
     val count by vm.count.collectAsStateWithLifecycle()
     val favoriteIds by vm.favoriteIds.collectAsStateWithLifecycle()
     val seriesProgress by vm.seriesProgress.collectAsStateWithLifecycle()
+    val completedSeries by vm.completedSeries.collectAsStateWithLifecycle()
     val searchQuery by vm.searchQuery.collectAsStateWithLifecycle()
     val sortMode by vm.sortMode.collectAsStateWithLifecycle()
     val storedViewMode by vm.viewMode.collectAsStateWithLifecycle()
@@ -681,6 +682,7 @@ private fun SeriesGrid(
                                         rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
                                         width = 196.mpx, height = 294.mpx,
                                         progress = seriesProgress[show.id],
+                                    watched = show.id in completedSeries,
                                         fresh = tv.own.owntv.ui.stage.isFreshlyAdded(show.addedAt),
                                         onClick = { onOpenAt(index); vm.openSeries(show) },
                                         onLongClick = { openMenu(show, index) },
@@ -797,6 +799,7 @@ private fun SeriesGrid(
                                     posterUrl = posterOf(show),
                                     placeholder = OwnTVIcon.SERIES,
                                     progress = seriesProgress[show.id],
+                                    watched = show.id in completedSeries,
                                     mark = playlistMarks[show.sourceId],
                                     onClick = { onOpenAt(index); vm.openSeries(show) },
                                     onLongClick = { openMenu(show, index) },
@@ -847,6 +850,7 @@ private fun SeriesGrid(
                                     width = posterW, height = posterW * 1.5f,
                                     compact = true,
                                     progress = seriesProgress[show.id],
+                                    watched = show.id in completedSeries,
                                     fresh = tv.own.owntv.ui.stage.isFreshlyAdded(show.addedAt),
                                     onClick = { onOpenAt(index); vm.openSeries(show) },
                                     onLongClick = { openMenu(show, index) },

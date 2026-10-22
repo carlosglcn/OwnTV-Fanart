@@ -64,11 +64,21 @@ fun HomeLiveRow(
     start: Dp,
     track: (FocusRequester) -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: hold OK on a card → "Remove from Recent channels" (only the Recent row passes this). */
+    onRemove: ((ChannelEntity) -> Unit)? = null,
 ) {
     val onNow = mode == HomeLiveRowMode.ON_NOW
+    var menuFor by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<ChannelEntity?>(null) }
+    menuFor?.let { ch ->
+        KeepWatchingMenu(
+            title = ch.name, onRemove = { onRemove?.invoke(ch) }, onDismiss = { menuFor = null },
+            label = stringResource(R.string.glcn_remove_from_recent),
+        )
+    }
+    val longPress: ((ChannelEntity) -> Unit)? = if (onRemove != null) ({ ch -> menuFor = ch }) else null
     // glcn: "On now" rails are drawn from the programmes' pictures.
     if (onNow) {
-        ArtLiveRow(title, guide.channels, guide.programmes, guide.now, onChannelClick, onFocus, firstItemFocusRequester, start, track, modifier)
+        ArtLiveRow(title, guide.channels, guide.programmes, guide.now, onChannelClick, onFocus, firstItemFocusRequester, start, track, modifier, onLongPress = longPress)
         return
     }
     val shown = if (onNow) guide.channels else channels
@@ -91,6 +101,7 @@ fun HomeLiveRow(
                     programme = if (onNow) currentProgramme(guide.programmes[channel.id].orEmpty(), guide.now) else null,
                     now = guide.now,
                     onClick = { onChannelClick(channel.id, shown) },
+                    onLongClick = longPress?.let { lp -> { lp(channel) } },
                     modifier = Modifier
                         .then(if (index == 0 && firstItemFocusRequester != null) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
                         .tracked(track = track)

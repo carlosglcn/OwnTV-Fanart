@@ -642,6 +642,7 @@ fun HomeScreen(
                             start = contentStart,
                             track = track,
                             modifier = rowModifier,
+                            onRemove = { vm.removeRecentChannel(it.id) },
                         )
 
                         HomeRow.FAVORITE_CHANNELS -> HomeLiveRow(
@@ -696,6 +697,7 @@ fun HomeScreen(
                             firstItemFocusRequester = firstItemFocusRequester,
                             track = track,
                             modifier = rowModifier,
+                            onRemove = { vm.removeContinueMovie(it.sourceItemId) },
                         )
 
                         HomeRow.CONTINUE_SERIES -> ContinuePosterRow(
@@ -707,6 +709,7 @@ fun HomeScreen(
                             firstItemFocusRequester = firstItemFocusRequester,
                             track = track,
                             modifier = rowModifier,
+                            onRemove = { vm.removeContinueEpisode(it.sourceItemId) },
                         )
 
                         HomeRow.FEATURED -> FeaturedBillboard(
@@ -1416,9 +1419,15 @@ private fun ContinuePosterRow(
     firstItemFocusRequester: FocusRequester?,
     track: (FocusRequester) -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: hold OK on a card → "Remove from Keep watching". */
+    onRemove: ((LauncherContinuationItem) -> Unit)? = null,
 ) {
     val setInfo = LocalHomeFocusInfo.current
     val setArt = LocalHomeFocusArt.current
+    var menuFor by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<LauncherContinuationItem?>(null) }
+    menuFor?.let { m ->
+        KeepWatchingMenu(title = m.title, onRemove = { onRemove?.invoke(m) }, onDismiss = { menuFor = null })
+    }
     Column(modifier) {
         HomeRowHeader(title, small = items.size.toString(), start = start)
         HomeLazyRow(
@@ -1430,6 +1439,7 @@ private fun ContinuePosterRow(
                 StagePoster(
                     title = item.title,
                     onClick = { onItemClick(item) },
+                    onLongClick = if (onRemove != null) ({ menuFor = item }) else null,
                     width = 196.mpx,
                     height = 294.mpx,
                     modifier = Modifier
@@ -1705,7 +1715,7 @@ private fun AllRowsHiddenState(
 
 /** glcn: the hold-OK menu of a Keep watching card. */
 @Composable
-private fun KeepWatchingMenu(title: String, onRemove: () -> Unit, onDismiss: () -> Unit) {
+internal fun KeepWatchingMenu(title: String, onRemove: () -> Unit, onDismiss: () -> Unit, label: String = stringResource(R.string.glcn_remove_from_continue)) {
     androidx.activity.compose.BackHandler { onDismiss() }
     val first = androidx.compose.runtime.remember { FocusRequester() }
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -1720,7 +1730,7 @@ private fun KeepWatchingMenu(title: String, onRemove: () -> Unit, onDismiss: () 
             tv.own.owntv.ui.stage.StageMenu(Modifier.width(560.mpx)) {
                 tv.own.owntv.ui.stage.StageMenuHeader(title = title, subtitle = null)
                 tv.own.owntv.ui.stage.StageMenuItem(
-                    stringResource(R.string.glcn_remove_from_continue),
+                    label,
                     onClick = { onRemove(); onDismiss() },
                     icon = OwnTVIcon.CLOSE,
                     modifier = Modifier.focusRequester(first),

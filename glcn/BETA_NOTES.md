@@ -25,3 +25,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔢 **Episode numbers readable on light themes (white on the dark badge)**
 - 🎞️ **Emby: what you already watched (or half-watched) on the server shows up here — ✓ marks, progress bars and Continue watching**
 - 📺 **Channel panel: programme picture → else the channel logo → else just the text; synopsis up to 4 lines**
+- 🧹 **Hold OK on Continue movies / Continue series / Recent channels cards to remove them**
+- 🗑️ **“Clear favorites” in Favorites (all, Live, Movies or Series — with confirmation)**
+- ✅ **✓ on the poster of a series you have watched to the end**

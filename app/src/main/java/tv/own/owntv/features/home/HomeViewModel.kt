@@ -283,6 +283,35 @@ class HomeViewModel(
         }
     }
 
+    /** glcn: take a film out of Continue movies. */
+    fun removeContinueMovie(movieId: Long) {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            userDataWriter.clearProgress(pid, MediaType.MOVIE, movieId)
+            userDataWriter.removeHistory(pid, MediaType.MOVIE, movieId)
+            refresh(pid)
+        }
+    }
+
+    /** glcn: take a show out of Continue series, from the episode its card stands for. */
+    fun removeContinueEpisode(episodeId: Long) {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            val seriesId = seriesDao.getEpisodeById(episodeId)?.seriesId ?: return@launch
+            userDataWriter.removeSeriesHistory(pid, seriesId)
+            refresh(pid)
+        }
+    }
+
+    /** glcn: take a channel out of Recent channels. */
+    fun removeRecentChannel(channelId: Long) {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            userDataWriter.removeHistory(pid, MediaType.LIVE, channelId)
+            refresh(pid)
+        }
+    }
+
     fun setHeroFocused(focused: Boolean) {
         _heroFocused.value = focused
     }

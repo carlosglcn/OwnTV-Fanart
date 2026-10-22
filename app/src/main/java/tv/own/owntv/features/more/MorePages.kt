@@ -304,6 +304,7 @@ internal fun FavouritesPage(
     val move by vm.move.collectAsStateWithLifecycle()
     var filter by rememberSaveable { mutableStateOf(FavFilter.ALL) }
     val segFocus = remember { FocusRequester() }
+    var showClearFav by remember { mutableStateOf(false) }
     // Hold OK: the item whose small menu is open, and the card to return to when it closes.
     var menu by remember { mutableStateOf<Triple<MediaType, Long, String>?>(null) }
     val itemFocus = remember { HashMap<Pair<MediaType, Long>, FocusRequester>() }
@@ -348,6 +349,18 @@ internal fun FavouritesPage(
                 selected = filter.ordinal,
                 onSelect = { filter = FavFilter.entries[it] },
                 modifier = Modifier.focusRequester(segFocus),
+            )
+            Spacer(Modifier.weight(1f))
+            if (counts.total > 0) StageTool(stringResource(R.string.glcn_clear_favorites), onClick = { showClearFav = true }, icon = OwnTVIcon.TRASH, danger = true)
+        }
+        if (showClearFav) {
+            ClearHistoryDialog(
+                onClear = { t -> vm.clearFavourites(t); showClearFav = false },
+                onDismiss = { showClearFav = false },
+                titleRes = R.string.glcn_clear_favorites,
+                bodyRes = R.string.glcn_choose_favorites,
+                allRes = R.string.glcn_all_favorites,
+                confirmRes = R.string.glcn_clear_favorites_confirm,
             )
         }
         androidx.compose.runtime.SideEffect { setEntry { runCatching { firstTarget.requestFocus() }.getOrDefault(false) } }

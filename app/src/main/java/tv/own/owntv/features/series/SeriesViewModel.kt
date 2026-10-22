@@ -595,6 +595,12 @@ class SeriesViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
+    /** glcn: the shows watched to the end — every episode the library holds for them is done — for the ✓ on their poster. */
+    val completedSeries: StateFlow<Set<Long>> = ctx
+        .flatMapLatest { c -> if (c.profileId < 0) flowOf(emptyList()) else progressDao.observeCompletedSeriesIds(c.profileId) }
+        .map { it.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
     val episodes: StateFlow<List<EpisodeEntity>> = _openedSeries
         .flatMapLatest { s -> if (s == null) flowOf(emptyList()) else seriesDao.episodesBySeries(s.id) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())

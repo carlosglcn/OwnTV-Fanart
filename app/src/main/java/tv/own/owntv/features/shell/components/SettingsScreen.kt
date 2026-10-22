@@ -2389,6 +2389,11 @@ private enum class HistoryScope(val type: tv.own.owntv.core.model.MediaType?, va
 internal fun ClearHistoryDialog(
     onClear: (tv.own.owntv.core.model.MediaType?) -> Unit,
     onDismiss: () -> Unit,
+    // glcn: the same picker clears favourites — only its words change.
+    titleRes: Int = R.string.settings_clear_history,
+    bodyRes: Int = R.string.settings_choose_history,
+    allRes: Int = R.string.settings_all_history,
+    confirmRes: Int = R.string.settings_clear_history_confirm,
 ) {
     var pending by remember { mutableStateOf<HistoryScope?>(null) }
     val firstFocus = remember { FocusRequester() }
@@ -2397,8 +2402,8 @@ internal fun ClearHistoryDialog(
     // One popup, two steps: what to clear, then "can't be undone" (focus on No). Back steps back first.
     tv.own.owntv.ui.stage.StagePopup(
         onDismiss = { if (pending != null) pending = null else onDismiss() },
-        title = if (p == null) stringResource(R.string.settings_clear_history) else stringResource(R.string.settings_clear_history_confirm, stringResource(p.labelRes)),
-        body = if (p == null) stringResource(R.string.settings_choose_history) else stringResource(R.string.settings_cannot_undo),
+        title = if (p == null) stringResource(titleRes) else stringResource(confirmRes, stringResource(p.labelRes)),
+        body = if (p == null) stringResource(bodyRes) else stringResource(R.string.settings_cannot_undo),
         width = 760.mpx,
         buttons = {
             if (p == null) {
@@ -2413,7 +2418,7 @@ internal fun ClearHistoryDialog(
             listOf(HistoryScope.LIVE to OwnTVIcon.LIVE_TV, HistoryScope.MOVIES to OwnTVIcon.MOVIES, HistoryScope.SERIES to OwnTVIcon.SERIES, HistoryScope.ALL to OwnTVIcon.TRASH).forEachIndexed { i, (scope, icon) ->
                 val all = scope == HistoryScope.ALL
                 tv.own.owntv.ui.stage.StagePopupOption(
-                    title = stringResource(if (all) R.string.settings_all_history else scope.labelRes),
+                    title = stringResource(if (all) allRes else scope.labelRes),
                     onClick = { pending = scope }, danger = all,
                     modifier = if (i == 0) Modifier.focusRequester(firstFocus) else Modifier,
                     leading = { tv.own.owntv.ui.stage.StagePopupIcon(icon, if (all) tv.own.owntv.ui.theme.StageColors.Danger else tv.own.owntv.ui.theme.StageColors.Text) },

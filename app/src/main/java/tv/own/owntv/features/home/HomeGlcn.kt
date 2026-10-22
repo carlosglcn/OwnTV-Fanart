@@ -334,6 +334,7 @@ internal fun ArtLiveRow(
     start: Dp,
     track: (FocusRequester) -> Unit,
     modifier: Modifier = Modifier,
+    onLongPress: ((ChannelEntity) -> Unit)? = null,
 ) {
     if (channels.isEmpty()) return
     Column(modifier) {
@@ -354,6 +355,7 @@ internal fun ArtLiveRow(
                     programme = programmes[channel.id].orEmpty().firstOrNull { now in it.startMs until it.stopMs },
                     now = now,
                     onClick = { onChannelClick(channel.id, channels) },
+                    onLongClick = onLongPress?.let { lp -> { lp(channel) } },
                     modifier = Modifier
                         .then(if (index == 0 && firstItemFocusRequester != null) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
                         .tracked(track = track)

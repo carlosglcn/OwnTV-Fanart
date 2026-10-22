@@ -248,6 +248,12 @@ class MoreCountsViewModel(
         viewModelScope.launch { userDataWriter.removeFavorite(pid, type, id) }
     }
 
+    /** glcn: clear every favourite of the profile, or one type's. */
+    fun clearFavourites(type: MediaType?) {
+        val pid = ctx.value.profileId.takeIf { it >= 0 } ?: return
+        viewModelScope.launch { userDataWriter.clearFavorites(pid, type) }
+    }
+
     /** The same removal each browse screen's "Remove from History" does, per type. */
     fun removeHistory(entry: HistoryEntry) {
         val pid = ctx.value.profileId.takeIf { it >= 0 } ?: return
