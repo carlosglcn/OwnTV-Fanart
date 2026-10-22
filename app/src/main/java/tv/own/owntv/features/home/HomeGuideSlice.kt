@@ -68,14 +68,14 @@ fun HomeLiveRow(
     onRemove: ((ChannelEntity) -> Unit)? = null,
 ) {
     val onNow = mode == HomeLiveRowMode.ON_NOW
-    var menuFor by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<ChannelEntity?>(null) }
-    menuFor?.let { ch ->
+    val menuFor = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<ChannelEntity?>(null) }
+    menuFor.value?.let { ch ->
         KeepWatchingMenu(
-            title = ch.name, onRemove = { onRemove?.invoke(ch) }, onDismiss = { menuFor = null },
+            title = ch.name, onRemove = { onRemove?.invoke(ch) }, onDismiss = { menuFor.value = null },
             label = stringResource(R.string.glcn_remove_from_recent),
         )
     }
-    val longPress: ((ChannelEntity) -> Unit)? = if (onRemove != null) ({ ch -> menuFor = ch }) else null
+    val longPress: ((ChannelEntity) -> Unit)? = if (onRemove != null) ({ ch -> menuFor.value = ch }) else null
     // glcn: "On now" rails are drawn from the programmes' pictures.
     if (onNow) {
         ArtLiveRow(title, guide.channels, guide.programmes, guide.now, onChannelClick, onFocus, firstItemFocusRequester, start, track, modifier, onLongPress = longPress)
