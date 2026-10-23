@@ -97,6 +97,7 @@ fun CategoryBrowserOverlay(
 
     // glcn: what the focused category holds, after the D-pad rests a moment.
     val channelFocus = remember { FocusRequester() }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     var peeked by remember { mutableStateOf<List<tv.own.owntv.core.database.entity.ChannelEntity>>(emptyList()) }
     var peekedNow by remember { mutableStateOf<Map<Long, tv.own.owntv.core.database.entity.EpgProgrammeEntity>>(emptyMap()) }
     val focusedKey = entries.getOrNull(focusedIndex)?.item?.key
@@ -124,7 +125,12 @@ fun CategoryBrowserOverlay(
             listState = listState,
             onSelect = { onSelect(entries[it].item.key) },
             onLongSelect = {},
-            onNavigateRight = { if (peeked.isNotEmpty()) runCatching { channelFocus.requestFocus() } },
+            onNavigateRight = {
+                // glcn: ▶ enters the channel column; if the requester is not attached yet, plain spatial focus does it.
+                if (peeked.isNotEmpty() && !runCatching { channelFocus.requestFocus() }.getOrDefault(false)) {
+                    focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right)
+                }
+            },
             focusRequester = listFocus,
             focusRowIndex = focusRow,
             onRowFocused = { focusRow = null },
