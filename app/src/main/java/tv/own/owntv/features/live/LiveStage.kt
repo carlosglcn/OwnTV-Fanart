@@ -368,9 +368,9 @@ internal fun LiveStagePane(
         }
         if (now != null && infoArt != null) {
             Box(
-                Modifier.padding(start = 28.mpx, top = 6.mpx).width(180.mpx).aspectRatio(2f / 3f)
+                Modifier.padding(start = 28.mpx, top = 6.mpx).width(260.mpx).aspectRatio(16f / 9f)
                     .clip(RoundedCornerShape(16.mpx)).background(Color(0xFF15191C)),
-            ) { tv.own.owntv.ui.components.ProgrammeArt(url = infoArt, modifier = Modifier.fillMaxSize(), tolerance = 0.6f) }
+            ) { tv.own.owntv.ui.components.ProgrammeArt(url = infoArt, modifier = Modifier.fillMaxSize()) }
         }
         }
     }

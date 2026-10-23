@@ -42,3 +42,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⚡ Zapping list: the schedule column is read ahead for the channels around the cursor, so it no longer appears late.
 - 🎯 Home: the Sports row rests at its first card when you come back to it, instead of leaving it cut at the edge.
 - 👨‍👩‍👧 Family profile: a kids profile gets a short menu (Home, Live TV, Guide, Movies, Series) and no Settings or More, on top of the adult-content filter it already had. Put a PIN on the adult profiles so the way back is closed.
+- 🖼️ Channel panel: the programme picture next to its description is now widescreen and seen whole, instead of a tall crop that cut people off.
