@@ -28,3 +28,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🧹 **Hold OK on Continue movies / Continue series / Recent channels cards to remove them**
 - 🗑️ **“Clear favorites” in Favorites (all, Live, Movies or Series — with confirmation)**
 - ✅ **✓ on the poster of a series you have watched to the end**
+- 🪟 **Poster strip: a programme window on the right — logo, title, time, progress bar, synopsis and what comes next**

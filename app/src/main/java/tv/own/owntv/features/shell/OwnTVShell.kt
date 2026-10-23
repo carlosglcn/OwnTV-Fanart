@@ -2031,6 +2031,7 @@ fun OwnTVShell(
                             currentId = previewChannel?.id,
                             title = zapOverlayTitle,
                             loadNow = { liveVm.nowMany(it) },
+                            loadSchedule = { liveVm.scheduleFor(it) },
                             onSelect = { liveVm.ensurePlaying(it); showChannelList = false },
                             onListView = { scope.launch { settingsRepo.setZapPanel(tv.own.owntv.core.settings.ZapViews.next(2, glcnZapViews)) } },
                             onDismiss = { showChannelList = false },

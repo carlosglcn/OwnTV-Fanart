@@ -10,6 +10,15 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.draw.clip
+import tv.own.owntv.ui.stage.stageGlass
+import tv.own.owntv.ui.theme.StageRadii
+import tv.own.owntv.ui.theme.stageAccent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -39,6 +48,7 @@ import androidx.tv.material3.Text
 import tv.own.owntv.R
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.database.entity.EpgProgrammeEntity
+import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.stageText
@@ -55,6 +65,7 @@ fun ZapPosterOverlay(
     currentId: Long?,
     title: String?,
     loadNow: suspend (List<ChannelEntity>) -> Map<Long, EpgProgrammeEntity>,
+    loadSchedule: (suspend (ChannelEntity) -> List<EpgProgrammeEntity>)? = null,
     onSelect: (ChannelEntity) -> Unit,
     onListView: () -> Unit,
     onDismiss: () -> Unit,
@@ -78,6 +89,7 @@ fun ZapPosterOverlay(
     }
     // Opened by holding OK, the same OK is still down — and its repeats and release would land on the
     // focused card and pick it at once, closing the strip. OK counts only from a fresh press.
+    var focusedCh by remember { androidx.compose.runtime.mutableStateOf<ChannelEntity?>(null) }
     var okArmed by remember { androidx.compose.runtime.mutableStateOf(false) }
     val now = remember { System.currentTimeMillis() }
     val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
@@ -118,7 +130,9 @@ fun ZapPosterOverlay(
                     modifier = Modifier.padding(start = 20.mpx),
                 )
             }
-            LazyRow(
+            androidx.compose.runtime.CompositionLocalProvider(
+                tv.own.owntv.features.home.LocalHomeFocusInfo provides { info -> info?.channel?.let { focusedCh = it } },
+            ) { LazyRow(
                 state = listState,
                 horizontalArrangement = Arrangement.spacedBy(20.mpx),
                 contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 10.mpx, bottom = 10.mpx),
@@ -133,6 +147,81 @@ fun ZapPosterOverlay(
                         width = 360.mpx,
                         modifier = if (index == start) Modifier.focusRequester(first) else Modifier,
                     )
+                }
+            } }
+        }
+        // glcn: the focused channel's programme in full, above the strip on the right — the picture
+        // behind stays free on the left.
+        if (loadSchedule != null) ZapPosterInfo(
+            channel = focusedCh,
+            programmes = programmes,
+            loadSchedule = loadSchedule,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.mpx, bottom = 392.mpx),
+        )
+    }
+}
+
+@Composable
+private fun ZapPosterInfo(
+    channel: ChannelEntity?,
+    programmes: Map<Long, EpgProgrammeEntity?>,
+    loadSchedule: suspend (ChannelEntity) -> List<EpgProgrammeEntity>,
+    modifier: Modifier = Modifier,
+) {
+    var rows by remember { mutableStateOf<List<EpgProgrammeEntity>>(emptyList()) }
+    LaunchedEffect(channel?.id) {
+        rows = emptyList()
+        if (channel == null) return@LaunchedEffect
+        kotlinx.coroutines.delay(200) // not a fetch per card while the D-pad is moving
+        rows = runCatching { loadSchedule(channel) }.getOrDefault(emptyList())
+    }
+    val ch = channel ?: return
+    val nowMs = System.currentTimeMillis()
+    val card = programmes[ch.id]
+    val cur = rows.firstOrNull { nowMs in it.startMs until it.stopMs } ?: card ?: return // no guide: nothing
+    val next = rows.filter { it.startMs >= cur.stopMs }.take(3)
+    val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
+    val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
+    val logo = ch.displayLogoUrl?.takeIf { it.isNotBlank() }
+    val accent = stageAccent.accent
+    Column(
+        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true).padding(18.mpx),
+        verticalArrangement = Arrangement.spacedBy(8.mpx),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
+            // No logo: the words alone.
+            if (logo != null) tv.own.owntv.ui.components.ChannelLogoTile(
+                logoUrl = logo,
+                modifier = Modifier.size(72.mpx, 52.mpx),
+                fill = Color.Transparent,
+            ) { }
+            Column(Modifier.weight(1f)) {
+                Text(cur.title, style = stageText(24, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    tv.own.owntv.core.live.ProviderTags.parse(ch.name).name + " · " +
+                        if (remaining in 1..600) stringResource(R.string.content_live_time_remaining, fmt.format(java.util.Date(cur.stopMs)), remaining)
+                        else stringResource(R.string.content_live_time_range, fmt.format(java.util.Date(cur.startMs)), fmt.format(java.util.Date(cur.stopMs))),
+                    style = stageText(16, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        val span = (cur.stopMs - cur.startMs).coerceAtLeast(1L)
+        val f = ((nowMs - cur.startMs).toFloat() / span).coerceIn(0f, 1f)
+        Box(Modifier.fillMaxWidth().height(4.mpx).clip(RoundedCornerShape(2.mpx)).background(StageColors.Ink.copy(alpha = 0.12f))) {
+            Box(Modifier.fillMaxWidth(f).height(4.mpx).background(accent))
+        }
+        (cur.description ?: card?.description)?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = stageText(16, 400), color = StageColors.Dim, maxLines = 4, overflow = TextOverflow.Ellipsis)
+        }
+        if (next.isNotEmpty()) {
+            Text(
+                stringResource(R.string.content_live_next), style = stageText(15, 700), color = accent,
+                modifier = Modifier.padding(top = 4.mpx),
+            )
+            next.forEach { n ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                    Text(fmt.format(java.util.Date(n.startMs)), style = stageText(16, 700), color = StageColors.Muted, maxLines = 1, modifier = Modifier.width(76.mpx))
+                    Text(n.title, style = stageText(16, 500), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 }
             }
         }
