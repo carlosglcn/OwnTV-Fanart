@@ -1608,6 +1608,7 @@ class LiveViewModel(
 
     /** [ensurePlaying] without forgetting the zap press: the tune a CH+/- step opens, timed from that press. */
     private fun startTune(channel: ChannelEntity) {
+        failoverTried.clear()
         zapList.cancelPendingRebuild()
         // A deliberate pick supersedes a CH+/- step still waiting out its delay — otherwise the deferred
         // tune would land half a second later and drag the user off the channel they just chose.
@@ -1761,6 +1762,28 @@ class LiveViewModel(
      * message, nothing to tell the difference between a broken app and a provider without a recording.
      * The Guide has said [EpgMatchSummary.CatchupUnavailable] all along; Live TV now says it too.
      */
+    // glcn: a channel the player has given up on is swapped for the same channel elsewhere in its playlist
+    // (another group, another quality), best first, each tried once; a deliberate tune starts afresh.
+    private val failoverTried = mutableSetOf<Long>()
+    private val _failoverNotice = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val failoverNotice: SharedFlow<String> = _failoverNotice.asSharedFlow()
+
+    init {
+        viewModelScope.launch { player.error.collect { f -> if (f != null) runCatching { tryFailover() } } }
+    }
+
+    private suspend fun tryFailover() {
+        val cur = _previewChannel.value ?: return
+        if (!player.isLiveContent || _catchupActive.value || timeshift.isRewound || externalPlayerOn.value) return
+        failoverTried += cur.id
+        val epgKey = cur.epgChannelId?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "\u0000"
+        val token = tv.own.owntv.core.live.ChannelFailover.searchToken(cur.name) ?: "\u0000"
+        val pool = withContext(Dispatchers.IO) { channelDao.siblingCandidates(cur.sourceId, epgKey, token) }
+        val next = tv.own.owntv.core.live.ChannelFailover.rank(cur, pool).firstOrNull { it.id !in failoverTried } ?: return
+        _failoverNotice.tryEmit(next.name)
+        live.launch { playChannel(next) }
+    }
+
     private val _catchupUnavailable = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val catchupUnavailable: SharedFlow<Unit> = _catchupUnavailable.asSharedFlow()
 

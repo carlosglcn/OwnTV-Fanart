@@ -32,3 +32,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🗂️ **Choose several playlists at once: tick the ones you want in the playlist picker (OK ticks / unticks) — Live, Guide and Home follow**
 - 📋 **Guide: wider channel-name column so names are no longer cut**
 - 🗂️ **Category sheet: the channels of the focused category appear beside it with what is on now (▶ enters, OK tunes, ◀ goes back) — and ◀ ▶ over the playlist chips switches list without OK**
+- 🔁 **Channel failover: if a channel will not play, it switches to the same channel elsewhere in its playlist (other group or quality), best picture first**
+- 🎯 **Live ExoPlayer opens multi-quality channels on the best quality — sharper picture right after a zap**

@@ -2004,6 +2004,11 @@ fun OwnTVShell(
                 LaunchedEffect(liveVm) {
                     liveVm.catchupUnavailable.collect { localSubToast.show(catchupUnavailable) }
                 }
+                // glcn: a channel that failed was swapped for the same one elsewhere in its playlist.
+                val failoverFmt = stringResource(R.string.glcn_failover_toast, "\u0000")
+                LaunchedEffect(liveVm) {
+                    liveVm.failoverNotice.collect { name -> localSubToast.show(failoverFmt.replace("\u0000", name)) }
+                }
                 // Back on a channel whose saved copy was kept: continue from there, or stay live.
                 val timeshiftResumeAt by liveVm.timeshiftResumeAt.collectAsStateWithLifecycle()
                 if (isFull && timeshiftResumeAt != null) {
