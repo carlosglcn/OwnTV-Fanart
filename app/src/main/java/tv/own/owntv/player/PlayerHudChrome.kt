@@ -195,11 +195,17 @@ internal fun LiveChannelHeader(player: PlaybackEngine, chips: List<String>, onBa
             }
             val shown = chips.filterNot { it.contains(':') || it == "MPV" || it == "EXO" }
             if (shown.isNotEmpty()) {
-                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Wraps to a second line when the cell is narrow, so no chip is ever cut ("STERE").
+                @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+                androidx.compose.foundation.layout.FlowRow(
+                    Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     shown.forEach { label ->
                         Text(
                             label,
-                            style = tv.own.owntv.ui.theme.stageText(20, 700),
+                            style = tv.own.owntv.ui.theme.stageText(19, 700),
                             color = hudInk.copy(alpha = 0.85f),
                             fontWeight = FontWeight.SemiBold,
                             // One line each: squeezed, a chip clips instead of stacking its letters.
