@@ -108,7 +108,7 @@ fun LiveEpgCard(
                 style = MaterialTheme.typography.titleMedium,
                 color = hudInk,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             val remaining = ((now.stopMs - nowMs) / 60_000L).toInt()
@@ -134,7 +134,7 @@ fun LiveEpgCard(
                     synopsis,
                     style = MaterialTheme.typography.labelMedium,
                     color = hudInk.copy(alpha = 0.82f),
-                    maxLines = 2,
+                    maxLines = 4,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = if (bare) 3.dp else 6.dp),
                 )
@@ -151,7 +151,7 @@ fun LiveEpgCard(
                     formatTime(entry.startMs) + "  " + entry.title,
                     style = MaterialTheme.typography.labelMedium,
                     color = hudInk.copy(alpha = 0.85f),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
