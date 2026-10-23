@@ -50,7 +50,7 @@ import tv.own.owntv.ui.components.drawStageGlyph
 
 internal object GuideGridDefaults {
     /** The channel column when the guide widths are not customised (48 → 344 of 1920). */
-    const val ChannelColShare = 296f / 1920f
+    const val ChannelColShare = 380f / 1920f
     /** `.gcell` rows — glcn: 74 high (was 56), so the title and its time read from the sofa. */
     val RowHeight = 74.mpx
     val RowGap = 6.mpx

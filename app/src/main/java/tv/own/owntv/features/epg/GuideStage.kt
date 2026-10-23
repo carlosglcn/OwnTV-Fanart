@@ -263,7 +263,7 @@ internal fun GuideChannelLabel(channel: ChannelEntity, name: String, dot: Color?
     val a = stageAccent
     Row(
         modifier.padding(start = 8.mpx),
-        horizontalArrangement = Arrangement.spacedBy(10.mpx),
+        horizontalArrangement = Arrangement.spacedBy(8.mpx),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(7.mpx).background(dot ?: Color.Transparent, RoundedCornerShape(50)))
@@ -273,7 +273,7 @@ internal fun GuideChannelLabel(channel: ChannelEntity, name: String, dot: Color?
             // Always whole: the column fits the longest number in the list; only the name is cut.
             maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(numberWidth),
         )
-        LivePlate(channel.displayLogoUrl, 58.mpx, 40.mpx, radius = 10.mpx)
+        LivePlate(channel.displayLogoUrl, 52.mpx, 38.mpx, radius = 10.mpx)
         Text(name, style = stageText(17, 700), color = if (selected) a.accent else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
     }
 }
