@@ -38,3 +38,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔁 Channel list wraps around: ▲ on the first channel jumps to the last, ▼ on the last to the first.
 - 🎯 Categories: moving ◀▶ across the playlist chips no longer drops the cursor down to Favourites.
 - 🏀 Basketball: Liga ACB and EuroLeague with the full season calendar, results, live quarter and the table. Data is published by a small scheduled job in a separate repository, so it no longer depends on a free feed that was cut.
+- 🔊 ExoPlayer: the sound no longer drops a few seconds in when auto frame rate switches the display.
