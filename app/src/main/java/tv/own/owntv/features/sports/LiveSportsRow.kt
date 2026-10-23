@@ -51,8 +51,9 @@ fun LiveSportsRow(
         ) {
             Text(stringResource(R.string.sports_title), style = stageText(26, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        LazyRow(
-            Modifier.focusRestorer().focusGroup(),
+        // glcn: the Home row rule — back on the first card it rests at the start, not flush against the edge.
+        tv.own.owntv.features.home.HomeLazyRow(
+            modifier = Modifier.focusRestorer().focusGroup(),
             contentPadding = PaddingValues(start = start, end = 64.mpx, top = 6.mpx, bottom = 6.mpx),
             horizontalArrangement = Arrangement.spacedBy(18.mpx),
         ) {
