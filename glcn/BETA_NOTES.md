@@ -44,3 +44,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 👨‍👩‍👧 Family profile: a kids profile gets a short menu (Home, Live TV, Guide, Movies, Series) and no Settings or More, on top of the adult-content filter it already had. Put a PIN on the adult profiles so the way back is closed.
 - 🖼️ Channel panel: the programme picture next to its description is now widescreen and seen whole, instead of a tall crop that cut people off.
 - 📺 Live player: the programme card shows the whole title (two lines) and up to four lines of synopsis instead of cutting them.
+- 🖼️ Live player: the programme picture is loaded as soon as the channel opens and kept, so the info card shows it at once instead of popping it in late.

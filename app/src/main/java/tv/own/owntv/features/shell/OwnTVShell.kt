@@ -399,6 +399,18 @@ fun OwnTVShell(
     val browserRailCounts by liveVm.railCounts.collectAsStateWithLifecycle()
     val previewChannel by liveVm.previewChannel.collectAsStateWithLifecycle()
     val playerRecording by liveVm.playerRecording.collectAsStateWithLifecycle()
+    // glcn: the playing programme's picture is fetched and loaded as soon as the channel opens — the
+    // player's card then has it on screen the first time it is shown, with no late pop-in.
+    run {
+        val artContext = androidx.compose.ui.platform.LocalContext.current
+        LaunchedEffect(previewChannel?.id) {
+            val ch = previewChannel ?: return@LaunchedEffect
+            liveVm.nowNext.map { it?.now?.startMs }.distinctUntilChanged().collect { start ->
+                val url = liveVm.nowArtUrl(ch, start) ?: return@collect
+                coil3.SingletonImageLoader.get(artContext).enqueue(coil3.request.ImageRequest.Builder(artContext).data(url).build())
+            }
+        }
+    }
     val overlayProgrammes by liveVm.nowProgrammes.collectAsStateWithLifecycle()
     val overlayFavoriteIds by liveVm.favoriteIds.collectAsStateWithLifecycle()
     val overlayPlaylistMarks by liveVm.playlistMarks.collectAsStateWithLifecycle()
@@ -1845,8 +1857,8 @@ fun OwnTVShell(
                             val guide by liveVm.zapGuide.collectAsStateWithLifecycle()
                             // glcn: the programme's picture beside now/next — the banner as a TV operator draws it.
                             val zapChannel = previewChannel
-                            val art by androidx.compose.runtime.produceState<String?>(null, zapChannel?.id, guide?.now?.startMs) {
-                                value = zapChannel?.let { runCatching { liveVm.nowFull(it).first?.imageUrl }.getOrNull() }
+                            val art by androidx.compose.runtime.produceState<String?>(liveVm.peekArt(zapChannel?.id, guide?.now?.startMs), zapChannel?.id, guide?.now?.startMs) {
+                                value = zapChannel?.let { liveVm.nowArtUrl(it, guide?.now?.startMs) }
                             }
                             androidx.compose.foundation.layout.Row(
                                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
@@ -1887,8 +1899,8 @@ fun OwnTVShell(
                                 if (watching == null) {
                                     // glcn: the programme's picture beside it, as on the channel-change banner.
                                     val artChannel = previewChannel
-                                    val art by androidx.compose.runtime.produceState<String?>(null, artChannel?.id, epg?.now?.startMs) {
-                                        value = artChannel?.let { runCatching { liveVm.nowFull(it).first?.imageUrl }.getOrNull() }
+                                    val art by androidx.compose.runtime.produceState<String?>(liveVm.peekArt(artChannel?.id, epg?.now?.startMs), artChannel?.id, epg?.now?.startMs) {
+                                        value = artChannel?.let { liveVm.nowArtUrl(it, epg?.now?.startMs) }
                                     }
                                     tv.own.owntv.features.shell.components.LiveEpgCardWithArt(epg = epg, art = art)
                                 } else {

@@ -184,6 +184,23 @@ class LiveViewModel(
     suspend fun nowFull(channel: ChannelEntity): Pair<tv.own.owntv.core.database.entity.EpgProgrammeEntity?, tv.own.owntv.core.database.entity.EpgProgrammeEntity?> =
         nowArt.nowAndNext(channel)
 
+    // glcn: the picture of the programme on air, per channel and programme start — so the player's card
+    // and the zap banner have it the moment they open, instead of reading it again and popping it in late.
+    private val artNow = HashMap<Long, Pair<Long, String?>>()
+
+    fun peekArt(channelId: Long?, startMs: Long?): String? =
+        if (channelId == null || startMs == null) null else artNow[channelId]?.takeIf { it.first == startMs }?.second
+
+    suspend fun nowArtUrl(channel: ChannelEntity, startMs: Long?): String? {
+        peekArt(channel.id, startMs)?.let { return it }
+        val url = runCatching { nowFull(channel).first?.imageUrl }.getOrNull()?.takeIf { it.isNotBlank() }
+        if (startMs != null && url != null) {
+            if (artNow.size > 60) artNow.clear()
+            artNow[channel.id] = startMs to url
+        }
+        return url
+    }
+
     /** glcn: what [channels] show now, with their pictures — the poster view of the zapping list. */
     suspend fun nowMany(channels: List<ChannelEntity>): Map<Long, tv.own.owntv.core.database.entity.EpgProgrammeEntity> =
         nowArt.many(channels)
