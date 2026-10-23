@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -185,6 +186,10 @@ private fun CategoryChannelsColumn(
     focus: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val lastFocus = remember { FocusRequester() }
+    var focusedRow by remember { mutableStateOf(0) }
+    val wrapScope = androidx.compose.runtime.rememberCoroutineScope()
     androidx.compose.foundation.layout.Column(
         modifier
             .stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true)
@@ -199,14 +204,31 @@ private fun CategoryChannelsColumn(
             modifier = Modifier.padding(start = 12.mpx, end = 12.mpx, bottom = 12.mpx),
         )
         androidx.compose.foundation.lazy.LazyColumn(
-            Modifier.fillMaxHeight().focusGroup(),
+            Modifier.fillMaxHeight().focusGroup()
+                // glcn: wrap around, as the channel list: ▲ on the first goes to the last, ▼ on the last to the first.
+                .onPreviewKeyEvent { e ->
+                    if (e.type != KeyEventType.KeyDown || channels.size < 2) return@onPreviewKeyEvent false
+                    val up = e.key == androidx.compose.ui.input.key.Key.DirectionUp && focusedRow == 0
+                    val down = e.key == androidx.compose.ui.input.key.Key.DirectionDown && focusedRow == channels.lastIndex
+                    if (!up && !down) return@onPreviewKeyEvent false
+                    wrapScope.launch {
+                        runCatching { listState.scrollToItem(if (up) channels.lastIndex else 0) }
+                        withFrameNanos { }
+                        runCatching { (if (up) lastFocus else focus).requestFocus() }
+                    }
+                    true
+                },
+            state = listState,
             contentPadding = androidx.compose.foundation.layout.PaddingValues(4.mpx),
         ) {
             itemsIndexed(channels, key = { _, c -> c.id }) { i, ch ->
                 tv.own.owntv.ui.stage.StageSurface(
                     onClick = { onTune(ch) },
                     radius = 14.mpx,
-                    modifier = (if (i == 0) Modifier.focusRequester(focus) else Modifier).fillMaxWidth(),
+                    modifier = (if (i == 0) Modifier.focusRequester(focus) else Modifier)
+                        .then(if (i == channels.lastIndex) Modifier.focusRequester(lastFocus) else Modifier)
+                        .onFocusChanged { if (it.hasFocus) focusedRow = i }
+                        .fillMaxWidth(),
                 ) { focused ->
                     androidx.compose.foundation.layout.Row(
                         Modifier.padding(horizontal = 12.mpx, vertical = 9.mpx),
