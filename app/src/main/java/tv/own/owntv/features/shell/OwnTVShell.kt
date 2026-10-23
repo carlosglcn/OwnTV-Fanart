@@ -2022,6 +2022,9 @@ fun OwnTVShell(
                             // The list the player zaps in: a built-in rail or custom category when it came from one.
                             currentKey = zapListKey ?: previewChannel?.categoryId?.let { tv.own.owntv.core.live.LiveKey.Folder(it) },
                             onSelect = { key -> liveVm.loadChannelsForCategory(key) },
+                            peekChannels = { liveVm.peekCategoryChannels(it) },
+                            loadNow = { liveVm.nowMany(it) },
+                            onTune = { liveVm.ensurePlaying(it); liveVm.hideCategoryBrowser(); showChannelList = false },
                             onDismiss = { liveVm.hideCategoryBrowser() },
                             modifier = Modifier.fillMaxSize(),
                         )

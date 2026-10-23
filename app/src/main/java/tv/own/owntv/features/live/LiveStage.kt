@@ -656,6 +656,14 @@ internal fun LiveCategories(
                     items(playlistRows.size, key = { playlistRows[it].first }) { row ->
                         val (id, name) = playlistRows[row]
                         val open = id == activePlaylist
+                        // glcn: the lists listed here are the active ones — resting on one shows it, no OK needed.
+                        var chipFocused by remember { mutableStateOf(false) }
+                        LaunchedEffect(chipFocused, open) {
+                            if (chipFocused && !open) {
+                                kotlinx.coroutines.delay(350)
+                                switcher?.onSelect?.invoke(id)
+                            }
+                        }
                         StageSurface(
                             onClick = { if (!open) switcher?.onSelect?.invoke(id) },
                             onLongClick = if (id > 0L && !open) ({
@@ -663,7 +671,7 @@ internal fun LiveCategories(
                                 android.widget.Toast.makeText(appCtx, R.string.glcn_category_hidden_toast, android.widget.Toast.LENGTH_SHORT).show()
                             }) else null,
                             radius = 22.mpx,
-                            modifier = Modifier.height(46.mpx),
+                            modifier = Modifier.height(46.mpx).onFocusChanged { chipFocused = it.hasFocus },
                         ) { focused ->
                             Row(Modifier.padding(horizontal = 18.mpx).height(46.mpx), verticalAlignment = Alignment.CenterVertically) {
                                 Text(

@@ -31,3 +31,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪟 **Poster strip: a programme window on the right — logo, title, time, progress bar, synopsis and what comes next**
 - 🗂️ **Choose several playlists at once: tick the ones you want in the playlist picker (OK ticks / unticks) — Live, Guide and Home follow**
 - 📋 **Guide: wider channel-name column so names are no longer cut**
+- 🗂️ **Category sheet: the channels of the focused category appear beside it with what is on now (▶ enters, OK tunes, ◀ goes back) — and ◀ ▶ over the playlist chips switches list without OK**

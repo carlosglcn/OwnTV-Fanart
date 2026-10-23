@@ -1159,6 +1159,13 @@ class LiveViewModel(
     fun showCategories() { _showCategoryBrowser.value = true }
     fun hideCategoryBrowser() { _showCategoryBrowser.value = false }
 
+    /** glcn: the channels a category of the browser holds, for the column beside it — a peek, nothing is armed. */
+    suspend fun peekCategoryChannels(key: LiveKey): List<ChannelEntity> = when (key) {
+        is LiveKey.Folder -> channelsInCategory(key.id)
+        is LiveKey.Custom -> channelsInCustom(key)
+        else -> channelsInRail(key)
+    }.take(PEEK_LIMIT)
+
     /** Load channels for a category picked in the browser into the zap list. */
     fun loadChannelsForCategory(key: LiveKey) {
         val close = { _showCategoryBrowser.value = false }
@@ -2263,6 +2270,7 @@ class LiveViewModel(
         // In-player channel lists: one category is normally far smaller, but cap the uncategorized
         // → All Channels fallback so a huge playlist can't be pulled into memory on every tune.
         const val ZAP_LIST_LIMIT = 2_000
+        const val PEEK_LIMIT = 150
 
         // The CH+/- timing constants (ZAP_TUNE_DELAY_MS, ZAP_ISOLATED_PRESS_MS) live in ZapTuneDelay.kt.
         const val HISTORY_LIST_LIMIT = 30

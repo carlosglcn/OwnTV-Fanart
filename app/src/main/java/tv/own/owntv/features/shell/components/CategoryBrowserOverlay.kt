@@ -1,7 +1,14 @@
 package tv.own.owntv.features.shell.components
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.focus.focusRequester
+import tv.own.owntv.core.epg.displayLogoUrl
+import tv.own.owntv.ui.stage.stageGlass
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -55,6 +62,10 @@ fun CategoryBrowserOverlay(
     onSelect: (LiveKey) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: the channels of the focused category, shown beside the sheet; null keeps the sheet alone. */
+    peekChannels: (suspend (LiveKey) -> List<tv.own.owntv.core.database.entity.ChannelEntity>)? = null,
+    loadNow: (suspend (List<tv.own.owntv.core.database.entity.ChannelEntity>) -> Map<Long, tv.own.owntv.core.database.entity.EpgProgrammeEntity>)? = null,
+    onTune: (tv.own.owntv.core.database.entity.ChannelEntity) -> Unit = {},
 ) {
     val layoutDirection = LocalLayoutDirection.current
     val (entries, groupsHeading) = liveCategoryEntries(railItems, railCounts)
@@ -83,6 +94,20 @@ fun CategoryBrowserOverlay(
 
     BackHandler { onDismiss() }
 
+    // glcn: what the focused category holds, after the D-pad rests a moment.
+    val channelFocus = remember { FocusRequester() }
+    var peeked by remember { mutableStateOf<List<tv.own.owntv.core.database.entity.ChannelEntity>>(emptyList()) }
+    var peekedNow by remember { mutableStateOf<Map<Long, tv.own.owntv.core.database.entity.EpgProgrammeEntity>>(emptyMap()) }
+    val focusedKey = entries.getOrNull(focusedIndex)?.item?.key
+    LaunchedEffect(focusedKey) {
+        if (peekChannels == null || focusedKey == null) return@LaunchedEffect
+        kotlinx.coroutines.delay(300)
+        val list = runCatching { peekChannels(focusedKey) }.getOrDefault(emptyList())
+        peeked = list
+        peekedNow = emptyMap()
+        if (loadNow != null && list.isNotEmpty()) peekedNow = runCatching { loadNow(list.take(40)) }.getOrDefault(emptyMap())
+    }
+
     val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
     Box(
         modifier = modifier
@@ -98,7 +123,7 @@ fun CategoryBrowserOverlay(
             listState = listState,
             onSelect = { onSelect(entries[it].item.key) },
             onLongSelect = {},
-            onNavigateRight = {},
+            onNavigateRight = { if (peeked.isNotEmpty()) runCatching { channelFocus.requestFocus() } },
             focusRequester = listFocus,
             focusRowIndex = focusRow,
             onRowFocused = { focusRow = null },
@@ -126,6 +151,85 @@ fun CategoryBrowserOverlay(
                     onJumpToIndex = { focusRow = it },
                 ),
         )
+        if (peekChannels != null && peeked.isNotEmpty()) CategoryChannelsColumn(
+            title = entries.getOrNull(focusedIndex)?.label.orEmpty(),
+            channels = peeked,
+            now = peekedNow,
+            onTune = onTune,
+            onBack = { runCatching { listFocus.requestFocus() } },
+            focus = channelFocus,
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = (20 + 440 + 12).mpx, top = 22.mpx, bottom = 22.mpx)
+                .width(500.mpx)
+                .fillMaxHeight(),
+        )
+    }
+}
+
+/** glcn: the focused category's channels with what is on now; OK tunes, ◀ goes back to the categories. */
+@Composable
+private fun CategoryChannelsColumn(
+    title: String,
+    channels: List<tv.own.owntv.core.database.entity.ChannelEntity>,
+    now: Map<Long, tv.own.owntv.core.database.entity.EpgProgrammeEntity>,
+    onTune: (tv.own.owntv.core.database.entity.ChannelEntity) -> Unit,
+    onBack: () -> Unit,
+    focus: FocusRequester,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.foundation.layout.Column(
+        modifier
+            .stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true)
+            .padding(horizontal = 16.mpx, vertical = 22.mpx)
+            .onPreviewKeyEvent { e ->
+                if (e.type == KeyEventType.KeyDown && e.key == androidx.compose.ui.input.key.Key.DirectionLeft) { onBack(); true } else false
+            },
+    ) {
+        androidx.tv.material3.Text(
+            title, style = tv.own.owntv.ui.theme.stageText(22, 800), color = tv.own.owntv.ui.theme.StageColors.Text,
+            maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 12.mpx, end = 12.mpx, bottom = 12.mpx),
+        )
+        androidx.compose.foundation.lazy.LazyColumn(
+            Modifier.fillMaxHeight().focusGroup(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(4.mpx),
+        ) {
+            itemsIndexed(channels, key = { _, c -> c.id }) { i, ch ->
+                tv.own.owntv.ui.stage.StageSurface(
+                    onClick = { onTune(ch) },
+                    radius = 14.mpx,
+                    modifier = (if (i == 0) Modifier.focusRequester(focus) else Modifier).fillMaxWidth(),
+                ) { focused ->
+                    androidx.compose.foundation.layout.Row(
+                        Modifier.padding(horizontal = 12.mpx, vertical = 9.mpx),
+                        horizontalArrangement = Arrangement.spacedBy(12.mpx),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        tv.own.owntv.ui.components.ChannelLogoTile(
+                            logoUrl = ch.displayLogoUrl,
+                            modifier = Modifier.width(64.mpx).height(46.mpx),
+                            fill = Color.Transparent,
+                        ) { }
+                        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+                            androidx.tv.material3.Text(
+                                tv.own.owntv.core.live.ProviderTags.parse(ch.name).name,
+                                style = tv.own.owntv.ui.theme.stageText(19, 700),
+                                color = if (focused) tv.own.owntv.ui.theme.stageAccent.onAccent else tv.own.owntv.ui.theme.StageColors.Text,
+                                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            )
+                            now[ch.id]?.title?.let {
+                                androidx.tv.material3.Text(
+                                    it, style = tv.own.owntv.ui.theme.stageText(16, 400),
+                                    color = if (focused) tv.own.owntv.ui.theme.stageAccent.onAccent.copy(alpha = 0.8f) else tv.own.owntv.ui.theme.StageColors.Muted,
+                                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
