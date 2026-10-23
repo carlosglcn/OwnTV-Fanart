@@ -34,3 +34,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🗂️ **Category sheet: the channels of the focused category appear beside it with what is on now (▶ enters, OK tunes, ◀ goes back) — and ◀ ▶ over the playlist chips switches list without OK**
 - 🔁 **Channel failover: if a channel will not play, it switches to the same channel elsewhere in its playlist (other group or quality), best picture first**
 - 🎯 **Live ExoPlayer opens multi-quality channels on the best quality — sharper picture right after a zap**
+- 🏀 **ACB: the month calendar reads the whole season list from the feed (not only the next and last 15 games)**
