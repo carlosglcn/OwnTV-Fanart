@@ -162,10 +162,20 @@ class LiveViewModel(
         guideReader.slice(channels, custom.value, epgOffset.value, from, to)
 
     /** glcn: what [channel] shows from now over the next hours — the zapping list's schedule column. */
+    // Kept five minutes, so a channel the list already prefetched (or was on a moment ago) shows at once.
+    private val scheduleCache = object : LinkedHashMap<Long, Pair<Long, List<tv.own.owntv.core.database.entity.EpgProgrammeEntity>>>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, Pair<Long, List<tv.own.owntv.core.database.entity.EpgProgrammeEntity>>>?) = size > 80
+    }
+
     suspend fun scheduleFor(channel: ChannelEntity): List<tv.own.owntv.core.database.entity.EpgProgrammeEntity> {
         val now = System.currentTimeMillis()
-        return guideReader.slice(listOf(channel), custom.value, epgOffset.value, now, now + 14 * 3_600_000L)[channel.id]
+        synchronized(scheduleCache) { scheduleCache[channel.id] }?.takeIf { now - it.first < 5 * 60_000L }?.let { (_, rows) ->
+            return rows.filter { it.stopMs > now }
+        }
+        val rows = guideReader.slice(listOf(channel), custom.value, epgOffset.value, now, now + 14 * 3_600_000L)[channel.id]
             .orEmpty().filter { it.stopMs > now }.sortedBy { it.startMs }.take(12)
+        synchronized(scheduleCache) { scheduleCache[channel.id] = now to rows }
+        return rows
     }
 
     /** glcn: the programme on air now on [channel] (picture and synopsis) and the one after it — the

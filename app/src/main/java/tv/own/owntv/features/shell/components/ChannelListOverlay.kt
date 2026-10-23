@@ -297,6 +297,15 @@ fun ChannelListOverlay(
             )
         }
         if (loadNow != null) NeighbourArtPrefetch(channels, focusedIndex, loadNow)
+        // glcn: the schedules of the channels around the cursor are read ahead, so the column beside the list is not late.
+        if (loadSchedule != null) {
+            LaunchedEffect(focusedIndex, channels.size) {
+                kotlinx.coroutines.delay(250)
+                for (d in buildList { for (k in 1..8) { add(k); add(-k) } }) {
+                    channels.getOrNull(focusedIndex + d)?.let { runCatching { loadSchedule(it) } }
+                }
+            }
+        }
         if (unified && loadSchedule != null) {
             ZapSchedulePanel(
                 channel = channels.getOrNull(focusedIndex),
@@ -429,7 +438,7 @@ private fun ZapSchedulePanel(
     var rows by remember { mutableStateOf<List<EpgProgrammeEntity>>(emptyList()) }
     LaunchedEffect(channel?.id) {
         if (channel == null) { rows = emptyList(); return@LaunchedEffect }
-        kotlinx.coroutines.delay(180)
+        kotlinx.coroutines.delay(90)
         rows = runCatching { loadSchedule(channel) }.getOrDefault(emptyList())
     }
     val ch = channel ?: return
