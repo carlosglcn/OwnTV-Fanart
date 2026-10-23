@@ -314,6 +314,17 @@ fun PlayerHud(
     var engineMsg by remember { mutableStateOf<String?>(null) }
     var engineFlash by remember { mutableIntStateOf(0) }
     LaunchedEffect(engineFlash) { if (engineFlash > 0) { delay(1800); engineMsg = null } }
+    // A channel juddering on ExoPlayer: say once that the other engine may play it smoothly. Longer than
+    // the switch confirmation — this one has to be read.
+    val smoothnessHint by player.smoothnessHint.collectAsStateWithLifecycle()
+    val smoothnessHintText = stringResource(R.string.player_smoothness_hint)
+    LaunchedEffect(smoothnessHint) {
+        if (smoothnessHint) {
+            engineMsg = smoothnessHintText
+            delay(6_000)
+            if (engineMsg == smoothnessHintText) engineMsg = null
+        }
+    }
     // Wrap the engine toggles so a click also surfaces the toast naming the engine we're switching TO.
     val toggleCompat: (() -> Unit)? = onToggleCompatMode?.let { cb -> {
         engineMsg = if (compatMode == true) switchedToExo else switchedToMpv; engineFlash++; cb()

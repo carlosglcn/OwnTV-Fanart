@@ -15,7 +15,7 @@ import tv.own.owntv.core.settings.SettingsRepository
 
 /**
  * Profile creation/switching and the launch gate's data. Shared by the "Who's watching?"
- * gate and the Settings → Profiles management screen.
+ * gate and the Settings › Profile page.
  */
 class ProfilesViewModel(
     private val profileDao: ProfileDao,

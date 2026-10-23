@@ -577,7 +577,7 @@ fun LiveScreen(
         }
     }
 
-    // Manual panel widths (Settings → Panel Width Adjustment), mapped onto Stage: Category = the sheet
+    // Manual panel widths (Settings → Layout → Panel widths), mapped onto Stage: Category = the sheet
     // (Stage) or the column (Separate), List and Preview split the rest; Preview 0% = full-width list.
     val panelShares = rememberPanelShares(PanelSection.LIVE, settingsVm)
     // The Stage layout has its own set: the sheet on its own scale, list + preview = 100.

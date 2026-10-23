@@ -205,7 +205,7 @@ fun SettingsScreen(
     // Background-image ingest copies a multi-megabyte file; it runs here, off the main thread.
     val ingestScope = rememberCoroutineScope()
 
-    // Batch 4 · Settings search + quick toggles. Empty query = normal grouped list; a non-blank
+    // Settings search + quick toggles. Empty query = normal grouped list; a non-blank
     // query swaps the list for flat results that carry their group context ("Playback › HDR").
     var searchQuery by remember { mutableStateOf("") }
     // Search opened (from More, or a full page's search): the plain search page, even while the query
@@ -293,7 +293,7 @@ fun SettingsScreen(
     val livePreview by settingsVm.livePreviewEnabled.collectAsStateWithLifecycle()
     val livePreviewPanelActive by settingsVm.livePreviewPanelActive.collectAsStateWithLifecycle()
     val previewAudio by settingsVm.livePreviewAudio.collectAsStateWithLifecycle()
-    val hdr by settingsVm.hdrEnabled.collectAsStateWithLifecycle()
+    val hdr by settingsVm.preferSdr.collectAsStateWithLifecycle()
     val autoFrameRate by settingsVm.autoFrameRate.collectAsStateWithLifecycle()
     val surroundMode by settingsVm.surroundMode.collectAsStateWithLifecycle()
     val autoPlayNext by settingsVm.autoPlayNext.collectAsStateWithLifecycle()
@@ -404,7 +404,8 @@ fun SettingsScreen(
         val ref = tv.own.owntv.features.settings.VIDEO_QUICK_ROWS.first { it.key == key }
         deepReturnKey = if (fromQuick) key else null
         videoRowKey = key
-        searchQuery = ""
+        // Leave search too: an empty query while still searching draws no page at all.
+        searchQuery = ""; searchMode = false
         selectedGroup = SettingsGroup.of(tv.own.owntv.features.settings.videoGroupOf(ref.section)).ordinal
     }
     // Back from a page reached through a Quick pin returns to that pin on Quick.
@@ -494,10 +495,10 @@ fun SettingsScreen(
         ),
         RootRow(
             "quick_hdr", TileTone.SECONDARY, OwnTVIcon.VIDEO,
-            title = stringResource(R.string.settings_quick_hdr),
+            title = stringResource(R.string.settings_quick_prefer_sdr),
             chip = stringResource(if (hdr) R.string.common_on else R.string.common_off),
             chipTone = if (hdr) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { settingsVm.setHdrEnabled(!hdr) },
+            onClick = { settingsVm.setPreferSdr(!hdr) },
         ),
         RootRow(
             "quick_autoplay", TileTone.SECONDARY, OwnTVIcon.AUTOPLAY_NEXT,
@@ -1025,9 +1026,10 @@ fun SettingsScreen(
     // Quick is the one group whose contents are not positional: it is whatever the user pinned, in the
     // order they pinned it. Its rows are still defined above like every other row, so a pinned row and
     // its home-group twin are the same object and stay in step automatically.
-    // Rows that live inside Video player settings can be pinned too, and they have no twin on the root
-    // to borrow from — Playback must not list them a second time. Quick materialises those from the
-    // catalogue next to the real rows, and each one reopens that screen on the row it came from.
+    // Rows of the player groups (Player, Picture, Sound & subtitles, Live TV, Watching & recording, and
+    // App's Diagnostics) can be pinned too, and they are not root rows, so there is no twin to borrow
+    // from. Quick materialises those from the catalogue next to the real rows, and each one reopens its
+    // group on the row it came from.
     val videoDeepRows: Map<String, RootRow> = tv.own.owntv.features.settings.VIDEO_QUICK_ROWS
         .filter { it.key in quickPinned }
         .associate { ref ->
@@ -1156,21 +1158,19 @@ fun SettingsScreen(
         }
     }
 
-        // Batch 4 · search results — flat, group-context-prefixed rows ("Playback › HDR").
+        // Search results — flat, group-context-prefixed rows ("Appearance › Theme").
         // Dialog-opening entries return focus to the search field on close (their normal row
         // isn't composed while searching). Toggle entries keep the results visible so the chip
         // updates live.
         //
-        // Settings that live one level deeper name that screen too ("Playback › Video player ›
-        // HDR"), because the group alone would send the user to a list the setting is no longer
-        // on. Built from the same format string the row itself uses, so the separator and its
-        // spacing stay translated rather than hard-coded here. It also lands in the search
-        // haystack, so typing "video player" finds everything on that screen.
+        // Settings under a sub-heading name it too ("Sound & subtitles › Languages & subtitles"),
+        // built from the same format string the row itself uses, so the separator and its spacing
+        // stay translated rather than hard-coded here.
     val searchResults: List<SettingsSearchEntry> = if (searchQuery.isBlank()) emptyList() else {
         val entries = listOfNotNull(
             SettingsSearchEntry(stringResource(R.string.settings_app_group), stringResource(R.string.settings_language), stringResource(R.string.settings_search_keywords_language), OwnTVIcon.LANGUAGE, TileTone.PRIMARY,
                 chip = languageChip, chipTone = TileTone.PRIMARY) { open(SettingsTab.LANGUAGE) },
-            SettingsSearchEntry(stringResource(R.string.settings_group_profile), stringResource(R.string.profiles_title), stringResource(R.string.settings_search_keywords_profiles), OwnTVIcon.PERSON, TileTone.SECONDARY) { searchQuery = ""; selectedGroup = SettingsGroup.PROFILE.ordinal },
+            SettingsSearchEntry(stringResource(R.string.settings_group_profile), stringResource(R.string.profiles_title), stringResource(R.string.settings_search_keywords_profiles), OwnTVIcon.PERSON, TileTone.SECONDARY) { searchQuery = ""; searchMode = false; selectedGroup = SettingsGroup.PROFILE.ordinal },
             SettingsSearchEntry(stringResource(R.string.settings_group_sources), stringResource(R.string.settings_playlists), stringResource(R.string.settings_search_keywords_playlists), OwnTVIcon.PLAYLIST, TileTone.PRIMARY) { open(SettingsTab.SOURCES) },
             SettingsSearchEntry(stringResource(R.string.settings_group_sources), stringResource(R.string.settings_epg_sources), stringResource(R.string.settings_search_keywords_epg), OwnTVIcon.EPG, TileTone.PRIMARY) { open(SettingsTab.EPG) },
             SettingsSearchEntry(stringResource(R.string.settings_group_sources), stringResource(R.string.content_epg_time_offset), stringResource(R.string.settings_search_keywords_epg_offset), OwnTVIcon.EPG, TileTone.SECONDARY,
@@ -1240,8 +1240,8 @@ fun SettingsScreen(
             SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_channel_numbers"), stringResource(R.string.settings_quick_channel_numbers), stringResource(R.string.settings_search_keywords_channel_numbers), OwnTVIcon.LIVE_TV, TileTone.PRIMARY,
                 chip = if (channelNumbers) stringResource(R.string.common_on) else stringResource(R.string.common_off), chipTone = if (channelNumbers) TileTone.PRIMARY else TileTone.SECONDARY, showChevron = false) { settingsVm.setDirectTune(!channelNumbers) },
             SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_mini"), stringResource(R.string.settings_mini_player_root), stringResource(R.string.settings_search_keywords_mini), OwnTVIcon.PIP, TileTone.TERTIARY) { openMiniPlayer = true; jumpVideo("vp_mini", false) },
-            SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_hdr"), stringResource(R.string.settings_quick_hdr), stringResource(R.string.settings_search_keywords_hdr), OwnTVIcon.VIDEO, TileTone.PRIMARY,
-                chip = if (hdr) stringResource(R.string.common_on) else stringResource(R.string.common_off), chipTone = if (hdr) TileTone.PRIMARY else TileTone.SECONDARY, showChevron = false) { settingsVm.setHdrEnabled(!hdr) },
+            SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_hdr"), stringResource(R.string.settings_quick_prefer_sdr), stringResource(R.string.settings_search_keywords_prefer_sdr), OwnTVIcon.VIDEO, TileTone.PRIMARY,
+                chip = if (hdr) stringResource(R.string.common_on) else stringResource(R.string.common_off), chipTone = if (hdr) TileTone.PRIMARY else TileTone.SECONDARY, showChevron = false) { settingsVm.setPreferSdr(!hdr) },
             SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_afr"), stringResource(R.string.settings_auto_frame_rate), stringResource(R.string.settings_search_keywords_afr), OwnTVIcon.VIDEO, TileTone.PRIMARY,
                 chip = if (autoFrameRate) stringResource(R.string.common_on) else stringResource(R.string.common_off), chipTone = if (autoFrameRate) TileTone.PRIMARY else TileTone.SECONDARY, showChevron = false) { toggleAutoFrameRate(searchFieldFocus) },
             SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_surround"), stringResource(R.string.settings_surround_sound), stringResource(R.string.settings_search_keywords_surround), OwnTVIcon.AUDIO, TileTone.SECONDARY,
@@ -1259,7 +1259,7 @@ fun SettingsScreen(
                     else pluralStringResource(R.plurals.settings_live_preroll_overrides, catchupOverrides, catchupOverrides),
                 chipTone = if (catchupOverrides > 0) TileTone.PRIMARY else TileTone.SECONDARY) { saveScroll(); dialogReturn = searchFieldFocus; showCatchupSources = true } else null,
             // Four screens that had no entry at all, so nothing on them could be found by name.
-            SettingsSearchEntry(stringResource(R.string.settings_group_watching_recording), stringResource(R.string.recording_settings_group), stringResource(R.string.settings_search_keywords_recording), OwnTVIcon.LIVE_TV, TileTone.TERTIARY) { searchQuery = ""; selectedGroup = SettingsGroup.WATCHING.ordinal },
+            SettingsSearchEntry(stringResource(R.string.settings_group_watching_recording), stringResource(R.string.recording_settings_group), stringResource(R.string.settings_search_keywords_recording), OwnTVIcon.LIVE_TV, TileTone.TERTIARY) { searchQuery = ""; searchMode = false; selectedGroup = SettingsGroup.WATCHING.ordinal },
             SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_open_subtitles), stringResource(R.string.settings_search_keywords_subtitle_appearance), OwnTVIcon.SUBTITLE, TileTone.PRIMARY) { open(SettingsTab.OPEN_SUBTITLES) },
             SettingsSearchEntry(stringResource(R.string.settings_group_appearance), stringResource(R.string.settings_glass_bg_title), stringResource(R.string.settings_search_keywords_glass), OwnTVIcon.SPARKLE, TileTone.PRIMARY,
                 chip = glassBackgroundSummary(settingsVm.backgroundConfig.collectAsStateWithLifecycle().value, glassConfig), chipTone = if (glassOn) TileTone.PRIMARY else TileTone.SECONDARY) { open(SettingsTab.GLASS_EFFECT) },
@@ -1287,7 +1287,7 @@ fun SettingsScreen(
             "vp_live_preview", "vp_preview_audio", "vp_channel_numbers", "vp_mini", "vp_hdr", "vp_afr",
             "vp_surround", "vp_autoplay", "vp_sub_style", "vp_live_latency", "vp_preroll", "vp_logging",
         )
-        // …and every OTHER Video player row, taken straight from the catalogue that screen already draws
+        // …and every OTHER player-group row, taken straight from the catalogue those groups already draw
         // from. Twenty-four settings had no entry of any kind — Multiview, the engine pickers, the seek
         // and volume steps, the language preferences, the per-playlist overrides — so searching for them
         // by name found nothing, on a screen whose own header offers to search "every setting". Deriving
@@ -1326,7 +1326,7 @@ fun SettingsScreen(
         val subStyleRef = tv.own.owntv.features.settings.VIDEO_QUICK_ROWS.first { it.key == "vp_sub_style" }
         val screenRowEntries =
             rowsOf(stringResource(R.string.settings_breadcrumb, stringResource(R.string.settings_group_watching_recording), stringResource(R.string.recording_settings_group)),
-                tv.own.owntv.features.settings.RECORDING_SEARCH_ROWS, R.string.settings_search_keywords_recording, OwnTVIcon.LIVE_TV) { searchQuery = ""; selectedGroup = SettingsGroup.WATCHING.ordinal } +
+                tv.own.owntv.features.settings.RECORDING_SEARCH_ROWS, R.string.settings_search_keywords_recording, OwnTVIcon.LIVE_TV) { searchQuery = ""; searchMode = false; selectedGroup = SettingsGroup.WATCHING.ordinal } +
             rowsOf(stringResource(R.string.settings_breadcrumb, tv.own.owntv.features.settings.videoRowPath("vp_sub_style"), stringResource(R.string.settings_subtitle_appearance)),
                 tv.own.owntv.features.settings.SUBTITLE_APPEARANCE_SEARCH_ROWS, R.string.settings_search_keywords_subtitle_appearance, OwnTVIcon.SUBTITLE, jumpTo(subStyleRef)) +
             rowsOf(stringResource(R.string.settings_breadcrumb, stringResource(R.string.settings_breadcrumb, stringResource(R.string.settings_group_app), stringResource(R.string.settings_group_network)), stringResource(R.string.common_proxy)),
@@ -2792,7 +2792,7 @@ private data class RootRow(
      * Honest chevrons: the arrow promises another screen, so only the rows that open one carry it.
      * Derived from the key rather than declared per row — [tabRowKey] is used by exactly the rows that
      * push a [SettingsTab], so a new sub-screen row gets its chevron with no extra flag to forget.
-     * Rows pinned to Quick from inside Video player settings are the exception and say so themselves
+     * Rows pinned to Quick from the player groups are the exception and say so themselves
      * in [chevron]: the ones that toggle in place must not promise a screen they never open.
      */
     val showChevron: Boolean get() = chevron ?: key.startsWith("tab_")
@@ -2923,7 +2923,7 @@ internal fun SettingsRowMenu(
     }
 }
 
-/** Batch 4 · one searchable settings row: its group breadcrumb, title, extra keywords, and action. */
+/** One searchable settings row: its group breadcrumb, title, extra keywords, and action. */
 private class SettingsSearchEntry(
     val group: String,
     val title: String,

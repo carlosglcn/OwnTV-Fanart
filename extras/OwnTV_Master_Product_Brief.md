@@ -421,8 +421,8 @@ their group.
 | **Appearance** | Theme, Accent color, Focus highlight, Glass & background, Ambient Glow (Dark + Glass off only), Fonts & text size, Popup size, UI zoom, Animations, Date, time & weather — with a live Home preview |
 | **Layout** | Navigation, Live TV layout, Live TV opens in, Movies & Series layout, Panel widths, Guide column widths, Browsing & lists, Home screen, Long-press menus, Remote shortcuts |
 | **Content & metadata** | Customize categories & items, Metadata (TMDB), OpenSubtitles |
-| **Player** | Live TV / Movies & Series player (+ per playlist), saved choices, learned stream fixes, External player · Film buffer, Network timeout, Reconnect attempts |
-| **Picture** | Hardware decoding, HDR (mpv only), Maximum video quality, Tunneled playback, Default zoom, saved zoom · Auto frame rate, Pause during the switch, Match resolution |
+| **Player** | Live TV / Movies & Series player (+ per playlist), saved choices, External player · Film buffer, Network timeout, Reconnect attempts |
+| **Picture** | Hardware decoding, Prefer SDR, Maximum video quality, Tunneled playback, Default zoom, saved zoom · Auto frame rate, Pause during the switch, Match resolution |
 | **Sound & subtitles** | Default volume, Surround, Dolby/DTS passthrough, Night mode, Volume leveling, Audio sync (+ saved) · Preferred audio / subtitle language, Subtitle appearance |
 | **Live TV** | Channel numbers, Live preview, Preview audio, Pause and rewind live TV, Rewind length, Resume a saved channel, Left and right rewind · Live latency, Pre-buffer, Give up after (each + per playlist) |
 | **Watching & recording** | Seek step, Live rewind step, Resume playback, Auto-play next episode · Multiview, Max tiles, Mini-player · Recording: keep one stream free, record what I'm watching, start early, keep going after the end |

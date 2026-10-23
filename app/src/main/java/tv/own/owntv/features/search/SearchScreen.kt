@@ -146,7 +146,7 @@ private sealed interface Entry {
 private const val ALL_TAB_CHANNELS = 4
 
 /**
- * Global search in the Stage design (SR-01 … SR-07): the title band, the field, tabs over grouped
+ * Global search in the Stage design: the title band, the field, tabs over grouped
  * results on the left, and on the right the focused result — Live TV's own preview pane for a channel,
  * the poster panel for a movie or series. Search only shows: OK goes to the item, where
  * playing, downloading and every option already live. Back clears the search first, then leaves.
@@ -281,7 +281,7 @@ fun SearchScreen(
         val panelX = fx(944)
         val panelW = fx(912)
 
-        // Title band: "Search" + "“sky” · 12 results" (SR-01).
+        // Title band: "Search" + "“sky” · 12 results".
         val titleModifier = Modifier.padding(start = fx(84), top = 52.mpx).width(fx(826))
         if (showingResults) {
             val total = shown.channels.size + shown.movies.size + shown.series.size + shown.programmes.size
@@ -496,7 +496,7 @@ fun SearchScreen(
             }
         }
 
-        // Key hints, bottom left (SR-01).
+        // Key hints, bottom left.
         val hints = buildList {
             val onFilter = filterFocused
             if (onFilter != null) {
@@ -534,7 +534,7 @@ private fun Entry.channel(): ChannelEntity? = when (this) {
     else -> null
 }
 
-/** The rows in display order; [grouped] puts each kind under its heading (SR-01), else one flat list. */
+/** The rows in display order; [grouped] puts each kind under its heading, else one flat list. */
 @Composable
 private fun searchEntries(results: SearchResults, grouped: Boolean, capChannels: Boolean): List<Entry> {
     val live = stringResource(R.string.common_nav_live_tv)
@@ -636,7 +636,7 @@ private fun SmallPoster(url: String?, placeholder: OwnTVIcon) {
 }
 
 /**
- * The poster panel (SR-02 … 04), in the Live TV preview's frame and place: the backdrop 16:9 (or the
+ * The poster panel, in the Live TV preview's frame and place: the backdrop 16:9 (or the
  * poster blurred, with the sharp poster at the right), a MOVIE / SERIES tag, the title art or name at
  * the bottom left; under it year • genres • runtime • ★ rating and tags, three lines of plot, five cast.
  */
@@ -709,7 +709,7 @@ private fun PosterPanel(info: VodTitleInfo, series: Boolean, modifier: Modifier 
     }
 }
 
-/** SR-06: JUMP TO (Continue watching · Unwatched · Channels), RECENT SEARCHES as rows, then Clear. */
+/** The empty page: JUMP TO (Continue watching · Unwatched · Channels), RECENT SEARCHES as rows, then Clear. */
 @Composable
 private fun Launcher(
     firstFocus: FocusRequester,
@@ -764,7 +764,7 @@ private fun RecentRow(term: String, onClick: () -> Unit) {
     }
 }
 
-/** SR-06's glass card: what Search does, and where a result takes you. */
+/** The empty page's glass card: what Search does, and where a result takes you. */
 @Composable
 private fun LauncherCard(modifier: Modifier = Modifier) {
     Column(modifier.stageGlass(30.mpx).padding(horizontal = 38.mpx, vertical = 34.mpx)) {
@@ -780,7 +780,7 @@ private fun LauncherCard(modifier: Modifier = Modifier) {
     }
 }
 
-/** SR-05: "Nothing found for “qwzx”" and what search looks in. */
+/** No results: "Nothing found for “qwzx”" and what search looks in. */
 @Composable
 private fun NothingFound(title: String, modifier: Modifier = Modifier) {
     Column(modifier) {

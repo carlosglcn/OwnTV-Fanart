@@ -84,7 +84,6 @@ class SettingsViewModel(
     private val companion: tv.own.owntv.core.companion.CompanionController,
     private val vodEngineStore: tv.own.owntv.core.player.VodEngineStore,
     private val forceMpvStore: tv.own.owntv.core.player.ForceMpvStore,
-    private val archiveDecodeStore: tv.own.owntv.core.player.ArchiveDecodeStore,
     private val playbackPrefs: tv.own.owntv.core.player.PlaybackPrefsStore,
     private val connectionLimits: tv.own.owntv.core.live.ConnectionLimits,
     // The measurement opens streams, so whatever is playing has to stop first — on a
@@ -265,11 +264,11 @@ class SettingsViewModel(
         viewModelScope.launch { settings.setLivePreviewAudio(enabled) }
     }
 
-    val hdrEnabled: StateFlow<Boolean> = settings.hdrEnabled
+    val preferSdr: StateFlow<Boolean> = settings.preferSdr
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
-    fun setHdrEnabled(enabled: Boolean) {
-        viewModelScope.launch { settings.setHdrEnabled(enabled) }
+    fun setPreferSdr(enabled: Boolean) {
+        viewModelScope.launch { settings.setPreferSdr(enabled) }
     }
 
     val autoFrameRate: StateFlow<Boolean> = settings.autoFrameRate
@@ -472,9 +471,6 @@ class SettingsViewModel(
 
     /** Every channel follows the Live TV player setting again; films' pins are kept. */
     fun clearLivePins() { viewModelScope.launch { forceMpvStore.clearAll() } }
-
-    /** Forget the stream lessons of this session and the stored catch-up decode list. */
-    fun forgetStreamFixes() { viewModelScope.launch { tv.own.owntv.player.LiveStreamQuirks.forgetLearned(archiveDecodeStore) } }
 
     /** Volume every item starts at, before any per-item value the player remembered. */
     val defaultVolume: StateFlow<Int> = settings.defaultVolume.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 100)
@@ -703,6 +699,9 @@ class SettingsViewModel(
 
     val audioDelayMs: StateFlow<Int> = settings.audioDelayMs.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     fun setAudioDelayMs(ms: Int) { viewModelScope.launch { settings.setAudioDelayMs(ms) } }
+    val outputAudioDelays: StateFlow<tv.own.owntv.core.player.OutputAudioDelays> =
+        settings.outputAudioDelays.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), tv.own.owntv.core.player.OutputAudioDelays.NONE)
+    fun setOutputAudioDelay(kind: tv.own.owntv.core.player.AudioOutputKind, ms: Int) { viewModelScope.launch { settings.setOutputAudioDelay(kind, ms) } }
 
     // --- CH+- key paging (browse panels): master toggle + per-direction skip counts ---
     // --- Recording ---

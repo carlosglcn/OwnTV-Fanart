@@ -314,7 +314,7 @@ fun OwnTVShell(
     // ...and the one-time suggestion to turn it on, for the 25-fps-on-60-Hz judder the direct render path
     // cannot fix by itself. `true` until the flag is read, so it can never flash on first frame.
     val afrPrompted by settingsRepo.autoFrameRatePrompted.collectAsStateWithLifecycle(initialValue = true)
-    // Direct tune (type a channel number on the remote). Settings → Video Player → Live TV; default on.
+    // Direct tune (type a channel number on the remote). Settings › Live TV › Channel numbers; default on.
     val directTuneEnabled by settingsRepo.directTune.collectAsStateWithLifecycle(initialValue = true)
     // "Prefer EPG logos": start following the setting once, here rather than in Application.onCreate —
     // the store queries nothing at all while the toggle is off, so cold start stays free of EPG reads.
@@ -464,7 +464,7 @@ fun OwnTVShell(
     val historyWatchedAt = remember(historyEntries) { historyEntries.associate { it.channel.id to it.watchedAt } }
     val historyNowPlaying = overlayNowPlaying // one shared map; the history rail adds to it below
     LaunchedEffect(historyChannels) { liveVm.ensureNowPlaying(historyChannels) }
-    // Batch 7 — the single most-recent resumable item, surfaced as a shared top-bar "Continue" chip.
+    // The single most-recent resumable item, surfaced as a shared top-bar "Continue" chip.
     val continueTarget by homeVm.continueTarget.collectAsStateWithLifecycle()
 
     // Per-profile startup action runs once when the authenticated shell first appears. With one unlocked

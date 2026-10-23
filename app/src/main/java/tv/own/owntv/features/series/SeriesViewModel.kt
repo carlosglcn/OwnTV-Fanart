@@ -1312,7 +1312,7 @@ class SeriesViewModel(
         }
     }
 
-    /** Hide the series from all lists (undo via Settings → Customize Category → Hidden items). */
+    /** Hide the series from all lists (undo via Settings → Customize → Hidden items). */
     fun hideSeries(series: SeriesEntity) {
         if (_selectedSeries.value?.id == series.id) _selectedSeries.value = null
         viewModelScope.launch {

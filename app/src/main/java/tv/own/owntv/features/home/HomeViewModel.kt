@@ -113,7 +113,7 @@ data class HomeUiState(
     val isLoading: Boolean = true,
 )
 
-/** What the shared top-bar Continue chip points at (Batch 7). */
+/** What the shared top-bar Continue chip points at. */
 enum class ContinueKind { LIVE, MOVIE, EPISODE }
 enum class ContinueAction { RESUME, PLAY, NEXT_UP, LAST_CHANNEL }
 
@@ -219,7 +219,7 @@ class HomeViewModel(
         }
     }
 
-    // --- Batch 7: the single most-recent resumable item, for the shared top-bar Continue chip. ---
+    // --- The single most-recent resumable item, for the shared top-bar Continue chip. ---
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val continueTarget: StateFlow<ContinueTarget?> = settings.activeProfileId
         .flatMapLatest { pid ->

@@ -23,6 +23,9 @@ import tv.own.owntv.core.settings.SettingsRepository
 import tv.own.owntv.core.settings.SubtitleStyle
 import tv.own.owntv.ui.theme.asAndroidTypeface
 
+private const val SURFACE_LAYOUT_NUDGES = 30
+private const val SURFACE_LAYOUT_NUDGE_MS = 100L
+
 private class MpvSurfaceView(context: Context, private val player: OwnTVPlayer) :
     SurfaceView(context), SurfaceHolder.Callback {
 
@@ -69,7 +72,7 @@ fun MpvVideoSurface(
     player: OwnTVPlayer,
     modifier: Modifier = Modifier,
     autoFrameRate: Boolean = true,
-    // Auto frame rate's two film extras (Settings → Video player). Ignored on live.
+    // Auto frame rate's two film extras (Settings › Picture › Frame rate). Ignored on live.
     afrMatchResolution: Boolean = false,
     afrHoldSecs: Int = 0,
 ) {
@@ -91,6 +94,19 @@ fun MpvVideoSurface(
         // recreated — destroying the old Surface and making a FRESH one. The Realtek decoder needs a clean
         // Surface for a back-to-back 4K-class session (reusing the dirty one throws 0x80001000).
         val surfaceResetToken by player.surfaceResetToken.collectAsStateWithLifecycle()
+        // The new SurfaceView gets its surface only once the window lays it out, and nothing else may ask
+        // for a frame: zapped by deep link or autoplay with no key pressed, the screen sat idle and the
+        // waiting load never started until the next remote press. Ask for layout until the surface comes.
+        val hostView = androidx.compose.ui.platform.LocalView.current
+        LaunchedEffect(surfaceResetToken) {
+            if (surfaceResetToken == 0) return@LaunchedEffect
+            repeat(SURFACE_LAYOUT_NUDGES) {
+                hostView.requestLayout()
+                hostView.invalidate()
+                kotlinx.coroutines.delay(SURFACE_LAYOUT_NUDGE_MS)
+                if (player.hasAttachedSurface) return@LaunchedEffect
+            }
+        }
         androidx.compose.runtime.key(surfaceResetToken) {
             AndroidView(
                 modifier = viewModifier,

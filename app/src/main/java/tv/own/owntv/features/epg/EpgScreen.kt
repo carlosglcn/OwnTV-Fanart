@@ -209,8 +209,11 @@ fun EpgScreen(
     LaunchedEffect(liveMode, liveSelected) { if (liveMode) vm.setCategoryFilter(liveSelected) }
     LaunchedEffect(Unit) { vm.load() } // reload from DB each time the guide is opened
 
-    // The focused channel plays in the video after the focus settles, as in Live TV.
+    // The preview stays on its channel while the guide is browsed; OK on a row brings that row's channel
+    // into it, and OK again on the channel already there watches it full screen. Following the focus made
+    // every row passed on the way to another one play for a moment.
     val effectivePreview = previewEnabled && livePreviewSetting && guidePreview
+    val previewNeeds: (ChannelEntity) -> Boolean = { ch -> effectivePreview && (!previewArmed || previewChannel?.id != ch.id) }
     // Switching the Guide's own preview off stops what is already playing, not only the next channel.
     LaunchedEffect(guidePreview) { if (!guidePreview && previewEnabled) liveVm.stopPreview() }
     LaunchedEffect(previewChannel?.id, effectivePreview, previewArmed) {
@@ -410,8 +413,16 @@ fun EpgScreen(
     BoxWithConstraints(
         modifier
             .fillMaxSize()
-            // Entering from the rail lands in the grid, on the row focus was on.
-            .focusProperties { onEnter = { if (state.channels.isNotEmpty()) runCatching { rowFocus(focusedRow.coerceIn(0, state.channels.size - 1)).requestFocus() } } }
+            // Entering from the rail lands in the grid, on the row focus was on. Not while the search field
+            // is opening: the Search button it replaces held focus, so the field's own request enters from
+            // outside too, and redirecting it would send focus to the grid instead.
+            .focusProperties {
+                onEnter = {
+                    if (state.channels.isNotEmpty() && !(searchOpen && !searchHadFocus)) {
+                        runCatching { rowFocus(focusedRow.coerceIn(0, state.channels.size - 1)).requestFocus() }
+                    }
+                }
+            }
             .focusGroup(),
     ) {
         val screenW = maxWidth
@@ -590,13 +601,17 @@ fun EpgScreen(
                                     selectedRow = gridHasFocus && index == focusedRow,
                                     cursorTime = cursorTime,
                                     cellMode = inCellMode,
-                                    onEnterCell = { cursorTime = System.currentTimeMillis(); inCellMode = true },
+                                    onEnterCell = {
+                                        cursorTime = System.currentTimeMillis()
+                                        inCellMode = true
+                                        if (previewNeeds(channel)) liveVm.onChannelFocused(channel)
+                                    },
                                     recordingStarts = recordingsByChannel[channel.id].orEmpty(),
                                     reminderStarts = remindersByChannel[channel.id].orEmpty(),
                                     onFocused = {
                                         focusedRow = index
                                         if (cursorTime !in state.windowStart until state.windowEnd) cursorTime = System.currentTimeMillis()
-                                        liveVm.onChannelFocused(channel)
+                                        if (!effectivePreview) liveVm.onChannelFocused(channel)
                                     },
                                     onCursor = { cursorTime = it },
                                     onShow = { p -> selected = channel to p },
@@ -609,7 +624,7 @@ fun EpgScreen(
                                             else -> { stepTo(to); true }
                                         }
                                     },
-                                    onOk = { p -> onOk(channel, p) },
+                                    onOk = { p -> if (previewNeeds(channel)) liveVm.onChannelFocused(channel) else onOk(channel, p) },
                                     onMenu = { p -> returnTo = null; if (p != null) menuFor = channel to p else channelMenuFor = channel },
                                 )
                             }

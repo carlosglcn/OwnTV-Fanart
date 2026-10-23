@@ -143,7 +143,6 @@ val appModule = module {
             companion = get(),
             vodEngineStore = get(),
             forceMpvStore = get(),
-            archiveDecodeStore = get(),
             playbackPrefs = get(),
             connectionLimits = get(),
             player = get(),

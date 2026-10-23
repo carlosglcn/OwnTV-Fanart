@@ -63,7 +63,7 @@ class DownloadsViewModel(
     /**
      * The profile's downloads, minus rows whose movie/series the user has hidden — a hidden title
      * disappears everywhere, Downloads included. The file stays on disk and the row reappears on
-     * unhide (Settings → Customize Category). Downloads whose source item no longer exists (deleted
+     * unhide (Settings → Customize). Downloads whose source item no longer exists (deleted
      * playlist / re-sync id churn) are kept — they can't be resolved to a hide key.
      */
     val downloads: StateFlow<List<DownloadEntity>> = settings.activeProfileId

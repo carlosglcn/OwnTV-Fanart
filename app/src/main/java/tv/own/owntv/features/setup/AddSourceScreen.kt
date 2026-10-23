@@ -183,7 +183,7 @@ fun AddSourceScreen(
     // ---- "Test HLS support" (Xtream) ----
     // A panel's `allowed_output_formats` is a claim, and a common one to get wrong in both directions,
     // so the button also *requests* an `.m3u8` channel and reads the answer. Driven from here rather
-    // than a ViewModel so both hosts (the setup wizard and Settings → Manage sources) get it without
+    // than a ViewModel so both hosts (the setup wizard and Settings › Sources & guide › Playlists) get it without
     // duplicating the plumbing — it's one short request that stores nothing unless the source exists.
     val xtreamClient: XtreamClient = koinInject()
     val channelDao: ChannelDao = koinInject()

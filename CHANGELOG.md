@@ -7,6 +7,29 @@
 > Issue numbers that are part of a title are fine; explanatory parentheticals are not. The detail —
 > what, why, files and verification — belongs in the commit message, never here.
 
+## v5.2.1 — 2026-10-21
+
+### ✨ New features
+- **📺 TV Guide: OK brings a channel into the preview, OK again watches it — scrolling no longer changes the preview (#300)**
+- **🎧 Audio delay for each output: HDMI, soundbar, Bluetooth, speakers, headphones**
+- **🎚️ FFmpeg audio for ExoPlayer, as a switch (off by default)**
+- **🌗 Prefer SDR when a stream offers both (replaces the HDR switch)**
+- **💡 A hint to try MPV when a live channel keeps dropping frames**
+
+### 🐛 Fixes
+- **Live H.264 channels no longer freeze or drop frames on some TVs (#284)**
+- **Auto frame rate tells 59.94, 29.97 and 23.976 from 60, 30 and 24, also for films that do not state theirs (#292)**
+- **Each playlist keeps its own category order (#297)**
+- **A re-sync with many custom-category items finishes, instead of locking the database (#288)**
+- **Auto frame rate goes back to the normal mode when a channel has no matching one**
+- **Full frame rate on mpv for H.264 above 30 fps, and after zapping from a 25 fps channel**
+- **H.264 catch-up stays on hardware decoding on mpv**
+- **A saved channel plays again after the TV wakes from standby**
+- **TV Guide search: typing goes into the search field**
+- **"Learned stream fixes" removed: catch-up no longer stays on software decoding for two weeks**
+- **No sound or picture left playing under a live error screen**
+- **Switching channels on mpv no longer holds up the screen**
+
 ## v5.2.0 — 2026-10-17
 
 ### ✨ New features

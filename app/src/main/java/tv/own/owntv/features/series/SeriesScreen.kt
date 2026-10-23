@@ -486,7 +486,7 @@ private fun SeriesGrid(
         onDispose { onEntryHook?.invoke(null) }
     }
 
-    // Manual panel widths (Settings → Panel Width Adjustment), mapped onto Stage: Separate = the column,
+    // Manual panel widths (Settings → Layout → Panel widths), mapped onto Stage: Separate = the column,
     // the posters and the details card (Poster panel 0% = no card); Cinematic = the sheet and the hero height.
     val panelShares = rememberPanelShares(PanelSection.SERIES, settingsVm)
     val cinematicSheetPct by settingsVm.cinematicSheetWidth(PanelSection.SERIES).collectAsStateWithLifecycle()

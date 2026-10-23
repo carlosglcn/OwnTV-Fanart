@@ -172,8 +172,8 @@ class SetupViewModel(
      * ask for the backup password via [SourceImporter.ImportState.NeedPassword].
      *
      * [sections] is what the user ticked before the restore began, and defaults to all of it — which
-     * is what the wizard did unconditionally until it gained a picker of its own. Settings → Backup
-     * & Restore has always asked; the first run, where a restore is most likely, did not.
+     * is what the wizard did unconditionally until it gained a picker of its own. More → Backup &
+     * Restore has always asked; the first run, where a restore is most likely, did not.
      */
     fun importBackup(
         file: File,

@@ -280,10 +280,12 @@ then the grid, opened at now with the now-line about a third of the way across.
 - **Order:** Provider, A–Z, Catch-up first or Favourites first. **Category** uses Live TV's own list.
   Its **Show** group: **Channels without guide**, and **Video preview** — off, the top shows the
   channel's logo instead of playing it (also off whenever Live TV's preview is off).
+- **The preview stays put while you browse:** moving through the rows does not change it. The first
+  **OK** on a row brings that channel into the preview; **OK** again on it watches it full screen.
 
 ### 🔔 Programme reminders
 **Where:** hold OK on an upcoming programme → **Remind me** · Settings → Sources & guide →
-**Programme reminders** / **Reminder time**
+**Program reminders** / **Reminder time**
 When it is due (5 minutes before by default) OwnTV **asks to switch** — over any screen, the player
 included — or **switches** by itself, or only **notifies**.
 
@@ -350,7 +352,8 @@ dropped; playback jumps over it. If your internet drops, saving waits and carrie
     **Settings → Live TV → Resume a saved channel** turns the question into **Always resume** or
     **Never resume**.
   - Watch another channel for **2 minutes** and the copy you left is deleted at once — you have moved on.
-  - After 5 minutes it is deleted anyway, and every copy is deleted when OwnTV starts.
+  - After 5 minutes it is deleted anyway, and every copy is deleted when OwnTV starts. The 5 minutes
+    are real time, standby included: wake the TV later and the channel opens live.
 - Catch-up channels still rewind into the provider's archive. Protected (DRM) and encrypted channels
   play as before, without a copy.
 
@@ -447,7 +450,7 @@ live scores every 30–120 seconds while something sports is on screen. **Refres
 shows when it last updated. Also here: My teams, goal alerts, playlist and channel filters.
 
 ### 🏠 Sports on Home
-**Settings → Home** can show a **Sports** row: live and upcoming matches of your leagues and teams,
+**Settings → Layout → Home screen** can show a **Sports** row: live and upcoming matches of your leagues and teams,
 in your order. **OK** opens the match page.
 
 ## 🎬 Movies & Series
@@ -514,7 +517,7 @@ The built-in service is shared by everyone using OwnTV, so it has minute/hour/da
 the top of the page.
 
 ### 🔑 Use your own key instead — recommended
-**Where:** Settings → Content & metadata → Metadata (TMDB) → **Get advanced TMDB info via remote**
+**Where:** Settings → Content & metadata → Metadata (TMDB) → **Get advanced TMDB info**
 A free personal TMDB key removes the shared limit. It's 32 characters, so send it from your phone by
 QR + PIN rather than typing it. A self-hosted Cloudflare Worker also works (one is in the repo).
 
@@ -686,6 +689,9 @@ you pick yourself is **remembered** for that channel, film or series (subtitles 
 subtitles → **Audio sync** for everything
 Nudge until lips match, then **Remember this delay** to keep it for that item. Works on both players,
 including sound sent as-is to a soundbar.
+**Delay for this output** (Settings → Sound & subtitles) adds a delay of its own for the output the
+sound is going to right now — HDMI, a soundbar on HDMI ARC, Bluetooth, the TV speakers or headphones.
+Each output keeps its own; set it while listening on that output.
 
 ### 🔊 Surround sound
 **Where:** Settings → Sound & subtitles → **Surround sound**
@@ -740,11 +746,11 @@ the rail, sheets, menus and popups; **Glass opacity** sets how much background s
 Live TV preview sits beside the rows; **Reset** goes back to Stage colours with glass on.
 
 ### ✨ Ambient Glow
-**Where:** Settings → Appearance → **Ambient Glow** — only shown with Theme **Dark** and Glass off
+**Where:** Settings → Appearance → **Ambient glow** — only shown with Theme **Dark** and Glass off
 A soft glow around the edges of the screen, with an optional slow pulse.
 
 ### 🔤 Font & size
-**Where:** Settings → Appearance → **Fonts & text size** · **Popup size** · **UI zoom**
+**Where:** Settings → Appearance → **Font customization** · **Popup size** · **UI zoom**
 One font family for the whole app and popups (Plus Jakarta Sans by default), main text 60–140% and
 popup text separately. **Popup size** and **UI zoom** step with ◀ ▶ right on their rows.
 > Below **85% zoom** OwnTV warns first — very small sizes draw many more items and can exhaust a
@@ -831,7 +837,7 @@ all settings** lists every setting whose name contains what you type, with its p
 | **Catch-up time zone** | Sources & guide | **Automatic** (default) uses the Xtream panel's own zone; Device or a fixed offset otherwise |
 | **Catch-up time zone per playlist** | Sources & guide | One provider's archive on a different clock (quarter-hour zones such as +05:30 included) |
 | **Hardware decoder** | Picture | On for smooth 4K; off only to diagnose |
-| **HDR (mpv only)** | Picture | Use HDR output when the video and TV support it. ExoPlayer always passes HDR through |
+| **Prefer SDR** | Picture | When a stream offers both SDR and HDR, play the SDR one. Off by default |
 | **Auto frame rate** | Picture | Match the TV's refresh rate to the content. Off by default |
 | **Pause during the display switch** · **Match resolution** | Picture | Films only: hold the film while the TV re-syncs (off–5 s); also switch to the film's resolution, never above the TV's own |
 | **Seek step / Live rewind step** | Watching & recording | How far the skip buttons jump |
@@ -840,7 +846,8 @@ all settings** lists every setting whose name contains what you type, with its p
 | **Default volume** | Sound & subtitles | 0–150%, where everything starts |
 | **Reset saved player choices / zoom / volume** | Player, Picture, Sound & subtitles | Forget everything the player remembered per item |
 | **Reset saved live TV player choices** | Player | Every channel follows the Live TV player setting again |
-| **Forget learned stream fixes** | Player | For a provider that has fixed its streams. Catch-up lessons also expire after 14 days |
+| **FFmpeg audio for ExoPlayer** | Sound & subtitles | Decode sound the TV has no decoder for (DTS, TrueHD on some TVs). Off by default; applies after a restart |
+| **Delay for this output** | Sound & subtitles | A delay for HDMI, ARC, Bluetooth, speakers or headphones, each kept on its own |
 | **Custom DNS** | App → DNS | System, Google, Cloudflare, Quad9, or DNS-over-HTTPS |
 | **External player** | Player | Separate switches for Live TV, Movies and Series; VLC and MX Player start where you left off |
 | **Resume a saved channel** | Live TV | Ask, always or never resume a channel saved by Pause and rewind |

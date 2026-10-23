@@ -579,7 +579,7 @@ class EpgViewModel(
             .flatMapLatest { pid -> if (pid < 0) flowOf(emptyList()) else reminderManager.observe(pid) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** How early a reminder comes (Settings › Reminder time) — the menu's "5 min before". */
+    /** How early a reminder comes (Settings › Sources & guide › Reminder time) — the menu's "5 min before". */
     val reminderLeadMinutes: StateFlow<Int> = settings.reminderLeadMinutes
         .stateIn(viewModelScope, SharingStarted.Eagerly, tv.own.owntv.core.reminder.ReminderSchedule.DEFAULT_LEAD_MINUTES)
 

@@ -995,7 +995,7 @@ class MovieViewModel(
         }
     }
 
-    /** Hide the movie from all lists (undo via Settings → Customize Category → Hidden items). */
+    /** Hide the movie from all lists (undo via Settings → Customize → Hidden items). */
     fun hideMovie(movie: MovieEntity) {
         if (_selectedMovie.value?.id == movie.id) _selectedMovie.value = null
         viewModelScope.launch {
