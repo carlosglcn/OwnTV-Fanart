@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
@@ -164,7 +165,9 @@ fun StageRail(
         selected == MainSection.SEARCH || selected in visibleSections -> selected
         else -> StageRailOrder.firstOrNull { it in visibleSections } ?: MainSection.MORE
     }
-    val items = StageRailOrder.filter { it == MainSection.SEARCH || it in visibleSections } + MainSection.MORE
+    // glcn: the family profile has no More (and so no Settings): the menu is the places to watch.
+    val family by org.koin.compose.koinInject<tv.own.owntv.core.nav.NavVisibility>().familyMode.collectAsStateWithLifecycle(false)
+    val items = StageRailOrder.filter { it == MainSection.SEARCH || it in visibleSections } + listOfNotNull(MainSection.MORE.takeUnless { family })
 
     // Slide in from the edge (320 ms, or a snap with animations off): the capsule when it leaves
     // HIDDEN, the open rail each time it opens.
@@ -597,7 +600,8 @@ fun StageTopBar(
                     }
                 }
             }
-            TopIcon(OwnTVIcon.TILES, selected == MainSection.MORE || selected == MainSection.SETTINGS, { onSelect(MainSection.MORE) },
+            val family by org.koin.compose.koinInject<tv.own.owntv.core.nav.NavVisibility>().familyMode.collectAsStateWithLifecycle(false)
+            if (!family) TopIcon(OwnTVIcon.TILES, selected == MainSection.MORE || selected == MainSection.SETTINGS, { onSelect(MainSection.MORE) },
                 if (focusSection == MainSection.MORE) Modifier.focusRequester(selectedItemFocusRequester) else Modifier, k = k)
             StageSurface(
                 onClick = onSwitchProfile,

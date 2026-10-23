@@ -41,3 +41,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔊 ExoPlayer: the sound no longer drops a few seconds in when auto frame rate switches the display.
 - ⚡ Zapping list: the schedule column is read ahead for the channels around the cursor, so it no longer appears late.
 - 🎯 Home: the Sports row rests at its first card when you come back to it, instead of leaving it cut at the edge.
+- 👨‍👩‍👧 Family profile: a kids profile gets a short menu (Home, Live TV, Guide, Movies, Series) and no Settings or More, on top of the adult-content filter it already had. Put a PIN on the adult profiles so the way back is closed.
