@@ -555,15 +555,18 @@ internal fun LiveCategories(
     }
     // CH+/− in the categories changes the selection; the highlight follows it there.
     var hasFocus by remember { mutableStateOf(false) }
+    // glcn: while the cursor rests on the playlist chips, switching list must not pull it down to a row.
+    var chipsFocused by remember { mutableStateOf(false) }
     LaunchedEffect(selectedIndex) {
         val pos = visible.indexOf(selectedIndex)
-        if (!hasFocus || pos < 0) return@LaunchedEffect
+        if (!hasFocus || chipsFocused || pos < 0) return@LaunchedEffect
         runCatching { listState.scrollToItem(pos + headerCount) } // the search field and playlist rows come first
         withFrameNanos { }
         runCatching { rowFocusers[pos].requestFocus() }
     }
     LaunchedEffect(focusRowIndex, visible) {
         val target = focusRowIndex ?: return@LaunchedEffect
+        if (chipsFocused) return@LaunchedEffect
         visible.indexOf(target).takeIf { it >= 0 }?.let { pos ->
             // A row further than the screen (a CH± jump) is not composed yet: scroll to it first.
             if (!runCatching { rowFocusers[pos].requestFocus() }.getOrDefault(false)) {
@@ -649,7 +652,7 @@ internal fun LiveCategories(
             }
             if (playlistRows.isNotEmpty()) item(key = "__playlists__") {
                 androidx.compose.foundation.lazy.LazyRow(
-                    modifier = Modifier.fillMaxWidth().padding(start = if (sheet) 8.mpx else 0.mpx, end = if (sheet) 8.mpx else 0.mpx, bottom = if (sheet) 14.mpx else 12.mpx),
+                    modifier = Modifier.fillMaxWidth().onFocusChanged { chipsFocused = it.hasFocus }.padding(start = if (sheet) 8.mpx else 0.mpx, end = if (sheet) 8.mpx else 0.mpx, bottom = if (sheet) 14.mpx else 12.mpx),
                     horizontalArrangement = Arrangement.spacedBy(8.mpx),
                     contentPadding = PaddingValues(horizontal = 4.mpx, vertical = 4.mpx),
                 ) {

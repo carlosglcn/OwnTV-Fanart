@@ -36,6 +36,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -218,6 +219,18 @@ fun ChannelListOverlay(
                     .fillMaxWidth()
                     .weight(1f)
                     .onFocusChanged { listFocused = it.hasFocus }
+                    // glcn: wrap around, ▲ on the first channel goes to the last and ▼ on the last to the first.
+                    .onPreviewKeyEvent { e ->
+                        if (e.type != KeyEventType.KeyDown || channels.size < 2) return@onPreviewKeyEvent false
+                        val to = when {
+                            e.key == Key.DirectionUp && focusedIndex == 0 -> channels.lastIndex
+                            e.key == Key.DirectionDown && focusedIndex == channels.lastIndex -> 0
+                            else -> return@onPreviewKeyEvent false
+                        }
+                        targetIndex = to
+                        scope.jumpLazyListTo(listState, to) { focusTarget.requestFocus() }
+                        true
+                    }
                     .chNavPaging(
                         enabled = chNavEnabled,
                         upSkip = chNavUpSkip,
