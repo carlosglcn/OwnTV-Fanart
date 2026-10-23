@@ -557,6 +557,20 @@ internal fun LiveCategories(
     var hasFocus by remember { mutableStateOf(false) }
     // glcn: while the cursor rests on the playlist chips, switching list must not pull it down to a row.
     var chipsFocused by remember { mutableStateOf(false) }
+    // The chip the cursor last rested on; cleared when it moves to the search or a row. Switching list rebuilds
+    // the rows below, and the cursor must not be dragged down with them.
+    var lastChipId by remember { mutableStateOf<Long?>(null) }
+    val chipFocusers = remember(playlistRows) { playlistRows.associate { it.first to FocusRequester() } }
+    LaunchedEffect(entries) {
+        val id = lastChipId ?: return@LaunchedEffect
+        val target = chipFocusers[id] ?: return@LaunchedEffect
+        withFrameNanos { }
+        if (!chipsFocused) {
+            runCatching { listState.scrollToItem(0) }
+            withFrameNanos { }
+            runCatching { target.requestFocus() }
+        }
+    }
     LaunchedEffect(selectedIndex) {
         val pos = visible.indexOf(selectedIndex)
         if (!hasFocus || chipsFocused || pos < 0) return@LaunchedEffect
@@ -652,7 +666,12 @@ internal fun LiveCategories(
             }
             if (playlistRows.isNotEmpty()) item(key = "__playlists__") {
                 androidx.compose.foundation.lazy.LazyRow(
-                    modifier = Modifier.fillMaxWidth().onFocusChanged { chipsFocused = it.hasFocus }.padding(start = if (sheet) 8.mpx else 0.mpx, end = if (sheet) 8.mpx else 0.mpx, bottom = if (sheet) 14.mpx else 12.mpx),
+                    modifier = Modifier.fillMaxWidth().onFocusChanged { chipsFocused = it.hasFocus }
+                        // ▲/▼ is the user leaving the chips on purpose; anything else that moves the cursor is undone.
+                        .onPreviewKeyEvent { e ->
+                            if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp)) lastChipId = null
+                            false
+                        }.padding(start = if (sheet) 8.mpx else 0.mpx, end = if (sheet) 8.mpx else 0.mpx, bottom = if (sheet) 14.mpx else 12.mpx),
                     horizontalArrangement = Arrangement.spacedBy(8.mpx),
                     contentPadding = PaddingValues(horizontal = 4.mpx, vertical = 4.mpx),
                 ) {
@@ -674,7 +693,9 @@ internal fun LiveCategories(
                                 android.widget.Toast.makeText(appCtx, R.string.glcn_category_hidden_toast, android.widget.Toast.LENGTH_SHORT).show()
                             }) else null,
                             radius = 22.mpx,
-                            modifier = Modifier.height(46.mpx).onFocusChanged { chipFocused = it.hasFocus },
+                            modifier = Modifier.height(46.mpx)
+                                .then(chipFocusers[id]?.let { Modifier.focusRequester(it) } ?: Modifier)
+                                .onFocusChanged { chipFocused = it.hasFocus; if (it.hasFocus) lastChipId = id },
                         ) { focused ->
                             Row(Modifier.padding(horizontal = 18.mpx).height(46.mpx), verticalAlignment = Alignment.CenterVertically) {
                                 Text(
