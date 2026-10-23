@@ -172,11 +172,12 @@ fun LiveEpgCardWithArt(epg: EpgNowNext?, art: String?, modifier: Modifier = Modi
             .clip(RoundedCornerShape(14.dp))
             .background(hudShade(0.72f))
             .padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         tv.own.owntv.ui.components.ProgrammeArt(
             url = art,
-            modifier = Modifier.size(width = 136.dp, height = 76.dp).clip(RoundedCornerShape(10.dp)),
+            modifier = Modifier.size(width = 150.dp, height = 84.dp).clip(RoundedCornerShape(10.dp)),
         )
         LiveEpgCard(epg, bare = true)
     }

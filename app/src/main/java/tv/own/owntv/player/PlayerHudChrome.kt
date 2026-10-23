@@ -175,7 +175,7 @@ internal fun LiveChannelHeader(player: PlaybackEngine, chips: List<String>, onBa
         CircleButton(OwnTVIcon.BACK, size = 40, onClick = onBack)
         Spacer(Modifier.width(14.dp))
         Box(
-            Modifier.size(width = 72.dp, height = 50.dp).clip(RoundedCornerShape(12.dp)).background(hudShade(0.45f)),
+            Modifier.size(width = 96.dp, height = 66.dp).clip(RoundedCornerShape(14.dp)).background(hudShade(0.45f)),
             contentAlignment = Alignment.Center,
         ) {
             if (!meta.logoUrl.isNullOrBlank()) {
@@ -191,18 +191,20 @@ internal fun LiveChannelHeader(player: PlaybackEngine, chips: List<String>, onBa
                     Text(it, style = MaterialTheme.typography.titleMedium, color = hudInk.copy(alpha = 0.5f), fontWeight = FontWeight.SemiBold, maxLines = 1)
                     Spacer(Modifier.width(10.dp))
                 }
-                Text(name, style = MaterialTheme.typography.titleLarge, color = hudInk, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(name, style = tv.own.owntv.ui.theme.stageText(32, 800), color = hudInk, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             val shown = chips.filterNot { it.contains(':') || it == "MPV" || it == "EXO" }
             if (shown.isNotEmpty()) {
-                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     shown.forEach { label ->
                         Text(
                             label,
-                            style = MaterialTheme.typography.labelMedium,
+                            style = tv.own.owntv.ui.theme.stageText(20, 700),
                             color = hudInk.copy(alpha = 0.85f),
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(hudInk.copy(alpha = 0.12f)).padding(horizontal = 8.dp, vertical = 2.dp),
+                            // One line each: squeezed, a chip clips instead of stacking its letters.
+                            maxLines = 1, softWrap = false,
+                            modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(hudInk.copy(alpha = 0.12f)).padding(horizontal = 10.dp, vertical = 3.dp),
                         )
                     }
                 }
@@ -406,7 +408,7 @@ internal fun BottomBar(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) { header() }
                     Spacer(Modifier.width(18.dp))
-                    Box(Modifier.widthIn(max = 600.dp)) { side() }
+                    Box(Modifier.widthIn(max = 540.dp)) { side() }
                 }
             } else header()
             Box(Modifier.fillMaxWidth().padding(vertical = if (side != null) 4.dp else 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
