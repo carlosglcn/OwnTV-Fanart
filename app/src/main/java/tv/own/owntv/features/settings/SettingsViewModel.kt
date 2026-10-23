@@ -641,7 +641,10 @@ class SettingsViewModel(
         if (profileId < 0L) return emptyList()
         val sources = sourceDao.observeForProfile(profileId).first().filter { it.syncLive }
         val defaultSourceId = settings.defaultSourceId.first()
-        val sourceIds = if (defaultSourceId > 0L && sources.any { it.id == defaultSourceId }) {
+        val activeSet = settings.activeSourceSet.first()
+        val sourceIds = if (activeSet.isNotEmpty() && sources.any { it.id in activeSet }) {
+            sources.filter { it.id in activeSet }.map { it.id }
+        } else if (defaultSourceId > 0L && sources.any { it.id == defaultSourceId }) {
             listOf(defaultSourceId)
         } else {
             sources.map { it.id }

@@ -127,6 +127,8 @@ fun OwnTVShell(
     playlists: List<tv.own.owntv.core.database.entity.SourceEntity> = emptyList(),
     activePlaylistId: Long = -1L,
     onSelectPlaylist: (Long) -> Unit = {},
+    activePlaylistSet: Set<Long> = emptySet(),
+    onSelectPlaylists: (Set<Long>) -> Unit = {},
     weatherInfo: tv.own.owntv.core.weather.WeatherInfo? = null,
     weatherFahrenheit: Boolean = false,
     activeProfileId: Long?,
@@ -720,6 +722,7 @@ fun OwnTVShell(
     // chosen playlist's name otherwise. With a single playlist there's nothing to switch, so just its name.
     val playlistLabel = when {
         playlists.size <= 1 -> sourceSummary ?: noSourceLabel
+        activePlaylistSet.isNotEmpty() -> playlists.filter { it.id in activePlaylistSet }.joinToString(", ") { it.name }
         activePlaylistId <= 0L -> stringResource(R.string.content_all_playlists)
         else -> playlists.firstOrNull { it.id == activePlaylistId }?.name ?: (sourceSummary ?: noSourceLabel)
     }
@@ -908,7 +911,7 @@ fun OwnTVShell(
         if (selectedSection != MainSection.HOME || playerMode != PlayerMode.NONE) homeVm.stopPreview()
     }
 
-    LaunchedEffect(selectedSection, playerMode, activeProfileId, activePlaylistId) {
+    LaunchedEffect(selectedSection, playerMode, activeProfileId, activePlaylistId, activePlaylistSet) {
         if (selectedSection == MainSection.HOME && playerMode == PlayerMode.NONE && (activeProfileId?.let { it >= 0 } == true)) {
             homeVm.refresh(activeProfileId)
         }
@@ -986,8 +989,8 @@ fun OwnTVShell(
     }
 
     // glcn: the Live category sheets list the playlists that carry channels inside the app-wide scope.
-    val liveSheetPlaylists = remember(playlists, activePlaylistId) {
-        playlists.filter { it.syncLive && (activePlaylistId <= 0L || it.id == activePlaylistId) }
+    val liveSheetPlaylists = remember(playlists, activePlaylistId, activePlaylistSet) {
+        playlists.filter { it.syncLive && (if (activePlaylistSet.isNotEmpty()) it.id in activePlaylistSet else (activePlaylistId <= 0L || it.id == activePlaylistId)) }
     }
     val liveOnlyId by tv.own.owntv.glcn.LiveListFilter.id.collectAsStateWithLifecycle()
     CompositionLocalProvider(
@@ -2117,6 +2120,8 @@ fun OwnTVShell(
             tv.own.owntv.features.shell.components.StagePlaylistMenu(
                 playlists = playlists,
                 activeId = activePlaylistId,
+                activeSet = activePlaylistSet,
+                onSelectMany = onSelectPlaylists,
                 pillLabel = playlistLabel,
                 pillBounds = playlistPillBounds,
                 onSelect = onSelectPlaylist,

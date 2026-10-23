@@ -166,6 +166,14 @@ class ShellViewModel(
     val activePlaylistId: StateFlow<Long> = settings.defaultSourceId
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), -1L)
 
+    /** glcn: several playlists chosen together (2+ ids), else empty — see [activePlaylistId]. */
+    val activePlaylistSet: StateFlow<Set<Long>> = settings.activeSourceSet
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    fun setActivePlaylists(ids: Set<Long>) {
+        viewModelScope.launch { settings.setActiveSources(ids) }
+    }
+
     /** Switch the active-playlist filter from the top-bar picker. Persists (survives restart). */
     fun setActivePlaylist(id: Long) {
         viewModelScope.launch { settings.setDefaultSource(id) }

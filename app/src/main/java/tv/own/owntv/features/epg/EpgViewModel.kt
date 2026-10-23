@@ -424,6 +424,7 @@ class EpgViewModel(
         // so the grid narrows to the chosen playlist's channels (or back to all). drop(1): initial load
         // is triggered by the screen.
         settings.defaultSourceId
+            .combine(settings.activeSourceSet) { id, set -> id to set }
             .drop(1)
             .distinctUntilChanged()
             .onEach { load() }

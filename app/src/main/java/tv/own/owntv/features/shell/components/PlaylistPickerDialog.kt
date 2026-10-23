@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import tv.own.owntv.ui.theme.mpx
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +37,8 @@ import tv.own.owntv.ui.components.trapAllFocusExit
 fun StagePlaylistMenu(
     playlists: List<SourceEntity>,
     activeId: Long,
+    activeSet: Set<Long> = emptySet(),
+    onSelectMany: (Set<Long>) -> Unit = {},
     pillLabel: String,
     pillBounds: androidx.compose.ui.geometry.Rect?,
     onSelect: (Long) -> Unit,
@@ -48,6 +51,13 @@ fun StagePlaylistMenu(
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     val numbers = remember(locale) { java.text.NumberFormat.getIntegerInstance(locale) }
     val selectedFocus = remember { FocusRequester() }
+    // glcn: OK ticks or unticks a playlist and the menu stays open; the choice applies at once and
+    // none ticked means all. Back closes.
+    var picked by remember {
+        androidx.compose.runtime.mutableStateOf(
+            if (activeSet.isNotEmpty()) activeSet else if (activeId > 0) setOf(activeId) else emptySet(),
+        )
+    }
     LaunchedEffect(Unit) { runCatching { selectedFocus.requestFocus() } }
     BackHandler { onDismiss() }
 
@@ -86,19 +96,22 @@ fun StagePlaylistMenu(
                 tv.own.owntv.ui.stage.StageMenuItem(
                     text = stringResource(R.string.content_all_playlists),
                     icon = tv.own.owntv.ui.components.OwnTVIcon.LAYERS,
-                    checked = activeId <= 0,
-                    onClick = { onSelect(-1L); onDismiss() },
-                    modifier = if (activeId <= 0) Modifier.focusRequester(selectedFocus) else Modifier,
+                    checked = picked.isEmpty(),
+                    onClick = { picked = emptySet(); onSelectMany(emptySet()); onDismiss() },
+                    modifier = if (picked.isEmpty()) Modifier.focusRequester(selectedFocus) else Modifier,
                 )
                 playlists.forEachIndexed { index, source ->
-                    val current = source.id == activeId
+                    val current = source.id in picked
                     tv.own.owntv.ui.stage.StageMenuItem(
                         text = source.name,
                         leading = { tv.own.owntv.ui.stage.StagePlaylistMark(tv.own.owntv.ui.stage.PlaylistMark.of(source.name, index)) },
                         value = if (current) null else counts[source.id]?.let(numbers::format),
                         checked = current,
-                        onClick = { onSelect(source.id); onDismiss() },
-                        modifier = if (current) Modifier.focusRequester(selectedFocus) else Modifier,
+                        onClick = {
+                            picked = if (current) picked - source.id else picked + source.id
+                            onSelectMany(picked)
+                        },
+                        modifier = if (current && source.id == picked.first()) Modifier.focusRequester(selectedFocus) else Modifier,
                     )
                 }
             }
