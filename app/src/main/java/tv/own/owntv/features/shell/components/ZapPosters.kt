@@ -89,9 +89,22 @@ fun ZapPosterOverlay(
             window.forEach { programmes[it.id] = got[it.id] }
         }
     }
+    // glcn: schedules read once, and the channels around the cursor read ahead, so the card beside the
+    // strip is complete the moment a channel is focused instead of filling in piece by piece.
+    val scheduleCache = remember(channels) { androidx.compose.runtime.mutableStateMapOf<Long, List<EpgProgrammeEntity>>() }
+    var focusedCh by remember { androidx.compose.runtime.mutableStateOf<ChannelEntity?>(null) }
+    if (loadSchedule != null) {
+        LaunchedEffect(channels, focusedCh?.id) {
+            val at = channels.indexOfFirst { it.id == focusedCh?.id }.takeIf { it >= 0 } ?: start
+            for (d in buildList { add(0); for (k in 1..6) { add(k); add(-k) } }) {
+                val c = channels.getOrNull(at + d) ?: continue
+                if (c.id in scheduleCache) continue
+                runCatching { loadSchedule(c) }.getOrNull()?.let { scheduleCache[c.id] = it }
+            }
+        }
+    }
     // Opened by holding OK, the same OK is still down — and its repeats and release would land on the
     // focused card and pick it at once, closing the strip. OK counts only from a fresh press.
-    var focusedCh by remember { androidx.compose.runtime.mutableStateOf<ChannelEntity?>(null) }
     var okArmed by remember { androidx.compose.runtime.mutableStateOf(false) }
     val now = remember { System.currentTimeMillis() }
     val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
@@ -162,6 +175,7 @@ fun ZapPosterOverlay(
             channel = focusedCh,
             programmes = programmes,
             loadSchedule = loadSchedule,
+            cache = scheduleCache,
             modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.mpx, bottom = 392.mpx),
         )
     }
@@ -172,15 +186,19 @@ private fun ZapPosterInfo(
     channel: ChannelEntity?,
     programmes: Map<Long, EpgProgrammeEntity?>,
     loadSchedule: suspend (ChannelEntity) -> List<EpgProgrammeEntity>,
+    cache: MutableMap<Long, List<EpgProgrammeEntity>>,
     modifier: Modifier = Modifier,
 ) {
-    var rows by remember { mutableStateOf<List<EpgProgrammeEntity>>(emptyList()) }
+    // From the cache at once; a channel not read yet is read now, with nothing waited for.
+    var loaded by remember { mutableStateOf<Pair<Long, List<EpgProgrammeEntity>>?>(null) }
     LaunchedEffect(channel?.id) {
-        rows = emptyList()
         if (channel == null) return@LaunchedEffect
-        kotlinx.coroutines.delay(200) // not a fetch per card while the D-pad is moving
-        rows = runCatching { loadSchedule(channel) }.getOrDefault(emptyList())
+        if (channel.id in cache) return@LaunchedEffect
+        val got = runCatching { loadSchedule(channel) }.getOrDefault(emptyList())
+        cache[channel.id] = got
+        loaded = channel.id to got
     }
+    val rows = channel?.let { c -> cache[c.id] ?: loaded?.takeIf { it.first == c.id }?.second } ?: emptyList()
     val ch = channel ?: return
     val nowMs = System.currentTimeMillis()
     val card = programmes[ch.id]
@@ -192,7 +210,7 @@ private fun ZapPosterInfo(
     val lent by androidx.compose.runtime.produceState<tv.own.owntv.core.metadata.ProgrammeArtResolver.Info?>(null, cur.title, cur.categories) {
         value = null
         if (!cur.description.isNullOrBlank() && cur.year != null) return@produceState
-        kotlinx.coroutines.delay(250)
+        kotlinx.coroutines.delay(120)
         value = runCatching { resolver.detailsFor(cur.title, cur.categories) }.getOrNull()
     }
     val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }

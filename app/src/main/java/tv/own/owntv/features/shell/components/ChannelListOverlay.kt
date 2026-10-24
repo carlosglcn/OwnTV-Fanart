@@ -360,7 +360,6 @@ private fun ZapPreviewPanel(
         // glcn: the previous channel's programme goes at once — a stale poster for seconds was worse than none.
         programme = null
         if (channel == null) return@LaunchedEffect
-        kotlinx.coroutines.delay(60)
         programme = runCatching { loadNow(channel) }.getOrNull()
     }
     val p = programme?.first ?: return
@@ -439,7 +438,6 @@ private fun ZapSchedulePanel(
     var rows by remember { mutableStateOf<List<EpgProgrammeEntity>>(emptyList()) }
     LaunchedEffect(channel?.id) {
         if (channel == null) { rows = emptyList(); return@LaunchedEffect }
-        kotlinx.coroutines.delay(90)
         rows = runCatching { loadSchedule(channel) }.getOrDefault(emptyList())
     }
     val ch = channel ?: return
