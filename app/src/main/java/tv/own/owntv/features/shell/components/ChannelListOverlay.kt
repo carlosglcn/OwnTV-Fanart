@@ -409,7 +409,7 @@ private fun ZapPreviewPanel(
             Box(Modifier.fillMaxWidth(f).height(4.mpx).background(stageAccent.accent))
         }
         p.description?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = stageText(16, 400), color = StageColors.Dim, maxLines = if (framed) 4 else 2, overflow = TextOverflow.Ellipsis)
+            DriftingSynopsis(it, style = stageText(16, 400), color = StageColors.Dim, lines = if (framed) 4 else 2)
         }
         // glcn: and what follows it.
         next?.let { n ->
@@ -468,7 +468,7 @@ private fun ZapSchedulePanel(
         )
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             // Only as many rows as fit above the programme card, so none is cut in half.
-            val fit = if (joined) ((maxHeight - 130.mpx) / 56.mpx).toInt().coerceAtLeast(3) else rows.size
+            val fit = if (joined) ((maxHeight - 180.mpx) / 56.mpx).toInt().coerceAtLeast(3) else rows.size
             Column(verticalArrangement = Arrangement.spacedBy(5.mpx)) {
             rows.take(fit).forEach { p ->
             val onAir = now in p.startMs until p.stopMs
@@ -503,7 +503,7 @@ private fun ZapSchedulePanel(
             }
         }
         if (joined && loadNow != null) {
-            ZapPreviewPanel(channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth(), framed = false)
+            ZapPreviewPanel(channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 46.mpx), framed = false)
         }
     }
 }

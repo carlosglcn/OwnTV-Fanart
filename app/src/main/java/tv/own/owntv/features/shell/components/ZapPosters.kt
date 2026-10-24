@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.verticalScroll
@@ -109,7 +110,11 @@ fun ZapPosterOverlay(
                 .background(Brush.verticalGradient(0f to Color.Transparent, 0.25f to shade.copy(alpha = 0.78f), 1f to shade.copy(alpha = 0.92f)))
                 .padding(top = 90.mpx, bottom = 40.mpx)
                 .onPreviewKeyEvent { e ->
-                    if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp) { onListView(); true } else false
+                    if (e.type != KeyEventType.KeyDown) false
+                    // glcn: ▲ opens the list; ◀ from the first channel goes back to it too.
+                    else if (e.key == Key.DirectionUp) { onListView(); true }
+                    else if (e.key == Key.DirectionLeft && focusedCh?.id == channels.firstOrNull()?.id) { onListView(); true }
+                    else false
                 },
         ) {
             Row(
@@ -273,7 +278,7 @@ internal fun DriftingSynopsis(
             scroll.scrollTo(0)
         }
     }
-    Box(modifier.fillMaxWidth().height(lineH * lines).clip(androidx.compose.ui.graphics.RectangleShape)) {
+    Box(modifier.fillMaxWidth().heightIn(max = lineH * lines).clip(androidx.compose.ui.graphics.RectangleShape)) {
         Text(
             text, style = style.copy(lineHeight = style.fontSize * 1.4f), color = color,
             modifier = Modifier.verticalScroll(scroll, enabled = false),

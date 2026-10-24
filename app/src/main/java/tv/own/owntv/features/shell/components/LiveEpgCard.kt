@@ -76,7 +76,7 @@ fun LiveEpgCard(
     // Side by side, the two halves fought for the corner and the "now" half shrank to one word a line.
     Column(
         modifier = modifier
-            .widthIn(min = 300.dp, max = if (bare) 470.dp else 500.dp)
+            .widthIn(min = 280.dp, max = if (bare) 400.dp else 440.dp)
             .then(if (bare) Modifier else Modifier.clip(RoundedCornerShape(10.dp)).background(hudShade(0.72f)))
             .then(
                 if (archive) Modifier
@@ -105,7 +105,7 @@ fun LiveEpgCard(
             SlotLabel(stringResource(if (archive) R.string.content_archive_playing else R.string.content_live_now), tv.own.owntv.ui.theme.stageAccent.accent)
             Text(
                 now.title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
                 color = hudInk,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
@@ -130,13 +130,13 @@ fun LiveEpgCard(
             }
             // What the programme actually IS, not just what it is called.
             now.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
-                Text(
+                // glcn: three lines, and a longer text drifts slowly down and back instead of ending in "…".
+                DriftingSynopsis(
                     synopsis,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = hudInk.copy(alpha = 0.82f),
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = if (bare) 3.dp else 6.dp),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    color = hudInk.copy(alpha = 0.82f),
+                    lines = 3,
                 )
             }
         }
@@ -173,7 +173,7 @@ fun LiveEpgCardWithArt(epg: EpgNowNext?, art: String?, modifier: Modifier = Modi
     ) {
         tv.own.owntv.ui.components.ProgrammeArt(
             url = art,
-            modifier = Modifier.size(width = 150.dp, height = 84.dp).clip(RoundedCornerShape(10.dp)),
+            modifier = Modifier.size(width = 128.dp, height = 72.dp).clip(RoundedCornerShape(10.dp)),
         )
         LiveEpgCard(epg, bare = true)
     }

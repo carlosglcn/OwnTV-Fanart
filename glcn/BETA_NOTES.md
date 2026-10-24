@@ -69,3 +69,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🗓️ TV Guide: the focused programme cell now stays whole inside the visible timeline, so a long programme that runs past either edge no longer looks cut off or misframed.
 - 📝 Programme info: every programme now tries to show a synopsis — when the guide has none, TMDB lends one (with a looser title match). A long synopsis slowly scrolls down and back so all of it can be read.
 - 🎚️ Live player: a new 'Quality' button in the controls bar lists the other copies of the channel in the same playlist (FHD, HD, SD…); OK switches to the one you pick. It only appears when the channel has more than one copy.
+- ◀ Quick channel strip: ◀ on the first channel goes back to the list.
+- 🖼️ Channel list: the programme picture and its text sit higher, no longer pressed against the bottom edge; a long synopsis scrolls slowly.
+- 📺 Player banner: the programme card is smaller (picture and text), and a synopsis that does not fit scrolls slowly instead of ending in "…".
