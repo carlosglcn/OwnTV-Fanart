@@ -75,3 +75,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔁 Category sheet: switching playlist no longer sends the list down to a group and back up; the list stays where it is while the new playlist loads.
 - 🎯 'Set TMDB name' window: the title has its own full-width line and the year and TMDB ID share the one below, so their labels are no longer cut off.
 - ⚡ Channel info beside the quick channel strip and list: the programme card now fills in at once when you change channel — schedules are read ahead for the nearby channels and nothing waits before loading, so the text no longer appears piece by piece.
+- ✨ New Lumen style (Settings → Style): Lumen Noche (near-black glass) and Lumen Día (pearl glass) with a cool blue accent; the floating menu and panels show as clear glass. The first-run style step now shows the styles in two rows.

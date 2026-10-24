@@ -26,6 +26,8 @@ import tv.own.owntv.ui.theme.mpx
 @Composable
 fun GlcnStyle.label(): String = stringResource(
     when (this) {
+        GlcnStyle.LUMEN_NOCHE -> R.string.glcn_style_lumen_noche
+        GlcnStyle.LUMEN_DIA -> R.string.glcn_style_lumen_dia
         GlcnStyle.ATARDECER -> R.string.glcn_style_atardecer
         GlcnStyle.ESTUDIO -> R.string.glcn_style_estudio
         GlcnStyle.VITRINA -> R.string.glcn_style_vitrina

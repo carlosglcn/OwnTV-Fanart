@@ -55,7 +55,7 @@ internal fun StyleStep(onNext: () -> Unit, onBack: () -> Unit) {
         next = WizardAction(stringResource(R.string.setup_continue), onNext),
         width = 1500.mpx,
     ) {
-        GlcnStyle.entries.chunked(4).forEachIndexed { row, styles ->
+        GlcnStyle.entries.chunked(5).forEachIndexed { row, styles ->
             Row(Modifier.fillMaxWidth().padding(top = if (row == 0) 8.mpx else 16.mpx), horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                 styles.forEachIndexed { i, st ->
                     StageSurface(
