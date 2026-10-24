@@ -115,7 +115,8 @@ fun ChannelListOverlay(
             else -> playingIndex.coerceAtLeast(0)
         }
     }
-    val listState = rememberLazyListState()
+    // glcn: opens already on the current channel — scrolling there after the first frame showed the top for a blink.
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = currentIndex)
     val focusTarget = remember { FocusRequester() }
     // The row that owns [focusTarget]: the current channel at first, then wherever paging jumped to.
     var targetIndex by remember(currentIndex) { mutableIntStateOf(currentIndex) }

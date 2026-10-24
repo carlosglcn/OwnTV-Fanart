@@ -179,7 +179,16 @@ private fun ZapPosterInfo(
     val nowMs = System.currentTimeMillis()
     val card = programmes[ch.id]
     val cur = rows.firstOrNull { nowMs in it.startMs until it.stopMs } ?: card ?: return // no guide: nothing
-    val next = rows.filter { it.startMs >= cur.stopMs }.take(3)
+    val next = rows.filter { it.startMs >= cur.stopMs }.take(2)
+    // glcn: a film or series the guide says little about: TMDB lends its year, rating and synopsis, once
+    // the D-pad has rested (and from memory when it was asked before).
+    val resolver: tv.own.owntv.core.metadata.ProgrammeArtResolver = org.koin.compose.koinInject()
+    val lent by androidx.compose.runtime.produceState<tv.own.owntv.core.metadata.ProgrammeArtResolver.Info?>(null, cur.title, cur.categories) {
+        value = null
+        if (!cur.description.isNullOrBlank() && cur.year != null) return@produceState
+        kotlinx.coroutines.delay(250)
+        value = runCatching { resolver.detailsFor(cur.title, cur.categories) }.getOrNull()
+    }
     val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
     val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
     val logo = ch.displayLogoUrl?.takeIf { it.isNotBlank() }
@@ -210,9 +219,19 @@ private fun ZapPosterInfo(
         Box(Modifier.fillMaxWidth().height(4.mpx).clip(RoundedCornerShape(2.mpx)).background(StageColors.Ink.copy(alpha = 0.12f))) {
             Box(Modifier.fillMaxWidth(f).height(4.mpx).background(accent))
         }
-        (cur.description ?: card?.description)?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = stageText(16, 400), color = StageColors.Dim, maxLines = 4, overflow = TextOverflow.Ellipsis)
-        }
+        // genre · year · age / rating: one quiet line
+        val facts = (
+            cur.details.categoryList.take(2) +
+                listOfNotNull(
+                    (cur.year ?: lent?.year)?.toString(),
+                    cur.rating ?: lent?.rating?.let { "★ " + tv.own.owntv.core.metadata.ProgrammeArtResolver.format(it) },
+                )
+            ).filter { it.isNotBlank() }.joinToString(" · ")
+        if (facts.isNotEmpty()) Text(facts, style = stageText(15, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        (cur.description ?: card?.description)?.takeIf { it.isNotBlank() }
+            ?.let { it }
+            .let { it ?: lent?.overview }
+            ?.let { Text(it, style = stageText(16, 400), color = StageColors.Dim, maxLines = 3, overflow = TextOverflow.Ellipsis) }
         if (next.isNotEmpty()) {
             Text(
                 stringResource(R.string.content_live_next), style = stageText(15, 700), color = accent,

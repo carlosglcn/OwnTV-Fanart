@@ -48,3 +48,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🤾 Handball: Liga ASOBAL with the calendar, results, live score and the table (points and draws). Data comes from the league's own site; a live match is read every half minute.
 - 🏎️ Formula 1: a session now finds its channel when the guide calls it "F1" ("Mundial F1"), and the programme shows under Sport on your channels.
 - 📺 Live player: the programme card text is a little smaller so the whole title and synopsis fit.
+- 🎬 Zapping posters: the programme card adds a quiet line with genre · year · rating and a short synopsis; for films and series the guide leaves blank (e.g. no year), TMDB fills year, rating and synopsis. Next programmes are now two.
+- 📋 Channel list: it opens directly on the current channel, with no blink to the top first.
