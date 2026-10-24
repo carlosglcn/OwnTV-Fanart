@@ -390,6 +390,7 @@ internal fun BottomBar(
     onChannels: (() -> Unit)? = null,
     onGuide: (() -> Unit)? = null,
     onOtherChannels: (() -> Unit)? = null, otherChannelsCount: Int = 0,
+    onChannelCopies: (() -> Unit)? = null,
     onOpenDialog: (HudDialog) -> Unit, onPip: (() -> Unit)?, onAudioMode: (() -> Unit)?,
     onMultiview: (() -> Unit)? = null, onRecordThis: (() -> Unit)? = null, recordingThis: Boolean = false,
     /** Given to whichever timeline is drawn, so Left/Right with the controls hidden can land on it. */
@@ -499,8 +500,14 @@ internal fun BottomBar(
                             CtrlButton(OwnTVIcon.HISTORY, label = stringResource(R.string.player_previous_channel)) { onPreviousChannel() }
                         }
                         // Sports Hub: only for a channel started from a match.
-                        PlayerControl.OTHER_CHANNELS -> if (onOtherChannels != null) {
-                            CtrlButton(OwnTVIcon.LIST, label = stringResource(R.string.sports_other_channels_count, otherChannelsCount)) { onOtherChannels() }
+                        PlayerControl.OTHER_CHANNELS -> {
+                            if (onOtherChannels != null) {
+                                CtrlButton(OwnTVIcon.LIST, label = stringResource(R.string.sports_other_channels_count, otherChannelsCount)) { onOtherChannels() }
+                            }
+                            // glcn: live — switch between the copies of this channel (FHD / HD / SD), nothing else.
+                            if (onChannelCopies != null) {
+                                CtrlButton(OwnTVIcon.VIDEO, label = stringResource(R.string.player_tool_quality)) { onChannelCopies() }
+                            }
                         }
                         // Not shown on the TV: Back from the player already returns to the match page.
                         PlayerControl.MATCH -> Unit

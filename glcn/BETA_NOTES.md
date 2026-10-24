@@ -68,3 +68,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎯 TMDB info: the 'Set TMDB name' window has an optional TMDB ID field; with an ID the film or series is matched exactly, with no search by name and year.
 - 🗓️ TV Guide: the focused programme cell now stays whole inside the visible timeline, so a long programme that runs past either edge no longer looks cut off or misframed.
 - 📝 Programme info: every programme now tries to show a synopsis — when the guide has none, TMDB lends one (with a looser title match). A long synopsis slowly scrolls down and back so all of it can be read.
+- 🎚️ Live player: a new 'Quality' button in the controls bar lists the other copies of the channel in the same playlist (FHD, HD, SD…); OK switches to the one you pick. It only appears when the channel has more than one copy.

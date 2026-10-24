@@ -1810,13 +1810,23 @@ class LiveViewModel(
         viewModelScope.launch { player.error.collect { f -> if (f != null) runCatching { tryFailover() } } }
     }
 
+    /** glcn: the other copies of [cur] in its own playlist (FHD / HD / SD…), with [cur] among them, best first. */
+    suspend fun copiesOf(cur: ChannelEntity): List<ChannelEntity> {
+        val others = tv.own.owntv.core.live.ChannelFailover.rank(cur, siblingPool(cur))
+        return (others + cur).sortedWith(compareByDescending<ChannelEntity> { tv.own.owntv.core.live.ChannelFailover.quality(it.name) }.thenBy { it.id })
+    }
+
+    private suspend fun siblingPool(cur: ChannelEntity): List<ChannelEntity> {
+        val epgKey = cur.epgChannelId?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "\u0000"
+        val token = tv.own.owntv.core.live.ChannelFailover.searchToken(cur.name) ?: "\u0000"
+        return withContext(Dispatchers.IO) { channelDao.siblingCandidates(cur.sourceId, epgKey, token) }
+    }
+
     private suspend fun tryFailover() {
         val cur = _previewChannel.value ?: return
         if (!player.isLiveContent || _catchupActive.value || timeshift.isRewound || externalPlayerOn.value) return
         failoverTried += cur.id
-        val epgKey = cur.epgChannelId?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "\u0000"
-        val token = tv.own.owntv.core.live.ChannelFailover.searchToken(cur.name) ?: "\u0000"
-        val pool = withContext(Dispatchers.IO) { channelDao.siblingCandidates(cur.sourceId, epgKey, token) }
+        val pool = siblingPool(cur)
         val next = tv.own.owntv.core.live.ChannelFailover.rank(cur, pool).firstOrNull { it.id !in failoverTried } ?: return
         _failoverNotice.tryEmit(next.name)
         live.launch { playChannel(next) }

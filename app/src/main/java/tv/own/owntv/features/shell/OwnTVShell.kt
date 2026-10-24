@@ -1763,6 +1763,14 @@ fun OwnTVShell(
                 val sportsConfig by settingsRepo.activeSportsConfig.collectAsStateWithLifecycle(tv.own.owntv.core.sports.SportsConfig())
                 val matchSession = sportsSession?.takeIf { s -> isTunedLive && s.options.any { it.channel.id == previewChannel?.id } }
                 var showOtherChannels by remember { mutableStateOf(false) }
+                // glcn: the copies of the channel on screen, looked up once the channel is tuned.
+                var showCopies by remember { mutableStateOf(false) }
+                val channelCopies by androidx.compose.runtime.produceState(emptyList<tv.own.owntv.core.database.entity.ChannelEntity>(), previewChannel?.id, isTunedLive) {
+                    value = emptyList()
+                    val ch = previewChannel ?: return@produceState
+                    if (!isTunedLive) return@produceState
+                    value = runCatching { liveVm.copiesOf(ch) }.getOrDefault(emptyList())
+                }
                 var goalToast by remember { mutableStateOf<tv.own.owntv.core.sports.MatchAlert?>(null) }
                 LaunchedEffect(isTunedLive) { if (isTunedLive) sportsPlayback.goals().collect { goalToast = it } }
                 LaunchedEffect(goalToast) { if (goalToast != null) { kotlinx.coroutines.delay(GOAL_TOAST_MS); goalToast = null } }
@@ -1790,7 +1798,7 @@ fun OwnTVShell(
                     onAudioMode = toAudioMode,
                     // The channel-list overlay draws ABOVE the HUD; while it's open the HUD goes inert so
                     // its hide/error focus grabs can't yank D-pad focus off the overlay.
-                    inert = showChannelList || showHistoryList || showCategoryBrowser || showSubtitleSearch || showLocalSubPicker || showOtherChannels,
+                    inert = showChannelList || showHistoryList || showCategoryBrowser || showSubtitleSearch || showLocalSubPicker || showOtherChannels || showCopies,
                     onChannelUp = zap?.let { z -> { z(-1) } },
                     onChannelDown = zap?.let { z -> { z(1) } },
                     onOpenChannelList = if (isTunedLive && liveCanZap) { { showChannelList = true } } else null,
@@ -1930,6 +1938,7 @@ fun OwnTVShell(
                     },
                     onOtherChannels = matchSession?.takeIf { it.options.size > 1 }?.let { { showOtherChannels = true } },
                     otherChannelsCount = (matchSession?.options?.size ?: 1) - 1,
+                    onChannelCopies = channelCopies.takeIf { it.size > 1 }?.let { { showCopies = true } },
                     onToastOk = goalToast?.let { a -> { switchToMatch(a.match) } },
                     modifier = Modifier.fillMaxSize().onPreviewKeyEvent { e ->
                         // glcn: OK while "Skip intro" shows jumps the intro.
@@ -1949,6 +1958,14 @@ fun OwnTVShell(
                 )
                 goalToast?.let { a ->
                     tv.own.owntv.features.sports.GoalToast(a, Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(top = 45.mpx, end = 60.mpx))
+                }
+                if (showCopies) {
+                    tv.own.owntv.features.shell.components.ChannelCopiesPopup(
+                        copies = channelCopies,
+                        playingId = previewChannel?.id,
+                        onPick = { ch -> liveVm.ensurePlaying(ch); showCopies = false },
+                        onDismiss = { showCopies = false },
+                    )
                 }
                 if (showOtherChannels) {
                     val s = matchSession
