@@ -83,6 +83,7 @@ internal fun sportLabel(sport: Sport): String = stringResource(
     when (sport) {
         Sport.SOCCER -> R.string.sports_sport_soccer
         Sport.BASKETBALL -> R.string.sports_sport_basketball
+        Sport.HANDBALL -> R.string.sports_sport_handball
         Sport.TENNIS -> R.string.sports_sport_tennis
         Sport.CRICKET -> R.string.sports_sport_cricket
         Sport.RACING -> R.string.sports_sport_motorsport
@@ -103,6 +104,7 @@ internal fun sportLabel(sport: Sport): String = stringResource(
 internal fun sportEmoji(sport: Sport): String = when (sport) {
     Sport.SOCCER -> "⚽"
     Sport.BASKETBALL -> "🏀"
+    Sport.HANDBALL -> "🤾"
     Sport.TENNIS -> "🎾"
     Sport.CRICKET -> "🏏"
     Sport.RACING -> "🏎"
