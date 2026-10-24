@@ -543,12 +543,11 @@ fun MoviesScreen(
             }
         }
         .focusGroup()
-    // ◀ from the search field opens the categories, as from the titles — with a query too (a search that
-    // found nothing here may be in another category), but not while typing, where ◀ moves the cursor.
+    // ◀ from the search field goes to the menu, but not while typing, where ◀ moves the cursor.
     var searchEditing by remember { mutableStateOf(false) }
     val searchLeft = Modifier.onPreviewKeyEvent { e ->
         if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft && !searchEditing && lockedKey == null) {
-            if (cinematic) categoriesOpen = true else runCatching { railFocus.requestFocus() }
+            runCatching { railFocus.requestFocus() }
             true
         } else false
     }
@@ -591,7 +590,7 @@ fun MoviesScreen(
                         VodSortTool(sortMode, Modifier.focusRequester(sortFocus)) { sortOpen = true }
                         StageTool(text = stringResource(R.string.content_category_browser_title), icon = OwnTVIcon.LIST, onClick = { categoriesOpen = true })
                         Spacer(Modifier.weight(1f))
-                        StageKeyHints(listOf(playHint, optionsHint, "◀" to stringResource(R.string.content_category_browser_title)))
+                        StageKeyHints(listOf(playHint, optionsHint))
                     }
                     if (movies.itemCount == 0) {
                         Text(emptyText, style = stageText(20, 500), color = StageColors.Muted, modifier = Modifier.padding(start = fx(84), top = 60.mpx))
@@ -638,8 +637,8 @@ fun MoviesScreen(
                                                 if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                 when (e.key) {
                                                     Key.Menu -> { openMenu(movie, index); true }
-                                                    // ◀ from the first column opens the categories.
-                                                    Key.DirectionLeft -> index % columns == 0 && run { categoriesOpen = true; true }
+                                                    // ◀ from the first column goes to the menu; categories open from their button or a shortcut.
+                                                    Key.DirectionLeft -> index % columns == 0 && lockedKey == null && run { runCatching { railFocus.requestFocus() }; true }
                                                     else -> false
                                                 }
                                             },

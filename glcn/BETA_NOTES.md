@@ -51,3 +51,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎬 Zapping posters: the programme card adds a quiet line with genre · year · rating and a short synopsis; for films and series the guide leaves blank (e.g. no year), TMDB fills year, rating and synopsis. Next programmes are now two.
 - 📋 Channel list: it opens directly on the current channel, with no blink to the top first.
 - 🕒 Live player: the programme card now moves on by itself when a programme ends; a channel left open no longer keeps showing the previous one.
+- 🎞️ Movies and Series: ◀ from the first column or the search field now goes to the menu instead of opening the categories; they open from the Categories button or a shortcut.
