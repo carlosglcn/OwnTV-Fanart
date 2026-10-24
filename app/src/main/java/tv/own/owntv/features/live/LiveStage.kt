@@ -348,12 +348,12 @@ internal fun LiveStagePane(
         }
         // glcn: the synopsis runs the full width, under the small picture.
         val resolver: tv.own.owntv.core.metadata.ProgrammeArtResolver = org.koin.compose.koinInject()
-        val lentOverview by androidx.compose.runtime.produceState<String?>(null, now?.title, now?.categories) {
+        val lentOverview by androidx.compose.runtime.produceState<String?>(null, now?.title) {
             value = null
             val n = now ?: return@produceState
             if (!n.description.isNullOrBlank()) return@produceState
             kotlinx.coroutines.delay(300)
-            value = runCatching { resolver.detailsFor(n.title, n.categories) }.getOrNull()?.overview
+            value = runCatching { resolver.detailsFor(n.title, null) }.getOrNull()?.overview
         }
         (now?.description?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
             tv.own.owntv.features.shell.components.DriftingSynopsis(
