@@ -320,7 +320,8 @@ internal fun LiveStagePane(
         val now = nowNext?.now
         // glcn: the programme's picture beside its words — seen whole, never under the text.
         val infoArt = nowNext?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() }
-        Row(Modifier.fillMaxWidth().padding(start = 4.mpx, end = 4.mpx, top = 34.mpx)) {
+        Column(Modifier.fillMaxWidth().padding(start = 4.mpx, end = 4.mpx, top = 34.mpx)) {
+        Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             if (now != null) {
                 Text(now.title, style = stageText(42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -336,34 +337,6 @@ internal fun LiveStagePane(
                     StageProgress(progressOf(now), Modifier.weight(1f))
                     Text(timeLeftText(minutesLeft(now)), style = stageText(17, 400).copy(fontFeatureSettings = Tabular), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                now.description?.takeIf { it.isNotBlank() }?.let {
-                    Text(
-                        it, style = stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp), color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
-                        maxLines = 4, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 18.mpx),
-                    )
-                }
-            }
-            val next = nowNext?.next
-            val later = nowNext?.upcoming?.firstOrNull()
-            if (next != null) {
-                Row(
-                    Modifier
-                        .padding(top = 22.mpx)
-                        .offset(x = (-12).mpx)
-                        .focusGroup(),
-                    // 30 between the two, less the 12 + 12 each entry pads itself with for its focus fill.
-                    horizontalArrangement = Arrangement.spacedBy(6.mpx),
-                ) {
-                    // ◀ from next goes back to the channel it belongs to, not to whatever lies to the left.
-                    LiveScheduleItem(
-                        next, accentTime = true, onClick = { onOpenProgramme(next) },
-                        modifier = Modifier.focusRequester(scheduleFocus).onPreviewKeyEvent { e ->
-                            if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onBackToList(); true } else false
-                        },
-                    )
-                    if (later != null) LiveScheduleItem(later, accentTime = false, onClick = { onOpenProgramme(later) })
-                }
             }
         }
         if (now != null && infoArt != null) {
@@ -371,6 +344,42 @@ internal fun LiveStagePane(
                 Modifier.padding(start = 28.mpx, top = 6.mpx).width(260.mpx).aspectRatio(16f / 9f)
                     .clip(RoundedCornerShape(16.mpx)).background(Color(0xFF15191C)),
             ) { tv.own.owntv.ui.components.ProgrammeArt(url = infoArt, modifier = Modifier.fillMaxSize()) }
+        }
+        }
+        // glcn: the synopsis runs the full width, under the small picture.
+        now?.description?.takeIf { it.isNotBlank() }?.let {
+            Text(
+                it, style = stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp), color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
+                maxLines = 3, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth().padding(top = 14.mpx),
+            )
+        }
+        val next = nowNext?.next
+        // glcn: what follows, several — the next one and the two after it.
+        val later = nowNext?.upcoming.orEmpty().take(2)
+        if (next != null) {
+            Column(
+                Modifier
+                    .padding(top = 14.mpx)
+                    .offset(x = (-12).mpx)
+                    .focusGroup(),
+            ) {
+                // ◀ from next goes back to the channel it belongs to, not to whatever lies to the left.
+                LiveScheduleItem(
+                    next, accentTime = true, onClick = { onOpenProgramme(next) },
+                    modifier = Modifier.focusRequester(scheduleFocus).onPreviewKeyEvent { e ->
+                        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onBackToList(); true } else false
+                    },
+                )
+                later.forEach { l ->
+                    LiveScheduleItem(
+                        l, accentTime = false, onClick = { onOpenProgramme(l) },
+                        modifier = Modifier.onPreviewKeyEvent { e ->
+                            if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onBackToList(); true } else false
+                        },
+                    )
+                }
+            }
         }
         }
     }
@@ -695,7 +704,9 @@ internal fun LiveCategories(
                             radius = 22.mpx,
                             modifier = Modifier.height(46.mpx)
                                 .then(chipFocusers[id]?.let { Modifier.focusRequester(it) } ?: Modifier)
-                                .onFocusChanged { chipFocused = it.hasFocus; if (it.hasFocus) lastChipId = id },
+                                .onFocusChanged { chipFocused = it.hasFocus; if (it.hasFocus) lastChipId = id }
+                                // glcn: ◀ on the first playlist stops there — it must not leave the sheet for the quick guide.
+                                .onPreviewKeyEvent { e -> row == 0 && e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft },
                         ) { focused ->
                             Row(Modifier.padding(horizontal = 18.mpx).height(46.mpx), verticalAlignment = Alignment.CenterVertically) {
                                 Text(
