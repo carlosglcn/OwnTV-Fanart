@@ -923,9 +923,20 @@ fun OwnTVShell(
         if (selectedSection != MainSection.HOME || playerMode != PlayerMode.NONE) homeVm.stopPreview()
     }
 
+    // glcn: Home rebuilds its whole feed only when something may have changed — after playback, another
+    // profile or playlist, or a minute away; moving between sections just shows what it already has.
+    val homeRefresh = remember { object { var at = 0L; var ctx: List<Any?>? = null; var stale = true } }
     LaunchedEffect(selectedSection, playerMode, activeProfileId, activePlaylistId, activePlaylistSet) {
+        if (playerMode != PlayerMode.NONE) homeRefresh.stale = true
         if (selectedSection == MainSection.HOME && playerMode == PlayerMode.NONE && (activeProfileId?.let { it >= 0 } == true)) {
-            homeVm.refresh(activeProfileId)
+            val ctx = listOf(activeProfileId, activePlaylistId, activePlaylistSet)
+            val t = System.currentTimeMillis()
+            if (homeRefresh.stale || ctx != homeRefresh.ctx || t - homeRefresh.at > 60_000L) {
+                homeRefresh.stale = false
+                homeRefresh.ctx = ctx
+                homeRefresh.at = t
+                homeVm.refresh(activeProfileId)
+            }
         }
     }
 
