@@ -1048,9 +1048,10 @@ fun MoviesScreen(
                 initialTitle = p.title,
                 initialYear = p.year,
                 hasOverride = p.hasOverride,
-                onSave = { title, year ->
+                initialTmdbId = p.tmdbId,
+                onSave = { title, year, tmdbId ->
                     setTmdbNameMovie = null
-                    vm.setMovieTmdbName(m, title, year)
+                    vm.setMovieTmdbName(m, title, year, tmdbId)
                     toast.show(researchingTmdbMessage)
                 },
                 onClear = {

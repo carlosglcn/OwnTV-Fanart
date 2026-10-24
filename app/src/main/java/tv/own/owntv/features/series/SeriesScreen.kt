@@ -1049,9 +1049,10 @@ private fun SeriesGrid(
                 initialTitle = p.title,
                 initialYear = p.year,
                 hasOverride = p.hasOverride,
-                onSave = { title, year ->
+                initialTmdbId = p.tmdbId,
+                onSave = { title, year, tmdbId ->
                     setTmdbNameSeries = null
-                    vm.setSeriesTmdbName(s, title, year)
+                    vm.setSeriesTmdbName(s, title, year, tmdbId)
                     toast.show(researchingTmdbMessage)
                 },
                 onClear = {
@@ -1845,7 +1846,8 @@ private fun EpisodeView(
                 initialTitle = p.title,
                 initialYear = p.year,
                 hasOverride = p.hasOverride,
-                onSave = { title, year -> setTmdbName = false; vm.setSeriesTmdbName(series, title, year); toast.show(researchingTmdbMessage) },
+                initialTmdbId = p.tmdbId,
+                onSave = { title, year, tmdbId -> setTmdbName = false; vm.setSeriesTmdbName(series, title, year, tmdbId); toast.show(researchingTmdbMessage) },
                 onClear = { setTmdbName = false; vm.clearSeriesTmdbName(series); toast.show(researchingTmdbMessage) },
                 onDismiss = { setTmdbName = false },
             )

@@ -737,18 +737,18 @@ class SeriesViewModel(
      * provider title. [hasOverride] drives the dialog's Clear button. Episodes inherit the series match, so
      * the override lives at the series level (no separate episode override).
      */
-    data class TmdbNamePrefill(val title: String, val year: Int?, val hasOverride: Boolean)
+    data class TmdbNamePrefill(val title: String, val year: Int?, val hasOverride: Boolean, val tmdbId: Int? = null)
 
     suspend fun seriesTmdbNamePrefill(series: SeriesEntity): TmdbNamePrefill {
-        metadata.seriesOverride(series)?.let { return TmdbNamePrefill(it.title, it.year, hasOverride = true) }
+        metadata.seriesOverride(series)?.let { return TmdbNamePrefill(it.title, it.year, hasOverride = true, tmdbId = it.tmdbId) }
         val norm = tv.own.owntv.core.metadata.TitleNormalizer.normalize(series.name)
         return TmdbNamePrefill(norm.query, series.year ?: norm.year, hasOverride = false)
     }
 
     /** Save the hand-typed override and force a re-resolve under the new query. */
-    fun setSeriesTmdbName(series: SeriesEntity, title: String, year: Int?) {
+    fun setSeriesTmdbName(series: SeriesEntity, title: String, year: Int?, tmdbId: Int? = null) {
         viewModelScope.launch {
-            runCatching { metadata.setSeriesOverride(series, title, year) }
+            runCatching { metadata.setSeriesOverride(series, title, year, tmdbId) }
             resolvedMeta.remove(series.id)
             _seriesMetaTick.value++
         }

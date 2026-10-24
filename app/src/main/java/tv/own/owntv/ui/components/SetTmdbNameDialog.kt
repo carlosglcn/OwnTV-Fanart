@@ -55,13 +55,15 @@ fun SetTmdbNameDialog(
     initialTitle: String,
     initialYear: Int?,
     hasOverride: Boolean,
-    onSave: (title: String, year: Int?) -> Unit,
+    initialTmdbId: Int? = null,
+    onSave: (title: String, year: Int?, tmdbId: Int?) -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     OwnTVPopup(onDismissRequest = onDismiss, stageLayout = true) {
         var title by remember { mutableStateOf(initialTitle) }
         var year by remember { mutableStateOf(initialYear?.toString() ?: "") }
+        var tmdbId by remember { mutableStateOf(initialTmdbId?.toString().orEmpty()) }
         val titleFocus = remember { FocusRequester() }
         LaunchedEffect(Unit) { runCatching { titleFocus.requestFocus() } }
         BackHandler { onDismiss() }
@@ -108,7 +110,16 @@ fun SetTmdbNameDialog(
                         label = stringResource(R.string.setup_year_optional),
                         value = year,
                         onValueChange = { s -> year = s.filter { it.isDigit() }.take(4) },
-                        modifier = Modifier.width(200.mpx),
+                        modifier = Modifier.width(160.mpx),
+                        keyboardType = KeyboardType.Number,
+                    )
+                    // glcn: the exact TMDB id, when the name and year find the wrong film.
+                    tv.own.owntv.features.settings.StageFieldRow(
+                        icon = tv.own.owntv.ui.components.OwnTVIcon.PENCIL,
+                        label = stringResource(R.string.setup_tmdb_id_optional),
+                        value = tmdbId,
+                        onValueChange = { s -> tmdbId = s.filter { it.isDigit() }.take(9) },
+                        modifier = Modifier.width(210.mpx),
                         keyboardType = KeyboardType.Number,
                     )
                 }
@@ -122,7 +133,7 @@ fun SetTmdbNameDialog(
                     Spacer(Modifier.weight(1f))
                     StageButton(
                         stringResource(R.string.common_save),
-                        onClick = { if (title.isNotBlank()) onSave(title.trim(), year.trim().toIntOrNull()) },
+                        onClick = { if (title.isNotBlank()) onSave(title.trim(), year.trim().toIntOrNull(), tmdbId.trim().toIntOrNull()) },
                         height = 56.mpx, textSize = 19, tinted = true,
                     )
                 }

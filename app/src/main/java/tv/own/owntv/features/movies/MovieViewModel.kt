@@ -590,18 +590,18 @@ class MovieViewModel(
      * Prefill for the "Set TMDB name" dialog: the saved override if any, else the cleaned
      * provider title. [hasOverride] drives the dialog's Clear button.
      */
-    data class TmdbNamePrefill(val title: String, val year: Int?, val hasOverride: Boolean)
+    data class TmdbNamePrefill(val title: String, val year: Int?, val hasOverride: Boolean, val tmdbId: Int? = null)
 
     suspend fun movieTmdbNamePrefill(movie: MovieEntity): TmdbNamePrefill {
-        metadata.movieOverride(movie)?.let { return TmdbNamePrefill(it.title, it.year, hasOverride = true) }
+        metadata.movieOverride(movie)?.let { return TmdbNamePrefill(it.title, it.year, hasOverride = true, tmdbId = it.tmdbId) }
         val norm = tv.own.owntv.core.metadata.TitleNormalizer.normalize(movie.name)
         return TmdbNamePrefill(norm.query, movie.year ?: norm.year, hasOverride = false)
     }
 
     /** Save the hand-typed override and force a re-resolve under the new query. */
-    fun setMovieTmdbName(movie: MovieEntity, title: String, year: Int?) {
+    fun setMovieTmdbName(movie: MovieEntity, title: String, year: Int?, tmdbId: Int? = null) {
         viewModelScope.launch {
-            runCatching { metadata.setMovieOverride(movie, title, year) }
+            runCatching { metadata.setMovieOverride(movie, title, year, tmdbId) }
             resolvedMeta.remove(movie.id)
             _metaRefreshTick.value++
         }
