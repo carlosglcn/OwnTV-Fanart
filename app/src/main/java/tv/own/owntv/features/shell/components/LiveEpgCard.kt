@@ -105,7 +105,7 @@ fun LiveEpgCard(
             SlotLabel(stringResource(if (archive) R.string.content_archive_playing else R.string.content_live_now), tv.own.owntv.ui.theme.stageAccent.accent)
             Text(
                 now.title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 color = hudInk,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
@@ -115,7 +115,7 @@ fun LiveEpgCard(
             Text(
                 if (remaining in 1..600) stringResource(R.string.content_live_time_remaining, formatTime(now.stopMs), remaining)
                 else stringResource(R.string.content_live_time_range, formatTime(now.startMs), formatTime(now.stopMs)),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = hudInk.copy(alpha = 0.7f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -132,7 +132,7 @@ fun LiveEpgCard(
             now.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
                 Text(
                     synopsis,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = hudInk.copy(alpha = 0.82f),
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis,
@@ -149,7 +149,7 @@ fun LiveEpgCard(
                 SlotLabel(stringResource(if (archive) R.string.content_archive_then else R.string.content_live_next), hudInk.copy(alpha = 0.6f))
                 Text(
                     formatTime(entry.startMs) + "  " + entry.title,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = hudInk.copy(alpha = 0.85f),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

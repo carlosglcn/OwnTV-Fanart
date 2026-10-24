@@ -47,3 +47,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Live player: the programme picture is loaded as soon as the channel opens and kept, so the info card shows it at once instead of popping it in late.
 - 🤾 Handball: Liga ASOBAL with the calendar, results, live score and the table (points and draws). Data comes from the league's own site; a live match is read every half minute.
 - 🏎️ Formula 1: a session now finds its channel when the guide calls it "F1" ("Mundial F1"), and the programme shows under Sport on your channels.
+- 📺 Live player: the programme card text is a little smaller so the whole title and synopsis fit.
