@@ -2276,14 +2276,12 @@ class LiveViewModel(
         sortBeforeMove = null // the new order IS playlist order — staying on it is the point
         viewModelScope.launch {
             val pid = currentProfileId() ?: return@launch
-            contentOrderDao.replaceContext(
-                profileId = pid,
-                type = MediaType.LIVE,
-                contextKey = s.contextKey,
-                rows = s.items.mapIndexed { i, ch ->
+            // glcn: Favorites spans every playlist, so ordering what one shows must keep the others' order.
+            val rows = s.items.mapIndexed { i, ch ->
                     ContentOrderEntity(profileId = pid, mediaType = MediaType.LIVE, contextKey = s.contextKey, itemId = ch.id, position = i)
-                },
-            )
+                }
+            if (s.contextKey == ContentOrderEntity.FAV_CONTEXT) contentOrderDao.replaceKeepingOthers(pid, MediaType.LIVE, s.contextKey, rows)
+            else contentOrderDao.replaceContext(pid, MediaType.LIVE, s.contextKey, rows)
         }
     }
 

@@ -1291,14 +1291,12 @@ class SeriesViewModel(
         sortBeforeMove = null // the new order IS playlist order — staying on it is the point
         viewModelScope.launch {
             val pid = currentProfileId() ?: return@launch
-            contentOrderDao.replaceContext(
-                profileId = pid,
-                type = MediaType.SERIES,
-                contextKey = s.contextKey,
-                rows = s.items.mapIndexed { i, ser ->
+            // glcn: Favorites spans every playlist, so ordering what one shows must keep the others' order.
+            val rows = s.items.mapIndexed { i, ser ->
                     ContentOrderEntity(profileId = pid, mediaType = MediaType.SERIES, contextKey = s.contextKey, itemId = ser.id, position = i)
-                },
-            )
+                }
+            if (s.contextKey == ContentOrderEntity.FAV_CONTEXT) contentOrderDao.replaceKeepingOthers(pid, MediaType.SERIES, s.contextKey, rows)
+            else contentOrderDao.replaceContext(pid, MediaType.SERIES, s.contextKey, rows)
         }
     }
 

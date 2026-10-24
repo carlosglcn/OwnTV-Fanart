@@ -64,3 +64,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⚡ Menu: moving through the side or top menu opens each section once the cursor rests on it (about half a second), no OK needed. Search, More and Settings still open with OK.
 - 🏠 Home: moving back to Home from another section no longer rebuilds its whole feed every time; it refreshes after playback, a profile or playlist change, or after a minute away.
 - 🌟 Home featured: right after the first live sport it now shows something worth watching on TV at that moment — a film, premiere, documentary or series — on the HD copy of the channel, leaning to what you usually follow.
+- ⭐ Favourites: ordering the favourites of one playlist no longer scrambles the order of the others (channels, movies and series).
