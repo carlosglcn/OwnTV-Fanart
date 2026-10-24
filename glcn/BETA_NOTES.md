@@ -61,3 +61,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌟 Home: the featured slides appear as soon as each one is ready — the first no longer waits for every picture and TMDB lookup to finish.
 - 🔁 Quick channel list: a channel tuned from a category's channels makes that category the list ◀ opens next, with the current channel marked.
 - 📜 Channel cards: when a focused card's title does not fit, it scrolls smoothly past and starts over.
+- ⚡ Menu: moving through the side or top menu opens each section once the cursor rests on it (about half a second), no OK needed. Search, More and Settings still open with OK.
