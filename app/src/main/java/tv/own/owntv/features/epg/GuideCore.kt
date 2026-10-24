@@ -138,11 +138,16 @@ internal fun ProgrammeStripCanvas(
             val e0 = p.stopMs.coerceIn(windowStart, windowEnd)
             if (e0 <= s0) return@forEachIndexed
             shownUntil = e0
-            val x = ((s0 - windowStart) / 60_000f) * pxPerMin - scrollPx.toFloat() + 3 * px
-            val w = ((e0 - s0) / 60_000f) * pxPerMin - 6 * px
-            if (w <= 0f || x + w <= 0f || x >= viewW) return@forEachIndexed
+            val x0 = ((s0 - windowStart) / 60_000f) * pxPerMin - scrollPx.toFloat() + 3 * px
+            val w0 = ((e0 - s0) / 60_000f) * pxPerMin - 6 * px
+            if (w0 <= 0f || x0 + w0 <= 0f || x0 >= viewW) return@forEachIndexed
             drawnAny = true
             val focused = focusTime != null && focusTime in p.startMs until p.stopMs
+            // glcn: the focused cell is kept whole inside the visible timeline, so a programme that runs past
+            // either edge still shows its rounded corners and ring instead of being cut off mid-frame.
+            val x = if (focused) maxOf(x0, 4 * px) else x0
+            val w = if (focused) minOf(x0 + w0, viewW - 4 * px) - x else w0
+            if (w <= 0f) return@forEachIndexed
             val isNow = now in p.startMs until p.stopMs
             val fade = if (!focused && p.stopMs <= now) 0.5f else 1f
             val box = androidx.compose.ui.geometry.Rect(x, 0f, x + w, h)

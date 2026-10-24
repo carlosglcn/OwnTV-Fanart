@@ -347,11 +347,20 @@ internal fun LiveStagePane(
         }
         }
         // glcn: the synopsis runs the full width, under the small picture.
-        now?.description?.takeIf { it.isNotBlank() }?.let {
-            Text(
-                it, style = stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp), color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
-                maxLines = 3, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth().padding(top = 14.mpx),
+        val resolver: tv.own.owntv.core.metadata.ProgrammeArtResolver = org.koin.compose.koinInject()
+        val lentOverview by androidx.compose.runtime.produceState<String?>(null, now?.title, now?.categories) {
+            value = null
+            val n = now ?: return@produceState
+            if (!n.description.isNullOrBlank()) return@produceState
+            kotlinx.coroutines.delay(300)
+            value = runCatching { resolver.detailsFor(n.title, n.categories) }.getOrNull()?.overview
+        }
+        (now?.description?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
+            tv.own.owntv.features.shell.components.DriftingSynopsis(
+                it,
+                modifier = Modifier.padding(top = 14.mpx),
+                style = stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp),
+                color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
             )
         }
         val next = nowNext?.next

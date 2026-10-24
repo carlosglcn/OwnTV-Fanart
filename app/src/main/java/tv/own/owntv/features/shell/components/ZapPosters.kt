@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.draw.clip
@@ -231,7 +232,7 @@ private fun ZapPosterInfo(
         (cur.description ?: card?.description)?.takeIf { it.isNotBlank() }
             ?.let { it }
             .let { it ?: lent?.overview }
-            ?.let { Text(it, style = stageText(16, 400), color = StageColors.Dim, maxLines = 3, overflow = TextOverflow.Ellipsis) }
+            ?.let { DriftingSynopsis(it) }
         if (next.isNotEmpty()) {
             Text(
                 stringResource(R.string.content_live_next), style = stageText(15, 700), color = accent,
@@ -244,5 +245,38 @@ private fun ZapPosterInfo(
                 }
             }
         }
+    }
+}
+
+
+/**
+ * glcn: a synopsis that fills three lines and, when it is longer, drifts down to its end and back, so the
+ * whole text can be read without a scrollbar or a cut-off "…".
+ */
+@Composable
+internal fun DriftingSynopsis(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: androidx.compose.ui.text.TextStyle = stageText(16, 400),
+    color: Color = StageColors.Dim,
+    lines: Int = 3,
+) {
+    val lineH = with(androidx.compose.ui.platform.LocalDensity.current) { style.fontSize.toDp() } * 1.4f
+    val scroll = androidx.compose.foundation.rememberScrollState()
+    LaunchedEffect(text, scroll.maxValue) {
+        scroll.scrollTo(0)
+        if (scroll.maxValue <= 0) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(2_500)
+            scroll.animateScrollTo(scroll.maxValue, androidx.compose.animation.core.tween(scroll.maxValue * 45, easing = androidx.compose.animation.core.LinearEasing))
+            kotlinx.coroutines.delay(2_000)
+            scroll.scrollTo(0)
+        }
+    }
+    Box(modifier.fillMaxWidth().height(lineH * lines).clip(androidx.compose.ui.graphics.RectangleShape)) {
+        Text(
+            text, style = style.copy(lineHeight = style.fontSize * 1.4f), color = color,
+            modifier = Modifier.verticalScroll(scroll, enabled = false),
+        )
     }
 }
