@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.withIndex
@@ -488,7 +489,17 @@ class LiveViewModel(
     private val keyedNowNext: StateFlow<Pair<Long?, EpgNowNext?>> = combine(_previewChannel, epgRefresh) { ch, tick -> ch to tick }
         .debounce(350)
         .distinctUntilChanged { a, b -> a.first?.id == b.first?.id && a.second == b.second }
-        .mapLatest { (ch, _) -> ch?.id to ch?.let { epgReader.nowNext(it, custom.value, epgOffset.value) } }
+        // glcn: asked again when the programme on air ends, so a channel left open does not keep showing the one before.
+        .transformLatest { (ch, _) ->
+            while (true) {
+                val answer = ch?.let { epgReader.nowNext(it, custom.value, epgOffset.value) }
+                emit(ch?.id to answer)
+                if (ch == null) break
+                val t = System.currentTimeMillis()
+                val due = answer?.now?.stopMs ?: answer?.next?.startMs ?: (t + 300_000L)
+                delay((due - t + 1_000L).coerceIn(15_000L, 600_000L))
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null to null)
 
     val nowNext: StateFlow<EpgNowNext?> = keyedNowNext.map { it.second }
