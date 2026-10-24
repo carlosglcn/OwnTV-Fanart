@@ -504,6 +504,8 @@ internal fun LiveCategories(
     onSelect: (Int) -> Unit,
     onLongSelect: (Int) -> Unit,
     onNavigateRight: () -> Unit,
+    /** glcn: whether the cursor rests on the playlist chips, where ◀ moves between them. */
+    onChipsFocused: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
     focusRowIndex: Int? = null,
@@ -566,6 +568,7 @@ internal fun LiveCategories(
     var hasFocus by remember { mutableStateOf(false) }
     // glcn: while the cursor rests on the playlist chips, switching list must not pull it down to a row.
     var chipsFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(chipsFocused) { onChipsFocused(chipsFocused) }
     // The chip the cursor last rested on; cleared when it moves to the search or a row. Switching list rebuilds
     // the rows below, and the cursor must not be dragged down with them.
     var lastChipId by remember { mutableStateOf<Long?>(null) }

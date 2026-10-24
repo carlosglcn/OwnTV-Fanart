@@ -608,10 +608,8 @@ private fun SeriesGrid(
     // ◀ from the search field goes to the menu, but not while typing, where ◀ moves the cursor.
     var searchEditing by remember { mutableStateOf(false) }
     val searchLeft = Modifier.onPreviewKeyEvent { e ->
-        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft && !searchEditing && lockedKey == null) {
-            runCatching { railFocus.requestFocus() }
-            true
-        } else false
+        // glcn: ◀ is not taken here — the shell moves it to the menu.
+        e.key == Key.Unknown
     }
     val emptyText = if (searchQuery.isNotBlank()) stringResource(R.string.content_no_series_found, searchQuery.trim()) else stringResource(R.string.content_no_series_here)
 
@@ -664,7 +662,7 @@ private fun SeriesGrid(
                         val columns = ((rowW + 26.mpx) / 222.mpx).toInt().coerceAtLeast(1)
                         // A fixed gap under the toolbar that scrolling posters never enter; the grid's own
                         // top padding is only the room the focused poster's lift and ring need.
-                        Spacer(Modifier.height(14.mpx))
+                        Spacer(Modifier.height(24.mpx))
                         CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
                             LazyVerticalGrid(
                                 state = effectiveGridState,
@@ -698,7 +696,6 @@ private fun SeriesGrid(
                                                 when (e.key) {
                                                     Key.Menu -> { openMenu(show, index); true }
                                                     // ◀ from the first column goes to the menu; categories open from their button or a shortcut.
-                                                    Key.DirectionLeft -> index % columns == 0 && lockedKey == null && run { runCatching { railFocus.requestFocus() }; true }
                                                     else -> false
                                                 }
                                             },

@@ -141,11 +141,7 @@ fun LiveEpgCard(
             }
         }
         epg.next?.let { entry ->
-            Row(
-                Modifier.padding(top = if (now != null) (if (bare) 4.dp else 8.dp) else 0.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            Column(Modifier.padding(top = if (now != null) (if (bare) 4.dp else 8.dp) else 0.dp)) {
                 SlotLabel(stringResource(if (archive) R.string.content_archive_then else R.string.content_live_next), hudInk.copy(alpha = 0.6f))
                 Text(
                     formatTime(entry.startMs) + "  " + entry.title,

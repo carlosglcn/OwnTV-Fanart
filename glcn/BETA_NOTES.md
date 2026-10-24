@@ -54,3 +54,7 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ Movies and Series: ◀ from the first column or the search field now goes to the menu instead of opening the categories; they open from the Categories button or a shortcut.
 - 📺 Live TV: under the programme picture the synopsis now runs the full width, and up to three coming programmes are listed instead of two.
 - ◀ Live TV: moving left across the playlist chips stops at the first one instead of jumping out to the quick channel guide.
+- ◀ Movies and Series: ◀ from the first column or the search field now reaches the menu (it was being caught by the category list).
+- 🎬 Movies and Series: a little more room between the search bar and the first posters.
+- 📺 Live player: the next programme reads "Up next" instead of "Live next", on its own line so it no longer sits crooked.
+- ◀ Category sheet: ◀ on the playlist chips moves to the previous chip instead of closing the sheet, and the channels beside it follow the chosen playlist.
