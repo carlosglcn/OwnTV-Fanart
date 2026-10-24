@@ -1,5 +1,7 @@
 package tv.own.owntv.ui.components
 
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.draw.drawBehind
 import coil3.request.allowHardware
@@ -180,12 +182,28 @@ fun rememberBillboardSlides(items: List<tv.own.owntv.core.home.FeaturedItem>): L
     val context = LocalContext.current
     val resolver: tv.own.owntv.core.metadata.ProgrammeArtResolver = org.koin.compose.koinInject()
     val slides by produceState(emptyList<Pair<tv.own.owntv.core.home.FeaturedItem, String>>(), items) {
-        value = items.mapNotNull { item ->
-            if (item !is tv.own.owntv.core.home.FeaturedItem.Live) return@mapNotNull item.art.takeIf { it.isNotBlank() }?.let { item to it }
-            val width = ArtColor.widthOf(context, item.art)
-            val good = width != null && width >= MIN_BILLBOARD_WIDTH && !ArtColor.isPlain(context, item.art)
-            if (good) item to item.art
-            else runCatching { resolver.infoFor(item.programme)?.backdropUrl }.getOrNull()?.let { item to it }
+        // glcn: shown as they come — films and series at once, each live slide when its picture is settled —
+        // instead of the whole row waiting for the slowest picture or TMDB answer.
+        val done = HashMap<Int, Pair<tv.own.owntv.core.home.FeaturedItem, String>?>()
+        fun publish() { value = items.indices.mapNotNull { done[it] } }
+        items.forEachIndexed { i, item ->
+            if (item !is tv.own.owntv.core.home.FeaturedItem.Live) done[i] = item.art.takeIf { it.isNotBlank() }?.let { item to it }
+        }
+        publish()
+        val gate = kotlinx.coroutines.sync.Semaphore(3)
+        kotlinx.coroutines.coroutineScope {
+            items.forEachIndexed { i, item ->
+                if (item !is tv.own.owntv.core.home.FeaturedItem.Live) return@forEachIndexed
+                launch {
+                    gate.withPermit {
+                        val width = ArtColor.widthOf(context, item.art)
+                        val good = width != null && width >= MIN_BILLBOARD_WIDTH && !ArtColor.isPlain(context, item.art)
+                        done[i] = if (good) item to item.art
+                        else runCatching { resolver.infoFor(item.programme)?.backdropUrl }.getOrNull()?.let { item to it }
+                        publish()
+                    }
+                }
+            }
         }
     }
     return slides

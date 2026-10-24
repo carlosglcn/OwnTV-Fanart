@@ -58,3 +58,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎬 Movies and Series: a little more room between the search bar and the first posters.
 - 📺 Live player: the next programme reads "Up next" instead of "Live next", on its own line so it no longer sits crooked.
 - ◀ Category sheet: ◀ on the playlist chips moves to the previous chip instead of closing the sheet, and the channels beside it follow the chosen playlist.
+- 🌟 Home: the featured slides appear as soon as each one is ready — the first no longer waits for every picture and TMDB lookup to finish.
+- 🔁 Quick channel list: a channel tuned from a category's channels makes that category the list ◀ opens next, with the current channel marked.
+- 📜 Channel cards: when a focused card's title does not fit, it scrolls smoothly past and starts over.

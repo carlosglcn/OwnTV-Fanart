@@ -167,7 +167,8 @@ fun CategoryBrowserOverlay(
             title = entries.getOrNull(focusedIndex)?.label.orEmpty(),
             channels = peeked,
             now = peekedNow,
-            onTune = onTune,
+            // glcn: the channel tuned from here makes this category the list the player zaps in.
+            onTune = { ch -> focusedKey?.let(onSelect); onTune(ch) },
             onBack = { runCatching { listFocus.requestFocus() } },
             focus = channelFocus,
             modifier = Modifier
