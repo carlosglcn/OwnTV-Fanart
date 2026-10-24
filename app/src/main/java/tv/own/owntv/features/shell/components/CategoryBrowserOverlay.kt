@@ -71,7 +71,9 @@ fun CategoryBrowserOverlay(
 ) {
     val layoutDirection = LocalLayoutDirection.current
     val (entries, groupsHeading) = liveCategoryEntries(railItems, railCounts)
-    val selectedIndex = remember(entries, currentKey) { entries.indexOfFirst { it.item.key == currentKey }.coerceAtLeast(0) }
+    // glcn: worked out when the sheet opens (or the current category changes), not whenever the entries do —
+    // switching playlist briefly changes them, and re-deriving the row threw the list down to the current group and back.
+    val selectedIndex = remember(currentKey) { entries.indexOfFirst { it.item.key == currentKey }.coerceAtLeast(0) }
     val listState = rememberLazyListState()
     val listFocus = remember { FocusRequester() }
     // Paging moves focus by setting the row to land on; the sheet scrolls to it and reports back.

@@ -72,3 +72,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ◀ Quick channel strip: ◀ on the first channel goes back to the list.
 - 🖼️ Channel list: the programme picture and its text sit higher, no longer pressed against the bottom edge; a long synopsis scrolls slowly.
 - 📺 Player banner: the programme card is smaller (picture and text), and a synopsis that does not fit scrolls slowly instead of ending in "…".
+- 🔁 Category sheet: switching playlist no longer sends the list down to a group and back up; the list stays where it is while the new playlist loads.
