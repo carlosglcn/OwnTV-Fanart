@@ -1,0 +1,28 @@
+run=40085525576 sha=f841b3ec331ff7a4ebdd5418dc5d460e3a80e8ab
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt:309:51 Unresolved reference 'basicMarquee'.
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt:309:159 Unresolved reference 'dp'.
+
+> Task :app:compileStandardReleaseKotlin FAILED
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1792837282248.json
+
+--
+* What went wrong:
+Execution failed for task ':app:compileStandardReleaseKotlin' (registered by plugin 'com.android.internal.application').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Kotlin compiler: UNRESOLVED_REFERENCE
+--
+         Unresolved reference 'basicMarquee'.
+         Location: /home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt line 309
+
+--
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileStandardReleaseKotlin' (registered by plugin 'com.android.internal.application').
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:135)
+	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
+--
+Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Unresolved reference 'basicMarquee'.
+	at org.jetbrains.kotlin.gradle.plugin.diagnostics.DefaultCompilerDiagnosticsProblemsReporter.reportCompilerMessage(CompilerDiagnosticsProblemsReporter.kt:63)
+	at org.jetbrains.kotlin.compilerRunner.btapi.ProblemsApiCompilerMessageRenderer.replayTo(ProblemsApiCompilerMessageRenderer.kt:88)
+--
+BUILD FAILED in 3m 36s
+112 actionable tasks: 90 executed, 22 from cache
+Configuration cache entry stored.
