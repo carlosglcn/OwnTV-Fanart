@@ -1,5 +1,8 @@
 package tv.own.owntv.features.sports
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -101,7 +104,11 @@ private fun RankingColumn(g: RankingGroup, modifier: Modifier) {
     Column(modifier) {
         Text(rankLabel(g.kind), style = stageText(19, 800), color = StageColors.Muted, modifier = Modifier.padding(bottom = 8.mpx))
         g.rows.take(10).forEach { r ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 5.mpx), horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = Alignment.CenterVertically) {
+            // Focusable so Down scrolls the page and the last rows come into view (plain text never took focus).
+            var on by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+            Row(Modifier.fillMaxWidth().onFocusChanged { on = it.isFocused }.focusable()
+                .background(if (on) StageColors.Ink.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(8.mpx))
+                .padding(vertical = 5.mpx, horizontal = 6.mpx), horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = Alignment.CenterVertically) {
                 Text(r.rank.toString(), style = stageText(19, 700), color = StageColors.Muted, modifier = Modifier.width(33.mpx))
                 Text(if (r.team.isAthlete) r.team.name else r.team.shortName, style = stageText(20, 600), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Text(r.points.toString(), style = stageText(20, 800), color = StageColors.Text, textAlign = TextAlign.End)
