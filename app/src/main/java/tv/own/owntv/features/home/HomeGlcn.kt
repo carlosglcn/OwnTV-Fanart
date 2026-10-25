@@ -308,7 +308,7 @@ internal fun ArtLiveCard(
             // The words under the picture, never over it, where the picture's own lettering would fight them.
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.mpx, vertical = 10.mpx)) {
                 // glcn: a focused card whose words do not fit lets them drift past, smoothly, then start over.
-                val drift = if (focused) Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 900, repeatDelayMillis = 1_500, velocity = 22.dp) else Modifier
+                val drift = if (focused) Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 900, repeatDelayMillis = 1_500, velocity = 36.dp) else Modifier
                 Text(
                     programme?.title?.let(SportsNow::displayTitle) ?: channel.name,
                     style = stageText(20, 800), color = StageColors.Text, maxLines = 1,
