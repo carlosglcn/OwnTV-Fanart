@@ -111,3 +111,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ◀ Live TV: from the first card (or the search field) ◀ goes on to the side menu
 - 🎨 Style: "None — my own settings" is now "Custom", and choosing it opens Theme and then Accent
 - 🏁 Formula 1: a finished session's Timeline now lists the pit stops (driver, lap, time) and the race director's notes — safety car, red and chequered flags, penalties — from a free history service. Nothing is asked while a session runs, and only when you open it
+- ↔️ Channel history strip: ◀ on the first channel now jumps to the last one, and ▶ on the last to the first (▲ still opens the list)
+- 📝 Player banner: the synopsis starts to drift after about a second and moves faster, so it can be read before the banner hides

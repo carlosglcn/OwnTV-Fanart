@@ -36,6 +36,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import kotlinx.coroutines.launch
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -107,6 +108,15 @@ fun ZapPosterOverlay(
     // Opened by holding OK, the same OK is still down — and its repeats and release would land on the
     // focused card and pick it at once, closing the strip. OK counts only from a fresh press.
     var okArmed by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val cardFocus = remember(channels) { HashMap<Int, FocusRequester>() }
+    val wrapScope = androidx.compose.runtime.rememberCoroutineScope()
+    fun wrapTo(index: Int) {
+        wrapScope.launch {
+            listState.scrollToItem(index)
+            androidx.compose.runtime.withFrameNanos { }
+            runCatching { cardFocus.getOrPut(index) { FocusRequester() }.requestFocus() }
+        }
+    }
     val now = remember { System.currentTimeMillis() }
     val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
     Box(
@@ -127,7 +137,9 @@ fun ZapPosterOverlay(
                     if (e.type != KeyEventType.KeyDown) false
                     // glcn: ▲ opens the list; ◀ from the first channel goes back to it too.
                     else if (e.key == Key.DirectionUp) { onListView(); true }
-                    else if (e.key == Key.DirectionLeft && focusedCh?.id == channels.firstOrNull()?.id) { onListView(); true }
+                    // glcn: ◀ from the first card wraps to the last, ▶ from the last to the first.
+                    else if (e.key == Key.DirectionLeft && channels.size > 1 && focusedCh?.id == channels.first().id) { wrapTo(channels.size - 1); true }
+                    else if (e.key == Key.DirectionRight && channels.size > 1 && focusedCh?.id == channels.last().id) { wrapTo(0); true }
                     else false
                 },
         ) {
@@ -165,7 +177,7 @@ fun ZapPosterOverlay(
                         now = now,
                         onClick = { onSelect(ch) },
                         width = 360.mpx,
-                        modifier = if (index == start) Modifier.focusRequester(first) else Modifier,
+                        modifier = Modifier.focusRequester(cardFocus.getOrPut(index) { FocusRequester() }).then(if (index == start) Modifier.focusRequester(first) else Modifier),
                     )
                 }
             } }
@@ -291,8 +303,8 @@ internal fun DriftingSynopsis(
         scroll.scrollTo(0)
         if (scroll.maxValue <= 0 || tv.own.owntv.glcn.LowRam.on) return@LaunchedEffect // light mode: no animation
         while (true) {
-            kotlinx.coroutines.delay(3_500)
-            scroll.animateScrollTo(scroll.maxValue, androidx.compose.animation.core.tween(scroll.maxValue * 80, easing = androidx.compose.animation.core.LinearEasing))
+            kotlinx.coroutines.delay(1_200) // the player banner is up only a few seconds: start reading-speed early
+            scroll.animateScrollTo(scroll.maxValue, androidx.compose.animation.core.tween(scroll.maxValue * 50, easing = androidx.compose.animation.core.LinearEasing))
             kotlinx.coroutines.delay(3_000)
             scroll.scrollTo(0)
         }
