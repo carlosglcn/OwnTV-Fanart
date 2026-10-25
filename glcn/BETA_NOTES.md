@@ -103,3 +103,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ♻️ Appearance: one "Reset appearance" row puts theme, accent, focus highlight, glass and background, text and window sizes and zoom back
 - 🎨 Home layout picker: more colour in the sketches, the Classic billboard nearer the middle, and the text stays readable on the highlighted card in light and dark
 - 🎵 Menu sounds: the "Air" style is replaced by "Kalimba" — soft plucked notes, with its own sound for move, OK and Back
+- 👁️ Preview with OK: the preview now stays on the channel you pressed OK on while you move around; OK on another channel switches it, OK again on the same one opens it full screen

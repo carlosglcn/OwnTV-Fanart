@@ -178,12 +178,11 @@ fun LiveScreen(
     // In-pane preview: play the focused channel after the focus settles (700ms). Disabled while the
     // fullscreen/mini player owns the surface (previewEnabled=false) to avoid two surfaces fighting.
     // glcn: "Preview with OK" — nothing plays while walking the list; the first OK starts the preview of the
-    // focused channel, a second OK on it goes full screen. Walking away from it stops it.
+    // focused channel, a second OK on it goes full screen. Moving on does not stop it: it stays on the channel
+    // that got the OK until OK is pressed on another one (which takes its place).
     val okOnly = tv.own.owntv.glcn.LowRam.previewOnOk
     var okChannelId by remember { mutableStateOf<Long?>(null) }
-    LaunchedEffect(previewChannel?.id, okOnly) {
-        if (okChannelId != null && previewChannel?.id != okChannelId) { okChannelId = null; vm.stopPreviewPlayback() }
-    }
+    LaunchedEffect(okOnly) { if (!okOnly) okChannelId = null }
     LaunchedEffect(previewChannel?.id, effectivePreview, previewArmed, okChannelId) {
         // previewArmed gates the case where the last channel was restored on startup — we don't auto-preview
         // it until the user actually focuses a channel (then it plays normally).
