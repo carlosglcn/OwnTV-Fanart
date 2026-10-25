@@ -2120,6 +2120,9 @@ class LiveViewModel(
         }
     }
 
+    /** glcn: stop what the preview pane plays, keeping the focused channel (its details stay on screen). */
+    fun stopPreviewPlayback() { live.stop() }
+
     fun stopPreview() {
         runCatching { habitTracker.stopped() }
         live.stop() // both engines, every watcher and the give-up alarm, and the reconnect link

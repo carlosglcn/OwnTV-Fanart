@@ -138,12 +138,12 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             runCatching {
                 GlobalContext.get().get<tv.own.owntv.core.settings.SettingsRepository>().applyStageDefaults()
             }
-            // glcn: a box with little memory starts without the live preview (it opens a stream on every
+            // glcn: a box with little memory starts with the live preview on OK (it opened a stream on every
             // step of the list). Once per install, so anyone can turn it back on.
             runCatching {
-                val prefs = getSharedPreferences("glcn_lowram", MODE_PRIVATE)
+                val prefs = getSharedPreferences(tv.own.owntv.glcn.LowRam.PREFS, MODE_PRIVATE)
                 if (tv.own.owntv.glcn.LowRam.on && !prefs.getBoolean("applied", false)) {
-                    GlobalContext.get().get<tv.own.owntv.core.settings.SettingsRepository>().setLivePreviewEnabled(false)
+                    tv.own.owntv.glcn.LowRam.setPreviewOnOk(this@OwnTVApp, true)
                     prefs.edit().putBoolean("applied", true).apply()
                 }
             }

@@ -958,6 +958,15 @@ internal fun VideoPlayerGroupRows(
                 value = SettingValue.Switch(previewAudio),
                 onClick = { vm.setLivePreviewAudio(!previewAudio) },
             )
+            // glcn: the preview waits for OK instead of opening a stream on every step of the list.
+            val okContext = androidx.compose.ui.platform.LocalContext.current
+            KeyedSettingRow(
+                icon = OwnTVIcon.LIVE_TV,
+                title = stringResource(R.string.glcn_preview_ok_title),
+                desc = stringResource(R.string.glcn_preview_ok_desc),
+                value = SettingValue.Switch(tv.own.owntv.glcn.LowRam.previewOnOk),
+                onClick = { tv.own.owntv.glcn.LowRam.setPreviewOnOk(okContext, !tv.own.owntv.glcn.LowRam.previewOnOk) },
+            )
         }
         KeyedSettingRow(
             quickKey = "vp_timeshift",

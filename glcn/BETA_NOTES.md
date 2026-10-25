@@ -96,3 +96,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏁 Racing classification: the rows can now be reached with Down, so the whole list scrolls into view instead of being cut at the bottom
 - 🪶 Light mode for boxes with about 2 GB of memory or less: starts with the live preview off (it opened a stream on every step of the list), no auto-drifting text, no image fades and a smaller picture cache — switch the preview back on in settings if you want it
 - 📺 Live player banner: lower — the synopsis takes two lines and "Next" sits on one line; channel logo and programme picture keep their size
+- 🔘 Live TV: ◀ no longer opens the categories — a new "Categories" button next to the guide and sort buttons does
+- 👁️ New "Preview with OK" (Settings › Live preview): nothing plays while you move through the list; OK starts the preview, OK again goes full screen. On by itself on 2 GB boxes
+- 🪶 New "Light mode" switch (Appearance): shown on and off by itself according to the box's memory; you can force it either way

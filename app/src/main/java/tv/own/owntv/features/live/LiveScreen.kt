@@ -177,12 +177,20 @@ fun LiveScreen(
 
     // In-pane preview: play the focused channel after the focus settles (700ms). Disabled while the
     // fullscreen/mini player owns the surface (previewEnabled=false) to avoid two surfaces fighting.
-    LaunchedEffect(previewChannel?.id, effectivePreview, previewArmed) {
+    // glcn: "Preview with OK" — nothing plays while walking the list; the first OK starts the preview of the
+    // focused channel, a second OK on it goes full screen. Walking away from it stops it.
+    val okOnly = tv.own.owntv.glcn.LowRam.previewOnOk
+    var okChannelId by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(previewChannel?.id, okOnly) {
+        if (okChannelId != null && previewChannel?.id != okChannelId) { okChannelId = null; vm.stopPreviewPlayback() }
+    }
+    LaunchedEffect(previewChannel?.id, effectivePreview, previewArmed, okChannelId) {
         // previewArmed gates the case where the last channel was restored on startup — we don't auto-preview
         // it until the user actually focuses a channel (then it plays normally).
         if (!effectivePreview || !previewArmed) return@LaunchedEffect
         val ch = previewChannel ?: return@LaunchedEffect
-        delay(700)
+        if (okOnly && okChannelId != ch.id) return@LaunchedEffect
+        delay(if (okOnly) 0 else 700)
         vm.playPreview(ch)
     }
 
@@ -680,11 +688,17 @@ fun LiveScreen(
                                 ) { focusChannelList(); true } else false
                             },
                         ) {
+                            if (lockedKey == null) tv.own.owntv.ui.stage.StageTool(
+                                text = stringResource(R.string.content_category_browser_title),
+                                icon = OwnTVIcon.FOLDER,
+                                onClick = { categoriesOpen = true },
+                                modifier = Modifier.focusRequester(toolsFocus),
+                            )
                             tv.own.owntv.ui.stage.StageTool(
                                 text = stringResource(R.string.content_live_guide_view),
                                 icon = OwnTVIcon.GRID,
                                 onClick = onOpenGuide,
-                                modifier = Modifier.focusRequester(toolsFocus),
+                                modifier = if (lockedKey != null) Modifier.focusRequester(toolsFocus) else Modifier,
                             )
                             tv.own.owntv.ui.stage.StageTool(
                                 text = null,
@@ -712,9 +726,9 @@ fun LiveScreen(
                         when (e.key) {
                             androidx.compose.ui.input.key.Key.Info -> { synopsisChannel = channel; true }
                             androidx.compose.ui.input.key.Key.Menu -> { if (selecting != null) batchActions = true else { contextChannel = channel; contextChannelId = channel.id }; true }
-                            // ◀ from the first card opens the categories sheet; otherwise one card back.
+                            // ◀ one card back; from the first card nothing — the categories open from the "Categories" button above.
                             androidx.compose.ui.input.key.Key.DirectionLeft -> (stepTarget ?: index).let { from ->
-                                if (from > 0) { stepTo(from - 1); true } else { categoriesOpen = true; true }
+                                if (from > 0) { stepTo(from - 1); true } else true
                             }
                             androidx.compose.ui.input.key.Key.DirectionRight -> (stepTarget ?: index).let { from ->
                                 from + 1 < channels.itemCount && run { stepTo(from + 1); true }
@@ -730,7 +744,9 @@ fun LiveScreen(
                     if (rememberLive) perCategoryChannelIds[selectedKey] = channel.id
                 },
                 onClick = { channel ->
-                    if (selecting != null) toggleSelected(channel) else {
+                    if (selecting != null) toggleSelected(channel)
+                    else if (okOnly && effectivePreview && okChannelId != channel.id) okChannelId = channel.id
+                    else {
                         vm.watchFullscreen(channel, channels.itemSnapshotList.items.filterNotNull())
                         if (!externalPlayerOn) onFullscreen()
                     }
@@ -839,7 +855,7 @@ fun LiveScreen(
                                     e.key == androidx.compose.ui.input.key.Key.DirectionLeft &&
                                     !searchEditing && lockedKey == null
                                 ) {
-                                    if (separate) runCatching { railFocus.requestFocus() } else categoriesOpen = true
+                                    if (separate) runCatching { railFocus.requestFocus() }
                                     true
                                 } else false
                             },
@@ -849,6 +865,11 @@ fun LiveScreen(
                         icon = OwnTVIcon.SORT,
                         value = if (sortMode == tv.own.owntv.core.settings.SettingsRepository.SortMode.ALPHA) stringResource(R.string.settings_sort_alpha) else stringResource(R.string.content_epg_sort_provider),
                         onClick = vm::toggleSort,
+                    )
+                    if (!separate && lockedKey == null) tv.own.owntv.ui.stage.StageTool(
+                        text = stringResource(R.string.content_category_browser_title),
+                        icon = OwnTVIcon.FOLDER,
+                        onClick = { categoriesOpen = true },
                     )
                     tv.own.owntv.ui.stage.StageTool(
                         text = stringResource(R.string.content_live_guide_view),
@@ -932,7 +953,7 @@ fun LiveScreen(
                                             androidx.compose.ui.input.key.Key.DirectionLeft -> when {
                                                 lockedKey != null -> false
                                                 separate -> { runCatching { railFocus.requestFocus() }; true }
-                                                else -> { categoriesOpen = true; true }
+                                                else -> true // glcn: categories open from their button in the header
                                             }
                                             // ▶ Schedule: next / later under the stage; nothing else to the right.
                                             androidx.compose.ui.input.key.Key.DirectionRight -> { runCatching { scheduleFocus.requestFocus() }; true }
@@ -948,7 +969,9 @@ fun LiveScreen(
                                         if (rememberLive) perCategoryChannelIds[selectedKey] = channel.id
                                     },
                                     onClick = {
-                                        if (selecting != null) toggleSelected(channel) else {
+                                        if (selecting != null) toggleSelected(channel)
+                                        else if (okOnly && effectivePreview && okChannelId != channel.id) okChannelId = channel.id
+                                        else {
                                             vm.watchFullscreen(channel, channels.itemSnapshotList.items.filterNotNull())
                                             if (!externalPlayerOn) onFullscreen()
                                         }

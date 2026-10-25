@@ -337,6 +337,7 @@ fun SettingsScreen(
     var showHomeLayout by remember { mutableStateOf(false) }
     val uiSounds by settingsVm.uiSounds.collectAsStateWithLifecycle()
     val uiSoundStyle by settingsVm.uiSoundStyle.collectAsStateWithLifecycle()
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val startupSound by settingsVm.startupSound.collectAsStateWithLifecycle()
     val dialogueBoost by settingsVm.dialogueBoost.collectAsStateWithLifecycle()
     val mpvPassthrough by settingsVm.mpvPassthrough.collectAsStateWithLifecycle()
@@ -853,6 +854,14 @@ fun SettingsScreen(
             chip = stringResource(R.string.common_percent, uiZoomPercent), chipTone = TileTone.SECONDARY,
             focus = zoomRowFocus,
             onClick = { saveScroll(); dialogReturn = zoomRowFocus; showZoom = true },
+        ),
+        // glcn: light mode for boxes with little memory — on by itself on a 2 GB box, here to force it either way.
+        RootRow(
+            "glcn_light_mode", TileTone.SECONDARY, OwnTVIcon.GLOW,
+            title = stringResource(R.string.glcn_light_mode_title), desc = stringResource(R.string.glcn_light_mode_desc),
+            chip = stringResource(if (tv.own.owntv.glcn.LowRam.on) R.string.common_on else R.string.common_off),
+            chipTone = if (tv.own.owntv.glcn.LowRam.on) TileTone.PRIMARY else TileTone.SECONDARY,
+            onClick = { tv.own.owntv.glcn.LowRam.force(appContext, !tv.own.owntv.glcn.LowRam.on) },
         ),
         RootRow(
             tabRowKey(SettingsTab.WEATHER), TileTone.SECONDARY, OwnTVIcon.WEATHER,
