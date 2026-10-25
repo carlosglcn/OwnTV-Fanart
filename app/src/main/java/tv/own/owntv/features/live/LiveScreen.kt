@@ -725,9 +725,9 @@ fun LiveScreen(
                         when (e.key) {
                             androidx.compose.ui.input.key.Key.Info -> { synopsisChannel = channel; true }
                             androidx.compose.ui.input.key.Key.Menu -> { if (selecting != null) batchActions = true else { contextChannel = channel; contextChannelId = channel.id }; true }
-                            // ◀ one card back; from the first card nothing — the categories open from the "Categories" button above.
+                            // ◀ one card back; from the first card on to the side menu — the categories open from the "Categories" button above.
                             androidx.compose.ui.input.key.Key.DirectionLeft -> (stepTarget ?: index).let { from ->
-                                if (from > 0) { stepTo(from - 1); true } else true
+                                if (from > 0) { stepTo(from - 1); true } else false
                             }
                             androidx.compose.ui.input.key.Key.DirectionRight -> (stepTarget ?: index).let { from ->
                                 from + 1 < channels.itemCount && run { stepTo(from + 1); true }
@@ -854,8 +854,7 @@ fun LiveScreen(
                                     e.key == androidx.compose.ui.input.key.Key.DirectionLeft &&
                                     !searchEditing && lockedKey == null
                                 ) {
-                                    if (separate) runCatching { railFocus.requestFocus() }
-                                    true
+                                    if (separate) { runCatching { railFocus.requestFocus() }; true } else false
                                 } else false
                             },
                     )
@@ -952,7 +951,7 @@ fun LiveScreen(
                                             androidx.compose.ui.input.key.Key.DirectionLeft -> when {
                                                 lockedKey != null -> false
                                                 separate -> { runCatching { railFocus.requestFocus() }; true }
-                                                else -> true // glcn: categories open from their button in the header
+                                                else -> false // glcn: categories open from their button in the header; ◀ goes on to the side menu
                                             }
                                             // ▶ Schedule: next / later under the stage; nothing else to the right.
                                             androidx.compose.ui.input.key.Key.DirectionRight -> { runCatching { scheduleFocus.requestFocus() }; true }

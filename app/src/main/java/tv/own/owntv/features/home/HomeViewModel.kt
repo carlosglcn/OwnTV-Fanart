@@ -155,7 +155,9 @@ class HomeViewModel(
     fun hideRow(row: tv.own.owntv.core.model.HomeRow) {
         viewModelScope.launch {
             val pid = settings.activeProfileId.first().takeIf { it >= 0 } ?: return@launch
-            settings.updateHomeConfig(pid) { it.copy(hidden = it.hidden + row) }
+            // The Dock's "Keep watching" tab stands for the hero and both continue rows: hiding it hides all three.
+            val rows = if (row == tv.own.owntv.core.model.HomeRow.HERO) setOf(row, tv.own.owntv.core.model.HomeRow.CONTINUE_MOVIES, tv.own.owntv.core.model.HomeRow.CONTINUE_SERIES) else setOf(row)
+            settings.updateHomeConfig(pid) { it.copy(hidden = it.hidden + rows) }
             // Home reads its rows once per load, so it is asked to load again; until then nothing would change on screen.
             refresh(pid)
         }
