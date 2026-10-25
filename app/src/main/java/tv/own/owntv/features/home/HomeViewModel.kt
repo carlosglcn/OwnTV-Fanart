@@ -151,6 +151,14 @@ class HomeViewModel(
     private val sourceRepository: tv.own.owntv.core.repository.SourceRepository,
 ) : ViewModel() {
 
+    /** The Dock's long press: take this row off Home, where Settings › Home rows would show it again. */
+    fun hideRow(row: tv.own.owntv.core.model.HomeRow) {
+        viewModelScope.launch {
+            val pid = settings.activeProfileId.first().takeIf { it >= 0 } ?: return@launch
+            settings.updateHomeConfig(pid) { it.copy(hidden = it.hidden + row) }
+        }
+    }
+
     // --- glcn: "Tonight" reminders ----------------------------------------------------------------
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val reminderRows: StateFlow<List<tv.own.owntv.core.database.entity.ReminderEntity>> =

@@ -85,3 +85,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🧹 Settings › Video player: the five "Reset saved…" rows are now one "Reset saved choices" row that lets you pick what to forget (or everything)
 - 🎵 Two new menu sound styles, "Soft" and "Air": rounded, warm tones and a gentle breath instead of anything metallic
 - 🎬 Movies/Series list view: moving down no longer stops when the next title is not ready yet — it retries and steps over it
+- 🏠 Dock Home: pressing Up from a card returns to the tab you are on, and a long press on a card offers "Hide this row"
+- 🎾 Tennis: players now show their photo (initials stay if it does not load)
+- 🐢 Titles that scroll when focused now drift a bit slower

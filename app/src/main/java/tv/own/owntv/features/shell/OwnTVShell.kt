@@ -1294,6 +1294,7 @@ fun OwnTVShell(
                         // glcn: the Dock layout — the focused title over its picture and a glass dock with tabs.
                         selectedSection == MainSection.HOME && homeLayout == 3 -> tv.own.owntv.features.home.LumenHome(
                             vm = homeVm,
+                            onHideRow = { homeVm.hideRow(it) },
                             onPlayMovie = { id, pos -> scope.launch { if (movieVm.playByIdAsync(id, pos) && !movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES) } },
                             onPlayEpisode = { seriesId, epId, pos -> scope.launch { if (seriesVm.playFromHomeAsync(seriesId, epId, pos) && !seriesVm.externalPlayerOn.value) openFullscreen(MainSection.SERIES) } },
                             onPlayChannel = { id, zap -> scope.launch { if (liveVm.ensurePlayingByIdAsync(id, zap)) openFullscreen(MainSection.LIVE_TV) } },

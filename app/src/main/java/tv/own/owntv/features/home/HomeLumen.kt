@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
@@ -48,6 +49,8 @@ import tv.own.owntv.core.database.entity.MovieEntity
 import tv.own.owntv.core.database.entity.SeriesEntity
 import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.core.home.TrendingHomeItem
+import androidx.compose.ui.res.stringResource
+import tv.own.owntv.R
 import tv.own.owntv.core.model.HomeRow
 import tv.own.owntv.core.sports.MatchNotifications
 import tv.own.owntv.core.sports.model.Match
@@ -101,6 +104,7 @@ fun LumenHome(
     onEntryHook: (((() -> Boolean)?) -> Unit)?,
     contentStart: Dp,
     modifier: Modifier = Modifier,
+    onHideRow: (HomeRow) -> Unit = {},
     sportsVm: SportsViewModel = koinViewModel(),
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
@@ -172,6 +176,8 @@ fun LumenHome(
     var focusedKey by remember { mutableStateOf<String?>(null) }
     val shown = tab?.items?.firstOrNull { it.key == focusedKey } ?: tab?.items?.firstOrNull()
     val entry = firstRowFocusRequester ?: remember { FocusRequester() }
+    val selectedTab = remember { FocusRequester() }
+    var menuRow by remember { mutableStateOf<HomeRow?>(null) }
 
     DisposableEffect(onEntryHook, entry) {
         onEntryHook?.invoke { runCatching { entry.requestFocus() }.isSuccess }
@@ -202,6 +208,12 @@ fun LumenHome(
                 pair.forEach { tv.own.owntv.features.sports.Crest(it, 230) }
             }
         }
+        menuRow?.let { row ->
+            KeepWatchingMenu(
+                title = row.displayTitle(), onRemove = { onHideRow(row) }, onDismiss = { menuRow = null },
+                label = stringResource(R.string.settings_home_hide_row),
+            )
+        }
         if (tab == null) return@Box
         Column(Modifier.padding(start = contentStart + 24.mpx, top = 120.mpx).width(900.mpx)) {
             Text(tab.row.displayTitle(), style = stageText(19, 700), color = accent.accent, maxLines = 1)
@@ -225,7 +237,7 @@ fun LumenHome(
                     StageTab(
                         label = t.row.displayTitle(), count = t.items.size.toString(), selected = i == selected,
                         onClick = { selected = i },
-                        modifier = Modifier.onFocusChanged { if (it.hasFocus) { selected = i; onChildFocused() } },
+                        modifier = Modifier.then(if (i == selected) Modifier.focusRequester(selectedTab) else Modifier).onFocusChanged { if (it.hasFocus) { selected = i; onChildFocused() } },
                     )
                 }
             }
@@ -233,7 +245,7 @@ fun LumenHome(
             LaunchedEffect(selected) { listState.scrollToItem(0) }
             LazyRow(
                 state = listState,
-                modifier = Modifier.padding(top = 18.mpx).focusRestorer().focusGroup(),
+                modifier = Modifier.padding(top = 18.mpx).focusProperties { up = selectedTab }.focusRestorer().focusGroup(),
                 contentPadding = PaddingValues(horizontal = 30.mpx, vertical = 8.mpx),
                 horizontalArrangement = Arrangement.spacedBy(20.mpx),
             ) {
@@ -245,6 +257,7 @@ fun LumenHome(
                         StageStill(
                             title = item.title, line = item.line, onClick = item.onClick, width = 300.mpx, height = 169.mpx,
                             titleSize = 19, lineSize = 15, modifier = m, progress = item.progress,
+                            onLongClick = { menuRow = tab.row },
                         ) {
                             if (item.crests != null) Row(
                                 Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.14f)),
@@ -257,6 +270,7 @@ fun LumenHome(
                     } else {
                         StagePoster(
                             title = item.title, onClick = item.onClick, width = 150.mpx, height = 225.mpx, modifier = m, progress = item.progress,
+                            onLongClick = { menuRow = tab.row },
                         ) {
                             AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                         }

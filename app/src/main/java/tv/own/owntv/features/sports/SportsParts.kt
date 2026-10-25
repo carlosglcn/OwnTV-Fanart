@@ -57,7 +57,16 @@ internal fun Crest(team: Team?, size: Int) {
                 style = stageText(size * 0.3f, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         } else {
-            AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding((size * 0.1f).mpx))
+            // A player's photo fills the circle (initials underneath stay if it never loads); a crest sits inside it.
+            if (team.isAthlete) {
+                Text(
+                    team.abbreviation.ifBlank { null } ?: initials(team.shortName),
+                    style = stageText(size * 0.3f, 800), color = StageColors.Text, maxLines = 1,
+                )
+                AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, alignment = Alignment.TopCenter, modifier = Modifier.fillMaxSize())
+            } else {
+                AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding((size * 0.1f).mpx))
+            }
         }
     }
 }
