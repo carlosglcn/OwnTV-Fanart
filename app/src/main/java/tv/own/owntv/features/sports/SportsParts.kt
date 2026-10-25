@@ -1,5 +1,7 @@
 package tv.own.owntv.features.sports
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,11 +61,16 @@ internal fun Crest(team: Team?, size: Int) {
         } else {
             // A player's photo fills the circle (initials underneath stay if it never loads); a crest sits inside it.
             if (team.isAthlete) {
-                Text(
+                // The initials hold the place until the photo has loaded; behind a photo with a clear background they would show through.
+                var loaded by androidx.compose.runtime.remember(url) { androidx.compose.runtime.mutableStateOf(false) }
+                if (!loaded) Text(
                     team.abbreviation.ifBlank { null } ?: initials(team.shortName),
                     style = stageText(size * 0.3f, 800), color = StageColors.Text, maxLines = 1,
                 )
-                AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, alignment = Alignment.TopCenter, modifier = Modifier.fillMaxSize())
+                AsyncImage(
+                    model = url, contentDescription = null, contentScale = ContentScale.Crop, alignment = Alignment.TopCenter,
+                    onSuccess = { loaded = true }, modifier = Modifier.fillMaxSize(),
+                )
             } else {
                 AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding((size * 0.1f).mpx))
             }
