@@ -243,7 +243,7 @@ fun ZapGuideLines(epg: EpgNowNext?, modifier: Modifier = Modifier) {
 private fun SlotLabel(text: String, color: Color) {
     Text(
         text.uppercase(),
-        style = tv.own.owntv.ui.theme.stageText(20, 500).copy(letterSpacing = 1.2.sp),
+        style = tv.own.owntv.ui.theme.stageText(16, 500).copy(letterSpacing = 1.2.sp),
         color = color,
         fontWeight = FontWeight.Bold,
         maxLines = 1,

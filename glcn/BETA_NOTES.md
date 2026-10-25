@@ -114,3 +114,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ↔️ Channel history strip: ◀ on the first channel now jumps to the last one, and ▶ on the last to the first (▲ still opens the list)
 - 📝 Player banner: the synopsis starts to drift after about a second and moves faster, so it can be read before the banner hides
 - 🖼️ Live TV: the programme picture now sits behind the programme text, in the bottom right corner, fading into the page — instead of a small picture beside it
+- 🔤 Player banner: the "LIVE NOW" / "NEXT" labels are smaller than the programme title under them
