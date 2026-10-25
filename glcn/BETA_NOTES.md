@@ -91,3 +91,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Home layout is now chosen from a small menu: four cards, each with a sketch of how Home looks (Classic, Cinema, Panel, Dock) — no more cycling with Right
 - 🏠 Dock: pressing Up from any card now goes back to the tab you are on; a long press on a tab also offers "Hide this row"; the synopsis keeps room under its last line so it is no longer cut
 - 📝 Dock: a channel's programme synopsis now shows (read from the guide only for the card you rest on)
+- 🏎️ Racing: a film or show with "Formula" in its title is no longer taken for a Grand Prix
+- 📺 Channel info banner: when two guide entries overlap, it now shows the one that has a synopsis
