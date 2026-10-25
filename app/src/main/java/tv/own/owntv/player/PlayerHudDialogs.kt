@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import tv.own.owntv.R
 import tv.own.owntv.ui.theme.mpx
@@ -349,6 +350,8 @@ internal fun QualityDialog(heights: List<Int>, current: Int?, onSelect: (Int?) -
 @Composable
 internal fun VolumeDialog(player: PlaybackEngine, onDismiss: () -> Unit) {
     val volume by player.volume.collectAsStateWithLifecycle()
+    val settings = koinInject<tv.own.owntv.core.settings.SettingsRepository>()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     // Mute the channel and "–" disables; without the shared guard focus died there (see
     // [tv.own.owntv.ui.components.rememberStepperFocus]).
     val steppers = tv.own.owntv.ui.components.rememberStepperFocus(
@@ -360,6 +363,7 @@ internal fun VolumeDialog(player: PlaybackEngine, onDismiss: () -> Unit) {
         onDismiss = onDismiss, title = stringResource(R.string.player_volume), eyebrow = null, width = 640.mpx,
         buttons = {
             tv.own.owntv.ui.stage.StageButton(stringResource(if (volume == 0) R.string.player_unmute else R.string.player_mute), onClick = { player.toggleMute() }, height = 56.mpx, textSize = 19)
+            tv.own.owntv.ui.stage.StageButton(stringResource(R.string.glcn_volume_all), onClick = { scope.launch { settings.setDefaultVolume(volume) }; onDismiss() }, height = 56.mpx, textSize = 19)
             tv.own.owntv.ui.stage.StageButton(stringResource(R.string.common_done), onClick = onDismiss, height = 56.mpx, textSize = 19, tinted = true)
         },
     ) {
