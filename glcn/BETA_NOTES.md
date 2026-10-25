@@ -84,3 +84,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🛠️ Fixed the "Delete profile" confirmation closing by itself when opened with a long press
 - 🧹 Settings › Video player: the five "Reset saved…" rows are now one "Reset saved choices" row that lets you pick what to forget (or everything)
 - 🎵 Two new menu sound styles, "Soft" and "Air": rounded, warm tones and a gentle breath instead of anything metallic
+- 🎬 Movies/Series list view: moving down no longer stops when the next title is not ready yet — it retries and steps over it

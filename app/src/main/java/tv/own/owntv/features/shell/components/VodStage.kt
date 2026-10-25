@@ -680,7 +680,17 @@ internal class VodStepper(private val scope: CoroutineScope, private val state: 
             if (delta != 0f) runCatching { list.scrollBy(delta) }
             if (list.layoutInfo.visibleItemsInfo.none { it.index == i }) runCatching { list.scrollToItem(i) }
             withFrameNanos { }
-            runCatching { focus(i).requestFocus() }
+            // An item can be missing for a moment (a page still arriving, a row not composed yet): try
+            // again once it has had time, and if it never appears step over it rather than stopping.
+            var at = i
+            var tries = 0
+            while (tries < 6 && runCatching { focus(at).requestFocus() }.isFailure) {
+                tries++
+                if (tries % 2 == 0) at++ else runCatching { list.scrollToItem(at) }
+                target = at
+                kotlinx.coroutines.delay(60)
+                withFrameNanos { }
+            }
             target = null
         }
     }
