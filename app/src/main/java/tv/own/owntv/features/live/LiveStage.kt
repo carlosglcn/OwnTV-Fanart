@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -319,18 +318,7 @@ internal fun LiveStagePane(
             }
         }
         val now = nowNext?.now
-        val infoArt = nowNext?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() }
-        val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
         Box(Modifier.fillMaxWidth()) {
-        // glcn: the programme's picture is the backdrop of its words, in the bottom right corner —
-        // sharp on the right, fading into the page towards the text and at the top and bottom.
-        if (now != null && infoArt != null) {
-            Box(Modifier.matchParentSize().clip(RoundedCornerShape(20.mpx))) {
-                tv.own.owntv.ui.components.ProgrammeArt(url = infoArt, modifier = Modifier.align(Alignment.BottomEnd).fillMaxHeight().fillMaxWidth(0.8f))
-                Box(Modifier.matchParentSize().background(Brush.horizontalGradient(0f to page.copy(alpha = 0.94f), 0.45f to page.copy(alpha = 0.72f), 1f to page.copy(alpha = 0.18f))))
-                Box(Modifier.matchParentSize().background(Brush.verticalGradient(0f to page.copy(alpha = 0.9f), 0.25f to Color.Transparent, 0.75f to Color.Transparent, 1f to page.copy(alpha = 0.9f))))
-            }
-        }
         Column(Modifier.fillMaxWidth().padding(start = 4.mpx, end = 4.mpx, top = 34.mpx)) {
         Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {

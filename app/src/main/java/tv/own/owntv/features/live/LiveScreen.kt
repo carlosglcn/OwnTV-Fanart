@@ -633,6 +633,20 @@ fun LiveScreen(
         val listX = if (separate) margin + colW + gapCat else margin
         val listWidth = if (previewShown) listW else row - (listX - margin)
 
+        // glcn: the programme's picture is the screen's own backdrop, from the bottom right corner —
+        // nothing frames it: it fades into the page towards the left and the top, behind the text.
+        if (!cinematic && lockedKey == null && previewShown) {
+            val backdrop = nowNext?.takeIf { it.now != null }?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() }
+            if (backdrop != null) {
+                val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
+                Box(Modifier.align(Alignment.BottomEnd).fillMaxWidth(0.66f).fillMaxHeight(0.78f)) {
+                    tv.own.owntv.ui.components.ProgrammeArt(url = backdrop, modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.5f })
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.55f to page.copy(alpha = 0.35f), 1f to androidx.compose.ui.graphics.Color.Transparent)))
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.5f to page.copy(alpha = 0.3f), 1f to androidx.compose.ui.graphics.Color.Transparent)))
+                }
+            }
+        }
+
         if (separate) {
             LiveCategories(
                 showPlaylists = true,
