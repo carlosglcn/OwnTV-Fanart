@@ -458,7 +458,7 @@ internal fun MatchCard(
             // League line · minute (red while live) or kick-off.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val day = if (m.isLive) null else dayOf(m.startMs, locale)
-                val league = listOfNotNull(leagueName(m), m.subtitle?.takeIf { featured }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
+                val league = listOfNotNull(leagueName(m), m.subtitle?.takeIf { featured && m.sport != tv.own.owntv.core.sports.model.Sport.RACING }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
                 Text(league, style = stageText(16.5f, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 val right = when {
                     m.off -> m.statusText
@@ -482,11 +482,12 @@ internal fun MatchCard(
 /** Two sides, each a 42 px crest, the name and the score; the losing side in muted grey. */
 @Composable
 private fun Sides(m: Match, spoiler: Boolean) {
-    if (m.competitors.size < 2) {
-        // Racing, a card: the session and its subtitle.
+    if (m.competitors.size < 2 || m.sport == tv.own.owntv.core.sports.model.Sport.RACING) {
+        // Racing, a card: the session by its kind, the Grand Prix under it.
         Spacer(Modifier.height(12.mpx))
-        Text(m.title, style = stageText(21, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        m.subtitle?.let { Text(it, style = stageText(19, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        val session = if (m.sport == tv.own.owntv.core.sports.model.Sport.RACING) raceSessionLabel(m) else null
+        Text(session ?: m.title, style = stageText(21, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        (if (session != null) m.title else m.subtitle)?.let { Text(it, style = stageText(19, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         return
     }
     listOfNotNull(m.home, m.away).forEach { c ->

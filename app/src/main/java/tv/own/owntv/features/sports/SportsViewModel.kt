@@ -66,6 +66,7 @@ data class MatchPageState(
     val match: Match,
     val summary: MatchSummary?,
     val standings: StandingsTable?,
+    val ranking: tv.own.owntv.core.sports.model.Ranking?,
     val config: SportsConfig,
     val search: ChannelSearch,
     val list: WatchList,
@@ -80,6 +81,7 @@ data class MatchPageState(
 data class LeaguePageState(
     val leagueKey: String,
     val table: StandingsTable?,
+    val ranking: tv.own.owntv.core.sports.model.Ranking?,
     val matches: List<Match>,
     val config: SportsConfig,
 )
@@ -230,6 +232,7 @@ class SportsViewModel(
                 match = b.match(m.key) ?: m,
                 summary = b.summaries[m.key],
                 standings = leagueKey?.let { b.standings[it] },
+                ranking = leagueKey?.let { b.rankings[it] },
                 config = c,
                 search = s,
                 list = WatchList.of(opts, filter, preferred, alsoList = preferred.toSet()),
@@ -249,7 +252,7 @@ class SportsViewModel(
         if (key == null) return@flatMapLatest flowOf(null)
         combine(repository.observe(Demand.LeaguePage(key)), config) { b, c ->
             val matches = (b.today[key].orEmpty() + b.tomorrow[key].orEmpty()).distinctBy { it.key }.sortedBy { it.startMs }
-            LeaguePageState(key, b.standings[key], matches, c)
+            LeaguePageState(key, b.standings[key], b.rankings[key], matches, c)
         }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
