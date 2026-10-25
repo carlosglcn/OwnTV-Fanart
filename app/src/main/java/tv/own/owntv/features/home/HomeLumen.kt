@@ -220,7 +220,7 @@ fun LumenHome(
             Spacer(Modifier.height(14.mpx))
             Text(shown?.title.orEmpty(), style = stageText(64f, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             shown?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
-            shown?.plot?.takeIf { it.isNotBlank() }?.let { Text(it, style = stageText(20, 400), color = StageColors.Body, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 16.mpx).width(760.mpx)) }
+            shown?.plot?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(760.mpx), style = stageText(20, 400), color = StageColors.Body) }
         }
 
         Column(

@@ -290,9 +290,9 @@ internal fun DriftingSynopsis(
         scroll.scrollTo(0)
         if (scroll.maxValue <= 0) return@LaunchedEffect
         while (true) {
-            kotlinx.coroutines.delay(2_500)
-            scroll.animateScrollTo(scroll.maxValue, androidx.compose.animation.core.tween(scroll.maxValue * 45, easing = androidx.compose.animation.core.LinearEasing))
-            kotlinx.coroutines.delay(2_000)
+            kotlinx.coroutines.delay(3_500)
+            scroll.animateScrollTo(scroll.maxValue, androidx.compose.animation.core.tween(scroll.maxValue * 80, easing = androidx.compose.animation.core.LinearEasing))
+            kotlinx.coroutines.delay(3_000)
             scroll.scrollTo(0)
         }
     }
