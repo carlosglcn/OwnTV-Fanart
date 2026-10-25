@@ -533,6 +533,7 @@ fun SettingsScreen(
                 when (homeBackdrop) {
                     1 -> R.string.glcn_home_backdrop_cinema
                     2 -> R.string.glcn_home_backdrop_panel
+                    3 -> R.string.glcn_home_backdrop_dock
                     else -> R.string.glcn_home_backdrop_classic
                 },
             ),

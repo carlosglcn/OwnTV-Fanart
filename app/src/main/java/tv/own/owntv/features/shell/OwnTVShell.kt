@@ -219,7 +219,7 @@ fun OwnTVShell(
     var introSkipVisible by remember { mutableStateOf(false) }
     val introContext = androidx.compose.ui.platform.LocalContext.current
     val navStyle by settingsRepo.navStyle.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED)
-    val glcnStyle by settingsRepo.glcnStyle.collectAsStateWithLifecycle(initialValue = null)
+    val homeLayout by settingsRepo.homeBackdropStyle.collectAsStateWithLifecycle(initialValue = 0)
     val navSize by settingsRepo.navSize.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.SettingsRepository.NavSize.COMPACT)
     val navWiden by settingsRepo.navWiden.collectAsStateWithLifecycle(initialValue = null)
     val navLength by settingsRepo.navLength.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.SettingsRepository.NavLength.FIT)
@@ -1291,8 +1291,8 @@ fun OwnTVShell(
                                 .focusGroup(),
                         )
 
-                        // glcn: the Lumen styles have their own Home — the focused title over its picture and a glass dock.
-                        selectedSection == MainSection.HOME && glcnStyle?.homeDock == true -> tv.own.owntv.features.home.LumenHome(
+                        // glcn: the Dock layout — the focused title over its picture and a glass dock with tabs.
+                        selectedSection == MainSection.HOME && homeLayout == 3 -> tv.own.owntv.features.home.LumenHome(
                             vm = homeVm,
                             onPlayMovie = { id, pos -> scope.launch { if (movieVm.playByIdAsync(id, pos) && !movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES) } },
                             onPlayEpisode = { seriesId, epId, pos -> scope.launch { if (seriesVm.playFromHomeAsync(seriesId, epId, pos) && !seriesVm.externalPlayerOn.value) openFullscreen(MainSection.SERIES) } },
