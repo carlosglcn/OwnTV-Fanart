@@ -80,3 +80,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏎️ Motorsport: a session now reads "Free practice / Qualifying / Race" with the Grand Prix name under it, instead of two drivers standing in for two teams. It also shows the time, the circuit and the first three (live or final), and the Standings tab lists the drivers' and constructors' championships side by side.
 - 🪟 New Home layout "Dock" (Settings › Fanart › Home layout, next to Classic, Cinema and Panel): the focused title large over its picture, and a glass dock below with tabs (Keep watching, Recent and Favorite channels, Sports, Trending, Favorites, New…) — only the rows you have switched on. It works with any colour style.
 - 🏍️ MotoGP and other races are now found in the guide by the circuit's place too ("GP de Australia"), not only by the series name, over a wider time window; the sessions read Practice / Warm-up / Qualifying / Sprint / Race.
+- 🏟️ Dock Home: matches now show both team crests on the card and large beside the title instead of an empty box
+- 🛠️ Fixed the "Delete profile" confirmation closing by itself when opened with a long press

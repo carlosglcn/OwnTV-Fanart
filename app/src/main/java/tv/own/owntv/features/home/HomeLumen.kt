@@ -72,6 +72,8 @@ private class LumenItem(
     val backdrop: String?,
     val progress: Float?,
     val landscape: Boolean,
+    /** A match has no picture: its two crests are the art, on the card and large over the title. */
+    val crests: List<tv.own.owntv.core.sports.model.Team?>? = null,
     val onClick: () -> Unit,
 )
 
@@ -143,7 +145,7 @@ fun LumenHome(
             if (matches.isNotEmpty() && HomeRow.LIVE_SPORTS in order) add(
                 LumenTab(
                     HomeRow.LIVE_SPORTS,
-                    matches.map { m -> LumenItem("x" + m.key, MatchNotifications.pair(context, m), m.leagueName, null, null, null, null, true) { onOpenMatch(m) } },
+                    matches.map { m -> LumenItem("x" + m.key, MatchNotifications.pair(context, m), m.leagueName, null, null, null, null, true, listOf(m.home?.team, m.away?.team).takeIf { m.competitors.size >= 2 }) { onOpenMatch(m) } },
                 ),
             )
             if (state.trendingItems.isNotEmpty() && HomeRow.TRENDING in order) add(
@@ -195,6 +197,11 @@ fun LumenHome(
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(palette.page.copy(alpha = 0.78f), palette.page.copy(alpha = 0.34f), palette.page.copy(alpha = 0f)))))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to palette.page.copy(alpha = 0.95f))))
 
+        shown?.crests?.let { pair ->
+            Row(Modifier.align(Alignment.TopEnd).padding(end = 140.mpx, top = 170.mpx), horizontalArrangement = Arrangement.spacedBy(48.mpx)) {
+                pair.forEach { tv.own.owntv.features.sports.Crest(it, 230) }
+            }
+        }
         if (tab == null) return@Box
         Column(Modifier.padding(start = contentStart + 24.mpx, top = 120.mpx).width(900.mpx)) {
             Text(tab.row.displayTitle(), style = stageText(19, 700), color = accent.accent, maxLines = 1)
@@ -239,7 +246,12 @@ fun LumenHome(
                             title = item.title, line = item.line, onClick = item.onClick, width = 300.mpx, height = 169.mpx,
                             titleSize = 19, lineSize = 15, modifier = m, progress = item.progress,
                         ) {
-                            if (item.art != null) AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                            if (item.crests != null) Row(
+                                Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.14f)),
+                                horizontalArrangement = Arrangement.spacedBy(20.mpx, Alignment.CenterHorizontally),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) { item.crests.forEach { tv.own.owntv.features.sports.Crest(it, 84) } }
+                            else if (item.art != null) AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                             else Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.18f)))
                         }
                     } else {
