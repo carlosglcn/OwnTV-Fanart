@@ -334,6 +334,7 @@ fun SettingsScreen(
     val homeCoverDim by settingsVm.homeCoverDim.collectAsStateWithLifecycle()
     val glcnStyle by settingsVm.glcnStyle.collectAsStateWithLifecycle()
     var showGlcnStyle by remember { mutableStateOf(false) }
+    var showHomeLayout by remember { mutableStateOf(false) }
     val uiSounds by settingsVm.uiSounds.collectAsStateWithLifecycle()
     val uiSoundStyle by settingsVm.uiSoundStyle.collectAsStateWithLifecycle()
     val startupSound by settingsVm.startupSound.collectAsStateWithLifecycle()
@@ -538,7 +539,7 @@ fun SettingsScreen(
                 },
             ),
             chipTone = TileTone.PRIMARY,
-            onClick = { settingsVm.cycleHomeBackdropStyle() },
+            onClick = { showHomeLayout = true },
         ),
         RootRow(
             "glcn_home_cover", TileTone.PRIMARY, OwnTVIcon.IMAGE,
@@ -1495,6 +1496,9 @@ fun SettingsScreen(
     if (showStartup) StartupDialogHost(settingsVm, startupMode, onClose = { showStartup = false }, onPickChannel = { showStartupChannelPicker = true })
     if (showStartupChannelPicker) StartupChannelPickerHost(settingsVm, startupChannel, onClose = { showStartupChannelPicker = false })
     if (showAnimations) AnimationsDialogHost(settingsVm, animationLevel, onClose = { showAnimations = false })
+    if (showHomeLayout) {
+        tv.own.owntv.glcn.HomeLayoutPicker(homeBackdrop, onPick = settingsVm::setHomeBackdropStyle, onDismiss = { showHomeLayout = false })
+    }
     if (showGlcnStyle) {
         tv.own.owntv.glcn.StylePickerPopup(glcnStyle, onPick = settingsVm::applyGlcnStyle, onDismiss = { showGlcnStyle = false })
     }

@@ -237,6 +237,7 @@ fun LumenHome(
                     StageTab(
                         label = t.row.displayTitle(), count = t.items.size.toString(), selected = i == selected,
                         onClick = { selected = i },
+                        onLongClick = { menuRow = t.row },
                         modifier = Modifier.then(if (i == selected) Modifier.focusRequester(selectedTab) else Modifier).onFocusChanged { if (it.hasFocus) { selected = i; onChildFocused() } },
                     )
                 }
@@ -245,13 +246,14 @@ fun LumenHome(
             LaunchedEffect(selected) { listState.scrollToItem(0) }
             LazyRow(
                 state = listState,
-                modifier = Modifier.padding(top = 18.mpx).focusProperties { up = selectedTab }.focusRestorer().focusGroup(),
+                modifier = Modifier.padding(top = 18.mpx).focusRestorer().focusGroup(),
                 contentPadding = PaddingValues(horizontal = 30.mpx, vertical = 8.mpx),
                 horizontalArrangement = Arrangement.spacedBy(20.mpx),
             ) {
                 itemsIndexed(tab.items, key = { _, it -> it.key }) { index, item ->
                     val m = Modifier
                         .then(if (index == 0) Modifier.focusRequester(entry) else Modifier)
+                        .focusProperties { up = selectedTab }
                         .onFocusChanged { if (it.hasFocus) { focusedKey = item.key; onChildFocused() } }
                     if (item.landscape) {
                         StageStill(

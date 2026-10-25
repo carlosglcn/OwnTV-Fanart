@@ -22,6 +22,7 @@ import tv.own.owntv.ui.stage.stageGlass
 import tv.own.owntv.ui.theme.StageRadii
 import tv.own.owntv.ui.theme.stageAccent
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -296,10 +297,11 @@ internal fun DriftingSynopsis(
             scroll.scrollTo(0)
         }
     }
-    Box(modifier.fillMaxWidth().heightIn(max = lineH * lines).clip(androidx.compose.ui.graphics.RectangleShape)) {
+    // A little room under the last line, so its descenders are not cut where the drift ends.
+    Box(modifier.fillMaxWidth().heightIn(max = lineH * lines + 6.dp).clip(androidx.compose.ui.graphics.RectangleShape)) {
         Text(
             text, style = style.copy(lineHeight = style.fontSize * 1.4f), color = color,
-            modifier = Modifier.verticalScroll(scroll, enabled = false),
+            modifier = Modifier.verticalScroll(scroll, enabled = false).padding(bottom = 6.dp),
         )
     }
 }

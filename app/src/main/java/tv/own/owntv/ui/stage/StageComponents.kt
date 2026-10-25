@@ -382,9 +382,9 @@ fun StageTool(
  * with a 4 px accent underline glowing at 70%. Focused = FILLED.
  */
 @Composable
-fun StageTab(label: String, count: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun StageTab(label: String, count: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, onLongClick: (() -> Unit)? = null) {
     val a = stageAccent
-    StageSurface(onClick = onClick, radius = 12.mpx, modifier = modifier) { focused ->
+    StageSurface(onClick = onClick, radius = 12.mpx, modifier = modifier, onLongClick = onLongClick) { focused ->
         Row(
             Modifier
                 .padding(horizontal = 12.mpx)

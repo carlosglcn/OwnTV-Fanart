@@ -88,3 +88,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏠 Dock Home: pressing Up from a card returns to the tab you are on, and a long press on a card offers "Hide this row"
 - 🎾 Tennis: players now show their photo (initials stay if it does not load)
 - 🐢 The programme/film synopsis that drifts on its own now moves slower and pauses longer at each end; the Dock shows it the same way
+- 🖼️ Home layout is now chosen from a small menu: four cards, each with a sketch of how Home looks (Classic, Cinema, Panel, Dock) — no more cycling with Right
+- 🏠 Dock: pressing Up from any card now goes back to the tab you are on; a long press on a tab also offers "Hide this row"; the synopsis keeps room under its last line so it is no longer cut

@@ -1001,6 +1001,7 @@ class SettingsViewModel(
     }
 
     val homeBackdropStyle: StateFlow<Int> = settings.homeBackdropStyle.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    fun setHomeBackdropStyle(style: Int) { viewModelScope.launch { settings.setHomeBackdropStyle(style) } }
     fun cycleHomeBackdropStyle() { viewModelScope.launch { settings.setHomeBackdropStyle((homeBackdropStyle.value + 1) % 4) } }
 
     val zapPanel: StateFlow<Int> = settings.zapPanel.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
