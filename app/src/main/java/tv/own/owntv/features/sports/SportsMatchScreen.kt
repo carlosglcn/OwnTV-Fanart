@@ -459,8 +459,14 @@ private fun TimelineRow(e: MatchEvent, m: Match) {
         MatchEvent.Kind.KICKOFF -> stringResource(R.string.sports_event_kickoff)
         MatchEvent.Kind.HALF_TIME -> stringResource(R.string.sports_event_half_time)
         MatchEvent.Kind.FULL_TIME -> stringResource(R.string.sports_event_full_time)
+        MatchEvent.Kind.PIT_STOP -> stringResource(R.string.glcn_event_pit, who)
+        MatchEvent.Kind.RACE_CONTROL -> e.text.orEmpty()
     }
-    val assist = if (e.kind == MatchEvent.Kind.GOAL) e.players.getOrNull(1)?.let { stringResource(R.string.sports_event_assist, it) } else null
+    val assist = when (e.kind) {
+        MatchEvent.Kind.GOAL -> e.players.getOrNull(1)?.let { stringResource(R.string.sports_event_assist, it) }
+        MatchEvent.Kind.PIT_STOP -> e.text
+        else -> null
+    }
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 18.mpx, vertical = 12.mpx),
         horizontalArrangement = Arrangement.spacedBy(18.mpx),
@@ -477,7 +483,7 @@ private fun TimelineRow(e: MatchEvent, m: Match) {
             }
         }
         Column(Modifier.weight(1f)) {
-            Text(title, style = stageText(20, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, style = stageText(20, 700), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             val sub = listOfNotNull(team, assist).joinToString(stringResource(R.string.content_epg_bits_separator))
             if (sub.isNotEmpty()) Text(sub, style = stageText(18, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }

@@ -110,3 +110,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏠 Dock: "Hide this row" on Keep watching now really hides it
 - ◀ Live TV: from the first card (or the search field) ◀ goes on to the side menu
 - 🎨 Style: "None — my own settings" is now "Custom", and choosing it opens Theme and then Accent
+- 🏁 Formula 1: a finished session's Timeline now lists the pit stops (driver, lap, time) and the race director's notes — safety car, red and chequered flags, penalties — from a free history service. Nothing is asked while a session runs, and only when you open it
