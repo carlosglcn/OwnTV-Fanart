@@ -1385,10 +1385,16 @@ fun SettingsScreen(
             pluralStringResource(R.plurals.settings_setting_count, n, n)
         }
     }
-    val extras = stageRowExtras(
-        settingsVm, themeMode, uiZoomPercent, onSetZoom,
-        onOpenZoom = { saveScroll(); dialogReturn = zoomRowFocus; showZoom = true },
-        fontCustomization, onSetFontCustomization, playlistSources,
+    val extras = galleryExtras(
+        stageRowExtras(
+            settingsVm, themeMode, uiZoomPercent, onSetZoom,
+            onOpenZoom = { saveScroll(); dialogReturn = zoomRowFocus; showZoom = true },
+            fontCustomization, onSetFontCustomization, playlistSources,
+        ),
+        // glcn: OK on these rows shows the drawings; ◀ ▶ still change the choice in place.
+        "live_layout" to { saveScroll(); dialogReturn = liveLayoutRowFocus; showLiveLayout = true },
+        "vod_layout" to { saveScroll(); dialogReturn = vodLayoutRowFocus; showVodLayout = true },
+        "live_opens_in" to { saveScroll(); dialogReturn = stageSettings.focus.getValue(StageSettingsDialog.LIVE_OPENS_IN); stageSettings.open = StageSettingsDialog.LIVE_OPENS_IN },
     )
     // Shared with the dialogs below, so the simple ones open in the page's panel.
     val panel = remember { tv.own.owntv.features.settings.SettingsPanelState() }
@@ -2025,14 +2031,8 @@ private fun liveViewLabelRes(view: tv.own.owntv.core.settings.SettingsRepository
 @Composable
 private fun LiveOpensInDialog(settingsVm: SettingsViewModel, onClose: () -> Unit) {
     val current by settingsVm.liveView.collectAsStateWithLifecycle()
-    tv.own.owntv.features.settings.PickerDialog(
-        title = stringResource(R.string.settings_live_opens_in),
-        subtitle = stringResource(R.string.settings_live_opens_in_description),
-        options = tv.own.owntv.core.settings.SettingsRepository.LiveView.entries.map { it.name to stringResource(liveViewLabelRes(it)) },
-        selected = current.name,
-        onSelect = { settingsVm.setLiveView(tv.own.owntv.core.settings.SettingsRepository.LiveView.valueOf(it)); onClose() },
-        onDismiss = onClose,
-    )
+    // glcn: list and guide drawn, instead of two names.
+    tv.own.owntv.glcn.LiveOpensInGallery(current, onPick = settingsVm::setLiveView, onDismiss = onClose)
 }
 
 /** The guide block's Programme reminders: Ask to switch · Switch · Notify only. */
@@ -2934,6 +2934,14 @@ private class SettingsSearchEntry(
     val showChevron: Boolean = true,
     val onClick: () -> Unit,
 )
+
+/** glcn: the rows whose OK shows a gallery of drawings — their value and ◀ ▶ stay as they were. */
+private fun galleryExtras(base: Map<String, RowExtra>, vararg opens: Pair<String, () -> Unit>): Map<String, RowExtra> =
+    base.toMutableMap().also { m ->
+        opens.forEach { (key, open) ->
+            m[key]?.let { e -> m[key] = RowExtra(e.value, e.onStep, open, e.choices, e.chosen, e.recommended, e.help, e.hints, e.extra) }
+        }
+    }
 
 /** What a root row shows and does on its Stage page beyond its chip. */
 private class RowExtra(

@@ -106,3 +106,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 👁️ Preview with OK: the preview now stays on the channel you pressed OK on while you move around; OK on another channel switches it, OK again on the same one opens it full screen
 - 🎨 Colour styles: the picker now shows every style drawn as a small Home in its own colours (Lumen Night/Day, Sunset, Studio, Showcase, Pulse, Neon, Snow, Paper, Sand)
 - 🖼️ Live TV and Movies & Series layouts: each option is a card with a drawing of how the screen will look
+- 🖼️ OK on "Live TV layout", "Movies & Series layout" and "Live TV opens in" now shows the drawings (◀ ▶ still change the choice in place)

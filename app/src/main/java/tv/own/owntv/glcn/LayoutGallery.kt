@@ -59,7 +59,7 @@ internal fun GalleryPopup(title: Int, body: Int?, options: List<GalleryOption>, 
                             stringResource(o.name), style = stageText(21, 800), maxLines = 1,
                             color = if (focused) stageAccent.onAccent else if (picked) stageAccent.accent else StageColors.Text,
                         )
-                        Text(
+                        if (o.desc != 0) Text(
                             stringResource(o.desc), style = stageText(15, 500), maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Start,
                             color = if (focused) stageAccent.onAccent.copy(alpha = 0.9f) else StageColors.Dim,
                         )
@@ -188,4 +188,38 @@ fun VodLayoutGallery(current: SettingsRepository.VodLayout, onPick: (SettingsRep
             GalleryOption(SettingsRepository.VodLayout.CINEMATIC.name, R.string.settings_vod_layout_cinematic, R.string.settings_vod_layout_cinematic_description, vodCinematic),
         ),
         current = current.name, onPick = { onPick(SettingsRepository.VodLayout.valueOf(it)) }, onDismiss = onDismiss,
+    )
+
+// --- Live TV opens in -----------------------------------------------------------------------------------
+
+/** The list: the categories, the channels in a column and the preview. */
+private val openInList: DrawScope.(Color, Color, Color) -> Unit = { ink, accent, _ -> liveSeparate(this, ink, accent, accent) }
+
+/** The guide: channels down the side, the day's programmes as blocks along a time line. */
+private val openInGuide: DrawScope.(Color, Color, Color) -> Unit = { ink, accent, _ ->
+    val w = size.width; val h = size.height
+    val tints = tintsOf(accent)
+    // The time line, with "now" marked.
+    repeat(4) { i -> box(w * (0.22f + i * 0.2f), h * 0.07f, w * 0.08f, 6f, ink.copy(alpha = 0.45f), 3f) }
+    drawRect(accent, Offset(w * 0.52f, h * 0.05f), Size(3f, h * 0.9f))
+    repeat(5) { r ->
+        val y = h * (0.16f + r * 0.162f)
+        box(w * 0.04f, y, w * 0.12f, h * 0.12f, tints[r % 5].copy(alpha = 0.7f), 5f)
+        var x = w * 0.19f
+        listOf(0.2f, 0.27f, 0.18f).forEachIndexed { k, seg ->
+            box(x, y, w * seg - 4f, h * 0.12f, ink.copy(alpha = if ((r + k) % 2 == 0) 0.22f else 0.14f), 5f)
+            x += w * seg
+        }
+    }
+}
+
+@Composable
+fun LiveOpensInGallery(current: SettingsRepository.LiveView, onPick: (SettingsRepository.LiveView) -> Unit, onDismiss: () -> Unit) =
+    GalleryPopup(
+        title = R.string.settings_live_opens_in, body = R.string.settings_live_opens_in_description,
+        options = listOf(
+            GalleryOption(SettingsRepository.LiveView.LIST.name, R.string.content_live_list_view, 0, openInList),
+            GalleryOption(SettingsRepository.LiveView.GUIDE.name, R.string.content_live_guide_view, 0, openInGuide),
+        ),
+        current = current.name, onPick = { onPick(SettingsRepository.LiveView.valueOf(it)) }, onDismiss = onDismiss,
     )
