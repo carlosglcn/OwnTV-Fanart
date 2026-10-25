@@ -136,13 +136,25 @@ fun LiveEpgCard(
                     modifier = Modifier.padding(top = if (bare) 3.dp else 6.dp),
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     color = hudInk.copy(alpha = 0.82f),
-                    lines = 3,
+                    lines = if (bare) 2 else 3, // glcn: the player's banner is kept low — the text drifts if it is longer
                 )
             }
         }
         epg.next?.let { entry ->
+            val nextLabel = stringResource(if (archive) R.string.content_archive_then else R.string.content_live_next)
+            if (bare) {
+                // glcn: label and programme on one line, to keep the player's banner low.
+                Row(Modifier.padding(top = if (now != null) 3.dp else 0.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SlotLabel(nextLabel, hudInk.copy(alpha = 0.6f))
+                    Text(
+                        formatTime(entry.startMs) + "  " + entry.title,
+                        style = MaterialTheme.typography.labelSmall, color = hudInk.copy(alpha = 0.85f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                return@let
+            }
             Column(Modifier.padding(top = if (now != null) (if (bare) 4.dp else 8.dp) else 0.dp)) {
-                SlotLabel(stringResource(if (archive) R.string.content_archive_then else R.string.content_live_next), hudInk.copy(alpha = 0.6f))
+                SlotLabel(nextLabel, hudInk.copy(alpha = 0.6f))
                 Text(
                     formatTime(entry.startMs) + "  " + entry.title,
                     style = MaterialTheme.typography.labelSmall,

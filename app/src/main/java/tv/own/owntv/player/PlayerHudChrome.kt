@@ -418,7 +418,7 @@ internal fun BottomBar(
                     Box(Modifier.widthIn(max = 540.dp)) { side() }
                 }
             } else header()
-            Box(Modifier.fillMaxWidth().padding(vertical = if (side != null) 4.dp else 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
+            Box(Modifier.fillMaxWidth().padding(vertical = if (side != null) 2.dp else 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
         }
         // Band A — the instrument. The times are the bar's own end caps now; the separate time row is
         // gone, and on live the right cap is the state badge instead of a clock.
@@ -620,7 +620,7 @@ internal fun BottomBar(
             }
         }
     }
-    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = if (side != null) 10.dp else 20.dp)) { body() }
+    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = if (side != null) 6.dp else 20.dp)) { body() }
 }
 
 private fun volumeIcon(volume: Int): OwnTVIcon = when {
