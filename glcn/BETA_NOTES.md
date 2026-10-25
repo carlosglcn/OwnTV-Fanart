@@ -101,3 +101,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪶 New "Light mode" switch (Appearance): shown on and off by itself according to the box's memory; you can force it either way
 - 🔊 Menu sounds: a list that plays each style as you move over it (leaving without choosing keeps the one you had)
 - ♻️ Appearance: one "Reset appearance" row puts theme, accent, focus highlight, glass and background, text and window sizes and zoom back
+- 🎨 Home layout picker: more colour in the sketches, the Classic billboard nearer the middle, and the text stays readable on the highlighted card in light and dark

@@ -58,16 +58,18 @@ fun HomeLayoutPicker(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit)
                     onClick = { onPick(mode); onDismiss() },
                     radius = 22.mpx,
                     modifier = Modifier.weight(1f).then(if (mode == current.coerceIn(0, 3)) Modifier.focusRequester(first) else Modifier),
-                ) { _ ->
+                ) { focused ->
                     Column(Modifier.padding(14.mpx), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
-                        Sketch(mode, Modifier.fillMaxWidth().height(150.mpx))
+                        Sketch(mode, focused, Modifier.fillMaxWidth().height(150.mpx))
                         Text(
                             stringResource(name),
-                            style = stageText(21, 800), color = if (picked) stageAccent.accent else StageColors.Text, maxLines = 1,
+                            style = stageText(21, 800),
+                            // On the accent fill of the focused card the text takes the colour made for it.
+                            color = if (focused) stageAccent.onAccent else if (picked) stageAccent.accent else StageColors.Text, maxLines = 1,
                         )
                         Text(
                             stringResource(lines[mode]),
-                            style = stageText(15, 400), color = StageColors.Dim, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                            style = stageText(15, 500), color = if (focused) stageAccent.onAccent.copy(alpha = 0.9f) else StageColors.Dim, maxLines = 3, overflow = TextOverflow.Ellipsis,
                             textAlign = TextAlign.Start,
                         )
                     }
@@ -78,11 +80,15 @@ fun HomeLayoutPicker(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit)
     }
 }
 
-/** A tiny drawing of one layout: a screen, the picture, the rail, the rows. Shapes only — no words. */
+/** A tiny drawing of one layout: a screen, the picture, the rail, the rows. Shapes and colour only — no words. */
 @Composable
-private fun Sketch(mode: Int, modifier: Modifier) {
-    val ink = StageColors.Ink
+private fun Sketch(mode: Int, focused: Boolean, modifier: Modifier) {
+    // On the focused card's accent fill the lines turn to the colour made for it, so they stay readable.
+    val ink = if (focused) stageAccent.onAccent else StageColors.Ink
     val accent = stageAccent.accent
+    // Each layout has a hue of its own, so the four read apart at a glance; posters take turns in the tints.
+    val hue = when (mode) { 0 -> Color(0xFFFFA24C); 1 -> Color(0xFF8B6CFF); 2 -> Color(0xFF3FA9F5); else -> Color(0xFFFF6FA3) }
+    val tints = listOf(Color(0xFFFF7A6B), Color(0xFFFFC14D), accent, Color(0xFF8B6CFF), Color(0xFF4DB8FF))
     androidx.compose.foundation.layout.Box(modifier) {
         Canvas(Modifier.matchParentSize()) {
             val w = size.width
@@ -91,45 +97,60 @@ private fun Sketch(mode: Int, modifier: Modifier) {
             // The screen.
             drawRoundRect(ink.copy(alpha = 0.10f), size = size, cornerRadius = CornerRadius(14f, 14f))
             val railW = w * 0.05f
+            fun art(x: Float, y: Float, bw: Float, bh: Float, rad: CornerRadius = r, a: Float = 0.75f) =
+                drawRoundRect(
+                    Brush.linearGradient(listOf(hue.copy(alpha = a), accent.copy(alpha = a)), Offset(x, y), Offset(x + bw, y + bh)),
+                    topLeft = Offset(x, y), size = Size(bw, bh), cornerRadius = rad,
+                )
             fun block(x: Float, y: Float, bw: Float, bh: Float, c: Color, rad: CornerRadius = r) =
                 drawRoundRect(c, topLeft = Offset(x, y), size = Size(bw, bh), cornerRadius = rad)
-            fun posters(x: Float, y: Float, count: Int, pw: Float, ph: Float, gap: Float) {
-                repeat(count) { i -> block(x + i * (pw + gap), y, pw, ph, ink.copy(alpha = 0.28f), CornerRadius(5f, 5f)) }
+            fun posters(x: Float, y: Float, count: Int, pw: Float, ph: Float, gap: Float, first: Int = 0) {
+                repeat(count) { i -> block(x + i * (pw + gap), y, pw, ph, tints[(first + i) % tints.size].copy(alpha = 0.62f), CornerRadius(5f, 5f)) }
             }
             fun lines(x: Float, y: Float, widths: List<Float>, th: Float, c: Color) {
                 widths.forEachIndexed { i, lw -> block(x, y + i * (th + 5f), lw, th, c, CornerRadius(th / 2, th / 2)) }
             }
+            fun play(cx: Float, cy: Float, rad: Float) {
+                drawCircle(Color.White.copy(alpha = 0.85f), rad, Offset(cx, cy))
+                drawPath(
+                    androidx.compose.ui.graphics.Path().apply {
+                        moveTo(cx - rad * 0.3f, cy - rad * 0.5f); lineTo(cx + rad * 0.55f, cy); lineTo(cx - rad * 0.3f, cy + rad * 0.5f); close()
+                    },
+                    hue,
+                )
+            }
             // The rail, the same in every layout.
-            block(w * 0.02f, h * 0.12f, railW, h * 0.76f, ink.copy(alpha = 0.22f), CornerRadius(8f, 8f))
+            block(w * 0.02f, h * 0.12f, railW, h * 0.76f, ink.copy(alpha = 0.30f), CornerRadius(8f, 8f))
             val left = w * 0.02f + railW + w * 0.03f
             when (mode) {
-                0 -> { // Classic: the billboard in the corner, rows under it.
-                    block(w * 0.45f, h * 0.06f, w * 0.52f, h * 0.44f, accent.copy(alpha = 0.40f))
-                    lines(left, h * 0.14f, listOf(w * 0.26f, w * 0.18f, w * 0.22f), 7f, ink.copy(alpha = 0.55f))
+                0 -> { // Classic: the billboard to the right of the title, rows under it.
+                    art(w * 0.36f, h * 0.06f, w * 0.60f, h * 0.46f)
+                    play(w * 0.66f, h * 0.29f, h * 0.085f)
+                    lines(left, h * 0.14f, listOf(w * 0.24f, w * 0.17f, w * 0.20f), 8f, ink.copy(alpha = 0.75f))
                     posters(left, h * 0.58f, 5, w * 0.12f, h * 0.17f, w * 0.015f)
-                    posters(left, h * 0.80f, 5, w * 0.12f, h * 0.17f, w * 0.015f)
+                    posters(left, h * 0.80f, 5, w * 0.12f, h * 0.17f, w * 0.015f, first = 2)
                 }
                 1 -> { // Cinema: the picture fills the screen, the rows below.
-                    block(0f, 0f, w, h, accent.copy(alpha = 0.34f), CornerRadius(14f, 14f))
+                    art(0f, 0f, w, h, CornerRadius(14f, 14f), a = 0.62f)
                     shade(w, h)
-                    lines(left, h * 0.18f, listOf(w * 0.30f, w * 0.20f, w * 0.26f), 7f, ink.copy(alpha = 0.7f))
+                    lines(left, h * 0.18f, listOf(w * 0.30f, w * 0.20f, w * 0.26f), 8f, Color.White.copy(alpha = 0.9f))
                     posters(left, h * 0.62f, 6, w * 0.11f, h * 0.30f, w * 0.015f)
                 }
                 2 -> { // Panel: the rows at the left, a fixed panel at the right.
-                    block(0f, 0f, w, h, accent.copy(alpha = 0.30f), CornerRadius(14f, 14f))
+                    art(0f, 0f, w, h, CornerRadius(14f, 14f), a = 0.55f)
                     shade(w, h)
                     posters(left, h * 0.16f, 3, w * 0.13f, h * 0.30f, w * 0.015f)
-                    posters(left, h * 0.54f, 3, w * 0.13f, h * 0.30f, w * 0.015f)
-                    block(w * 0.66f, h * 0.10f, w * 0.31f, h * 0.80f, ink.copy(alpha = 0.22f), CornerRadius(12f, 12f))
-                    lines(w * 0.69f, h * 0.18f, listOf(w * 0.20f, w * 0.14f, w * 0.22f, w * 0.18f), 6f, ink.copy(alpha = 0.55f))
+                    posters(left, h * 0.54f, 3, w * 0.13f, h * 0.30f, w * 0.015f, first = 3)
+                    block(w * 0.66f, h * 0.10f, w * 0.31f, h * 0.80f, Color.Black.copy(alpha = 0.32f), CornerRadius(12f, 12f))
+                    lines(w * 0.69f, h * 0.18f, listOf(w * 0.20f, w * 0.14f, w * 0.22f, w * 0.18f), 6f, Color.White.copy(alpha = 0.85f))
                 }
                 else -> { // Dock: a large title over its picture and a glass dock with tabs.
-                    block(0f, 0f, w, h, accent.copy(alpha = 0.40f), CornerRadius(14f, 14f))
+                    art(0f, 0f, w, h, CornerRadius(14f, 14f), a = 0.70f)
                     shade(w, h)
-                    lines(left, h * 0.14f, listOf(w * 0.34f, w * 0.22f), 9f, ink.copy(alpha = 0.75f))
-                    block(left - w * 0.01f, h * 0.52f, w * 0.90f - left + w * 0.06f, h * 0.42f, ink.copy(alpha = 0.26f), CornerRadius(14f, 14f))
-                    repeat(4) { i -> block(left + i * w * 0.15f, h * 0.57f, w * 0.12f, 6f, ink.copy(alpha = if (i == 1) 0.8f else 0.4f), CornerRadius(3f, 3f)) }
-                    posters(left + w * 0.01f, h * 0.68f, 5, w * 0.13f, h * 0.20f, w * 0.015f)
+                    lines(left, h * 0.14f, listOf(w * 0.34f, w * 0.22f), 10f, Color.White.copy(alpha = 0.92f))
+                    block(left - w * 0.01f, h * 0.52f, w * 0.90f - left + w * 0.06f, h * 0.42f, Color.Black.copy(alpha = 0.34f), CornerRadius(14f, 14f))
+                    repeat(4) { i -> block(left + i * w * 0.15f, h * 0.57f, w * 0.12f, 6f, Color.White.copy(alpha = if (i == 1) 0.95f else 0.45f), CornerRadius(3f, 3f)) }
+                    posters(left + w * 0.01f, h * 0.68f, 5, w * 0.13f, h * 0.20f, w * 0.015f, first = 1)
                 }
             }
         }
