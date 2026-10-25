@@ -463,6 +463,11 @@ open class MainActivity : ComponentActivity() {
                         // Background image sits behind everything when a path is set; otherwise the solid
                         // base color shows through and glass renders over that instead.
                         if (background.showsPicture) BackgroundLayer(background, blurred)
+                        // glcn: a glass style (Lumen) owns its page tone — a bright picture would wash it out and leave
+                        // the style's text unreadable, so the picture shows through the page colour, not over it.
+                        if (background.showsPicture) glcnStyle?.takeIf { it.glass }?.let { st ->
+                            Box(Modifier.fillMaxSize().background(Color(st.page).copy(alpha = 0.62f)))
+                        }
 
                         Box(modifier = Modifier.fillMaxSize()) {
                         val profile = activeProfileId
