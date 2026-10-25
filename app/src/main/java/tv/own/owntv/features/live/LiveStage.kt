@@ -278,11 +278,7 @@ internal fun LiveStagePane(
                     fill = Color.Transparent,
                 ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(56.mpx)) }
             }
-            // glcn: the programme's own picture fills the frame until the video plays over it.
-            val art = nowNext?.nowDetails?.imageUrl
-            if (!playing && !art.isNullOrBlank()) {
-                tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
-            }
+            // glcn: until the video plays the frame holds the channel's logo alone — the programme's picture is already the screen's backdrop.
             if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
             if (loading) OwnTVSpinner(sizeDp = 28)
             // `.shade`: black 72% at the bottom, clear by 42% up — a video-sized gradient, one pass.

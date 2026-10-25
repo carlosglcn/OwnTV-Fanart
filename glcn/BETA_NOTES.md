@@ -115,3 +115,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📝 Player banner: the synopsis starts to drift after about a second and moves faster, so it can be read before the banner hides
 - 🖼️ Live TV: the programme picture is now the screen's own backdrop from the bottom right corner, fading into the page behind the programme text — instead of a small picture beside it
 - 🔤 Player banner: the "LIVE NOW" / "NEXT" labels are smaller than the programme title under them
+- 📺 Live TV preview: while nothing plays it shows the channel logo only, since the programme picture is now the backdrop
