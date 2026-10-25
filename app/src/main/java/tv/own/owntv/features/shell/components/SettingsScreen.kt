@@ -688,6 +688,8 @@ fun SettingsScreen(
                     1 -> R.string.glcn_ui_sound_style_crystal
                     2 -> R.string.glcn_ui_sound_style_wood
                     3 -> R.string.glcn_ui_sound_style_bubble
+                    4 -> R.string.glcn_ui_sound_style_soft
+                    5 -> R.string.glcn_ui_sound_style_air
                     else -> R.string.glcn_ui_sound_style_classic
                 },
             ),

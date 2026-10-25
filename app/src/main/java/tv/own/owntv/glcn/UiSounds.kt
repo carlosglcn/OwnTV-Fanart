@@ -37,7 +37,7 @@ object UiSounds {
             field = value
         }
 
-    /** 0 classic, 1 crystal, 2 wood, 3 bubble. Changing it drops the cached sounds so the next ones are built in the new style. */
+    /** 0 classic, 1 crystal, 2 wood, 3 bubble, 4 soft, 5 air. Changing it drops the cached sounds so the next ones are built in the new style. */
     @Volatile var style: Int = 0
         set(value) {
             if (value == field) return
@@ -172,15 +172,15 @@ object UiSounds {
         val buf = FloatArray((seconds * RATE).toInt())
 
         /** A bell-like note: a sine and a few soft partials, struck and decaying. */
-        fun bell(atSec: Double, freq: Double, durSec: Double, amp: Double, decay: Double = 5.0, partials: DoubleArray = doubleArrayOf(1.0, 0.35, 0.12)) {
+        fun bell(atSec: Double, freq: Double, durSec: Double, amp: Double, decay: Double = 5.0, partials: DoubleArray = doubleArrayOf(1.0, 0.35, 0.12), attack: Double = 0.004) {
             val start = (atSec * RATE).toInt()
             val n = (durSec * RATE).toInt()
             for (i in 0 until n) {
                 val idx = start + i
                 if (idx >= buf.size) break
                 val t = i.toDouble() / RATE
-                val attack = (t / 0.004).coerceAtMost(1.0)
-                val env = attack * exp(-decay * t)
+                val attackEnv = (t / attack).coerceAtMost(1.0)
+                val env = attackEnv * exp(-decay * t)
                 var v = 0.0
                 partials.forEachIndexed { k, a -> v += a * sin(2 * PI * freq * (k + 1) * t) }
                 buf[idx] += (amp * env * v).toFloat()
@@ -200,6 +200,22 @@ object UiSounds {
                 phase += 2 * PI * f / RATE
                 val env = (t / 0.003).coerceAtMost(1.0) * exp(-decay * t)
                 buf[idx] += (amp * env * sin(phase)).toFloat()
+            }
+        }
+
+        /** A breath of air: noise softened by a one-pole low-pass at [cutoff] Hz, swelling in and fading out. */
+        fun air(atSec: Double, durSec: Double, amp: Double, cutoff: Double) {
+            val start = (atSec * RATE).toInt()
+            val n = (durSec * RATE).toInt()
+            val a = 1 - exp(-2 * PI * cutoff / RATE)
+            var y = 0.0
+            val rnd = java.util.Random(7)
+            for (i in 0 until n) {
+                val idx = start + i
+                if (idx >= buf.size) break
+                y += a * ((rnd.nextDouble() * 2 - 1) - y)
+                val p = i.toDouble() / n
+                buf[idx] += (amp * 3.0 * y * sin(PI * p) * (1 - p * 0.4)).toFloat()
             }
         }
 
@@ -231,6 +247,8 @@ object UiSounds {
         1 -> Mix(0.04).apply { bell(0.0, 3200.0, 0.04, 0.14, decay = 200.0, partials = doubleArrayOf(1.0, 0.22)) }
         2 -> Mix(0.05).apply { bell(0.0, 620.0, 0.05, 0.3, decay = 90.0, partials = doubleArrayOf(1.0, 0.4, 0.15)) }
         3 -> Mix(0.04).apply { drop(0.0, 900.0, 1500.0, 0.04, 0.24, decay = 70.0) }
+        4 -> Mix(0.06).apply { bell(0.0, 520.0, 0.06, 0.24, decay = 55.0, partials = doubleArrayOf(1.0, 0.06), attack = 0.007) }
+        5 -> Mix(0.05).apply { air(0.0, 0.05, 0.1, 1600.0); bell(0.0, 700.0, 0.05, 0.05, decay = 80.0, partials = doubleArrayOf(1.0), attack = 0.008) }
         else -> Mix(0.03).apply { bell(0.0, 1900.0, 0.03, 0.18, decay = 160.0, partials = doubleArrayOf(1.0)) }
     }.pcm()
 
@@ -238,6 +256,8 @@ object UiSounds {
         1 -> Mix(0.22).apply { bell(0.0, 1568.0, 0.2, 0.2, decay = 24.0, partials = doubleArrayOf(1.0, 0.25)); bell(0.05, 2349.0, 0.17, 0.17, decay = 28.0, partials = doubleArrayOf(1.0, 0.2)) }
         2 -> Mix(0.16).apply { bell(0.0, 392.0, 0.15, 0.34, decay = 28.0, partials = doubleArrayOf(1.0, 0.45, 0.2)); bell(0.045, 587.0, 0.12, 0.28, decay = 34.0, partials = doubleArrayOf(1.0, 0.4, 0.15)) }
         3 -> Mix(0.12).apply { drop(0.0, 600.0, 1500.0, 0.1, 0.32, decay = 26.0) }
+        4 -> Mix(0.3).apply { bell(0.0, 523.0, 0.28, 0.26, decay = 16.0, partials = doubleArrayOf(1.0, 0.06), attack = 0.009); bell(0.07, 659.0, 0.22, 0.22, decay = 18.0, partials = doubleArrayOf(1.0, 0.05), attack = 0.009) }
+        5 -> Mix(0.2).apply { air(0.0, 0.16, 0.12, 2200.0); drop(0.0, 480.0, 760.0, 0.16, 0.14, decay = 14.0) }
         else -> Mix(0.09).apply { bell(0.0, 1250.0, 0.09, 0.3, decay = 45.0); bell(0.012, 1870.0, 0.07, 0.15, decay = 60.0) }
     }.pcm()
 
@@ -245,6 +265,8 @@ object UiSounds {
         1 -> Mix(0.16).apply { bell(0.0, 1175.0, 0.15, 0.18, decay = 32.0, partials = doubleArrayOf(1.0, 0.22)) }
         2 -> Mix(0.14).apply { bell(0.0, 330.0, 0.13, 0.34, decay = 36.0, partials = doubleArrayOf(1.0, 0.45, 0.2)) }
         3 -> Mix(0.12).apply { drop(0.0, 1300.0, 520.0, 0.1, 0.28, decay = 26.0) }
+        4 -> Mix(0.26).apply { bell(0.0, 440.0, 0.24, 0.26, decay = 18.0, partials = doubleArrayOf(1.0, 0.06), attack = 0.009); bell(0.07, 349.0, 0.2, 0.22, decay = 20.0, partials = doubleArrayOf(1.0, 0.05), attack = 0.009) }
+        5 -> Mix(0.18).apply { air(0.0, 0.14, 0.11, 1800.0); drop(0.0, 700.0, 460.0, 0.14, 0.13, decay = 16.0) }
         else -> Mix(0.09).apply { glide(0.0, 1100.0, 650.0, 0.09, 0.22) }
     }.pcm()
 

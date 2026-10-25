@@ -82,3 +82,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏍️ MotoGP and other races are now found in the guide by the circuit's place too ("GP de Australia"), not only by the series name, over a wider time window; the sessions read Practice / Warm-up / Qualifying / Sprint / Race.
 - 🏟️ Dock Home: matches now show both team crests on the card and large beside the title instead of an empty box
 - 🛠️ Fixed the "Delete profile" confirmation closing by itself when opened with a long press
+- 🧹 Settings › Video player: the five "Reset saved…" rows are now one "Reset saved choices" row that lets you pick what to forget (or everything)
+- 🎵 Two new menu sound styles, "Soft" and "Air": rounded, warm tones and a gentle breath instead of anything metallic
