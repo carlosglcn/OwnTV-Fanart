@@ -1040,6 +1040,19 @@ class SettingsViewModel(
     val uiSounds: StateFlow<Int> = settings.uiSounds.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     // glcn: one Sounds setting — the opening chime goes with the menu sounds.
     val uiSoundStyle: StateFlow<Int> = settings.uiSoundStyle.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    /** glcn: Appearance back to how the app came (the fonts are a separate object, reset by the screen). */
+    fun resetAppearance() {
+        viewModelScope.launch {
+            settings.setThemeMode(ThemeMode.DARK)
+            settings.setAccent(AccentColor.TEAL)
+            settings.setCustomAccent("")
+            settings.setFocusHighlight("")
+            settings.setFocusHighlightWidth(2)
+            settings.resetGlassAndBackground()
+            settings.setUiZoomPercent(UiZoom.DEFAULT)
+        }
+    }
+    fun setUiSoundStyle(style: Int) { viewModelScope.launch { settings.setUiSoundStyle(style) } }
     fun cycleUiSoundStyle() { viewModelScope.launch { settings.setUiSoundStyle((uiSoundStyle.value + 1) % 6) } }
     fun cycleUiSounds() { viewModelScope.launch { val next = (uiSounds.value + 1) % 3; settings.setUiSounds(next); settings.setStartupSound(next > 0) } }
     /** glcn: one Animations setting — Off, Subtle, Full (the motion level and the card style together). */

@@ -335,6 +335,8 @@ fun SettingsScreen(
     val glcnStyle by settingsVm.glcnStyle.collectAsStateWithLifecycle()
     var showGlcnStyle by remember { mutableStateOf(false) }
     var showHomeLayout by remember { mutableStateOf(false) }
+    var showSoundStyle by remember { mutableStateOf(false) }
+    var showResetAppearance by remember { mutableStateOf(false) }
     val uiSounds by settingsVm.uiSounds.collectAsStateWithLifecycle()
     val uiSoundStyle by settingsVm.uiSoundStyle.collectAsStateWithLifecycle()
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
@@ -696,7 +698,7 @@ fun SettingsScreen(
                 },
             ),
             chipTone = TileTone.SECONDARY,
-            onClick = { settingsVm.cycleUiSoundStyle() },
+            onClick = { showSoundStyle = true },
         ),
         RootRow(
             "animations", TileTone.SECONDARY, OwnTVIcon.MOTION,
@@ -871,6 +873,12 @@ fun SettingsScreen(
             chipTone = if (weatherEnabled) TileTone.PRIMARY else TileTone.SECONDARY,
             focus = rowFocus.getValue(SettingsTab.WEATHER),
             onClick = { open(SettingsTab.WEATHER) },
+        ),
+        // glcn: one row to put Appearance back, like the player's.
+        RootRow(
+            "glcn_reset_appearance", TileTone.SECONDARY, OwnTVIcon.REFRESH,
+            title = stringResource(R.string.glcn_reset_appearance_title), desc = stringResource(R.string.glcn_reset_appearance_desc),
+            onClick = { showResetAppearance = true },
         ),
         RootGroup("group_layout", stringResource(R.string.settings_group_layout), OwnTVIcon.LIST_GRID, stringResource(R.string.settings_group_summary_layout)),
         navigationRootRow(settingsVm, navigationRowFocus) { saveScroll(); dialogReturn = navigationRowFocus; showNavigation = true },
@@ -1505,6 +1513,22 @@ fun SettingsScreen(
     if (showStartup) StartupDialogHost(settingsVm, startupMode, onClose = { showStartup = false }, onPickChannel = { showStartupChannelPicker = true })
     if (showStartupChannelPicker) StartupChannelPickerHost(settingsVm, startupChannel, onClose = { showStartupChannelPicker = false })
     if (showAnimations) AnimationsDialogHost(settingsVm, animationLevel, onClose = { showAnimations = false })
+    if (showResetAppearance) {
+        tv.own.owntv.ui.stage.StageConfirm(
+            title = stringResource(R.string.glcn_reset_appearance_title),
+            body = stringResource(R.string.glcn_reset_appearance_desc),
+            confirm = stringResource(R.string.glcn_reset_appearance_confirm),
+            onConfirm = {
+                settingsVm.resetAppearance()
+                onSetFontCustomization(tv.own.owntv.core.theme.FontCustomization())
+                showResetAppearance = false
+            },
+            onCancel = { showResetAppearance = false },
+        )
+    }
+    if (showSoundStyle) {
+        tv.own.owntv.glcn.SoundStylePicker(uiSoundStyle, onPick = settingsVm::setUiSoundStyle, onDismiss = { showSoundStyle = false })
+    }
     if (showHomeLayout) {
         tv.own.owntv.glcn.HomeLayoutPicker(homeBackdrop, onPick = settingsVm::setHomeBackdropStyle, onDismiss = { showHomeLayout = false })
     }
