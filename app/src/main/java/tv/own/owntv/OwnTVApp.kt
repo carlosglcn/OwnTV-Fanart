@@ -138,15 +138,6 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             runCatching {
                 GlobalContext.get().get<tv.own.owntv.core.settings.SettingsRepository>().applyStageDefaults()
             }
-            // glcn: a box with little memory starts with the live preview on OK (it opened a stream on every
-            // step of the list). Once per install, so anyone can turn it back on.
-            runCatching {
-                val prefs = getSharedPreferences(tv.own.owntv.glcn.LowRam.PREFS, MODE_PRIVATE)
-                if (tv.own.owntv.glcn.LowRam.on && !prefs.getBoolean("applied", false)) {
-                    tv.own.owntv.glcn.LowRam.setPreviewOnOk(this@OwnTVApp, true)
-                    prefs.edit().putBoolean("applied", true).apply()
-                }
-            }
         }
         // Sports: core decides from Auto rebuild whether the stored board is due ("on every app start",
         // or older than the chosen hours). It reads one small file and touches no database.
@@ -233,6 +224,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         if (level >= TRIM_MEMORY_RUNNING_LOW) {
             runCatching { SingletonImageLoader.get(this).memoryCache?.clear() }
         }
+        if (level >= TRIM_MEMORY_RUNNING_CRITICAL) tv.own.owntv.glcn.LowRam.onMemoryCritical(this)
         // The engines judge the level themselves: UI_HIDDEN (every Home press) is not pressure for them,
         // and used to leave mpv on a trimmed cache for the rest of the session.
         runCatching { GlobalContext.getOrNull()?.getOrNull<tv.own.owntv.player.PlaybackEngines>()?.onTrimMemory(level) }

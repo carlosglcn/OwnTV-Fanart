@@ -176,6 +176,7 @@ fun SettingsScreen(
     var showAppIcon by remember { mutableStateOf(false) }
     var showPopupSize by remember { mutableStateOf(false) }
     var showTheme by remember { mutableStateOf(false) }
+    var chainAccent by remember { mutableStateOf(false) } // glcn: "Custom" style → theme, then accent
     var showAccent by remember { mutableStateOf(false) }
     var showFocusHighlight by remember { mutableStateOf(false) }
     var showUpdate by remember { mutableStateOf(false) }
@@ -525,7 +526,7 @@ fun SettingsScreen(
             heading = stringResource(R.string.glcn_part_home),
             title = stringResource(R.string.glcn_style_title),
             desc = stringResource(R.string.glcn_style_desc),
-            chip = glcnStyle?.label() ?: stringResource(R.string.common_off),
+            chip = glcnStyle?.label() ?: stringResource(R.string.glcn_style_none),
             chipTone = if (glcnStyle != null) TileTone.PRIMARY else TileTone.SECONDARY,
             onClick = { showGlcnStyle = true },
         ),
@@ -1515,7 +1516,7 @@ fun SettingsScreen(
     }
     if (showEpgOffset) EpgOffsetRootDialog(settingsVm, epgOffset, onClose = { showEpgOffset = false })
     if (showGuideDays) GuideDaysDialog(settingsVm, guideDays, onClose = { showGuideDays = false })
-    if (showTheme) ThemeDialogHost(settingsVm, themeMode, onClose = { showTheme = false })
+    if (showTheme) ThemeDialogHost(settingsVm, themeMode, onClose = { showTheme = false; if (chainAccent) { chainAccent = false; showAccent = true } })
     if (showStartup) StartupDialogHost(settingsVm, startupMode, onClose = { showStartup = false }, onPickChannel = { showStartupChannelPicker = true })
     if (showStartupChannelPicker) StartupChannelPickerHost(settingsVm, startupChannel, onClose = { showStartupChannelPicker = false })
     if (showAnimations) AnimationsDialogHost(settingsVm, animationLevel, onClose = { showAnimations = false })
@@ -1539,7 +1540,7 @@ fun SettingsScreen(
         tv.own.owntv.glcn.HomeLayoutPicker(homeBackdrop, onPick = settingsVm::setHomeBackdropStyle, onDismiss = { showHomeLayout = false })
     }
     if (showGlcnStyle) {
-        tv.own.owntv.glcn.StylePickerPopup(glcnStyle, onPick = settingsVm::applyGlcnStyle, onDismiss = { showGlcnStyle = false })
+        tv.own.owntv.glcn.StylePickerPopup(glcnStyle, onPick = { st -> settingsVm.applyGlcnStyle(st); if (st == null) { chainAccent = true; showTheme = true } }, onDismiss = { showGlcnStyle = false })
     }
     if (showNavigation) {
         NavigationPopupHost(settingsVm, onDismiss = { showNavigation = false })

@@ -465,6 +465,7 @@ open class MainActivity : ComponentActivity() {
                         if (background.showsPicture) BackgroundLayer(background, blurred)
 
                         Box(modifier = Modifier.fillMaxSize()) {
+                        tv.own.owntv.glcn.LowRamPrompt()
                         val profile = activeProfileId
                         when {
                             profile == null || !profilesLoaded -> Unit // active id / Room list loading

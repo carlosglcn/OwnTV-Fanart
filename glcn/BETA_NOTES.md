@@ -94,11 +94,11 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏎️ Racing: a film or show with "Formula" in its title is no longer taken for a Grand Prix
 - 📺 Channel info banner: when two guide entries overlap, it now shows the one that has a synopsis
 - 🏁 Racing classification: the rows can now be reached with Down, so the whole list scrolls into view instead of being cut at the bottom
-- 🪶 Light mode for boxes with about 2 GB of memory or less: starts with the live preview off (it opened a stream on every step of the list), no auto-drifting text, no image fades and a smaller picture cache — switch the preview back on in settings if you want it
+- 🪶 Light mode: no auto-drifting text, no image fades and a smaller picture cache. It never switches on by itself — if the system reports memory really running out, the app asks once whether to switch it on
 - 📺 Live player banner: lower — the synopsis takes two lines and "Next" sits on one line; channel logo and programme picture keep their size
 - 🔘 Live TV: ◀ no longer opens the categories — a new "Categories" button next to the guide and sort buttons does
-- 👁️ New "Preview with OK" (Settings › Live preview): nothing plays while you move through the list; OK starts the preview, OK again goes full screen. On by itself on 2 GB boxes
-- 🪶 New "Light mode" switch (Appearance): shown on and off by itself according to the box's memory; you can force it either way
+- 👁️ New "Preview with OK" (Settings › Live preview): nothing plays while you move through the list; OK starts the preview, OK again goes full screen.
+- 🪶 New "Light mode" switch (Appearance): off unless you switch it on (or say yes when the app notices memory running out)
 - 🔊 Menu sounds: a list that plays each style as you move over it (leaving without choosing keeps the one you had)
 - ♻️ Appearance: one "Reset appearance" row puts theme, accent, focus highlight, glass and background, text and window sizes and zoom back
 - 🎨 Home layout picker: more colour in the sketches, the Classic billboard nearer the middle, and the text stays readable on the highlighted card in light and dark
@@ -107,3 +107,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎨 Colour styles: the picker now shows every style drawn as a small Home in its own colours (Lumen Night/Day, Sunset, Studio, Showcase, Pulse, Neon, Snow, Paper, Sand)
 - 🖼️ Live TV and Movies & Series layouts: each option is a card with a drawing of how the screen will look
 - 🖼️ OK on "Live TV layout", "Movies & Series layout" and "Live TV opens in" now shows the drawings (◀ ▶ still change the choice in place)
+- 🏠 Dock: "Hide this row" on Keep watching now really hides it
+- ◀ Live TV: from the first card (or the search field) ◀ goes on to the side menu
+- 🎨 Style: "None — my own settings" is now "Custom", and choosing it opens Theme and then Accent
