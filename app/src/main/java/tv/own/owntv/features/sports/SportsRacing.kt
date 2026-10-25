@@ -35,6 +35,8 @@ internal fun raceSessionLabel(m: Match): String? = RaceSession.of(m.subtitle)?.l
             RaceSession.PRACTICE_1 -> R.string.glcn_race_practice_1
             RaceSession.PRACTICE_2 -> R.string.glcn_race_practice_2
             RaceSession.PRACTICE_3 -> R.string.glcn_race_practice_3
+            RaceSession.PRACTICE -> R.string.glcn_race_practice
+            RaceSession.WARM_UP -> R.string.glcn_race_warm_up
             RaceSession.SPRINT_QUALIFYING -> R.string.glcn_race_sprint_qualifying
             RaceSession.SPRINT -> R.string.glcn_race_sprint
             RaceSession.QUALIFYING -> R.string.glcn_race_qualifying
