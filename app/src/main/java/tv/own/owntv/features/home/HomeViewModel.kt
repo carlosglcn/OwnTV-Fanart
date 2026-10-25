@@ -156,6 +156,8 @@ class HomeViewModel(
         viewModelScope.launch {
             val pid = settings.activeProfileId.first().takeIf { it >= 0 } ?: return@launch
             settings.updateHomeConfig(pid) { it.copy(hidden = it.hidden + row) }
+            // Home reads its rows once per load, so it is asked to load again; until then nothing would change on screen.
+            refresh(pid)
         }
     }
 
