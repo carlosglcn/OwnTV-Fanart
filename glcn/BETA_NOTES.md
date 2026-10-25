@@ -104,3 +104,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎨 Home layout picker: more colour in the sketches, the Classic billboard nearer the middle, and the text stays readable on the highlighted card in light and dark
 - 🎵 Menu sounds: the "Air" style is replaced by "Kalimba" — soft plucked notes, with its own sound for move, OK and Back
 - 👁️ Preview with OK: the preview now stays on the channel you pressed OK on while you move around; OK on another channel switches it, OK again on the same one opens it full screen
+- 🎨 Colour styles: the picker now shows every style drawn as a small Home in its own colours (Lumen Night/Day, Sunset, Studio, Showcase, Pulse, Neon, Snow, Paper, Sand)
+- 🖼️ Live TV and Movies & Series layouts: each option is a card with a drawing of how the screen will look

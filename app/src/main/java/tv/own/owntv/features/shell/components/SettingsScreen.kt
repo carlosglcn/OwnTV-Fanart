@@ -1797,30 +1797,8 @@ private fun VodLayoutDialog(
     vodLayout: tv.own.owntv.core.settings.SettingsRepository.VodLayout,
     onClose: () -> Unit,
 ) {
-    val layouts = tv.own.owntv.core.settings.SettingsRepository.VodLayout.entries
-    tv.own.owntv.features.settings.PickerDialog(
-        title = stringResource(R.string.settings_vod_layout),
-        subtitle = stringResource(R.string.settings_vod_layout_screen_description),
-        options = layouts.map { it.name to stringResource(vodLayoutLabelRes(it)) },
-        descriptions = layouts.associate {
-            it.name to stringResource(
-                if (it == tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC) {
-                    R.string.settings_vod_layout_cinematic_description
-                } else {
-                    R.string.settings_vod_layout_separate_description
-                },
-            )
-        },
-        optionPreview = { value ->
-            VodLayoutPreviewBars(tv.own.owntv.core.settings.SettingsRepository.VodLayout.valueOf(value))
-        },
-        selected = vodLayout.name,
-        onSelect = {
-            settingsVm.setVodLayout(tv.own.owntv.core.settings.SettingsRepository.VodLayout.valueOf(it))
-            onClose()
-        },
-        onDismiss = onClose,
-    )
+    // glcn: each layout drawn, instead of a list of names.
+    tv.own.owntv.glcn.VodLayoutGallery(vodLayout, onPick = settingsVm::setVodLayout, onDismiss = onClose)
 }
 
 /** The Layout group's Navigation row, built here to keep [SettingsScreen] under the JVM method-size limit. */
@@ -1883,27 +1861,8 @@ private fun liveLayoutLabelRes(layout: tv.own.owntv.core.settings.SettingsReposi
 @Composable
 private fun LiveLayoutDialog(settingsVm: SettingsViewModel, onClose: () -> Unit) {
     val current by settingsVm.liveLayout.collectAsStateWithLifecycle()
-    val layouts = tv.own.owntv.core.settings.SettingsRepository.LiveLayout.entries
-    tv.own.owntv.features.settings.PickerDialog(
-        title = stringResource(R.string.settings_live_layout),
-        subtitle = stringResource(R.string.settings_live_layout_description),
-        options = layouts.map { it.name to stringResource(liveLayoutLabelRes(it)) },
-        descriptions = layouts.associate {
-            it.name to stringResource(
-                when (it) {
-                    tv.own.owntv.core.settings.SettingsRepository.LiveLayout.SEPARATE -> R.string.settings_live_layout_separate_description
-                    tv.own.owntv.core.settings.SettingsRepository.LiveLayout.CINEMATIC -> R.string.settings_live_layout_cinematic_description
-                    else -> R.string.settings_live_layout_stage_description
-                },
-            )
-        },
-        selected = current.name,
-        onSelect = {
-            settingsVm.setLiveLayout(tv.own.owntv.core.settings.SettingsRepository.LiveLayout.valueOf(it))
-            onClose()
-        },
-        onDismiss = onClose,
-    )
+    // glcn: each layout drawn, instead of a list of names.
+    tv.own.owntv.glcn.LiveLayoutGallery(current, onPick = settingsVm::setLiveLayout, onDismiss = onClose)
 }
 
 // Moved out of SettingsScreen unchanged: that function sits at the JVM's 64 KB method limit.
