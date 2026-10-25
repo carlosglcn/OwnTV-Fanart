@@ -94,3 +94,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏎️ Racing: a film or show with "Formula" in its title is no longer taken for a Grand Prix
 - 📺 Channel info banner: when two guide entries overlap, it now shows the one that has a synopsis
 - 🏁 Racing classification: the rows can now be reached with Down, so the whole list scrolls into view instead of being cut at the bottom
+- 🪶 Light mode for boxes with about 2 GB of memory or less: starts with the live preview off (it opened a stream on every step of the list), no auto-drifting text, no image fades and a smaller picture cache — switch the preview back on in settings if you want it

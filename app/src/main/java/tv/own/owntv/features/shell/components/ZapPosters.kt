@@ -289,7 +289,7 @@ internal fun DriftingSynopsis(
     val scroll = androidx.compose.foundation.rememberScrollState()
     LaunchedEffect(text, scroll.maxValue) {
         scroll.scrollTo(0)
-        if (scroll.maxValue <= 0) return@LaunchedEffect
+        if (scroll.maxValue <= 0 || tv.own.owntv.glcn.LowRam.on) return@LaunchedEffect // light mode: no animation
         while (true) {
             kotlinx.coroutines.delay(3_500)
             scroll.animateScrollTo(scroll.maxValue, androidx.compose.animation.core.tween(scroll.maxValue * 80, easing = androidx.compose.animation.core.LinearEasing))

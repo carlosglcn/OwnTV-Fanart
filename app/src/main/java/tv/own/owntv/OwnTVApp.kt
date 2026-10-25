@@ -79,6 +79,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
     }
 
     override fun onCreate() {
+        tv.own.owntv.glcn.LowRam.detect(this)
         Perf.begin() // zero-point for the OwnTVPerf startup timeline (adb logcat -s OwnTVPerf)
         super.onCreate()
         // "Restart now" after an icon change runs a few milliseconds in a process of its own; nothing
@@ -137,6 +138,15 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             runCatching {
                 GlobalContext.get().get<tv.own.owntv.core.settings.SettingsRepository>().applyStageDefaults()
             }
+            // glcn: a box with little memory starts without the live preview (it opens a stream on every
+            // step of the list). Once per install, so anyone can turn it back on.
+            runCatching {
+                val prefs = getSharedPreferences("glcn_lowram", MODE_PRIVATE)
+                if (tv.own.owntv.glcn.LowRam.on && !prefs.getBoolean("applied", false)) {
+                    GlobalContext.get().get<tv.own.owntv.core.settings.SettingsRepository>().setLivePreviewEnabled(false)
+                    prefs.edit().putBoolean("applied", true).apply()
+                }
+            }
         }
         // Sports: core decides from Auto rebuild whether the stored board is due ("on every app start",
         // or older than the chosen hours). It reads one small file and touches no database.
@@ -182,7 +192,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             .build()
         return ImageLoader.Builder(context)
             .components { add(OkHttpNetworkFetcherFactory(callFactory = { imageHttpClient })) }
-            .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.10).build() }
+            .memoryCache { MemoryCache.Builder().maxSizePercent(context, if (tv.own.owntv.glcn.LowRam.on) 0.06 else 0.10).build() }
             // Explicit bounded disk cache: posters/logos survive across sessions instead of
             // re-downloading, capped so a 220k-item catalog can't eat the box's storage.
             .diskCache {
@@ -194,7 +204,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             // Opaque poster art doesn't need an alpha channel; RGB_565 halves bitmap memory
             // under the deliberately small memory cap.
             .allowRgb565(true)
-            .crossfade(true)
+            .crossfade(!tv.own.owntv.glcn.LowRam.on)
             .build()
     }
 
