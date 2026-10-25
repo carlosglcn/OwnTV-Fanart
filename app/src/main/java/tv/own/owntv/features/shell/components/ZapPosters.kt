@@ -304,7 +304,7 @@ internal fun DriftingSynopsis(
         if (scroll.maxValue <= 0 || tv.own.owntv.glcn.LowRam.on) return@LaunchedEffect // light mode: no animation
         while (true) {
             kotlinx.coroutines.delay(1_200) // the player banner is up only a few seconds: start reading-speed early
-            scroll.animateScrollTo(scroll.maxValue, androidx.compose.animation.core.tween(scroll.maxValue * 50, easing = androidx.compose.animation.core.LinearEasing))
+            scroll.animateScrollTo(scroll.maxValue, androidx.compose.animation.core.tween(scroll.maxValue * 65, easing = androidx.compose.animation.core.LinearEasing))
             kotlinx.coroutines.delay(3_000)
             scroll.scrollTo(0)
         }
