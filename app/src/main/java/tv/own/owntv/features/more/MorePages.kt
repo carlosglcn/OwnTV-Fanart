@@ -661,6 +661,24 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
                     exportFailed = path == null
                 }
             })
+            // glcn: Share exports the same file and offers it to whatever can take it (mail, a chat, a nearby phone).
+            StageTool(stringResource(R.string.glcn_share_log), icon = OwnTVIcon.SHARE, onClick = {
+                scope.launch {
+                    val path = withContext(Dispatchers.IO) { PlaybackErrorLog.export(context) }
+                    exportPath = path
+                    exportFailed = path == null
+                    if (path != null) {
+                        runCatching {
+                            val uri = androidx.core.content.FileProvider.getUriForFile(context, context.packageName + ".fileprovider", java.io.File(path))
+                            val send = android.content.Intent(android.content.Intent.ACTION_SEND)
+                                .setType("text/plain")
+                                .putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            context.startActivity(android.content.Intent.createChooser(send, null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                        } // nothing to share with on this box: the saved-to line above still says where the file is
+                    }
+                }
+            })
             if (!entries.isNullOrEmpty()) StageTool(stringResource(R.string.settings_clear_log), icon = OwnTVIcon.TRASH, danger = true, onClick = {
                 PlaybackErrorLog.clear(context)
                 exportPath = null
