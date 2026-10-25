@@ -77,6 +77,8 @@ private class LumenItem(
     val landscape: Boolean,
     /** A match has no picture: its two crests are the art, on the card and large over the title. */
     val crests: List<tv.own.owntv.core.sports.model.Team?>? = null,
+    /** A channel's programme on air: its synopsis is not in the guide slice, so it is read when the card is focused. */
+    val programmeId: Long? = null,
     val onClick: () -> Unit,
 )
 
@@ -124,6 +126,7 @@ fun LumenHome(
                 key = "c" + ch.id, title = p?.title ?: ch.name,
                 line = if (p != null) listOf(timeFmt.format(java.util.Date(p.startMs)) + " – " + timeFmt.format(java.util.Date(p.stopMs)), ch.name).joinToString("  ·  ") else ch.name,
                 plot = p?.description,
+                programmeId = p?.id,
                 art = p?.imageUrl?.takeIf { it.isNotBlank() } ?: ch.displayLogoUrl, backdrop = p?.imageUrl?.takeIf { it.isNotBlank() },
                 progress = p?.let { (now - it.startMs).toFloat() / total!! }, landscape = true,
                 onClick = { onPlayChannel(ch.id, all) },
@@ -176,6 +179,16 @@ fun LumenHome(
     var focusedKey by remember { mutableStateOf<String?>(null) }
     val shown = tab?.items?.firstOrNull { it.key == focusedKey } ?: tab?.items?.firstOrNull()
     val entry = firstRowFocusRequester ?: remember { FocusRequester() }
+    val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
+    val synopses = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
+    val wantedProgramme = shown?.programmeId
+    LaunchedEffect(wantedProgramme) {
+        val id = wantedProgramme ?: return@LaunchedEffect
+        if (id in synopses) return@LaunchedEffect
+        delay(150) // a held key crosses many cards: only the one it rests on is read
+        val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { epgDao.programmeDescription(id) }.getOrNull() }
+        if (!text.isNullOrBlank()) synopses[id] = text
+    }
     val selectedTab = remember { FocusRequester() }
     var menuRow by remember { mutableStateOf<HomeRow?>(null) }
 
@@ -220,7 +233,7 @@ fun LumenHome(
             Spacer(Modifier.height(14.mpx))
             Text(shown?.title.orEmpty(), style = stageText(64f, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             shown?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
-            shown?.plot?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(760.mpx), style = stageText(20, 400), color = StageColors.Body) }
+            (shown?.plot ?: shown?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(760.mpx), style = stageText(20, 400), color = StageColors.Body) }
         }
 
         Column(
