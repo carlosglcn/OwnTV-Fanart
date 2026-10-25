@@ -110,11 +110,14 @@ fun LumenHome(
 
     val tabs = remember(state, matches) {
         val now = System.currentTimeMillis()
+        val timeFmt = android.text.format.DateFormat.getTimeFormat(context)
         fun channelItem(ch: ChannelEntity, guide: tv.own.owntv.core.home.GuideSliceState, all: List<ChannelEntity>): LumenItem {
             val p = guide.programmes[ch.id]?.firstOrNull { now >= it.startMs && now < it.stopMs }
             val total = p?.let { (it.stopMs - it.startMs).coerceAtLeast(1L) }
             return LumenItem(
-                key = "c" + ch.id, title = p?.title ?: ch.name, line = ch.name, plot = p?.description,
+                key = "c" + ch.id, title = p?.title ?: ch.name,
+                line = if (p != null) listOf(timeFmt.format(java.util.Date(p.startMs)) + " – " + timeFmt.format(java.util.Date(p.stopMs)), ch.name).joinToString("  ·  ") else ch.name,
+                plot = p?.description,
                 art = p?.imageUrl?.takeIf { it.isNotBlank() } ?: ch.displayLogoUrl, backdrop = p?.imageUrl?.takeIf { it.isNotBlank() },
                 progress = p?.let { (now - it.startMs).toFloat() / total!! }, landscape = true,
                 onClick = { onPlayChannel(ch.id, all) },
@@ -187,9 +190,9 @@ fun LumenHome(
         val wanted = shown?.backdrop ?: shown?.art?.takeIf { shown.landscape.not() }
         LaunchedEffect(wanted) { delay(250); settled = wanted }
         Crossfade(settled, modifier = Modifier.fillMaxSize(), label = "lumen-backdrop") { url ->
-            if (url != null) AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(0.8f))
+            if (url != null) AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(1f))
         }
-        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(palette.page.copy(alpha = 0.94f), palette.page.copy(alpha = 0.6f), palette.page.copy(alpha = 0.12f)))))
+        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(palette.page.copy(alpha = 0.78f), palette.page.copy(alpha = 0.34f), palette.page.copy(alpha = 0f)))))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to palette.page.copy(alpha = 0.95f))))
 
         if (tab == null) return@Box
