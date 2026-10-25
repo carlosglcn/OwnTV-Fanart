@@ -37,7 +37,7 @@ object UiSounds {
             field = value
         }
 
-    /** 0 classic, 1 crystal, 2 wood, 3 bubble, 4 soft, 5 air. Changing it drops the cached sounds so the next ones are built in the new style. */
+    /** 0 classic, 1 crystal, 2 wood, 3 bubble, 4 soft, 5 kalimba. Changing it drops the cached sounds so the next ones are built in the new style. */
     @Volatile var style: Int = 0
         set(value) {
             if (value == field) return
@@ -248,7 +248,8 @@ object UiSounds {
         2 -> Mix(0.05).apply { bell(0.0, 620.0, 0.05, 0.3, decay = 90.0, partials = doubleArrayOf(1.0, 0.4, 0.15)) }
         3 -> Mix(0.04).apply { drop(0.0, 900.0, 1500.0, 0.04, 0.24, decay = 70.0) }
         4 -> Mix(0.06).apply { bell(0.0, 520.0, 0.06, 0.24, decay = 55.0, partials = doubleArrayOf(1.0, 0.06), attack = 0.007) }
-        5 -> Mix(0.05).apply { air(0.0, 0.05, 0.1, 1600.0); bell(0.0, 700.0, 0.05, 0.05, decay = 80.0, partials = doubleArrayOf(1.0), attack = 0.008) }
+        // 5 — kalimba: a plucked tine, a soft fundamental with a little of its fourth harmonic.
+        5 -> Mix(0.09).apply { bell(0.0, 880.0, 0.09, 0.2, decay = 48.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003) }
         else -> Mix(0.03).apply { bell(0.0, 1900.0, 0.03, 0.18, decay = 160.0, partials = doubleArrayOf(1.0)) }
     }.pcm()
 
@@ -257,7 +258,7 @@ object UiSounds {
         2 -> Mix(0.16).apply { bell(0.0, 392.0, 0.15, 0.34, decay = 28.0, partials = doubleArrayOf(1.0, 0.45, 0.2)); bell(0.045, 587.0, 0.12, 0.28, decay = 34.0, partials = doubleArrayOf(1.0, 0.4, 0.15)) }
         3 -> Mix(0.12).apply { drop(0.0, 600.0, 1500.0, 0.1, 0.32, decay = 26.0) }
         4 -> Mix(0.3).apply { bell(0.0, 523.0, 0.28, 0.26, decay = 16.0, partials = doubleArrayOf(1.0, 0.06), attack = 0.009); bell(0.07, 659.0, 0.22, 0.22, decay = 18.0, partials = doubleArrayOf(1.0, 0.05), attack = 0.009) }
-        5 -> Mix(0.2).apply { air(0.0, 0.16, 0.12, 2200.0); drop(0.0, 480.0, 760.0, 0.16, 0.14, decay = 14.0) }
+        5 -> Mix(0.4).apply { bell(0.0, 659.0, 0.36, 0.3, decay = 11.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003); bell(0.07, 988.0, 0.32, 0.26, decay = 13.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003) }
         else -> Mix(0.09).apply { bell(0.0, 1250.0, 0.09, 0.3, decay = 45.0); bell(0.012, 1870.0, 0.07, 0.15, decay = 60.0) }
     }.pcm()
 
@@ -266,7 +267,7 @@ object UiSounds {
         2 -> Mix(0.14).apply { bell(0.0, 330.0, 0.13, 0.34, decay = 36.0, partials = doubleArrayOf(1.0, 0.45, 0.2)) }
         3 -> Mix(0.12).apply { drop(0.0, 1300.0, 520.0, 0.1, 0.28, decay = 26.0) }
         4 -> Mix(0.26).apply { bell(0.0, 440.0, 0.24, 0.26, decay = 18.0, partials = doubleArrayOf(1.0, 0.06), attack = 0.009); bell(0.07, 349.0, 0.2, 0.22, decay = 20.0, partials = doubleArrayOf(1.0, 0.05), attack = 0.009) }
-        5 -> Mix(0.18).apply { air(0.0, 0.14, 0.11, 1800.0); drop(0.0, 700.0, 460.0, 0.14, 0.13, decay = 16.0) }
+        5 -> Mix(0.34).apply { bell(0.0, 784.0, 0.3, 0.26, decay = 13.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003); bell(0.07, 523.0, 0.28, 0.24, decay = 14.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003) }
         else -> Mix(0.09).apply { glide(0.0, 1100.0, 650.0, 0.09, 0.22) }
     }.pcm()
 
