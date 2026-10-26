@@ -125,7 +125,7 @@ fun MiniPlayer(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth().then(
-                    if (focused) Modifier.basicMarquee(iterations = Int.MAX_VALUE) else Modifier,
+                    if (focused) Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = tv.own.owntv.glcn.DriftPace.START_MS, velocity = tv.own.owntv.glcn.DriftPace.velocity()) else Modifier,
                 ),
             )
         }

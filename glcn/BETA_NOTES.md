@@ -118,3 +118,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 Live TV preview: while nothing plays it shows the channel logo only, since the programme picture is now the backdrop
 - 📤 More › Error log: a new "Share" button saves the log and offers it to any app that can take it (the saved-to path is still shown)
 - 🔒 A provider that answers 403 now gets a clearer message: the list may have expired, be in use on too many devices or be blocked for this network
+- 🏷️ Live TV preview: while nothing plays, the channel logo is shown large and soft toward the right of the frame, and the channel number sits beside the name, bigger and in the accent colour
+- 🐢 One calm pace for every drifting text (synopsis, long titles, mini player): it waits about three seconds before it starts moving
