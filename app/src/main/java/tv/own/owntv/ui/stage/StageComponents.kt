@@ -887,6 +887,8 @@ fun StageStill(
     progress: Float? = null,
     /** glcn: hold OK — the card's menu. */
     onLongClick: (() -> Unit)? = null,
+    /** glcn: false keeps the card its own size on focus (no lift, no tilt) — for cards that sit flush in a row. */
+    lift: Boolean = true,
     artwork: @Composable BoxScope.() -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -896,8 +898,7 @@ fun StageStill(
     Column(
         modifier
             .width(width)
-            .stageLift(focused, StageFocus.POSTER)
-            .stageTilt(focused)
+            .then(if (lift) Modifier.stageLift(focused, StageFocus.POSTER).stageTilt(focused) else Modifier)
             .stageClickable(interaction, true, onClick, onLongClick),
     ) {
         Box(

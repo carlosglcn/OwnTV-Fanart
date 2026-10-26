@@ -39,6 +39,8 @@ import androidx.compose.ui.focus.FocusRequester
 import kotlinx.coroutines.launch
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -327,6 +329,8 @@ internal fun DriftingSynopsis(
     style: androidx.compose.ui.text.TextStyle = stageText(16, 400),
     color: Color = StageColors.Dim,
     lines: Int = 3,
+    /** glcn: a long text fades out at its foot instead of being cut through a line. */
+    fade: Boolean = false,
 ) {
     val lineH = with(androidx.compose.ui.platform.LocalDensity.current) { style.fontSize.toDp() } * 1.4f
     val scroll = androidx.compose.foundation.rememberScrollState()
@@ -341,10 +345,25 @@ internal fun DriftingSynopsis(
         }
     }
     // A little room under the last line, so its descenders are not cut where the drift ends.
-    Box(modifier.fillMaxWidth().heightIn(max = lineH * lines + 6.dp).clip(androidx.compose.ui.graphics.RectangleShape)) {
+    val soft = fade && scroll.maxValue > 0
+    Box(
+        modifier.fillMaxWidth().heightIn(max = lineH * lines + 6.dp).clip(androidx.compose.ui.graphics.RectangleShape)
+            .then(
+                if (soft) Modifier
+                    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            Brush.verticalGradient(0.86f to Color.Black, 1f to Color.Transparent),
+                            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                        )
+                    }
+                else Modifier,
+            ),
+    ) {
         Text(
             text, style = style.copy(lineHeight = style.fontSize * 1.4f), color = color,
-            modifier = Modifier.verticalScroll(scroll, enabled = false).padding(bottom = 6.dp),
+            modifier = Modifier.verticalScroll(scroll, enabled = false).padding(bottom = if (soft) 18.dp else 6.dp),
         )
     }
 }

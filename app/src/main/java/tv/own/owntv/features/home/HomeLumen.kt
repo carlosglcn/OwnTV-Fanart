@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -232,12 +233,12 @@ fun LumenHome(
             )
         }
         if (tab == null) return@Box
-        Column(Modifier.padding(start = contentStart + 24.mpx, top = 120.mpx).width(900.mpx)) {
+        Column(Modifier.padding(start = contentStart + 24.mpx, top = 120.mpx).width(1240.mpx)) {
             Text(tab.row.displayTitle(), style = stageText(19, 700), color = accent.accent, maxLines = 1)
             Spacer(Modifier.height(14.mpx))
             Text(shown?.title.orEmpty(), style = stageText(64f, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             shown?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
-            (shown?.plot ?: shown?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(760.mpx), style = stageText(20, 400), color = StageColors.Body) }
+            (shown?.plot ?: shown?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(1040.mpx), style = stageText(20, 400), color = StageColors.Body, lines = 5, fade = true) }
         }
 
         // glcn: no box — a gradient from clear to the page's own colour, so the dock grows out of the picture.
@@ -283,6 +284,8 @@ fun LumenHome(
                 itemsIndexed(tab.items, key = { _, it -> it.key }) { index, item ->
                     val m = Modifier
                         .then(if (index == 0) Modifier.focusRequester(entry) else Modifier)
+                        // The card with the focus is drawn over its neighbours, never behind them.
+                        .zIndex(if (item.key == focusedKey) 1f else 0f)
                         .focusProperties { up = selectedTab }
                         .onFocusChanged { if (it.hasFocus) { focusedKey = item.key; onChildFocused() } }
                     // glcn: the card the focus rests on opens wide, with its landscape picture; the others stay
@@ -304,7 +307,7 @@ fun LumenHome(
                     StageStill(
                         title = item.title, line = if (open || item.landscape) item.line else null, onClick = item.onClick, width = w, height = h,
                         titleSize = if (open) 21 else 17, lineSize = if (open) 16 else 14, modifier = m, progress = item.progress,
-                        onLongClick = { menuRow = tab.row },
+                        onLongClick = { menuRow = tab.row }, lift = false,
                     ) {
                         if (item.crests != null) Row(
                             Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.14f)),
