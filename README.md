@@ -2,6 +2,8 @@
 
 # OwnTV Fanart
 
+🇪🇸 **[Leer en español](README.es.md)**
+
 **An unofficial, modified version of [OwnTV](https://github.com/ahXN00/OwnTV) by [ahXN00](https://github.com/ahXN00)**,
 maintained by [Carlos (carlosglcn)](https://github.com/carlosglcn). It keeps everything OwnTV does and puts the
 pictures first: the guide's fanart across Home, Live TV and the guide, and a few extras on top.
@@ -31,11 +33,14 @@ OwnTV Fanart is free and made in spare time. If it makes your TV nicer, you can 
 ## ✨ What is different from OwnTV
 
 - **Fanart everywhere** — programme pictures from the guide (XMLTV `<icon>`) on Home, Live TV, the guide and the zap banner; wide TMDB pictures when a guide only has a poster.
-- **A new Home** — Featured billboard, Sports now, Tonight (with reminders), recently added films and series, and three backgrounds: *Classic*, *Cinema* and *Panel*.
-- **TMDB ratings** beside films and series on live TV.
-- **Calmer or livelier motion** — floating cards, a slow zoom and a light sweep, or a *Subtle* style.
+- **A new Home** — four layouts (*Classic*, *Cinema*, *Panel* and *Dock*), with a Featured billboard, Sports now, Tonight (with reminders) and recently added films and series.
+- **A screen for what is on** — press Info in Live TV for the programme's fanart, logo, rating, synopsis, what comes next and when it airs again this week.
+- **TMDB ratings, years and synopses** beside films and series on live TV.
+- **Sports** — football, basketball (ACB, EuroLeague), handball, tennis, Formula 1 and MotoGP with calendars, live scores and classifications.
+- **Smooth, calm motion** — rows that glide to the focus, floating cards and a light sweep, or a *Subtle* style; a *Light mode* for older devices.
 - **Seasonal themes** (optional) — Halloween, Christmas, New Year's Eve, Carnival and Valentine's touches, menu sounds and an opening chime.
 - **Sound** — the best audio track in your language, clearer dialogue, and (on SHIELD) Dolby/DTS passthrough from mpv too.
+- **TV and phone together** — automatic sync of favourites and history, and *Watch on TV* from the phone.
 - **Emby** libraries via M3U, Android Auto and a home-screen widget on the phone, a fanart screensaver on the TV.
 
 ## 📄 Licence and credits
