@@ -1813,6 +1813,7 @@ fun OwnTVShell(
                 var showOtherChannels by remember { mutableStateOf(false) }
                 // glcn: the copies of the channel on screen, looked up once the channel is tuned.
                 var showCopies by remember { mutableStateOf(false) }
+                var showProgramInfo by remember { mutableStateOf(false) }
                 val channelCopies by androidx.compose.runtime.produceState(emptyList<tv.own.owntv.core.database.entity.ChannelEntity>(), previewChannel?.id, isTunedLive) {
                     value = emptyList()
                     val ch = previewChannel ?: return@produceState
@@ -1846,7 +1847,7 @@ fun OwnTVShell(
                     onAudioMode = toAudioMode,
                     // The channel-list overlay draws ABOVE the HUD; while it's open the HUD goes inert so
                     // its hide/error focus grabs can't yank D-pad focus off the overlay.
-                    inert = showChannelList || showHistoryList || showCategoryBrowser || showSubtitleSearch || showLocalSubPicker || showOtherChannels || showCopies,
+                    inert = showChannelList || showHistoryList || showCategoryBrowser || showSubtitleSearch || showLocalSubPicker || showOtherChannels || showCopies || showProgramInfo,
                     onChannelUp = zap?.let { z -> { z(-1) } },
                     onChannelDown = zap?.let { z -> { z(1) } },
                     onOpenChannelList = if (isTunedLive && liveCanZap) { { showChannelList = true } } else null,
@@ -1987,6 +1988,8 @@ fun OwnTVShell(
                     onOtherChannels = matchSession?.takeIf { it.options.size > 1 }?.let { { showOtherChannels = true } },
                     otherChannelsCount = (matchSession?.options?.size ?: 1) - 1,
                     onChannelCopies = channelCopies.takeIf { it.size > 1 }?.let { { showCopies = true } },
+                    // glcn: the Info button opens the programme's own screen on a live channel.
+                    onProgrammeInfo = if (isTunedLive && previewChannel != null) { { showProgramInfo = true } } else null,
                     onToastOk = goalToast?.let { a -> { switchToMatch(a.match) } },
                     modifier = Modifier.fillMaxSize().onPreviewKeyEvent { e ->
                         // glcn: OK while "Skip intro" shows jumps the intro.
@@ -2006,6 +2009,17 @@ fun OwnTVShell(
                 )
                 goalToast?.let { a ->
                     tv.own.owntv.features.sports.GoalToast(a, Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(top = 45.mpx, end = 60.mpx))
+                }
+                if (showProgramInfo) {
+                    val infoChannel = previewChannel
+                    if (infoChannel != null) tv.own.owntv.glcn.ProgrammeInfoScreen(
+                        channel = infoChannel,
+                        player = if (liveOnExo) liveVm.previewEngine else mpvEngine,
+                        loadSchedule = { liveVm.scheduleFor(it) },
+                        loadWeek = { liveVm.weekFor(it) },
+                        onDismiss = { showProgramInfo = false },
+                        modifier = Modifier.fillMaxSize(),
+                    ) else showProgramInfo = false
                 }
                 if (showCopies) {
                     tv.own.owntv.features.shell.components.ChannelCopiesPopup(

@@ -889,6 +889,10 @@
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/LowRam.kt	preview_on_ok
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/PlatformLogoStyle.kt	glcn_platform_logo
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/PlatformLogoStyle.kt	square
+1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	EEE d
+1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	·
+1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	★
 2	empty	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	eq
 1	technical	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	eqBar$i

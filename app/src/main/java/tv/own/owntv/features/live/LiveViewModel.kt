@@ -179,6 +179,17 @@ class LiveViewModel(
         return rows
     }
 
+    /** glcn: the guide's programmes on [channel] for the coming week — the programme info screen's repeats. */
+    private val weekCache = HashMap<Long, Pair<Long, List<tv.own.owntv.core.database.entity.EpgProgrammeEntity>>>()
+    suspend fun weekFor(channel: ChannelEntity): List<tv.own.owntv.core.database.entity.EpgProgrammeEntity> {
+        val now = System.currentTimeMillis()
+        synchronized(weekCache) { weekCache[channel.id] }?.takeIf { now - it.first < 10 * 60_000L }?.let { return it.second }
+        val rows = guideReader.slice(listOf(channel), custom.value, epgOffset.value, now, now + 7 * 24 * 3_600_000L)[channel.id]
+            .orEmpty().filter { it.stopMs > now }.sortedBy { it.startMs }
+        synchronized(weekCache) { weekCache[channel.id] = now to rows }
+        return rows
+    }
+
     /** glcn: the programme on air now on [channel] (picture and synopsis) and the one after it — the
      *  zapping list's preview. */
     private val nowArt: tv.own.owntv.core.live.NowArt by inject()
