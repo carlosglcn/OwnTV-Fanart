@@ -19,6 +19,12 @@ On a TV, open **Downloader** (by AFTVnews), type the code and install — it alw
 
 It installs **beside** the official app (its own package, `tv.own.owntv.glcn`), and tells you in-app when a new version is out.
 
+## ☕ Support the project
+
+OwnTV Fanart is free and made in spare time. If it makes your TV nicer, you can buy me a coffee — it is never expected, and always appreciated.
+
+<p align="center"><a href="https://ko-fi.com/galcn10"><img src="extras/glcn/support.svg" alt="Enjoying OwnTV Fanart? Support the project on Ko-fi" width="560"></a></p>
+
 ## ✨ What is different from OwnTV
 
 - **Fanart everywhere** — programme pictures from the guide (XMLTV `<icon>`) on Home, Live TV, the guide and the zap banner; wide TMDB pictures when a guide only has a poster.

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="150" viewBox="0 0 640 150" role="img" aria-label="Enjoying OwnTV Fanart? Support the project on Ko-fi">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0E2A2B"/>
+      <stop offset="1" stop-color="#143F3A"/>
+    </linearGradient>
+    <linearGradient id="pill" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00C2A8"/>
+      <stop offset="1" stop-color="#3EDBC0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.12" cy="0.5" r="0.6">
+      <stop offset="0" stop-color="#00C2A8" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#00C2A8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="150" rx="22" fill="url(#bg)"/>
+  <rect width="640" height="150" rx="22" fill="url(#glow)"/>
+  <rect x="1" y="1" width="638" height="148" rx="21" fill="none" stroke="#3EDBC0" stroke-opacity="0.35" stroke-width="2"/>
+  <!-- cup -->
+  <g transform="translate(34 38)">
+    <path d="M10 8h54v34a26 26 0 0 1-26 26h-2a26 26 0 0 1-26-26z" fill="#F4F1EA"/>
+    <path d="M64 16h8a12 12 0 0 1 0 24h-8" fill="none" stroke="#F4F1EA" stroke-width="7" stroke-linecap="round"/>
+    <path d="M37 54c-9-7-14-11-14-17a7.5 7.5 0 0 1 14-3.5A7.5 7.5 0 0 1 51 37c0 6-5 10-14 17z" fill="#FF5E5B"/>
+    <path d="M24 -2c-3 5 3 7 0 12M38 -4c-3 5 3 7 0 12M52 -2c-3 5 3 7 0 12" fill="none" stroke="#F4F1EA" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <text x="140" y="58" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="27" font-weight="800" fill="#F4F1EA">Enjoying OwnTV Fanart?</text>
+  <text x="140" y="86" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" fill="#F4F1EA" fill-opacity="0.78">Every coffee keeps the updates coming. Thank you!</text>
+  <rect x="140" y="102" width="206" height="34" rx="17" fill="url(#pill)"/>
+  <text x="243" y="125" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" font-weight="800" fill="#06211F">Support on Ko-fi</text>
+</svg>
