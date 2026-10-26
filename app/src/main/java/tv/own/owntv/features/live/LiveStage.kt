@@ -413,6 +413,7 @@ private fun LiveScheduleItem(p: XtEpgEntry, accentTime: Boolean, onClick: () -> 
 /** Scroll only as far as the focused item, plus one row of room, needs (the TV default pins it a third down). */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 internal val edgeScrollSpec = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
+    override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float> get() = tv.own.owntv.glcn.SmoothScroll.animation
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
         // One row of room kept ahead of the highlight, so the next row is already laid out: a held
         // ▲/▼ otherwise outran the list at the edge and stopped.

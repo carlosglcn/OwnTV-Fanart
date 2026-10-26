@@ -1018,6 +1018,8 @@ fun OwnTVShell(
     }
     val liveOnlyId by tv.own.owntv.glcn.LiveListFilter.id.collectAsStateWithLifecycle()
     CompositionLocalProvider(
+        // glcn: every row, grid and list glides to the focus with one eased slide.
+        tv.own.owntv.glcn.SmoothScroll.provided(),
         LocalRemoteShortcuts provides remoteShortcutEnvironment,
         tv.own.owntv.features.shell.components.LocalClockWeather provides (weatherInfo to weatherFahrenheit),
         // glcn: the category sheets list the playlists when there are several.

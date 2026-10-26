@@ -96,6 +96,13 @@ fun ProgrammeInfoScreen(
         value = runCatching { resolver.detailsFor(c.title, c.categories) }.getOrNull()
     }
 
+    // A film's own lettering, when TMDB has it, stands where its name would.
+    val titleLogo by produceState<String?>(null, cur?.title, cur?.categories) {
+        val c = cur ?: return@produceState
+        value = runCatching { resolver.logoFor(c.title, c.categories) }.getOrNull()
+    }
+    var logoFailed by remember(titleLogo) { mutableStateOf(false) }
+
     var showTech by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
@@ -126,7 +133,15 @@ fun ProgrammeInfoScreen(
                     style = stageText(26, 600), color = Soft,
                 )
             } else {
-                Text(cur.title, style = stageText(58f, 800), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (!titleLogo.isNullOrBlank() && !logoFailed) {
+                    tv.own.owntv.ui.stage.StageTitleArt(
+                        url = titleLogo!!, contentDescription = cur.title,
+                        modifier = Modifier.width(640.mpx).height(150.mpx), alignment = Alignment.CenterStart,
+                        onFailed = { logoFailed = true },
+                    )
+                } else {
+                    Text(cur.title, style = stageText(58f, 800), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
                 val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
                 Text(
                     if (remaining in 1..600) stringResource(R.string.content_live_time_remaining, timeFmt.format(java.util.Date(cur.stopMs)), remaining)

@@ -88,3 +88,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏠 Home: moving down and up between rows now glides with a longer eased slide instead of a quick snap
 - 🐢 Drifting text (synopsis, long titles, mini player) now moves about a third slower, so it can be read as it goes
 - ℹ️ Live TV: the Info button in the player now opens a screen for the programme on air — its fanart behind, the channel logo, genres, year, age and rating, the synopsis, what comes next and when it airs again this week. The stream's technical data sit behind a button inside it
+- 🏠 Dock: rebuilt as one continuous motion — the focused card dissolves into the next as it widens while the others glide left together, with no jumps even when a key is held down
+- 🎞️ Every row, grid and list now glides to the focus with the same long eased slide instead of a quick snap
+- 🎬 Live TV programme screen: a film shows its own title lettering (from TMDB) where its name would be

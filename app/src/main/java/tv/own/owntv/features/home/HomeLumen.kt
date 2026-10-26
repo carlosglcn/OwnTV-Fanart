@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -29,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -275,13 +273,14 @@ fun LumenHome(
                     )
                 }
             }
-            val listState = rememberLazyListState()
-            LaunchedEffect(selected) { listState.scrollToItem(0) }
-            // glcn: the card with the focus is always the first one, wide, at the left; the rest glide left to
-            // meet it. The scroll follows the focus (tracking the cards as they change size), and the TV's
-            // own "bring into view" is switched off so the two never fight.
-            val focusedAt = tab.items.indexOfFirst { it.key == focusedKey }.coerceAtLeast(0)
-            // A row that has just been chosen fades in instead of replacing the old one at once.
+            // glcn: ONE number (pos) drives the whole row — which card is the wide one, and how far the row has
+            // glided. The wide card hands over to the next by dissolving (its picture fades into the next card's
+            // as that one widens) while the others slide left, all in a single continuous motion. A spring that
+            // is simply re-aimed on every key press keeps its speed, so a held key flows instead of stuttering.
+            val items = tab.items
+            val focusedAt = items.indexOfFirst { it.key == focusedKey }.coerceAtLeast(0)
+            val pos = remember { androidx.compose.animation.core.Animatable(0f) }
+            val lastTab = remember { mutableIntStateOf(selected) }
             val rowAlpha = remember { androidx.compose.animation.core.Animatable(1f) }
             LaunchedEffect(selected) {
                 if (tv.own.owntv.glcn.LowRam.on) return@LaunchedEffect
@@ -289,55 +288,83 @@ fun LumenHome(
                 rowAlpha.animateTo(1f, androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing))
             }
             LaunchedEffect(selected, focusedAt) {
-                if (tv.own.owntv.glcn.LowRam.on) listState.scrollToItem(focusedAt) else listState.animateScrollToItem(focusedAt)
+                if (lastTab.intValue != selected || tv.own.owntv.glcn.LowRam.on) {
+                    lastTab.intValue = selected
+                    pos.snapTo(focusedAt.toFloat())
+                } else {
+                    pos.animateTo(focusedAt.toFloat(), androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 140f))
+                }
             }
+            val narrow = remember(items) { items.map { x -> if (x.landscape) 250 else 187 } }
+            val openable = remember(items) { items.map { x -> x.crests == null && (x.backdrop ?: x.art.takeIf { x.landscape }) != null } }
+            fun wideness(i: Int, t: Float): Float = if (openable.getOrElse(i) { false }) (1f - kotlin.math.abs(i - t)).coerceIn(0f, 1f) else 0f
+            val k by remember { androidx.compose.runtime.derivedStateOf { kotlin.math.floor(pos.value).toInt() } }
+            val from = (minOf(k, focusedAt) - 1).coerceAtLeast(0)
+            val to = (maxOf(k, focusedAt) + 9).coerceAtMost(items.lastIndex)
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides NoBringIntoView) {
-            LazyRow(
-                state = listState,
-                modifier = Modifier.padding(top = 18.mpx).graphicsLayer { alpha = rowAlpha.value }.focusRestorer().focusGroup(),
-                // Room at the end, so the last cards can also come to the left edge.
-                contentPadding = PaddingValues(start = 30.mpx, end = 900.mpx, top = 8.mpx, bottom = 8.mpx),
-                horizontalArrangement = Arrangement.spacedBy(12.mpx),
-            ) {
-                itemsIndexed(tab.items, key = { _, it -> it.key }) { index, item ->
-                    val m = Modifier
-                        .then(if (index == 0) Modifier.focusRequester(entry) else Modifier)
-                        // The card with the focus is drawn over its neighbours, never behind them.
-                        .zIndex(if (item.key == focusedKey) 1f else 0f)
-                        .focusProperties { up = selectedTab }
-                        .onFocusChanged { if (it.hasFocus) { focusedKey = item.key; onChildFocused() } }
-                    // glcn: the card the focus rests on opens wide, with its landscape picture; the others stay
-                    // narrow. One composable per card, so the focus is never lost while it opens.
-                    val wideArt = item.backdrop ?: item.art.takeIf { item.landscape }
-                    val canOpen = item.crests == null && wideArt != null
-                    val open = canOpen && item.key == (tab.items.firstOrNull { it.key == focusedKey } ?: tab.items.firstOrNull())?.key
-                    // One height for every card; only the width changes.
-                    val tw = if (open) 500.mpx else if (item.landscape) 250.mpx else 187.mpx
-                    val low = tv.own.owntv.glcn.LowRam.on
-                    val spec = if (low) androidx.compose.animation.core.snap<Dp>() else androidx.compose.animation.core.tween<Dp>(280, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-                    val w by androidx.compose.animation.core.animateDpAsState(tw, spec, label = "dock-card-w")
-                    val h = 281.mpx
-                    val wideA by androidx.compose.animation.core.animateFloatAsState(
-                        if (open) 1f else 0f,
-                        if (low) androidx.compose.animation.core.snap<Float>() else androidx.compose.animation.core.tween<Float>(280, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                        label = "dock-card-wide",
-                    )
-                    StageStill(
-                        title = item.title, line = if (open || item.landscape) item.line else null, onClick = item.onClick, width = w, height = h,
-                        titleSize = if (open) 21 else 17, lineSize = if (open) 16 else 14, modifier = m, progress = item.progress,
-                        onLongClick = { menuRow = tab.row }, lift = false,
-                    ) {
-                        if (item.crests != null) Row(
-                            Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.14f)),
-                            horizontalArrangement = Arrangement.spacedBy(20.mpx, Alignment.CenterHorizontally),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) { item.crests.forEach { tv.own.owntv.features.sports.Crest(it, 84) } }
-                        else {
-                            // The closed picture stays underneath; the wide one fades in over it as the card opens.
-                            if (item.art != null) AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                            else Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.18f)))
-                            if (wideArt != null && wideArt != item.art && (open || wideA > 0.01f)) AsyncImage(model = wideArt, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(wideA))
+            androidx.compose.ui.layout.Layout(
+                modifier = Modifier.padding(top = 18.mpx, start = 30.mpx).fillMaxWidth().graphicsLayer { alpha = rowAlpha.value }.focusRestorer().focusGroup(),
+                content = {
+                    for (i in from..to) {
+                        val item = items[i]
+                        androidx.compose.runtime.key(item.key) {
+                            val m = Modifier
+                                .then(if (i == 0) Modifier.focusRequester(entry) else Modifier)
+                                .focusProperties { up = selectedTab }
+                                .onFocusChanged { if (it.hasFocus) { focusedKey = item.key; onChildFocused() } }
+                            val wideArt = item.backdrop ?: item.art.takeIf { item.landscape }
+                            val near = kotlin.math.abs(i - focusedAt) <= 1 || kotlin.math.abs(i - k) <= 1
+                            // The width is set by the row's layout; the numbers here are only the widest it can be.
+                            StageStill(
+                                title = item.title, line = item.line, onClick = item.onClick, width = 500.mpx, height = 281.mpx,
+                                titleSize = 19, lineSize = 15, modifier = m, progress = item.progress,
+                                onLongClick = { menuRow = tab.row }, lift = false,
+                            ) {
+                                if (item.crests != null) Row(
+                                    Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.14f)),
+                                    horizontalArrangement = Arrangement.spacedBy(20.mpx, Alignment.CenterHorizontally),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) { item.crests.forEach { tv.own.owntv.features.sports.Crest(it, 84) } }
+                                else {
+                                    if (item.art != null) AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                    else Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.18f)))
+                                    // The wide picture dissolves in over the closed one as the card opens (drawn, never recomposed).
+                                    if (near && wideArt != null && wideArt != item.art) AsyncImage(
+                                        model = wideArt, contentDescription = null, contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = wideness(i, pos.value) },
+                                    )
+                                }
+                            }
                         }
+                    }
+                },
+            ) { measurables, constraints ->
+                val t = pos.value
+                val kk = kotlin.math.floor(t).toInt()
+                val frac = t - kk
+                val gap = 12.mpx.roundToPx()
+                val wide = 500.mpx.roundToPx()
+                val ws = IntArray(measurables.size) { j ->
+                    val i = from + j
+                    val n = narrow[i].mpx.roundToPx()
+                    n + ((wide - n) * wideness(i, t)).toInt()
+                }
+                val left = IntArray(measurables.size)
+                for (j in 1 until measurables.size) left[j] = left[j - 1] + ws[j - 1] + gap
+                fun at(i: Int) = left[(i - from).coerceIn(0, measurables.size - 1)]
+                val scroll = at(kk) + (at(kk + 1) - at(kk)) * frac
+                val placeables = measurables.mapIndexed { j, m ->
+                    m.measure(androidx.compose.ui.unit.Constraints(minWidth = ws[j], maxWidth = ws[j], minHeight = 0, maxHeight = androidx.compose.ui.unit.Constraints.Infinity))
+                }
+                val top = 8.mpx.roundToPx()
+                val width = if (constraints.hasBoundedWidth) constraints.maxWidth else 1700.mpx.roundToPx()
+                layout(width, (placeables.maxOfOrNull { it.height } ?: 0) + top * 2) {
+                    placeables.forEachIndexed { j, p ->
+                        val i = from + j
+                        val x = (left[j] - scroll).toInt()
+                        // A card that has glided past the left edge dissolves away instead of being cut.
+                        val a = if (x >= 0) 1f else (1f + x / (0.7f * ws[j])).coerceIn(0f, 1f)
+                        if (a > 0f) p.placeWithLayer(x, top, zIndex = if (i == focusedAt) 1f else 0f) { alpha = a }
                     }
                 }
             }
