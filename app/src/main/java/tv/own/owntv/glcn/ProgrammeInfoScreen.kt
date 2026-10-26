@@ -34,6 +34,7 @@ import androidx.tv.material3.Text
 import tv.own.owntv.R
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.database.entity.EpgProgrammeEntity
+import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.core.metadata.ProgrammeArtResolver
 import tv.own.owntv.features.shell.components.DriftingSynopsis
 import tv.own.owntv.player.StreamInfoOverlay
