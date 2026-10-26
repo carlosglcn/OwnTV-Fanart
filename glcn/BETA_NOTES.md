@@ -91,3 +91,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏠 Dock: rebuilt as one continuous motion — the focused card dissolves into the next as it widens while the others glide left together, with no jumps even when a key is held down
 - 🎞️ Every row, grid and list now glides to the focus with the same long eased slide instead of a quick snap
 - 🎬 Live TV programme screen: a film shows its own title lettering (from TMDB) where its name would be
+- 🏠 Dock: moving back to the left works again after scrolling right

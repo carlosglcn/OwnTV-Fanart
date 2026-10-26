@@ -364,7 +364,7 @@ fun LumenHome(
                         val x = (left[j] - scroll).toInt()
                         // A card that has glided past the left edge dissolves away instead of being cut.
                         val a = if (x >= 0) 1f else (1f + x / (0.7f * ws[j])).coerceIn(0f, 1f)
-                        if (a > 0f) p.placeWithLayer(x, top, zIndex = if (i == focusedAt) 1f else 0f) { alpha = a }
+                        p.placeWithLayer(x, top, zIndex = if (i == focusedAt) 1f else 0f) { alpha = a }
                     }
                 }
             }
