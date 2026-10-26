@@ -8,6 +8,8 @@ pictures first: the guide's fanart across Home, Live TV and the guide, and a few
 
 > Please report problems with this version **here**, not to the original author.
 
+Oficial Telegram Channel https://t.me/owntvfanart
+
 ## ⬇️ Download
 
 | Device | Latest release |
