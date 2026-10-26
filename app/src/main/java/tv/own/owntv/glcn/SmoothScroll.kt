@@ -21,11 +21,14 @@ object SmoothScroll {
     val spec = object : BringIntoViewSpec {
         override val scrollAnimationSpec: AnimationSpec<Float> get() = animation
         override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
-            val trailing = offset + size - containerSize
+            // Room kept round the focused item, so its ring is never flush with (or cut by) the screen's edge.
+            val room = 64f.coerceAtMost((containerSize - size).coerceAtLeast(0f) / 2f)
+            val lead = offset - room
+            val trailing = offset + size + room - containerSize
             return when {
-                offset >= 0f && trailing <= 0f -> 0f
-                offset < 0f && trailing > 0f -> 0f
-                kotlin.math.abs(offset) < kotlin.math.abs(trailing) -> offset
+                lead >= 0f && trailing <= 0f -> 0f
+                lead < 0f && trailing > 0f -> 0f
+                kotlin.math.abs(lead) < kotlin.math.abs(trailing) -> lead
                 else -> trailing
             }
         }

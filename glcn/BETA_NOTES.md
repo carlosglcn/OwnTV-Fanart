@@ -92,3 +92,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ Every row, grid and list now glides to the focus with the same long eased slide instead of a quick snap
 - 🎬 Live TV programme screen: a film shows its own title lettering (from TMDB) where its name would be
 - 🏠 Dock: moving back to the left works again after scrolling right
+- ⚙️ Settings and other lists: the focused item keeps some room from the screen edge instead of sitting flush against it
