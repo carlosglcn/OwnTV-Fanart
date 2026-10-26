@@ -122,3 +122,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🐢 One calm pace for every drifting text (synopsis, long titles, mini player): it waits about three seconds before it starts moving
 - 🏠 Dock: the card with the focus opens wide with its landscape picture and the others stay narrow; the dock is taller and has no box — it rises from the bottom as a soft gradient. The Dock sketch in the Home layout picker shows the new look
 - 📺 TV Guide: while nothing plays, the preview shows the channel logo large and soft toward the right, as in Live TV
+- ⭐ TV Guide: "Favourites first" and the Favourites category now follow the same order as your Favorites folder
