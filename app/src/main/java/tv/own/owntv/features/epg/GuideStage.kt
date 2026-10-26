@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -44,6 +45,7 @@ import tv.own.owntv.ui.components.chNavPaging
 import tv.own.owntv.ui.components.jumpLazyListTo
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.pluralStringResource
@@ -126,10 +128,14 @@ internal fun GuideVideo(
             .background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
-        if (channel != null) {
-            ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.size(200.mpx), fill = Color.Transparent) {
-                OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(48.mpx))
-            }
+        if (channel != null && !playing) {
+            // glcn: the channel's logo large and soft toward the right while nothing plays, as in Live TV.
+            ChannelLogoTile(
+                logoUrl = channel.displayLogoUrl,
+                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f).graphicsLayer { alpha = 0.34f },
+                fill = Color.Transparent,
+            ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(48.mpx)) }
+            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.5f to Color.Transparent)))
         }
         if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
         if (showVideo && previewState == tv.own.owntv.player.LivePreviewEngine.State.LOADING) OwnTVSpinner(sizeDp = 24)

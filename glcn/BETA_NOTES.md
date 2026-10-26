@@ -120,3 +120,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔒 A provider that answers 403 now gets a clearer message: the list may have expired, be in use on too many devices or be blocked for this network
 - 🏷️ Live TV preview: while nothing plays, the channel logo is shown large and soft toward the right of the frame, and the channel number sits beside the name, bigger and in the accent colour
 - 🐢 One calm pace for every drifting text (synopsis, long titles, mini player): it waits about three seconds before it starts moving
+- 🏠 Dock: the card with the focus opens wide with its landscape picture and the others stay narrow; the dock is taller and has no box — it rises from the bottom as a soft gradient. The Dock sketch in the Home layout picker shows the new look
+- 📺 TV Guide: while nothing plays, the preview shows the channel logo large and soft toward the right, as in Live TV

@@ -236,13 +236,17 @@ fun LumenHome(
             (shown?.plot ?: shown?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(760.mpx), style = stageText(20, 400), color = StageColors.Body) }
         }
 
+        // glcn: no box — a gradient from clear to the page's own colour, so the dock grows out of the picture.
+        Box(
+            Modifier.align(Alignment.BottomStart).fillMaxWidth().height(560.mpx)
+                .background(Brush.verticalGradient(0f to Color.Transparent, 0.3f to palette.page.copy(alpha = 0.7f), 1f to palette.page.copy(alpha = 0.96f))),
+        )
         Column(
             Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = contentStart, end = 56.mpx, bottom = 40.mpx)
+                .padding(start = contentStart, end = 56.mpx, bottom = 28.mpx)
                 .fillMaxWidth()
-                .height(350.mpx)
-                .stageGlass(40.mpx)
+                .height(452.mpx)
                 .padding(top = 20.mpx),
         ) {
             LazyRow(Modifier.padding(horizontal = 24.mpx).focusGroup(), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
@@ -268,27 +272,29 @@ fun LumenHome(
                         .then(if (index == 0) Modifier.focusRequester(entry) else Modifier)
                         .focusProperties { up = selectedTab }
                         .onFocusChanged { if (it.hasFocus) { focusedKey = item.key; onChildFocused() } }
-                    if (item.landscape) {
-                        StageStill(
-                            title = item.title, line = item.line, onClick = item.onClick, width = 300.mpx, height = 169.mpx,
-                            titleSize = 19, lineSize = 15, modifier = m, progress = item.progress,
-                            onLongClick = { menuRow = tab.row },
-                        ) {
-                            if (item.crests != null) Row(
-                                Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.14f)),
-                                horizontalArrangement = Arrangement.spacedBy(20.mpx, Alignment.CenterHorizontally),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) { item.crests.forEach { tv.own.owntv.features.sports.Crest(it, 84) } }
-                            else if (item.art != null) AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                            else Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.18f)))
-                        }
-                    } else {
-                        StagePoster(
-                            title = item.title, onClick = item.onClick, width = 150.mpx, height = 225.mpx, modifier = m, progress = item.progress,
-                            onLongClick = { menuRow = tab.row },
-                        ) {
-                            AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                        }
+                    // glcn: the card the focus rests on opens wide, with its landscape picture; the others stay
+                    // narrow. One composable per card, so the focus is never lost while it opens.
+                    val wideArt = item.backdrop ?: item.art.takeIf { item.landscape }
+                    val canOpen = item.crests == null && wideArt != null
+                    val open = canOpen && item.key == (tab.items.firstOrNull { it.key == focusedKey } ?: tab.items.firstOrNull())?.key
+                    val tw = if (open) 500.mpx else if (item.landscape) 210.mpx else 150.mpx
+                    val th = if (open) 281.mpx else if (item.landscape) 169.mpx else 225.mpx
+                    val spec = if (tv.own.owntv.glcn.LowRam.on) androidx.compose.animation.core.snap<Dp>() else androidx.compose.animation.core.tween<Dp>(200)
+                    val w by androidx.compose.animation.core.animateDpAsState(tw, spec, label = "dock-card-w")
+                    val h by androidx.compose.animation.core.animateDpAsState(th, spec, label = "dock-card-h")
+                    StageStill(
+                        title = item.title, line = if (open || item.landscape) item.line else null, onClick = item.onClick, width = w, height = h,
+                        titleSize = if (open) 21 else 17, lineSize = if (open) 16 else 14, modifier = m, progress = item.progress,
+                        onLongClick = { menuRow = tab.row },
+                    ) {
+                        if (item.crests != null) Row(
+                            Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.14f)),
+                            horizontalArrangement = Arrangement.spacedBy(20.mpx, Alignment.CenterHorizontally),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) { item.crests.forEach { tv.own.owntv.features.sports.Crest(it, 84) } }
+                        else if (open && wideArt != null) AsyncImage(model = wideArt, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        else if (item.art != null) AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        else Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.18f)))
                     }
                 }
             }

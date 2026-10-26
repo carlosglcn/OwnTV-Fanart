@@ -144,13 +144,17 @@ private fun Sketch(mode: Int, focused: Boolean, modifier: Modifier) {
                     block(w * 0.66f, h * 0.10f, w * 0.31f, h * 0.80f, Color.Black.copy(alpha = 0.32f), CornerRadius(12f, 12f))
                     lines(w * 0.69f, h * 0.18f, listOf(w * 0.20f, w * 0.14f, w * 0.22f, w * 0.18f), 6f, Color.White.copy(alpha = 0.85f))
                 }
-                else -> { // Dock: a large title over its picture and a glass dock with tabs.
+                else -> { // Dock: a large title over its picture, a dock that fades up from the bottom, one wide card and narrow ones.
                     art(0f, 0f, w, h, CornerRadius(14f, 14f), a = 0.70f)
                     shade(w, h)
                     lines(left, h * 0.14f, listOf(w * 0.34f, w * 0.22f), 10f, Color.White.copy(alpha = 0.92f))
-                    block(left - w * 0.01f, h * 0.52f, w * 0.90f - left + w * 0.06f, h * 0.42f, Color.Black.copy(alpha = 0.34f), CornerRadius(14f, 14f))
-                    repeat(4) { i -> block(left + i * w * 0.15f, h * 0.57f, w * 0.12f, 6f, Color.White.copy(alpha = if (i == 1) 0.95f else 0.45f), CornerRadius(3f, 3f)) }
-                    posters(left + w * 0.01f, h * 0.68f, 5, w * 0.13f, h * 0.20f, w * 0.015f, first = 1)
+                    drawRect(
+                        Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)), startY = h * 0.36f, endY = h),
+                        topLeft = androidx.compose.ui.geometry.Offset(0f, h * 0.36f), size = Size(w, h * 0.64f),
+                    )
+                    repeat(4) { i -> block(left + i * w * 0.15f, h * 0.50f, w * 0.12f, 6f, Color.White.copy(alpha = if (i == 0) 0.95f else 0.45f), CornerRadius(3f, 3f)) }
+                    block(left, h * 0.60f, w * 0.30f, h * 0.30f, Color.White.copy(alpha = 0.55f), CornerRadius(10f, 10f))
+                    posters(left + w * 0.32f, h * 0.62f, 4, w * 0.085f, h * 0.27f, w * 0.015f, first = 1)
                 }
             }
         }
