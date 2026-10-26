@@ -84,3 +84,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ▼ TV channel strip over the player: press Down to see what each channel gives next, right under its card (a few programmes, so the picture behind stays visible); Up closes it
 - 🏠 Dock: every card has the same height and sits right next to the wide one; the focused card is always first, wide, at the left and the rest glide left to meet it (no jumps), the wide picture fades in as the card opens, and the backdrop no longer flashes empty
 - 🏠 Dock: the focused card no longer grows over its neighbours — every card keeps the same height and sits flush, and the focused one is drawn on top; the title and synopsis use the free width and up to five lines, and a long synopsis fades out softly instead of being cut through a line
+- 🏠 Dock: moving between rows and cards is softer — the title and synopsis change with a short cross-fade, a newly chosen row fades in, and the backdrop follows sooner

@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -213,7 +214,7 @@ fun LumenHome(
         val wanted = shown?.backdrop ?: shown?.art?.takeIf { shown.landscape.not() }
         // A card with no wide picture keeps the backdrop that is there, so the screen never flashes empty.
         LaunchedEffect(wanted, shown?.crests == null) {
-            if (wanted != null) { delay(250); settled = wanted } else if (shown?.crests != null) settled = null
+            if (wanted != null) { delay(150); settled = wanted } else if (shown?.crests != null) settled = null
         }
         Crossfade(settled, modifier = Modifier.fillMaxSize(), label = "lumen-backdrop") { url ->
             if (url != null) AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(1f))
@@ -236,9 +237,19 @@ fun LumenHome(
         Column(Modifier.padding(start = contentStart + 24.mpx, top = 120.mpx).width(1240.mpx)) {
             Text(tab.row.displayTitle(), style = stageText(19, 700), color = accent.accent, maxLines = 1)
             Spacer(Modifier.height(14.mpx))
-            Text(shown?.title.orEmpty(), style = stageText(64f, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            shown?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
-            (shown?.plot ?: shown?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(1040.mpx), style = stageText(20, 400), color = StageColors.Body, lines = 5, fade = true) }
+            // glcn: the words change with a short cross-fade, not a cut, as the focus moves.
+            androidx.compose.animation.Crossfade(
+                targetState = shown?.key,
+                animationSpec = if (tv.own.owntv.glcn.LowRam.on) androidx.compose.animation.core.snap<Float>() else androidx.compose.animation.core.tween<Float>(180),
+                label = "lumen-words",
+            ) { k ->
+                val it0 = tab.items.firstOrNull { x -> x.key == k }
+                Column {
+                    Text(it0?.title.orEmpty(), style = stageText(64f, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    it0?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
+                    (it0?.plot ?: it0?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(1040.mpx), style = stageText(20, 400), color = StageColors.Body, lines = 5, fade = true) }
+                }
+            }
         }
 
         // glcn: no box — a gradient from clear to the page's own colour, so the dock grows out of the picture.
@@ -270,13 +281,20 @@ fun LumenHome(
             // meet it. The scroll follows the focus (tracking the cards as they change size), and the TV's
             // own "bring into view" is switched off so the two never fight.
             val focusedAt = tab.items.indexOfFirst { it.key == focusedKey }.coerceAtLeast(0)
+            // A row that has just been chosen fades in instead of replacing the old one at once.
+            val rowAlpha = remember { androidx.compose.animation.core.Animatable(1f) }
+            LaunchedEffect(selected) {
+                if (tv.own.owntv.glcn.LowRam.on) return@LaunchedEffect
+                rowAlpha.snapTo(0f)
+                rowAlpha.animateTo(1f, androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            }
             LaunchedEffect(selected, focusedAt) {
                 if (tv.own.owntv.glcn.LowRam.on) listState.scrollToItem(focusedAt) else listState.animateScrollToItem(focusedAt)
             }
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides NoBringIntoView) {
             LazyRow(
                 state = listState,
-                modifier = Modifier.padding(top = 18.mpx).focusRestorer().focusGroup(),
+                modifier = Modifier.padding(top = 18.mpx).graphicsLayer { alpha = rowAlpha.value }.focusRestorer().focusGroup(),
                 // Room at the end, so the last cards can also come to the left edge.
                 contentPadding = PaddingValues(start = 30.mpx, end = 900.mpx, top = 8.mpx, bottom = 8.mpx),
                 horizontalArrangement = Arrangement.spacedBy(12.mpx),
