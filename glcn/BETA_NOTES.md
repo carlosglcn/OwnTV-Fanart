@@ -123,3 +123,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏠 Dock: the card with the focus opens wide with its landscape picture and the others stay narrow; the dock is taller and has no box — it rises from the bottom as a soft gradient. The Dock sketch in the Home layout picker shows the new look
 - 📺 TV Guide: while nothing plays, the preview shows the channel logo large and soft toward the right, as in Live TV
 - ⭐ TV Guide: "Favourites first" and the Favourites category now follow the same order as your Favorites folder
+- ▼ TV channel strip over the player: press Down to see what each channel gives next, right under its card (a few programmes, so the picture behind stays visible); Up closes it

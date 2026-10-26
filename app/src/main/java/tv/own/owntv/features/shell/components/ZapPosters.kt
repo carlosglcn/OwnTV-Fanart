@@ -118,6 +118,11 @@ fun ZapPosterOverlay(
         }
     }
     val now = remember { System.currentTimeMillis() }
+    // glcn: ▼ opens what each channel gives next under its card (a few programmes, so the picture behind stays
+    // visible); ▲ closes it, and from the closed strip goes to the list as before. Read from the cache the
+    // look-ahead above fills, so it opens at once.
+    var showNext by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val timeFmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
     val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
     Box(
         modifier.fillMaxSize().onPreviewKeyEvent { e ->
@@ -136,7 +141,8 @@ fun ZapPosterOverlay(
                 .onPreviewKeyEvent { e ->
                     if (e.type != KeyEventType.KeyDown) false
                     // glcn: ▲ opens the list; ◀ from the first channel goes back to it too.
-                    else if (e.key == Key.DirectionUp) { onListView(); true }
+                    else if (e.key == Key.DirectionUp) { if (showNext) showNext = false else onListView(); true }
+                    else if (e.key == Key.DirectionDown) { if (loadSchedule != null) showNext = true; true }
                     // glcn: ◀ from the first card wraps to the last, ▶ from the last to the first.
                     else if (e.key == Key.DirectionLeft && channels.size > 1 && focusedCh?.id == channels.first().id) { wrapTo(channels.size - 1); true }
                     else if (e.key == Key.DirectionRight && channels.size > 1 && focusedCh?.id == channels.last().id) { wrapTo(0); true }
@@ -161,6 +167,10 @@ fun ZapPosterOverlay(
                     style = stageText(16, 600), color = StageColors.Dim, maxLines = 1,
                     modifier = Modifier.padding(start = 20.mpx),
                 )
+                if (loadSchedule != null && !showNext) Text(
+                    "▼ " + stringResource(R.string.content_live_next),
+                    style = stageText(16, 600), color = StageColors.Dim, maxLines = 1,
+                )
             }
             androidx.compose.runtime.CompositionLocalProvider(
                 tv.own.owntv.features.home.LocalHomeFocusInfo provides { info -> info?.channel?.let { focusedCh = it } },
@@ -171,6 +181,7 @@ fun ZapPosterOverlay(
                 modifier = Modifier.focusGroup(),
             ) {
                 itemsIndexed(channels, key = { _, c -> c.id }) { index, ch ->
+                    Column(Modifier.width(360.mpx)) {
                     tv.own.owntv.features.home.ArtLiveCard(
                         channel = ch,
                         programme = programmes[ch.id],
@@ -179,6 +190,12 @@ fun ZapPosterOverlay(
                         width = 360.mpx,
                         modifier = Modifier.focusRequester(cardFocus.getOrPut(index) { FocusRequester() }).then(if (index == start) Modifier.focusRequester(first) else Modifier),
                     )
+                    if (showNext) {
+                        val after = programmes[ch.id]?.stopMs ?: now
+                        val rows = scheduleCache[ch.id]?.filter { it.startMs >= after }?.take(3).orEmpty()
+                        if (rows.isNotEmpty()) ZapNextList(rows, timeFmt)
+                    }
+                    }
                 }
             } }
         }
@@ -189,8 +206,22 @@ fun ZapPosterOverlay(
             programmes = programmes,
             loadSchedule = loadSchedule,
             cache = scheduleCache,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.mpx, bottom = 392.mpx),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.mpx, bottom = if (showNext) 530.mpx else 392.mpx),
         )
+    }
+}
+
+/** glcn: the next few programmes of one channel, under its card — time and title, one line each. */
+@Composable
+private fun ZapNextList(rows: List<EpgProgrammeEntity>, fmt: java.text.DateFormat) {
+    Column(Modifier.fillMaxWidth().padding(start = 6.mpx, end = 6.mpx, top = 12.mpx), verticalArrangement = Arrangement.spacedBy(3.mpx)) {
+        Text(stringResource(R.string.content_live_next), style = stageText(15, 700), color = stageAccent.accent, maxLines = 1)
+        rows.forEach { n ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
+                Text(fmt.format(java.util.Date(n.startMs)), style = stageText(16, 700), color = StageColors.Muted, maxLines = 1, modifier = Modifier.width(66.mpx))
+                Text(n.title, style = stageText(16, 500), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            }
+        }
     }
 }
 
