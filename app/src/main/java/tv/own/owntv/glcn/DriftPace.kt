@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.Dp
  */
 object DriftPace {
     const val START_MS = 3_200
-    const val MS_PER_PX = 65
+    const val MS_PER_PX = 95
 
     /** The same speed for sideways drift, as a velocity in dp per second. */
     @Composable
