@@ -341,6 +341,11 @@ fun HomeScreen(
     val bottomRoomPx = with(androidx.compose.ui.platform.LocalDensity.current) { 72.dp.toPx() }
     val homeBringIntoViewSpec = remember(bottomRoomPx) {
         object : BringIntoViewSpec {
+            // glcn: the page glides from row to row — a longer, eased slide instead of the quick snap the
+            // default gave, which read as a bump on every ▼ / ▲. Light mode keeps it instant.
+            override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float>
+                get() = if (tv.own.owntv.glcn.LowRam.on) androidx.compose.animation.core.snap<Float>()
+                else androidx.compose.animation.core.tween(380, easing = androidx.compose.animation.core.CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f))
             override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
                 if (heroFocused.value) return 0f
                 val trailing = offset + size + bottomRoomPx - containerSize
