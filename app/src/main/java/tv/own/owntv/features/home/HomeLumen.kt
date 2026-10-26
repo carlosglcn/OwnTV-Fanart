@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 package tv.own.owntv.features.home
 
 import androidx.compose.animation.Crossfade
@@ -297,7 +298,7 @@ fun LumenHome(
                     val h = 281.mpx
                     val wideA by androidx.compose.animation.core.animateFloatAsState(
                         if (open) 1f else 0f,
-                        if (low) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                        if (low) androidx.compose.animation.core.snap<Float>() else androidx.compose.animation.core.tween<Float>(280, easing = androidx.compose.animation.core.FastOutSlowInEasing),
                         label = "dock-card-wide",
                     )
                     StageStill(
@@ -324,7 +325,6 @@ fun LumenHome(
     }
 }
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private val NoBringIntoView = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
 }
