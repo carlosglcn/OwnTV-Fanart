@@ -82,3 +82,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 TV Guide: while nothing plays, the preview shows the channel logo large and soft toward the right, as in Live TV
 - ⭐ TV Guide: "Favourites first" and the Favourites category now follow the same order as your Favorites folder
 - ▼ TV channel strip over the player: press Down to see what each channel gives next, right under its card (a few programmes, so the picture behind stays visible); Up closes it
+- 🏠 Dock: every card has the same height and sits right next to the wide one; the focused card is always first, wide, at the left and the rest glide left to meet it (no jumps), the wide picture fades in as the card opens, and the backdrop no longer flashes empty

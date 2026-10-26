@@ -209,7 +209,10 @@ fun LumenHome(
         // The focused card's wide picture, settled before it swaps; the page's own colour washes it out.
         var settled by remember { mutableStateOf<String?>(null) }
         val wanted = shown?.backdrop ?: shown?.art?.takeIf { shown.landscape.not() }
-        LaunchedEffect(wanted) { delay(250); settled = wanted }
+        // A card with no wide picture keeps the backdrop that is there, so the screen never flashes empty.
+        LaunchedEffect(wanted, shown?.crests == null) {
+            if (wanted != null) { delay(250); settled = wanted } else if (shown?.crests != null) settled = null
+        }
         Crossfade(settled, modifier = Modifier.fillMaxSize(), label = "lumen-backdrop") { url ->
             if (url != null) AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(1f))
         }
@@ -261,11 +264,20 @@ fun LumenHome(
             }
             val listState = rememberLazyListState()
             LaunchedEffect(selected) { listState.scrollToItem(0) }
+            // glcn: the card with the focus is always the first one, wide, at the left; the rest glide left to
+            // meet it. The scroll follows the focus (tracking the cards as they change size), and the TV's
+            // own "bring into view" is switched off so the two never fight.
+            val focusedAt = tab.items.indexOfFirst { it.key == focusedKey }.coerceAtLeast(0)
+            LaunchedEffect(selected, focusedAt) {
+                if (tv.own.owntv.glcn.LowRam.on) listState.scrollToItem(focusedAt) else listState.animateScrollToItem(focusedAt)
+            }
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides NoBringIntoView) {
             LazyRow(
                 state = listState,
                 modifier = Modifier.padding(top = 18.mpx).focusRestorer().focusGroup(),
-                contentPadding = PaddingValues(horizontal = 30.mpx, vertical = 8.mpx),
-                horizontalArrangement = Arrangement.spacedBy(20.mpx),
+                // Room at the end, so the last cards can also come to the left edge.
+                contentPadding = PaddingValues(start = 30.mpx, end = 900.mpx, top = 8.mpx, bottom = 8.mpx),
+                horizontalArrangement = Arrangement.spacedBy(12.mpx),
             ) {
                 itemsIndexed(tab.items, key = { _, it -> it.key }) { index, item ->
                     val m = Modifier
@@ -277,11 +289,17 @@ fun LumenHome(
                     val wideArt = item.backdrop ?: item.art.takeIf { item.landscape }
                     val canOpen = item.crests == null && wideArt != null
                     val open = canOpen && item.key == (tab.items.firstOrNull { it.key == focusedKey } ?: tab.items.firstOrNull())?.key
-                    val tw = if (open) 500.mpx else if (item.landscape) 210.mpx else 150.mpx
-                    val th = if (open) 281.mpx else if (item.landscape) 169.mpx else 225.mpx
-                    val spec = if (tv.own.owntv.glcn.LowRam.on) androidx.compose.animation.core.snap<Dp>() else androidx.compose.animation.core.tween<Dp>(200)
+                    // One height for every card; only the width changes.
+                    val tw = if (open) 500.mpx else if (item.landscape) 250.mpx else 187.mpx
+                    val low = tv.own.owntv.glcn.LowRam.on
+                    val spec = if (low) androidx.compose.animation.core.snap<Dp>() else androidx.compose.animation.core.tween<Dp>(280, easing = androidx.compose.animation.core.FastOutSlowInEasing)
                     val w by androidx.compose.animation.core.animateDpAsState(tw, spec, label = "dock-card-w")
-                    val h by androidx.compose.animation.core.animateDpAsState(th, spec, label = "dock-card-h")
+                    val h = 281.mpx
+                    val wideA by androidx.compose.animation.core.animateFloatAsState(
+                        if (open) 1f else 0f,
+                        if (low) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                        label = "dock-card-wide",
+                    )
                     StageStill(
                         title = item.title, line = if (open || item.landscape) item.line else null, onClick = item.onClick, width = w, height = h,
                         titleSize = if (open) 21 else 17, lineSize = if (open) 16 else 14, modifier = m, progress = item.progress,
@@ -292,14 +310,23 @@ fun LumenHome(
                             horizontalArrangement = Arrangement.spacedBy(20.mpx, Alignment.CenterHorizontally),
                             verticalAlignment = Alignment.CenterVertically,
                         ) { item.crests.forEach { tv.own.owntv.features.sports.Crest(it, 84) } }
-                        else if (open && wideArt != null) AsyncImage(model = wideArt, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                        else if (item.art != null) AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                        else Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.18f)))
+                        else {
+                            // The closed picture stays underneath; the wide one fades in over it as the card opens.
+                            if (item.art != null) AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                            else Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.18f)))
+                            if (wideArt != null && wideArt != item.art && (open || wideA > 0.01f)) AsyncImage(model = wideArt, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(wideA))
+                        }
                     }
                 }
             }
+            }
         }
     }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private val NoBringIntoView = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
 }
 
 private data class TrendingFacts(val name: String, val poster: String?, val backdrop: String?, val plot: String?, val year: Int?)
