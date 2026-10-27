@@ -1735,7 +1735,13 @@ fun OwnTVShell(
             } else {
                 // Dynamic docked size/position: a screen-width fraction at the chosen corner/edge, so it
                 // scales with the panel + UI zoom (never a fixed-size box).
-                Modifier.align(miniPos.alignment).padding(24.dp)
+                // glcn: at a top spot the window sits below the menu bar, so the bar stays in view behind it.
+                val belowBar = navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.TOP &&
+                    (miniPos == tv.own.owntv.core.player.MiniPlayerPosition.TOP_LEFT ||
+                        miniPos == tv.own.owntv.core.player.MiniPlayerPosition.TOP_CENTER ||
+                        miniPos == tv.own.owntv.core.player.MiniPlayerPosition.TOP_RIGHT)
+                Modifier.align(miniPos.alignment)
+                    .padding(start = 24.dp, end = 24.dp, bottom = 24.dp, top = if (belowBar) 108.mpx else 24.dp)
                     .fillMaxWidth(tv.own.owntv.core.player.MiniPlayerSize.fraction(miniSizePct)).aspectRatio(16f / 9f)
                     .clip(RoundedCornerShape(14.dp)).background(Color.Black)
             },

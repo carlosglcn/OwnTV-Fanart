@@ -577,14 +577,19 @@ internal fun LiveCategories(
     // The chip the cursor last rested on; cleared when it moves to the search or a row. Switching list rebuilds
     // the rows below, and the cursor must not be dragged down with them.
     var lastChipId by remember { mutableStateOf<Long?>(null) }
-    val chipFocusers = remember(playlistRows) { playlistRows.associate { it.first to FocusRequester() } }
+    // glcn: keyed by the chips' ids, not the list instance — switching list rebuilds the rows but the chips are the
+    // same, and new focus requesters on them dropped the cursor for a frame (the highlight blinked).
+    val chipIds = playlistRows.map { it.first }
+    val chipFocusers = remember(chipIds) { chipIds.associateWith { FocusRequester() } }
     LaunchedEffect(entries) {
         val id = lastChipId ?: return@LaunchedEffect
         val target = chipFocusers[id] ?: return@LaunchedEffect
         withFrameNanos { }
         if (!chipsFocused) {
-            runCatching { listState.scrollToItem(0) }
-            withFrameNanos { }
+            if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
+                runCatching { listState.scrollToItem(0) }
+                withFrameNanos { }
+            }
             runCatching { target.requestFocus() }
         }
     }
