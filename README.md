@@ -10,6 +10,8 @@ pictures first: the guide's fanart across Home, Live TV and the guide, and a few
 
 Oficial Telegram Channel https://t.me/owntvfanart
 
+https://github.com/user-attachments/assets/faacb82b-6903-47c0-ae53-6854024aa5b6
+
 ## ⬇️ Download
 
 | Device | Latest release |
