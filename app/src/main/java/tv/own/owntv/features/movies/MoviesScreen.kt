@@ -489,6 +489,9 @@ fun MoviesScreen(
     val optionsHint = stringResource(R.string.content_key_hold_ok) to stringResource(R.string.content_key_options)
 
     // The toolbar and the titles: one focus group, entered on a title, never the search field.
+    // glcn: Up from the search / sort row is a deliberate move to the menu above; from the grid it stays trapped (a held key
+    // outrunning the lazy grid must not escape there).
+    var toolbarHasFocus by remember { mutableStateOf(false) }
     val paneModifier = Modifier
         .onFocusChanged { gridPaneFocused = it.hasFocus }
         .chNavPaging(
@@ -541,7 +544,7 @@ fun MoviesScreen(
                     androidx.compose.ui.focus.FocusDirection.Right -> cancelFocusChange()
                     // Pinned (More) keeps Up for its tabs.
                     androidx.compose.ui.focus.FocusDirection.Up, androidx.compose.ui.focus.FocusDirection.Down ->
-                        if (lockedKey == null) cancelFocusChange()
+                        if (lockedKey == null && !(requestedFocusDirection == androidx.compose.ui.focus.FocusDirection.Up && toolbarHasFocus)) cancelFocusChange()
                     else -> Unit
                 }
             }
@@ -579,6 +582,7 @@ fun MoviesScreen(
                         Modifier.padding(start = fx(68), end = fx(64)).fillMaxWidth()
                             // ▼ from the toolbar returns to the title the hero shows, not the poster below the tool.
                             .onPreviewKeyEvent { e -> e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown && focusCurrentTitle() }
+                            .onFocusChanged { toolbarHasFocus = it.hasFocus }
                             .focusGroup(),
                         horizontalArrangement = Arrangement.spacedBy(10.mpx),
                         verticalAlignment = Alignment.CenterVertically,
@@ -694,7 +698,7 @@ fun MoviesScreen(
             }
             Column(Modifier.padding(start = listX, top = top).width(listW).fillMaxHeight().then(paneModifier)) {
                 Row(
-                    Modifier.fillMaxWidth().focusGroup(),
+                    Modifier.fillMaxWidth().onFocusChanged { toolbarHasFocus = it.hasFocus }.focusGroup(),
                     horizontalArrangement = Arrangement.spacedBy(10.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

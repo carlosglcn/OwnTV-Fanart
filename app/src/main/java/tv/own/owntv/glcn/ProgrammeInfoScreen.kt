@@ -91,6 +91,14 @@ fun ProgrammeInfoScreen(
         else week.orEmpty().filter { it.startMs >= cur.stopMs && it.title.trim().lowercase() == t }.take(7)
     }
 
+    // The zap cache keeps programmes without their synopsis (it is heavy); this one is read on demand.
+    val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
+    val ownSynopsis by produceState<String?>(null, cur?.id) {
+        val c = cur ?: return@produceState
+        value = c.description?.takeIf { it.isNotBlank() }
+            ?: runCatching { epgDao.programmeDescription(c.id) }.getOrNull()?.takeIf { it.isNotBlank() }
+    }
+
     // TMDB lends the wide picture, the rating and a synopsis when the guide says little.
     val lent by produceState<ProgrammeArtResolver.Info?>(null, cur?.title, cur?.categories) {
         val c = cur ?: return@produceState
@@ -162,7 +170,7 @@ fun ProgrammeInfoScreen(
                     )
                     ).filter { it.isNotBlank() }.joinToString("  ·  ")
                 if (facts.isNotEmpty()) Text(facts, style = stageText(20, 600), color = Dim, modifier = Modifier.staggerIn(250).padding(top = 16.mpx), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                (cur.description?.takeIf { it.isNotBlank() } ?: lent?.overview)?.let {
+                (ownSynopsis ?: lent?.overview)?.let {
                     DriftingSynopsis(it, modifier = Modifier.staggerIn(300).padding(top = 16.mpx).width(960.mpx), style = stageText(21, 400), color = Soft, lines = 6, fade = true)
                 }
                 if (next.isNotEmpty()) {

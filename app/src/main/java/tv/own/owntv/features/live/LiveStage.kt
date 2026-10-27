@@ -549,7 +549,8 @@ internal fun LiveCategories(
     val searchFocus = remember { FocusRequester() }
     // glcn: playlist rows — "All playlists" then each playlist; the active one sits open above its categories.
     val switcher = if (showPlaylists) LocalCategoryPlaylists.current?.takeIf { it.playlists.size > 1 } else null
-    val allPlaylistsText = stringResource(R.string.content_all_playlists)
+    // glcn: "All" on the chip, so the three chips fit the sheet and the row never scrolls sideways when the cursor moves.
+    val allPlaylistsText = stringResource(R.string.content_all_playlists_short)
     val activePlaylist = if (switcher != null && switcher.activeId > 0L) switcher.activeId else -1L
     val allPlaylistRows = remember(switcher?.playlists, allPlaylistsText) {
         switcher?.let { listOf(-1L to allPlaylistsText) + it.playlists.map { src -> src.id to src.name } }.orEmpty()
@@ -734,7 +735,7 @@ internal fun LiveCategories(
                         var chipFocused by remember { mutableStateOf(false) }
                         LaunchedEffect(chipFocused, open) {
                             if (chipFocused && !open) {
-                                kotlinx.coroutines.delay(350)
+                                kotlinx.coroutines.delay(600)
                                 switcher?.onSelect?.invoke(id)
                             }
                         }
