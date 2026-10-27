@@ -1,6 +1,7 @@
 ## What's new
 
 ### ✨ New
+- 🚀 **First start: the setup now lets you choose your colour style and your Home layout (Classic, Cinema, Panel or Dock) from cards that show how each one looks**
 - 🪟 **Dock: a new Home layout with the focused title large over its picture and a glass dock below; the focused card opens wide and the rest glide left in one smooth motion**
 - ✨ **Lumen Night and Lumen Day: two glass styles with a turquoise accent; the style pickers draw every style as a small Home**
 - ℹ️ **Live TV programme screen: press Info for its fanart, channel logo, genres, year, rating, synopsis, what comes next and when it airs again this week; a film shows its own title lettering. The stream's technical data sit behind a button inside it**
@@ -27,3 +28,6 @@
 - 🗓️ **TV Guide: a category whose channels have no guide data now shows its channels instead of an empty screen**
 - 🖼️ **TV Guide: channel logos are a third larger**
 - 🛠️ **Delete profile confirmation no longer closes by itself**
+
+### 🙏 Thank you
+Thank you to everyone in the community who reports bugs and shares ideas — many of the fixes and improvements in this version come from your messages.
