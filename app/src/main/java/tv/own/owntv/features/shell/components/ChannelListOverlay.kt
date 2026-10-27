@@ -115,7 +115,8 @@ fun ChannelListOverlay(
             else -> playingIndex.coerceAtLeast(0)
         }
     }
-    val listState = rememberLazyListState()
+    // glcn: opens already on the current channel — scrolling there after the first frame showed the top for a blink.
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = currentIndex)
     val focusTarget = remember { FocusRequester() }
     // The row that owns [focusTarget]: the current channel at first, then wherever paging jumped to.
     var targetIndex by remember(currentIndex) { mutableIntStateOf(currentIndex) }
@@ -359,7 +360,6 @@ private fun ZapPreviewPanel(
         // glcn: the previous channel's programme goes at once — a stale poster for seconds was worse than none.
         programme = null
         if (channel == null) return@LaunchedEffect
-        kotlinx.coroutines.delay(60)
         programme = runCatching { loadNow(channel) }.getOrNull()
     }
     val p = programme?.first ?: return
@@ -408,7 +408,7 @@ private fun ZapPreviewPanel(
             Box(Modifier.fillMaxWidth(f).height(4.mpx).background(stageAccent.accent))
         }
         p.description?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = stageText(16, 400), color = StageColors.Dim, maxLines = if (framed) 4 else 2, overflow = TextOverflow.Ellipsis)
+            DriftingSynopsis(it, style = stageText(16, 400), color = StageColors.Dim, lines = if (framed) 4 else 2)
         }
         // glcn: and what follows it.
         next?.let { n ->
@@ -438,7 +438,6 @@ private fun ZapSchedulePanel(
     var rows by remember { mutableStateOf<List<EpgProgrammeEntity>>(emptyList()) }
     LaunchedEffect(channel?.id) {
         if (channel == null) { rows = emptyList(); return@LaunchedEffect }
-        kotlinx.coroutines.delay(90)
         rows = runCatching { loadSchedule(channel) }.getOrDefault(emptyList())
     }
     val ch = channel ?: return
@@ -467,7 +466,7 @@ private fun ZapSchedulePanel(
         )
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             // Only as many rows as fit above the programme card, so none is cut in half.
-            val fit = if (joined) ((maxHeight - 130.mpx) / 56.mpx).toInt().coerceAtLeast(3) else rows.size
+            val fit = if (joined) ((maxHeight - 180.mpx) / 56.mpx).toInt().coerceAtLeast(3) else rows.size
             Column(verticalArrangement = Arrangement.spacedBy(5.mpx)) {
             rows.take(fit).forEach { p ->
             val onAir = now in p.startMs until p.stopMs
@@ -502,7 +501,7 @@ private fun ZapSchedulePanel(
             }
         }
         if (joined && loadNow != null) {
-            ZapPreviewPanel(channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth(), framed = false)
+            ZapPreviewPanel(channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 46.mpx), framed = false)
         }
     }
 }

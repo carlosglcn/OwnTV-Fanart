@@ -15,6 +15,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -390,6 +395,7 @@ internal fun BottomBar(
     onChannels: (() -> Unit)? = null,
     onGuide: (() -> Unit)? = null,
     onOtherChannels: (() -> Unit)? = null, otherChannelsCount: Int = 0,
+    onChannelCopies: (() -> Unit)? = null,
     onOpenDialog: (HudDialog) -> Unit, onPip: (() -> Unit)?, onAudioMode: (() -> Unit)?,
     onMultiview: (() -> Unit)? = null, onRecordThis: (() -> Unit)? = null, recordingThis: Boolean = false,
     /** Given to whichever timeline is drawn, so Left/Right with the controls hidden can land on it. */
@@ -417,7 +423,7 @@ internal fun BottomBar(
                     Box(Modifier.widthIn(max = 540.dp)) { side() }
                 }
             } else header()
-            Box(Modifier.fillMaxWidth().padding(vertical = if (side != null) 4.dp else 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
+            Box(Modifier.fillMaxWidth().padding(vertical = if (side != null) 2.dp else 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
         }
         // Band A — the instrument. The times are the bar's own end caps now; the separate time row is
         // gone, and on live the right cap is the state badge instead of a clock.
@@ -457,7 +463,31 @@ internal fun BottomBar(
         // slack a focused button expands into, so growth is always toward the centre: the left cluster
         // pushes only the buttons to its right, the right cluster only those to its left. Walk either
         // cluster outward-in and nothing you have already passed ever moves.
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().focusGroup()) {
+        // glcn: the tool's name in one fixed place, one focus box that slides between the tools, and the row
+        // wrapping round — ◀ from the first tool reaches Info at the far end, ▶ from the last returns.
+        val toolFocus = androidx.compose.runtime.remember { ToolFocusState() }
+        val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+        ToolLabelLine(toolFocus)
+        androidx.compose.runtime.CompositionLocalProvider(LocalToolFocus provides toolFocus) {
+        Box(Modifier.fillMaxWidth().onGloballyPositioned { toolFocus.origin = it.positionInWindow() }) {
+        ToolFocusBox(toolFocus, Modifier.matchParentSize())
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().focusGroup().onKeyEvent { e ->
+                if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onKeyEvent false
+                val toward = when (e.key) {
+                    androidx.compose.ui.input.key.Key.DirectionLeft -> androidx.compose.ui.focus.FocusDirection.Left to androidx.compose.ui.focus.FocusDirection.Right
+                    androidx.compose.ui.input.key.Key.DirectionRight -> androidx.compose.ui.focus.FocusDirection.Right to androidx.compose.ui.focus.FocusDirection.Left
+                    else -> return@onKeyEvent false
+                }
+                if (!focusManager.moveFocus(toward.first)) {
+                    // At the end: walk to the other end, one step at a time.
+                    var guard = 0
+                    while (guard++ < 40 && focusManager.moveFocus(toward.second)) { }
+                }
+                true
+            },
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 // The ORDER comes from core's canonical list, not from the order these lines
                 // happen to be written in. Each control keeps its own composable and its own
@@ -499,8 +529,14 @@ internal fun BottomBar(
                             CtrlButton(OwnTVIcon.HISTORY, label = stringResource(R.string.player_previous_channel)) { onPreviousChannel() }
                         }
                         // Sports Hub: only for a channel started from a match.
-                        PlayerControl.OTHER_CHANNELS -> if (onOtherChannels != null) {
-                            CtrlButton(OwnTVIcon.LIST, label = stringResource(R.string.sports_other_channels_count, otherChannelsCount)) { onOtherChannels() }
+                        PlayerControl.OTHER_CHANNELS -> {
+                            if (onOtherChannels != null) {
+                                CtrlButton(OwnTVIcon.LIST, label = stringResource(R.string.sports_other_channels_count, otherChannelsCount)) { onOtherChannels() }
+                            }
+                            // glcn: live — switch between the copies of this channel (FHD / HD / SD), nothing else.
+                            if (onChannelCopies != null) {
+                                CtrlButton(OwnTVIcon.VIDEO, label = stringResource(R.string.player_tool_quality)) { onChannelCopies() }
+                            }
                         }
                         // Not shown on the TV: Back from the player already returns to the match page.
                         PlayerControl.MATCH -> Unit
@@ -612,8 +648,10 @@ internal fun BottomBar(
                 }
             }
         }
+        }
+        }
     }
-    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = if (side != null) 10.dp else 20.dp)) { body() }
+    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = if (side != null) 6.dp else 20.dp)) { body() }
 }
 
 private fun volumeIcon(volume: Int): OwnTVIcon = when {

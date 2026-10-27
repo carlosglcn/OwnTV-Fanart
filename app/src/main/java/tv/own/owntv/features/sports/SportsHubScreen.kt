@@ -70,6 +70,7 @@ import tv.own.owntv.ui.components.longPressMenuGuard
 import tv.own.owntv.ui.components.trapAllFocusExit
 import tv.own.owntv.ui.stage.StageFocus
 import tv.own.owntv.ui.stage.StageKeyHints
+import tv.own.owntv.ui.stage.stageGlass
 import tv.own.owntv.ui.stage.StageMenu
 import tv.own.owntv.ui.stage.StageMenuHeader
 import tv.own.owntv.ui.stage.StageMenuItem
@@ -316,7 +317,9 @@ fun SportsHubScreen(
                 stringResource(R.string.common_ok) to stringResource(R.string.sports_hint_match_page),
                 stringResource(R.string.content_key_hold_ok) to stringResource(R.string.sports_hint_follow_remind),
             ),
-            Modifier.align(Alignment.BottomEnd).padding(end = 60.mpx, bottom = 27.mpx),
+            // glcn: on a glass capsule, so the hints never run into the cards' text beneath them.
+            Modifier.align(Alignment.BottomEnd).padding(end = 48.mpx, bottom = 18.mpx)
+                .stageGlass(22.mpx, overContent = true).padding(horizontal = 20.mpx, vertical = 10.mpx),
             textSize = 18,
         )
     }
@@ -458,7 +461,7 @@ internal fun MatchCard(
             // League line · minute (red while live) or kick-off.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val day = if (m.isLive) null else dayOf(m.startMs, locale)
-                val league = listOfNotNull(leagueName(m), m.subtitle?.takeIf { featured }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
+                val league = listOfNotNull(leagueName(m), m.subtitle?.takeIf { featured && m.sport != tv.own.owntv.core.sports.model.Sport.RACING }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
                 Text(league, style = stageText(16.5f, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 val right = when {
                     m.off -> m.statusText
@@ -482,11 +485,12 @@ internal fun MatchCard(
 /** Two sides, each a 42 px crest, the name and the score; the losing side in muted grey. */
 @Composable
 private fun Sides(m: Match, spoiler: Boolean) {
-    if (m.competitors.size < 2) {
-        // Racing, a card: the session and its subtitle.
+    if (m.competitors.size < 2 || m.sport == tv.own.owntv.core.sports.model.Sport.RACING) {
+        // Racing, a card: the session by its kind, the Grand Prix under it.
         Spacer(Modifier.height(12.mpx))
-        Text(m.title, style = stageText(21, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        m.subtitle?.let { Text(it, style = stageText(19, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        val session = if (m.sport == tv.own.owntv.core.sports.model.Sport.RACING) raceSessionLabel(m) else null
+        Text(session ?: m.title, style = stageText(21, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        (if (session != null) m.title else m.subtitle)?.let { Text(it, style = stageText(19, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         return
     }
     listOfNotNull(m.home, m.away).forEach { c ->

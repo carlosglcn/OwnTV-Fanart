@@ -3,6 +3,8 @@ package tv.own.owntv.features.home
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -176,6 +178,7 @@ internal fun LiveBadge(modifier: Modifier = Modifier) {
  * corner, title and time over a dark foot, a progress bar — or the channel logo alone when the guide
  * has no picture. [startLabel] replaces the time left for an upcoming programme ("21:30").
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun ArtLiveCard(
     channel: ChannelEntity,
@@ -304,9 +307,13 @@ internal fun ArtLiveCard(
             }
             // The words under the picture, never over it, where the picture's own lettering would fight them.
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.mpx, vertical = 10.mpx)) {
+                // glcn: a focused card whose words do not fit lets them drift past, smoothly, then start over.
+                val drift = if (focused) Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = tv.own.owntv.glcn.DriftPace.START_MS, repeatDelayMillis = 1_500, velocity = tv.own.owntv.glcn.DriftPace.velocity()) else Modifier
                 Text(
                     programme?.title?.let(SportsNow::displayTitle) ?: channel.name,
-                    style = stageText(20, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = stageText(20, 800), color = StageColors.Text, maxLines = 1,
+                    overflow = if (focused) TextOverflow.Clip else TextOverflow.Ellipsis,
+                    modifier = drift,
                 )
                 val line = when {
                     startLabel != null -> "$startLabel · ${channel.name}"
@@ -314,7 +321,7 @@ internal fun ArtLiveCard(
                     else -> null
                 }
                 line?.let {
-                    Text(it, style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(it, style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, overflow = if (focused) TextOverflow.Clip else TextOverflow.Ellipsis, modifier = drift)
                 }
             }
         }

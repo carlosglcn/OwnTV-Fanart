@@ -55,7 +55,7 @@ internal fun StyleStep(onNext: () -> Unit, onBack: () -> Unit) {
         next = WizardAction(stringResource(R.string.setup_continue), onNext),
         width = 1500.mpx,
     ) {
-        GlcnStyle.entries.chunked(4).forEachIndexed { row, styles ->
+        GlcnStyle.entries.chunked(5).forEachIndexed { row, styles ->
             Row(Modifier.fillMaxWidth().padding(top = if (row == 0) 8.mpx else 16.mpx), horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                 styles.forEachIndexed { i, st ->
                     StageSurface(
@@ -100,7 +100,7 @@ private fun StyleThumb(st: GlcnStyle) {
     }
 }
 
-/** glcn: first-run "How do you want Home?" — Classic, Cinema or Panel. */
+/** glcn: first-run "How do you want Home?" — Classic, Cinema, Panel or Dock. */
 @Composable
 internal fun HomeLayoutStep(onNext: () -> Unit, onBack: () -> Unit) {
     val settings: SettingsRepository = koinInject()
@@ -119,6 +119,7 @@ internal fun HomeLayoutStep(onNext: () -> Unit, onBack: () -> Unit) {
                 WizardCard(OwnTVIcon.HOME, stringResource(R.string.glcn_home_backdrop_classic), stringResource(R.string.glcn_setup_home_classic)) { pick(0) },
                 WizardCard(OwnTVIcon.MOVIES, stringResource(R.string.glcn_home_backdrop_cinema), stringResource(R.string.glcn_setup_home_cinema)) { pick(1) },
                 WizardCard(OwnTVIcon.LIST_GRID, stringResource(R.string.glcn_home_backdrop_panel), stringResource(R.string.glcn_setup_home_panel)) { pick(2) },
+                WizardCard(OwnTVIcon.LIVE_TV, stringResource(R.string.glcn_home_backdrop_dock), stringResource(R.string.glcn_setup_home_dock)) { pick(3) },
             ),
             first,
         )

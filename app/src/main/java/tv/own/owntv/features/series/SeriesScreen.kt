@@ -297,7 +297,8 @@ private fun SeriesGrid(
     val settingsVm: tv.own.owntv.features.settings.SettingsViewModel = koinViewModel()
     val vodLayout by settingsVm.vodLayout.collectAsStateWithLifecycle()
     // Cinematic is the browse section's; More → Favourites / History pin the plain Separate list.
-    val cinematic = vodLayout == SettingsRepository.VodLayout.CINEMATIC && lockedKey == null
+    val runway = vodLayout == SettingsRepository.VodLayout.RUNWAY && lockedKey == null
+    val cinematic = (vodLayout == SettingsRepository.VodLayout.CINEMATIC || runway) && lockedKey == null
     val cinematicDetailsPct by settingsVm.cinematicDetailsHeight(PanelSection.SERIES).collectAsStateWithLifecycle()
     // Cinematic is grid-only. The stored choice is deliberately not rewritten, so switching back to
     // Separate restores the user's List.
@@ -315,6 +316,7 @@ private fun SeriesGrid(
     val perCategorySeriesIds = remember { mutableStateMapOf<LiveKey, Long>() }
     // NOTE: plain constructors, not remember*State() — these are created lazily inside getOrPut, so a
     // @Composable/rememberSaveable call here would register slots conditionally and corrupt the slot table.
+    val glideScope = androidx.compose.runtime.rememberCoroutineScope()
     val effectiveGridState = if (rememberSeries) perCategoryGrid.getOrPut(selectedKey) { androidx.compose.foundation.lazy.grid.LazyGridState() } else gridState
     val effectiveListState = if (rememberSeries) perCategoryList.getOrPut(selectedKey) { androidx.compose.foundation.lazy.LazyListState() } else listState
     LaunchedEffect(selectedKey, rememberSeries) {
@@ -322,7 +324,12 @@ private fun SeriesGrid(
     }
     // The List view scrolls a LazyListState, the grids (Cinematic and Separate) a LazyGridState.
     val usesList = viewMode == SettingsRepository.VodViewMode.LIST
+    // glcn: the Runway layout is one row of posters; it has no lazy state, only the index it is centred on.
+    var runwayAt by remember(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
+    var runwayWindow by remember { mutableStateOf(0..0) }
+    val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
     suspend fun scrollToIndex(i: Int) {
+        if (runway) { runwayAt = i; return }
         runCatching { if (usesList) effectiveListState.scrollToItem(i) else effectiveGridState.scrollToItem(i) }
     }
     val stepper = remember { VodStepper(scope) { effectiveListState } }
@@ -341,14 +348,15 @@ private fun SeriesGrid(
     // Tiles the provider gave no artwork for: ask for the TMDB poster already cached from an earlier
     // focus, so the placeholder is only shown when nothing at all is known (mirrors Movies).
     val cachedPosters by vm.cachedPosters.collectAsStateWithLifecycle()
-    LaunchedEffect(effectiveGridState, effectiveListState, viewMode, series) {
+    val overridden by vm.overriddenSeries.collectAsStateWithLifecycle()
+    LaunchedEffect(effectiveGridState, effectiveListState, viewMode, series, runway) {
         val grid = !usesList
         snapshotFlow {
-            val indices = if (grid) effectiveGridState.layoutInfo.visibleItemsInfo.map { it.index }
+            val indices = if (runway) runwayWindow.toList() else if (grid) effectiveGridState.layoutInfo.visibleItemsInfo.map { it.index }
             else effectiveListState.layoutInfo.visibleItemsInfo.map { it.index }
-            indices.filter { it < series.itemCount }
-                .mapNotNull { series.peek(it) }
-                .filter { it.posterUrl.isNullOrBlank() }
+            val shown = indices.filter { it < series.itemCount }.mapNotNull { series.peek(it) }
+            vm.onSeriesVisible(shown)
+            shown.filter { it.posterUrl.isNullOrBlank() || it.id in overridden }
         }.distinctUntilChanged().collect { vm.onPosterlessVisible(it) }
     }
 
@@ -491,7 +499,11 @@ private fun SeriesGrid(
     val panelShares = rememberPanelShares(PanelSection.SERIES, settingsVm)
     val cinematicSheetPct by settingsVm.cinematicSheetWidth(PanelSection.SERIES).collectAsStateWithLifecycle()
     val selectedMeta = selectedSeriesMeta?.takeIf { it.seriesId == selectedSeries?.id }?.cache
-    val titleInfo = selectedSeries?.let { seriesTitleInfo(it, selectedMeta, metadataMode.tmdbWins) }
+    val titleInfo = selectedSeries?.let { seriesTitleInfo(it, selectedMeta, metadataMode.tmdbWins || it.id in overridden) }
+    LaunchedEffect(selectedSeries?.id, titleInfo?.backdropUrl) {
+        val id = selectedSeries?.id ?: return@LaunchedEffect
+        titleInfo?.backdropUrl?.takeIf { it.isNotBlank() }?.let { runwayBackdrops[id] = it }
+    }
     val (categoryEntries, groupsHeading) = vodCategoryEntries(railItems, railCounts, playlistMarks, series = true)
     val headerLabel = if (selectedItem?.key is LiveKey.Folder || selectedItem?.key is LiveKey.Custom) ProviderTags.parse(selectedLabel).name else selectedLabel
 
@@ -542,11 +554,17 @@ private fun SeriesGrid(
         vm.onSeriesFocused(show)
         if (rememberSeries) perCategorySeriesIds[selectedKey] = show.id
     }
-    val posterOf: (tv.own.owntv.core.database.entity.SeriesEntity) -> String? = { it.posterUrl?.takeIf { u -> u.isNotBlank() } ?: cachedPosters[it.id] }
+    val posterOf: (tv.own.owntv.core.database.entity.SeriesEntity) -> String? = {
+        val own = it.posterUrl?.takeIf { u -> u.isNotBlank() }
+        if (it.id in overridden) cachedPosters[it.id] ?: own else own ?: cachedPosters[it.id]
+    }
     val playHint = stringResource(R.string.common_ok) to stringResource(R.string.content_episodes)
     val optionsHint = stringResource(R.string.content_key_hold_ok) to stringResource(R.string.content_key_options)
 
     // The toolbar and the titles: one focus group, entered on a title, never the search field.
+    // glcn: Up from the search / sort row is a deliberate move to the menu above; from the grid it stays trapped (a held key
+    // outrunning the lazy grid must not escape there).
+    var toolbarHasFocus by remember { mutableStateOf(false) }
     val paneModifier = Modifier
         .onFocusChanged { gridPaneFocused = it.hasFocus }
         .chNavPaging(
@@ -599,20 +617,17 @@ private fun SeriesGrid(
                     androidx.compose.ui.focus.FocusDirection.Right -> cancelFocusChange()
                     // Pinned (More) keeps Up for its tabs.
                     androidx.compose.ui.focus.FocusDirection.Up, androidx.compose.ui.focus.FocusDirection.Down ->
-                        if (lockedKey == null) cancelFocusChange()
+                        if (lockedKey == null && !(requestedFocusDirection == androidx.compose.ui.focus.FocusDirection.Up && toolbarHasFocus)) cancelFocusChange()
                     else -> Unit
                 }
             }
         }
         .focusGroup()
-    // ◀ from the search field opens the categories, as from the titles — with a query too (a search that
-    // found nothing here may be in another category), but not while typing, where ◀ moves the cursor.
+    // ◀ from the search field goes to the menu, but not while typing, where ◀ moves the cursor.
     var searchEditing by remember { mutableStateOf(false) }
     val searchLeft = Modifier.onPreviewKeyEvent { e ->
-        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft && !searchEditing && lockedKey == null) {
-            if (cinematic) categoriesOpen = true else runCatching { railFocus.requestFocus() }
-            true
-        } else false
+        // glcn: ◀ is not taken here — the shell moves it to the menu.
+        e.key == Key.Unknown
     }
     val emptyText = if (searchQuery.isNotBlank()) stringResource(R.string.content_no_series_found, searchQuery.trim()) else stringResource(R.string.content_no_series_here)
 
@@ -640,6 +655,7 @@ private fun SeriesGrid(
                         Modifier.padding(start = fx(68), end = fx(64)).fillMaxWidth()
                             // ▼ from the toolbar returns to the title the hero shows, not the poster below the tool.
                             .onPreviewKeyEvent { e -> e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown && focusCurrentTitle() }
+                            .onFocusChanged { toolbarHasFocus = it.hasFocus }
                             .focusGroup(),
                         horizontalArrangement = Arrangement.spacedBy(10.mpx),
                         verticalAlignment = Alignment.CenterVertically,
@@ -653,7 +669,7 @@ private fun SeriesGrid(
                         VodSortTool(sortMode, Modifier.focusRequester(sortFocus)) { sortOpen = true }
                         StageTool(text = stringResource(R.string.content_category_browser_title), icon = OwnTVIcon.LIST, onClick = { categoriesOpen = true })
                         Spacer(Modifier.weight(1f))
-                        StageKeyHints(listOf(playHint, optionsHint, "◀" to stringResource(R.string.content_category_browser_title)))
+                        StageKeyHints(listOf(playHint, optionsHint))
                     }
                     if (series.itemCount == 0) {
                         Text(emptyText, style = stageText(20, 500), color = StageColors.Muted, modifier = Modifier.padding(start = fx(84), top = 60.mpx))
@@ -665,22 +681,23 @@ private fun SeriesGrid(
                         val columns = ((rowW + 26.mpx) / 222.mpx).toInt().coerceAtLeast(1)
                         // A fixed gap under the toolbar that scrolling posters never enter; the grid's own
                         // top padding is only the room the focused poster's lift and ring need.
-                        Spacer(Modifier.height(14.mpx))
-                        CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
-                            LazyVerticalGrid(
-                                state = effectiveGridState,
-                                columns = GridCells.Fixed(columns),
-                                horizontalArrangement = Arrangement.spacedBy(26.mpx),
-                                verticalArrangement = Arrangement.spacedBy(30.mpx),
-                                contentPadding = PaddingValues(start = fx(84), end = fx(64), top = 14.mpx, bottom = glowRoom),
-                                modifier = Modifier.fillMaxWidth().weight(1f),
-                            ) {
-                                items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
-                                    val show = series[index] ?: return@items
+                        Spacer(Modifier.height(24.mpx))
+                        val glide = remember(effectiveGridState) { tv.own.owntv.glcn.GlideScroller(effectiveGridState, glideScope) }
+                        if (runway) {
+                            Spacer(Modifier.height(10.mpx))
+                            tv.own.owntv.glcn.PosterRunway(
+                                count = series.itemCount,
+                                focusedAt = runwayAt.coerceIn(0, (series.itemCount - 1).coerceAtLeast(0)),
+                                narrow = 196.mpx, wide = 520.mpx, gap = 26.mpx,
+                                modifier = Modifier.padding(start = fx(84), end = fx(64)).fillMaxWidth().padding(vertical = 18.mpx),
+                                onWindow = { runwayWindow = it },
+                            ) { index, wideness ->
+                                val show = series[index]
+                                if (show == null) Spacer(Modifier.fillMaxWidth().height(294.mpx)) else {
                                     StagePoster(
                                         title = show.name,
                                         rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
-                                        width = 196.mpx, height = 294.mpx,
+                                        width = 196.mpx, height = 294.mpx, fillWidth = true,
                                         progress = seriesProgress[show.id],
                                         watched = show.id in completedSeries,
                                         fresh = tv.own.owntv.ui.stage.isFreshlyAdded(show.addedAt),
@@ -693,17 +710,60 @@ private fun SeriesGrid(
                                                 selectedId = targetSeriesId, selectedFocus = gridSelFocus,
                                                 firstItemFocus = firstItemFocus,
                                             )
-                                            .onFocusChanged { if (it.isFocused) onShowFocus(show) }
+                                            .onFocusChanged { if (it.isFocused) { onShowFocus(show); runwayAt = index } }
                                             .onPreviewKeyEvent { e ->
-                                                if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                                                when (e.key) {
-                                                    Key.Menu -> { openMenu(show, index); true }
-                                                    // ◀ from the first column opens the categories.
-                                                    Key.DirectionLeft -> index % columns == 0 && run { categoriesOpen = true; true }
-                                                    else -> false
-                                                }
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true } else false
                                             },
-                                    ) { VodPosterArt(posterOf(show), OwnTVIcon.SERIES) }
+                                    ) {
+                                        VodPosterArt(posterOf(show), OwnTVIcon.SERIES)
+                                        val wide = runwayBackdrops[show.id]
+                                        if (wide != null) coil3.compose.AsyncImage(
+                                            model = wide, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = wideness() },
+                                        )
+                                    }
+                                }
+                            }
+                        } else
+                        CompositionLocalProvider(LocalBringIntoViewSpec provides tv.own.owntv.glcn.NoBringIntoViewSpec) {
+                            tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f)) {
+                                LazyVerticalGrid(
+                                    state = effectiveGridState,
+                                    columns = GridCells.Fixed(columns),
+                                    horizontalArrangement = Arrangement.spacedBy(26.mpx),
+                                    verticalArrangement = Arrangement.spacedBy(30.mpx),
+                                    contentPadding = PaddingValues(start = fx(84), end = fx(64), top = 14.mpx, bottom = glowRoom),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
+                                        val show = series[index] ?: return@items
+                                        StagePoster(
+                                            title = show.name,
+                                            rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
+                                            width = 196.mpx, height = 294.mpx,
+                                            progress = seriesProgress[show.id],
+                                            watched = show.id in completedSeries,
+                                            fresh = tv.own.owntv.ui.stage.isFreshlyAdded(show.addedAt),
+                                            onClick = { onOpenAt(index); vm.openSeries(show) },
+                                            onLongClick = { openMenu(show, index) },
+                                            modifier = Modifier
+                                                .gridFocusTarget(
+                                                    itemId = show.id, index = index,
+                                                    contextId = contextSeriesId, contextFocus = contextFocus,
+                                                    selectedId = targetSeriesId, selectedFocus = gridSelFocus,
+                                                    firstItemFocus = firstItemFocus,
+                                                )
+                                                .onFocusChanged { if (it.isFocused) { onShowFocus(show); glide.focused(index) } }
+                                                .onPreviewKeyEvent { e ->
+                                                    if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                                    when (e.key) {
+                                                        Key.Menu -> { openMenu(show, index); true }
+                                                        // ◀ from the first column goes to the menu; categories open from their button or a shortcut.
+                                                        else -> false
+                                                    }
+                                                },
+                                        ) { VodPosterArt(posterOf(show), OwnTVIcon.SERIES) }
+                                    }
                                 }
                             }
                         }
@@ -752,7 +812,7 @@ private fun SeriesGrid(
             }
             Column(Modifier.padding(start = listX, top = top).width(listW).fillMaxHeight().then(paneModifier)) {
                 Row(
-                    Modifier.fillMaxWidth().focusGroup(),
+                    Modifier.fillMaxWidth().onFocusChanged { toolbarHasFocus = it.hasFocus }.focusGroup(),
                     horizontalArrangement = Arrangement.spacedBy(10.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -833,38 +893,40 @@ private fun SeriesGrid(
                     // A fixed gap under the toolbar that scrolled posters never enter (as Cinematic).
                     Spacer(Modifier.height(20.mpx))
                     CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
-                        LazyVerticalGrid(
-                            state = effectiveGridState,
-                            columns = GridCells.Fixed(columns),
-                            horizontalArrangement = Arrangement.spacedBy(20.mpx),
-                            verticalArrangement = Arrangement.spacedBy(30.mpx),
-                            contentPadding = PaddingValues(start = glowRoom, end = glowRoom, top = 12.mpx, bottom = 24.mpx),
-                            modifier = Modifier.fillMaxWidth().weight(1f).then(glowWide),
-                        ) {
-                            items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
-                                val show = series[index] ?: return@items
-                                StagePoster(
-                                    title = show.name,
-                                    rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
-                                    width = posterW, height = posterW * 1.5f,
-                                    compact = true,
-                                    progress = seriesProgress[show.id],
-                                    watched = show.id in completedSeries,
-                                    fresh = tv.own.owntv.ui.stage.isFreshlyAdded(show.addedAt),
-                                    onClick = { onOpenAt(index); vm.openSeries(show) },
-                                    onLongClick = { openMenu(show, index) },
-                                    modifier = Modifier
-                                        .gridFocusTarget(
-                                            itemId = show.id, index = index,
-                                            contextId = contextSeriesId, contextFocus = contextFocus,
-                                            selectedId = targetSeriesId, selectedFocus = gridSelFocus,
-                                            firstItemFocus = firstItemFocus,
-                                        )
-                                        .onFocusChanged { if (it.isFocused) onShowFocus(show) }
-                                        .onPreviewKeyEvent { e ->
-                                            if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true } else false
-                                        },
-                                ) { VodPosterArt(posterOf(show), OwnTVIcon.SERIES) }
+                        tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f).then(glowWide)) {
+                            LazyVerticalGrid(
+                                state = effectiveGridState,
+                                columns = GridCells.Fixed(columns),
+                                horizontalArrangement = Arrangement.spacedBy(20.mpx),
+                                verticalArrangement = Arrangement.spacedBy(30.mpx),
+                                contentPadding = PaddingValues(start = glowRoom, end = glowRoom, top = 12.mpx, bottom = 24.mpx),
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
+                                    val show = series[index] ?: return@items
+                                    StagePoster(
+                                        title = show.name,
+                                        rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
+                                        width = posterW, height = posterW * 1.5f,
+                                        compact = true,
+                                        progress = seriesProgress[show.id],
+                                        watched = show.id in completedSeries,
+                                        fresh = tv.own.owntv.ui.stage.isFreshlyAdded(show.addedAt),
+                                        onClick = { onOpenAt(index); vm.openSeries(show) },
+                                        onLongClick = { openMenu(show, index) },
+                                        modifier = Modifier
+                                            .gridFocusTarget(
+                                                itemId = show.id, index = index,
+                                                contextId = contextSeriesId, contextFocus = contextFocus,
+                                                selectedId = targetSeriesId, selectedFocus = gridSelFocus,
+                                                firstItemFocus = firstItemFocus,
+                                            )
+                                            .onFocusChanged { if (it.isFocused) onShowFocus(show) }
+                                            .onPreviewKeyEvent { e ->
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true } else false
+                                            },
+                                    ) { VodPosterArt(posterOf(show), OwnTVIcon.SERIES) }
+                                }
                             }
                         }
                     }
@@ -1033,7 +1095,7 @@ private fun SeriesGrid(
             value = runCatching { vm.relatedTo(s) }.getOrDefault(emptyList())
         }
         tv.own.owntv.features.shell.components.MediaDetailsScreen(
-            details = buildSeriesDetails(s, cache, metadataMode.tmdbWins).copy(related = related),
+            details = buildSeriesDetails(s, cache, metadataMode.tmdbWins || s.id in overridden).copy(related = related),
             onExit = { detailsSeries = null },
         )
     }
@@ -1053,9 +1115,10 @@ private fun SeriesGrid(
                 initialTitle = p.title,
                 initialYear = p.year,
                 hasOverride = p.hasOverride,
-                onSave = { title, year ->
+                initialTmdbId = p.tmdbId,
+                onSave = { title, year, tmdbId ->
                     setTmdbNameSeries = null
-                    vm.setSeriesTmdbName(s, title, year)
+                    vm.setSeriesTmdbName(s, title, year, tmdbId)
                     toast.show(researchingTmdbMessage)
                 },
                 onClear = {
@@ -1290,7 +1353,9 @@ private fun EpisodeView(
     // from Home or a Continue pill never focused it in the grid.
     LaunchedEffect(series.id) { vm.onSeriesFocused(series) }
     val seriesMeta = selectedSeriesMeta?.takeIf { it.seriesId == series.id }?.cache
-    val info = seriesTitleInfo(series, seriesMeta, metadataMode.tmdbWins)
+    val overriddenIds by vm.overriddenSeries.collectAsStateWithLifecycle()
+    val handFixed = series.id in overriddenIds
+    val info = seriesTitleInfo(series, seriesMeta, metadataMode.tmdbWins || handFixed)
     val categoryName = series.categoryId
         ?.let { id -> railItems.firstOrNull { it.key == LiveKey.Folder(id) } }
         ?.let { ProviderTags.parse(it.displayLabel(R.string.content_category_all_series)).name }
@@ -1837,7 +1902,7 @@ private fun EpisodeView(
             value = runCatching { vm.relatedTo(series) }.getOrDefault(emptyList())
         }
         tv.own.owntv.features.shell.components.MediaDetailsScreen(
-            details = buildSeriesDetails(series, seriesMeta, metadataMode.tmdbWins).copy(related = related),
+            details = buildSeriesDetails(series, seriesMeta, metadataMode.tmdbWins || handFixed).copy(related = related),
             onExit = { showSeriesDetails = false },
         )
     }
@@ -1849,7 +1914,8 @@ private fun EpisodeView(
                 initialTitle = p.title,
                 initialYear = p.year,
                 hasOverride = p.hasOverride,
-                onSave = { title, year -> setTmdbName = false; vm.setSeriesTmdbName(series, title, year); toast.show(researchingTmdbMessage) },
+                initialTmdbId = p.tmdbId,
+                onSave = { title, year, tmdbId -> setTmdbName = false; vm.setSeriesTmdbName(series, title, year, tmdbId); toast.show(researchingTmdbMessage) },
                 onClear = { setTmdbName = false; vm.clearSeriesTmdbName(series); toast.show(researchingTmdbMessage) },
                 onDismiss = { setTmdbName = false },
             )

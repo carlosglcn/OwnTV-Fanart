@@ -26,6 +26,8 @@ import tv.own.owntv.ui.theme.mpx
 @Composable
 fun GlcnStyle.label(): String = stringResource(
     when (this) {
+        GlcnStyle.LUMEN_NOCHE -> R.string.glcn_style_lumen_noche
+        GlcnStyle.LUMEN_DIA -> R.string.glcn_style_lumen_dia
         GlcnStyle.ATARDECER -> R.string.glcn_style_atardecer
         GlcnStyle.ESTUDIO -> R.string.glcn_style_estudio
         GlcnStyle.VITRINA -> R.string.glcn_style_vitrina
@@ -60,26 +62,3 @@ fun StyleSwatch(style: GlcnStyle, modifier: Modifier = Modifier) {
     }
 }
 
-/** Settings › Fanart › Style: the eight styles, or the user's own choices ("None"). */
-@Composable
-fun StylePickerPopup(current: GlcnStyle?, onPick: (GlcnStyle?) -> Unit, onDismiss: () -> Unit) {
-    val first = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
-    StagePopup(onDismiss = onDismiss, title = stringResource(R.string.glcn_style_title), body = stringResource(R.string.glcn_style_desc)) {
-        GlcnStyle.entries.forEachIndexed { i, st ->
-            StagePopupOption(
-                title = st.label(),
-                subtitle = st.kind(),
-                onClick = { onPick(st); onDismiss() },
-                modifier = if (i == 0) Modifier.focusRequester(first) else Modifier,
-                leading = { focused -> StagePopupRadio(on = st == current, focused = focused); StyleSwatch(st) },
-            )
-        }
-        StagePopupOption(
-            title = stringResource(R.string.glcn_style_none),
-            subtitle = stringResource(R.string.glcn_style_none_desc),
-            onClick = { onPick(null); onDismiss() },
-            leading = { focused -> StagePopupRadio(on = current == null, focused = focused) },
-        )
-    }
-}

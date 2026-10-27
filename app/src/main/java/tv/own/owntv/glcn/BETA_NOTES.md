@@ -1,0 +1,1 @@
+- 🌙 Lumen styles: a bright background picture no longer washes out the page — the picture now sits under the style's own page tone, so text stays readable

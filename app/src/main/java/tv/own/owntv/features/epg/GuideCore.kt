@@ -25,10 +25,12 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -75,8 +77,11 @@ internal fun ProgrammeStripCanvas(
     catchupIds: Set<Long>,
     recordingStarts: Set<Long>,
     reminderStarts: Set<Long>,
-    /** How far the timeline is scrolled, shared by every row and the ruler. */
-    scrollPx: Int,
+    /** How far the timeline is scrolled, shared by every row and the ruler. Read while drawing, so it can glide. */
+    scrollPx: () -> Int,
+    /** glcn: the sliding cursor that is drawn behind the rows; this row only colours its text by how near it is. */
+    cursor: GuideCursor? = null,
+    rowIndex: Int = 0,
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
     val measurer = rememberTextMeasurer(cacheSize = 64)
@@ -98,21 +103,18 @@ internal fun ProgrammeStripCanvas(
     // A row with nothing in the window says so, rather than looking broken.
     val emptyText = stringResource(R.string.content_epg_no_programme)
     // Clipped at the timeline's left edge only, so a focused cell's glow still spills up and down.
-    Canvas(Modifier.fillMaxSize()) { clipRect(left = 0f, top = -size.height, right = size.width + 40 * px, bottom = size.height * 2) {
-        // The focused cell's ring. In light the focus colour is the accent, the cell's own fill, so the
-        // ring stands off it with a page-coloured gap first (`.mine.light .gcell.f`: 2.5 page + 2.5 accent).
-        fun focusRing(x0: Float, w: Float, h: Float, r: CornerRadius) {
-            if (palette.isLight) {
-                for ((colour, out) in listOf(palette.page to 1.25f * px, a.accent to 3.75f * px)) {
-                    drawRoundRect(colour, Offset(x0 - out, -out), Size(w + 2 * out, h + 2 * out), CornerRadius(r.x + out), style = Stroke(2.5f * px))
-                }
-            } else {
-                drawRoundRect(a.focus, Offset(x0 - px, -px), Size(w + 2 * px, h + 2 * px), CornerRadius(r.x + px), style = Stroke(2 * px))
-            }
-        }
+    Canvas(Modifier.fillMaxSize()) { val scrollPx = scrollPx(); clipRect(left = 0f, top = -size.height, right = size.width + 40 * px, bottom = size.height * 2) {
+        fun focusRing(x0: Float, w: Float, h: Float, r: CornerRadius) = guideFocusRing(palette, a, px, Rect(x0, 0f, x0 + w, h), r.x)
         val viewW = size.width
         val h = size.height
         val r = CornerRadius(14 * px)
+        val rowGlide = if (cursor != null && focusTime != null) 1f - (kotlin.math.abs(cursor.rowOff.value) / (GuideGridDefaults.RowHeight.toPx() + GuideGridDefaults.RowGap.toPx())).coerceIn(0f, 1f) else 1f
+        // How much of the cursor box is under a cell right now (1 once it has arrived), so its text turns dark with it.
+        fun glide(x0c: Float, w0c: Float): Float {
+            if (cursor == null) return 1f
+            val d = kotlin.math.abs((cursor.x.value + cursor.w.value / 2f) - (x0c + w0c / 2f))
+            return (1f - d / (w0c / 2f + 24 * px)).coerceIn(0f, 1f) * rowGlide * cursor.cellAlpha.value
+        }
         // Feeds sometimes carry two programmes for the same time. Each one is drawn from where the one
         // before it ends, so they never sit on top of each other; one hidden completely is left out.
         var shownUntil = windowStart
@@ -125,10 +127,13 @@ internal fun ProgrammeStripCanvas(
             val gx1 = (((gapEnd - windowStart) / 60_000f) * pxPerMin - scrollPx - 3 * px).coerceAtMost(viewW)
             if (gx1 > gx0) {
                 val box = androidx.compose.ui.geometry.Rect(gx0, 0f, gx1, h)
-                drawBoxShadow(a.accent.copy(alpha = 0.4f), 34 * px, r.x, dy = 12 * px, bounds = box)
-                drawRoundRect(a.accent, Offset(gx0, 0f), Size(gx1 - gx0, h), r)
-                focusRing(gx0, gx1 - gx0, h, r)
-                val label = measurer.measure(emptyText, timeStyle.copy(color = a.onAccent), maxLines = 1, softWrap = false)
+                if (cursor == null) {
+                    drawBoxShadow(a.accent.copy(alpha = 0.4f), 34 * px, r.x, dy = 12 * px, bounds = box)
+                    drawRoundRect(a.accent, Offset(gx0, 0f), Size(gx1 - gx0, h), r)
+                    focusRing(gx0, gx1 - gx0, h, r)
+                }
+                val gb = glide(gx0 + scrollPx, gx1 - gx0)
+                val label = measurer.measure(emptyText, timeStyle.copy(color = androidx.compose.ui.graphics.lerp(dimColor, a.onAccent, gb)), maxLines = 1, softWrap = false)
                 drawText(label, topLeft = Offset(gx0 + 14 * px, (h - label.size.height) / 2f))
                 drawnAny = true
             }
@@ -138,28 +143,37 @@ internal fun ProgrammeStripCanvas(
             val e0 = p.stopMs.coerceIn(windowStart, windowEnd)
             if (e0 <= s0) return@forEachIndexed
             shownUntil = e0
-            val x = ((s0 - windowStart) / 60_000f) * pxPerMin - scrollPx.toFloat() + 3 * px
-            val w = ((e0 - s0) / 60_000f) * pxPerMin - 6 * px
-            if (w <= 0f || x + w <= 0f || x >= viewW) return@forEachIndexed
+            val x0 = ((s0 - windowStart) / 60_000f) * pxPerMin - scrollPx.toFloat() + 3 * px
+            val w0 = ((e0 - s0) / 60_000f) * pxPerMin - 6 * px
+            if (w0 <= 0f || x0 + w0 <= 0f || x0 >= viewW) return@forEachIndexed
             drawnAny = true
             val focused = focusTime != null && focusTime in p.startMs until p.stopMs
+            // glcn: the focused cell is kept whole inside the visible timeline, so a programme that runs past
+            // either edge still shows its rounded corners and ring instead of being cut off mid-frame.
+            val x = if (focused) maxOf(x0, 4 * px) else x0
+            val w = if (focused) minOf(x0 + w0, viewW - 4 * px) - x else w0
+            if (w <= 0f) return@forEachIndexed
             val isNow = now in p.startMs until p.stopMs
             val fade = if (!focused && p.stopMs <= now) 0.5f else 1f
             val box = androidx.compose.ui.geometry.Rect(x, 0f, x + w, h)
-            if (focused) {
+            val blend = if (focused) glide(x0 + scrollPx, w0) else 0f
+            if (focused && cursor == null) {
                 drawBoxShadow(a.accent.copy(alpha = 0.4f), 34 * px, r.x, dy = 12 * px, bounds = box)
                 drawRoundRect(a.accent, Offset(x, 0f), Size(w, h), r)
                 focusRing(x, w, h, r)
-            } else {
+            } else if (!focused) {
                 drawRoundRect(ink.copy(alpha = (if (isNow) 0.085f else 0.045f) * fade), Offset(x, 0f), Size(w, h), r)
             }
             // Text starts at the visible part of a cell that began before the timeline's left edge.
             val tx = maxOf(x, 0f)
             val textW = (x + w - tx - 28 * px).toInt()
             if (textW <= 4) return@forEachIndexed
-            val titleColor = if (focused) a.onAccent else textColor.copy(alpha = fade)
-            val smallColor = if (focused) Color.Black.copy(alpha = 0.6f) else dimColor.copy(alpha = fade)
-            val iconColor = if (focused) a.onAccent else a.accent.copy(alpha = fade)
+            val lerpC = androidx.compose.ui.graphics.lerp(textColor.copy(alpha = fade), a.onAccent, blend)
+            val titleColor = if (cursor == null) (if (focused) a.onAccent else textColor.copy(alpha = fade)) else lerpC
+            val smallColor = if (cursor == null) (if (focused) Color.Black.copy(alpha = 0.6f) else dimColor.copy(alpha = fade))
+                else androidx.compose.ui.graphics.lerp(dimColor.copy(alpha = fade), Color.Black.copy(alpha = 0.6f), blend)
+            val iconColor = if (cursor == null) (if (focused) a.onAccent else a.accent.copy(alpha = fade))
+                else androidx.compose.ui.graphics.lerp(a.accent.copy(alpha = fade), a.onAccent, blend)
             val title = measurer.measure(p.title, titleStyle.copy(color = titleColor), overflow = TextOverflow.Ellipsis, maxLines = 1, softWrap = false, constraints = Constraints(maxWidth = textW))
             // glcn: title and time centred in the (taller) row together.
             val textTop = ((h - title.size.height - 3 * px - 20 * px) / 2f).coerceAtLeast(8 * px)
@@ -173,7 +187,7 @@ internal fun ProgrammeStripCanvas(
                 drawStageGlyph(g, c, Offset(cx, lineTop + 2 * px), icon, filled)
                 cx += icon + 8 * px
             }
-            if (p.startMs in recordingStarts) glyph(OwnTVIcon.REC, if (focused) a.onAccent else recRed.copy(alpha = fade), filled = true)
+            if (p.startMs in recordingStarts) glyph(OwnTVIcon.REC, if (cursor == null) (if (focused) a.onAccent else recRed.copy(alpha = fade)) else androidx.compose.ui.graphics.lerp(recRed.copy(alpha = fade), a.onAccent, blend), filled = true)
             if (p.startMs in reminderStarts) glyph(OwnTVIcon.BELL, iconColor)
             if (p.id in catchupIds) glyph(OwnTVIcon.REWIND, iconColor)
             val timeW = (x + w - 14 * px - cx).toInt()
@@ -377,4 +391,66 @@ internal fun CatchupPlayerChooser(
             leading = { tv.own.owntv.ui.stage.StagePopupIcon(OwnTVIcon.EXTERNAL) },
         )
     }
+}
+
+
+/** glcn: the focus ring of a guide cell; in light the accent is the cell's own fill, so the ring stands off it with a page gap first. */
+internal fun DrawScope.guideFocusRing(palette: tv.own.owntv.ui.theme.StagePalette, a: tv.own.owntv.ui.theme.StageAccent, px: Float, box: Rect, radius: Float) {
+    val w = box.width; val h = box.height
+    if (palette.isLight) {
+        for ((colour, out) in listOf(palette.page to 1.25f * px, a.accent to 3.75f * px)) {
+            drawRoundRect(colour, Offset(box.left - out, box.top - out), Size(w + 2 * out, h + 2 * out), CornerRadius(radius + out), style = Stroke(2.5f * px))
+        }
+    } else {
+        drawRoundRect(a.focus, Offset(box.left - px, box.top - px), Size(w + 2 * px, h + 2 * px), CornerRadius(radius + px), style = Stroke(2 * px))
+    }
+}
+
+/** glcn: the focused cell's glow, fill and ring, drawn once behind the rows so it can slide from cell to cell. */
+internal fun DrawScope.drawGuideCursor(box: Rect, a: tv.own.owntv.ui.theme.StageAccent, palette: tv.own.owntv.ui.theme.StagePalette, px: Float) {
+    val r = 14 * px
+    drawBoxShadow(a.accent.copy(alpha = 0.4f), 34 * px, r, dy = 12 * px, bounds = box)
+    drawRoundRect(a.accent, box.topLeft, box.size, CornerRadius(r))
+    guideFocusRing(palette, a, px, box, r)
+}
+
+/** glcn: the animated state of the guide's cursor, shared by the overlay behind the rows and the rows' text. */
+internal class GuideCursor(
+    /** Left and width of the focused cell in timeline pixels (not scrolled). */
+    val x: androidx.compose.animation.core.Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
+    val w: androidx.compose.animation.core.Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
+    /** How far the box is from the focused row's own place (pixels, → 0). */
+    val rowOff: androidx.compose.animation.core.Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
+    val rowAlpha: androidx.compose.animation.core.Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
+    val cellAlpha: androidx.compose.animation.core.Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
+)
+
+/** Where the cell at [focusTime] sits on the unscrolled timeline: (left, width) in pixels, as the strip draws it. */
+internal fun cellBoxContent(
+    programmes: List<EpgProgrammeEntity>,
+    focusTime: Long,
+    windowStart: Long,
+    windowEnd: Long,
+    pxPerMin: Float,
+    px: Float,
+): Pair<Float, Float>? {
+    if (programmes.none { focusTime in it.startMs until it.stopMs }) {
+        val gs = (programmes.lastOrNull { it.stopMs <= focusTime }?.stopMs ?: windowStart).coerceAtLeast(windowStart)
+        val ge = (programmes.firstOrNull { it.startMs > focusTime }?.startMs ?: windowEnd).coerceAtMost(windowEnd)
+        val x0 = ((gs - windowStart) / 60_000f) * pxPerMin + 3 * px
+        val x1 = ((ge - windowStart) / 60_000f) * pxPerMin - 3 * px
+        return if (x1 > x0) x0 to (x1 - x0) else null
+    }
+    var shownUntil = windowStart
+    for (p in programmes) {
+        val s0 = p.startMs.coerceIn(windowStart, windowEnd).coerceAtLeast(shownUntil)
+        val e0 = p.stopMs.coerceIn(windowStart, windowEnd)
+        if (e0 <= s0) continue
+        shownUntil = e0
+        if (focusTime in p.startMs until p.stopMs) {
+            val w = ((e0 - s0) / 60_000f) * pxPerMin - 6 * px
+            return if (w > 0f) (((s0 - windowStart) / 60_000f) * pxPerMin + 3 * px) to w else null
+        }
+    }
+    return null
 }

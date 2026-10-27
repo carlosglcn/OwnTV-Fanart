@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -44,6 +45,7 @@ import tv.own.owntv.ui.components.chNavPaging
 import tv.own.owntv.ui.components.jumpLazyListTo
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.pluralStringResource
@@ -116,6 +118,7 @@ internal fun GuideVideo(
     val previewState by previewEngine.state.collectAsStateWithLifecycle()
     val playing = showVideo && previewState != tv.own.owntv.player.LivePreviewEngine.State.ERROR &&
         previewState != tv.own.owntv.player.LivePreviewEngine.State.IDLE
+    val loading = showVideo && previewState == tv.own.owntv.player.LivePreviewEngine.State.LOADING
     val r = 28.mpx
     val videoShadow = tv.own.owntv.ui.theme.stageShadow(0.55f)
     Box(
@@ -126,12 +129,18 @@ internal fun GuideVideo(
             .background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
-        if (channel != null) {
-            ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.size(200.mpx), fill = Color.Transparent) {
-                OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(48.mpx))
-            }
-        }
         if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
+        if (channel != null && (!playing || loading)) {
+            // glcn: the channel's logo large and soft toward the right while nothing plays — and while the new channel
+            // is still loading, instead of a black square with a spinner.
+            if (loading) Box(Modifier.fillMaxSize().background(Color.Black))
+            ChannelLogoTile(
+                logoUrl = channel.displayLogoUrl,
+                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f).graphicsLayer { alpha = 0.34f },
+                fill = Color.Transparent,
+            ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(48.mpx)) }
+            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.5f to Color.Transparent)))
+        }
         if (showVideo && previewState == tv.own.owntv.player.LivePreviewEngine.State.LOADING) OwnTVSpinner(sizeDp = 24)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.58f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.72f))))
         Box(Modifier.fillMaxSize().drawBehind { drawInnerRing(Color.White.copy(alpha = 0.08f), 1.mpx.toPx(), r.toPx()) })
@@ -182,7 +191,14 @@ internal fun GuideProgrammeBlock(
     modifier: Modifier = Modifier,
 ) {
     val a = stageAccent
-    Column(modifier) {
+    // glcn: a new programme's words rise in softly rather than cutting over.
+    val rise = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(1f) }
+    androidx.compose.runtime.LaunchedEffect(title, eyebrow) {
+        if (tv.own.owntv.glcn.LowRam.on) return@LaunchedEffect
+        rise.snapTo(0f)
+        rise.animateTo(1f, androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+    }
+    Column(modifier.graphicsLayer { alpha = 0.2f + 0.8f * rise.value; translationY = (1f - rise.value) * 10.mpx.toPx() }) {
         if (eyebrow != null) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                 OwnTVIcon(OwnTVIcon.CLOCK, a.accent, Modifier.size(18.mpx))
@@ -214,7 +230,7 @@ internal fun GuideRuler(
     windowStart: Long,
     windowEnd: Long,
     now: Long,
-    scrollPx: Int,
+    scrollPx: () -> Int,
     modifier: Modifier = Modifier,
 ) {
     val formatTime = rememberSystemTimeFormatter()
@@ -242,6 +258,7 @@ internal fun GuideRuler(
         val chipShift = 34.mpx.toPx()
         val placeables = measurables.map { it.measure(Constraints()) }
         layout(constraints.maxWidth, constraints.maxHeight) {
+            val scrollPx = scrollPx()
             placeables.forEachIndexed { i, pl ->
                 val isChip = nowIn && i == placeables.lastIndex
                 val t = if (isChip) now else times[i]
@@ -273,7 +290,7 @@ internal fun GuideChannelLabel(channel: ChannelEntity, name: String, dot: Color?
             // Always whole: the column fits the longest number in the list; only the name is cut.
             maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(numberWidth),
         )
-        LivePlate(channel.displayLogoUrl, 52.mpx, 38.mpx, radius = 10.mpx)
+        LivePlate(channel.displayLogoUrl, 68.mpx, 50.mpx, radius = 10.mpx)
         Text(name, style = stageText(17, 700), color = if (selected) a.accent else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
     }
 }

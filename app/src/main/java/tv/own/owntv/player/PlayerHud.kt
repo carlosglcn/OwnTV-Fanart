@@ -229,6 +229,10 @@ fun PlayerHud(
     // The other channels showing the match, and their count for the tool's label.
     onOtherChannels: (() -> Unit)? = null,
     otherChannelsCount: Int = 0,
+    /** glcn: live — pick another copy of this channel (FHD / HD / SD). Null = fewer than two copies. */
+    onChannelCopies: (() -> Unit)? = null,
+    /** glcn: live — the programme's own screen. When set, the Info button opens it (the technical data sit inside it). */
+    onProgrammeInfo: (() -> Unit)? = null,
     // The match page.
     // A goal toast for another followed match is up: OK switches to it instead of showing the controls.
     onToastOk: (() -> Unit)? = null,
@@ -797,10 +801,10 @@ fun PlayerHud(
                     onPreviousChannel = onPreviousChannel,
                     onChannels = if (isLive) onOpenChannelList?.let { open -> { controlsVisible = false; open() } } else null,
                     onGuide = if (isLive) onOpenGuide?.let { open -> { controlsVisible = false; open() } } else null,
-                    onOtherChannels = onOtherChannels, otherChannelsCount = otherChannelsCount,
+                    onOtherChannels = onOtherChannels, otherChannelsCount = otherChannelsCount, onChannelCopies = onChannelCopies,
                     compatMode = compatMode, onToggleCompatMode = toggleCompat,
                     vodOnExo = vodOnExo, onToggleVodEngine = toggleVod,
-                    onInfo = { showInfo = !showInfo }, infoOn = showInfo,
+                    onInfo = { if (isLive && onProgrammeInfo != null) { controlsVisible = false; onProgrammeInfo() } else showInfo = !showInfo }, infoOn = showInfo,
                     onReport = {
                         val meta = player.currentMeta.value
                         // The readout is gathered on the player's own thread now, so the report is

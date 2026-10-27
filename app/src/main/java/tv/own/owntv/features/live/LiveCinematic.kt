@@ -64,6 +64,7 @@ import tv.own.owntv.ui.stage.StageProgress
 import tv.own.owntv.ui.stage.StageSurface
 import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.mpx
+import tv.own.owntv.glcn.staggerAt
 import tv.own.owntv.ui.theme.mpxSp
 import tv.own.owntv.ui.theme.stageText
 
@@ -191,6 +192,7 @@ internal fun LiveCinematicPane(
                     modifier = Modifier.padding(start = 64.mpx, top = 40.mpx),
                 )
             } else {
+                val cardsGate = tv.own.owntv.glcn.rememberStaggerGate()
                 CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
                     LazyRow(
                         state = listState,
@@ -208,7 +210,7 @@ internal fun LiveCinematicPane(
                                 val rows = programmes[channel.id].orEmpty()
                                 val current = rows.firstOrNull { now in it.startMs until it.stopMs }
                                 val next = rows.filter { it.startMs >= (current?.stopMs ?: now) }.take(1)
-                                Column(Modifier.width(CARD_W.mpx)) {
+                                Column(Modifier.staggerAt(index, cardsGate, step = 70, cap = 7).width(CARD_W.mpx)) {
                                     LiveChannelCard(
                                         channel = channel,
                                         programme = current,
@@ -410,14 +412,18 @@ private fun LiveCinematicVideo(
         modifier.clip(RoundedCornerShape(24.mpx)).background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
-        if (!art.isNullOrBlank()) {
-            tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
-        } else if (channel != null) {
-            ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.size(220.mpx), fill = Color.Transparent) {
-                OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(56.mpx))
+        if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
+        // glcn: the picture shows until the video plays and while a new channel loads, not a black square.
+        if (!playing || loading) {
+            if (!art.isNullOrBlank()) {
+                tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
+            } else if (channel != null) {
+                if (loading) Box(Modifier.fillMaxSize().background(Color.Black))
+                ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.size(220.mpx), fill = Color.Transparent) {
+                    OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(56.mpx))
+                }
             }
         }
-        if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
         if (loading) OwnTVSpinner(sizeDp = 28)
         if (channel != null) {
             Box(Modifier.align(Alignment.TopStart).padding(start = 18.mpx, top = 16.mpx)) { StageLiveBadge(stringResource(R.string.player_live)) }

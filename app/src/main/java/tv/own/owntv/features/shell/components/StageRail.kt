@@ -267,7 +267,8 @@ fun StageRail(
                     active = section == selected ||
                         (section == MainSection.MORE && selected == MainSection.SETTINGS),
                     onClick = { onSelect(section) },
-                    modifier = if (section == focusSection) Modifier.focusRequester(selectedItemFocusRequester) else Modifier,
+                    modifier = (if (section == focusSection) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
+                        .selectOnRest(section.opensOnRest() && section != selected) { onSelect(section) },
                 )
             }
             // Full height: the profile sits at the bottom, after the last separator.
@@ -571,7 +572,8 @@ fun StageTopBar(
             if (nowPlaying != null) TopIcon(if (nowPlaying.audioMode) OwnTVIcon.EQ else OwnTVIcon.PLAY, false, onNowPlaying, accentIcon = true, k = k)
             named.forEach { section ->
                 val active = section == selected
-                val focusMod = if (section == focusSection) Modifier.focusRequester(selectedItemFocusRequester) else Modifier
+                val focusMod = (if (section == focusSection) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
+                    .selectOnRest(section.opensOnRest() && !active) { onSelect(section) }
                 if (compact && !active) {
                     // Compact: the section is its icon; only the open one shows its name.
                     TopIcon(section.stageIcon, false, { onSelect(section) }, focusMod, k = k)
@@ -628,4 +630,24 @@ private fun TopIcon(icon: OwnTVIcon, active: Boolean, onClick: () -> Unit, modif
     ) { focused ->
         OwnTVIcon(icon, when { focused -> a.onAccent; active || accentIcon -> a.accent; else -> StageColors.NavText }, Modifier.size((25 * k).toInt().mpx))
     }
+}
+
+/** glcn: sections that open by resting on them in the menu; Search and the More hub still wait for OK. */
+private fun MainSection.opensOnRest() = this != MainSection.SEARCH && this != MainSection.MORE && this != MainSection.SETTINGS
+
+/**
+ * glcn: resting the cursor on a menu entry opens it, no OK needed. The short wait keeps a cursor passing
+ * over entries from opening each one in turn.
+ */
+@Composable
+private fun Modifier.selectOnRest(enabled: Boolean, onRest: () -> Unit): Modifier {
+    var focused by remember { mutableStateOf(false) }
+    val latest by androidx.compose.runtime.rememberUpdatedState(onRest)
+    androidx.compose.runtime.LaunchedEffect(focused, enabled) {
+        if (focused && enabled) {
+            kotlinx.coroutines.delay(420)
+            latest()
+        }
+    }
+    return onFocusChanged { focused = it.hasFocus }
 }

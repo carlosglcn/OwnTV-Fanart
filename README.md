@@ -2,33 +2,47 @@
 
 # OwnTV Fanart
 
+🇪🇸 **[Leer en español](README.es.md)**
+
 **An unofficial, modified version of [OwnTV](https://github.com/ahXN00/OwnTV) by [ahXN00](https://github.com/ahXN00)**,
 maintained by [Carlos (carlosglcn)](https://github.com/carlosglcn). It keeps everything OwnTV does and puts the
 pictures first: the guide's fanart across Home, Live TV and the guide, and a few extras on top.
 
 > Please report problems with this version **here**, not to the original author.
 
-Oficial Telegram Channel https://t.me/owntvfanart
-
 https://github.com/user-attachments/assets/faacb82b-6903-47c0-ae53-6854024aa5b6
 
 ## ⬇️ Download
 
-| Device | Latest release |
-|---|---|
-| Android TV (NVIDIA SHIELD, Google TV, Fire TV…) | [OwnTV-Fanart.apk](https://github.com/carlosglcn/OwnTV-Fanart/releases/latest/download/OwnTV-Fanart.apk) |
-| Android phone / tablet | [OwnTV-Fanart-Mobile.apk](https://github.com/carlosglcn/OwnTV-Fanart-Mobile/releases/latest/download/OwnTV-Fanart-Mobile.apk) |
+| Device | Latest release | Downloader code |
+|---|---|---|
+| Android TV (NVIDIA SHIELD, Google TV, Fire TV…) | [OwnTV-Fanart.apk](https://github.com/carlosglcn/OwnTV-Fanart/releases/latest/download/OwnTV-Fanart.apk) | **`6823827`** |
+| Android phone / tablet | [OwnTV-Fanart-Mobile.apk](https://github.com/carlosglcn/OwnTV-Fanart-Mobile/releases/latest/download/OwnTV-Fanart-Mobile.apk) | **`6823148`** |
+
+On a TV, open **Downloader** (by AFTVnews), type the code and install — it always fetches the newest version.
+
+[![TV downloads](https://img.shields.io/github/downloads/carlosglcn/OwnTV-Fanart/total?label=TV%20downloads&color=00c2a8)](https://github.com/carlosglcn/OwnTV-Fanart/releases)
+[![Phone downloads](https://img.shields.io/github/downloads/carlosglcn/OwnTV-Fanart-Mobile/total?label=Phone%20downloads&color=00c2a8)](https://github.com/carlosglcn/OwnTV-Fanart-Mobile/releases)
 
 It installs **beside** the official app (its own package, `tv.own.owntv.glcn`), and tells you in-app when a new version is out.
+
+## ☕ Support the project
+
+OwnTV Fanart is free and made in spare time. If it makes your TV nicer, you can buy me a coffee — it is never expected, and always appreciated.
+
+<p align="center"><a href="https://ko-fi.com/galcn10"><img src="extras/glcn/support.svg" alt="Enjoying OwnTV Fanart? Support the project on Ko-fi" width="560"></a></p>
 
 ## ✨ What is different from OwnTV
 
 - **Fanart everywhere** — programme pictures from the guide (XMLTV `<icon>`) on Home, Live TV, the guide and the zap banner; wide TMDB pictures when a guide only has a poster.
-- **A new Home** — Featured billboard, Sports now, Tonight (with reminders), recently added films and series, and three backgrounds: *Classic*, *Cinema* and *Panel*.
-- **TMDB ratings** beside films and series on live TV.
-- **Calmer or livelier motion** — floating cards, a slow zoom and a light sweep, or a *Subtle* style.
+- **A new Home** — four layouts (*Classic*, *Cinema*, *Panel* and *Dock*), with a Featured billboard, Sports now, Tonight (with reminders) and recently added films and series.
+- **A screen for what is on** — press Info in Live TV for the programme's fanart, logo, rating, synopsis, what comes next and when it airs again this week.
+- **TMDB ratings, years and synopses** beside films and series on live TV.
+- **Sports** — football, basketball (ACB, EuroLeague), handball, tennis, Formula 1 and MotoGP with calendars, live scores and classifications.
+- **Smooth, calm motion** — rows that glide to the focus, floating cards and a light sweep, or a *Subtle* style; a *Light mode* for older devices.
 - **Seasonal themes** (optional) — Halloween, Christmas, New Year's Eve, Carnival and Valentine's touches, menu sounds and an opening chime.
 - **Sound** — the best audio track in your language, clearer dialogue, and (on SHIELD) Dolby/DTS passthrough from mpv too.
+- **TV and phone together** — automatic sync of favourites and history, and *Watch on TV* from the phone.
 - **Emby** libraries via M3U, Android Auto and a home-screen widget on the phone, a fanart screensaver on the TV.
 
 ## 📄 Licence and credits
@@ -90,11 +104,14 @@ launcher, D-pad first.
 
 ## 💬 Community
 
-Questions, ideas, bug reports — **join the OwnTV Telegram group:**
+Questions, ideas, bug reports — **join the Telegram groups:**
 
-### 👉 [t.me/owntvplayer](https://t.me/owntvplayer)
+| OwnTV Fanart (this version) | OwnTV (original app) |
+|---|---|
+| ### 👉 [t.me/owntvfanart](https://t.me/owntvfanart) | ### 👉 [t.me/owntvplayer](https://t.me/owntvplayer) |
+| <a href="https://t.me/owntvfanart"><img src="extras/qr-codes/telegram_owntvfanart_qr.png" alt="Scan to join the OwnTV Fanart Telegram group" width="150"></a> | <a href="https://t.me/owntvplayer"><img src="extras/qr-codes/telegram_qr_code.jpg" alt="Scan to join the OwnTV Telegram group" width="150"></a> |
 
-<a href="https://t.me/owntvplayer"><img src="extras/qr-codes/telegram_qr_code.jpg" alt="Scan to join the OwnTV Telegram group" width="150"></a>
+Problems with **this version** go to the Fanart group; the original group is for the upstream app.
 
 ---
 
@@ -114,7 +131,7 @@ Questions, ideas, bug reports — **join the OwnTV Telegram group:**
 - **Multiple playlists** at once, with provider labels everywhere they could be confused
 - Rename, hide, reorder and combine categories; bulk rename rules
 - **TMDB** posters, plots, cast and trailers in 40 languages — scales to ~50k channels / ~168k movies
-- **Two layouts for Movies & Series** — the classic three panels, or **Cinematic**: the focused title's artwork full-bleed behind the whole screen, with its details and cast above a wide poster grid
+- **Three layouts for Movies & Series** — the classic three panels, **Cinematic**: the focused title's artwork full-bleed behind the whole screen, with its details and cast above a wide poster grid, or **Runway**: one row of posters where the focused one opens wide with its backdrop and the rest glide to the side
 - Adjustable panel widths per section, including hiding the preview pane entirely
 
 ### 📥 Sources & EPG

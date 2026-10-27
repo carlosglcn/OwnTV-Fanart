@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.withIndex
@@ -178,11 +179,39 @@ class LiveViewModel(
         return rows
     }
 
+    /** glcn: the guide's programmes on [channel] for the coming week — the programme info screen's repeats. */
+    private val weekCache = HashMap<Long, Pair<Long, List<tv.own.owntv.core.database.entity.EpgProgrammeEntity>>>()
+    suspend fun weekFor(channel: ChannelEntity): List<tv.own.owntv.core.database.entity.EpgProgrammeEntity> {
+        val now = System.currentTimeMillis()
+        synchronized(weekCache) { weekCache[channel.id] }?.takeIf { now - it.first < 10 * 60_000L }?.let { return it.second }
+        val rows = guideReader.slice(listOf(channel), custom.value, epgOffset.value, now, now + 7 * 24 * 3_600_000L)[channel.id]
+            .orEmpty().filter { it.stopMs > now }.sortedBy { it.startMs }
+        synchronized(weekCache) { weekCache[channel.id] = now to rows }
+        return rows
+    }
+
     /** glcn: the programme on air now on [channel] (picture and synopsis) and the one after it — the
      *  zapping list's preview. */
     private val nowArt: tv.own.owntv.core.live.NowArt by inject()
     suspend fun nowFull(channel: ChannelEntity): Pair<tv.own.owntv.core.database.entity.EpgProgrammeEntity?, tv.own.owntv.core.database.entity.EpgProgrammeEntity?> =
         nowArt.nowAndNext(channel)
+
+    // glcn: the picture of the programme on air, per channel and programme start — so the player's card
+    // and the zap banner have it the moment they open, instead of reading it again and popping it in late.
+    private val artNow = HashMap<Long, Pair<Long, String?>>()
+
+    fun peekArt(channelId: Long?, startMs: Long?): String? =
+        if (channelId == null || startMs == null) null else artNow[channelId]?.takeIf { it.first == startMs }?.second
+
+    suspend fun nowArtUrl(channel: ChannelEntity, startMs: Long?): String? {
+        peekArt(channel.id, startMs)?.let { return it }
+        val url = runCatching { nowFull(channel).first?.imageUrl }.getOrNull()?.takeIf { it.isNotBlank() }
+        if (startMs != null && url != null) {
+            if (artNow.size > 60) artNow.clear()
+            artNow[channel.id] = startMs to url
+        }
+        return url
+    }
 
     /** glcn: what [channels] show now, with their pictures — the poster view of the zapping list. */
     suspend fun nowMany(channels: List<ChannelEntity>): Map<Long, tv.own.owntv.core.database.entity.EpgProgrammeEntity> =
@@ -471,7 +500,17 @@ class LiveViewModel(
     private val keyedNowNext: StateFlow<Pair<Long?, EpgNowNext?>> = combine(_previewChannel, epgRefresh) { ch, tick -> ch to tick }
         .debounce(350)
         .distinctUntilChanged { a, b -> a.first?.id == b.first?.id && a.second == b.second }
-        .mapLatest { (ch, _) -> ch?.id to ch?.let { epgReader.nowNext(it, custom.value, epgOffset.value) } }
+        // glcn: asked again when the programme on air ends, so a channel left open does not keep showing the one before.
+        .transformLatest { (ch, _) ->
+            while (true) {
+                val answer = ch?.let { epgReader.nowNext(it, custom.value, epgOffset.value) }
+                emit(ch?.id to answer)
+                if (ch == null) break
+                val t = System.currentTimeMillis()
+                val due = answer?.now?.stopMs ?: answer?.next?.startMs ?: (t + 300_000L)
+                delay((due - t + 1_000L).coerceIn(15_000L, 600_000L))
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null to null)
 
     val nowNext: StateFlow<EpgNowNext?> = keyedNowNext.map { it.second }
@@ -1782,13 +1821,23 @@ class LiveViewModel(
         viewModelScope.launch { player.error.collect { f -> if (f != null) runCatching { tryFailover() } } }
     }
 
+    /** glcn: the other copies of [cur] in its own playlist (FHD / HD / SD…), with [cur] among them, best first. */
+    suspend fun copiesOf(cur: ChannelEntity): List<ChannelEntity> {
+        val others = tv.own.owntv.core.live.ChannelFailover.rank(cur, siblingPool(cur))
+        return (others + cur).sortedWith(compareByDescending<ChannelEntity> { tv.own.owntv.core.live.ChannelFailover.quality(it.name) }.thenBy { it.id })
+    }
+
+    private suspend fun siblingPool(cur: ChannelEntity): List<ChannelEntity> {
+        val epgKey = cur.epgChannelId?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "\u0000"
+        val token = tv.own.owntv.core.live.ChannelFailover.searchToken(cur.name) ?: "\u0000"
+        return withContext(Dispatchers.IO) { channelDao.siblingCandidates(cur.sourceId, epgKey, token) }
+    }
+
     private suspend fun tryFailover() {
         val cur = _previewChannel.value ?: return
         if (!player.isLiveContent || _catchupActive.value || timeshift.isRewound || externalPlayerOn.value) return
         failoverTried += cur.id
-        val epgKey = cur.epgChannelId?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "\u0000"
-        val token = tv.own.owntv.core.live.ChannelFailover.searchToken(cur.name) ?: "\u0000"
-        val pool = withContext(Dispatchers.IO) { channelDao.siblingCandidates(cur.sourceId, epgKey, token) }
+        val pool = siblingPool(cur)
         val next = tv.own.owntv.core.live.ChannelFailover.rank(cur, pool).firstOrNull { it.id !in failoverTried } ?: return
         _failoverNotice.tryEmit(next.name)
         live.launch { playChannel(next) }
@@ -2082,6 +2131,9 @@ class LiveViewModel(
         }
     }
 
+    /** glcn: stop what the preview pane plays, keeping the focused channel (its details stay on screen). */
+    fun stopPreviewPlayback() { live.stop() }
+
     fun stopPreview() {
         runCatching { habitTracker.stopped() }
         live.stop() // both engines, every watcher and the give-up alarm, and the reconnect link
@@ -2248,14 +2300,12 @@ class LiveViewModel(
         sortBeforeMove = null // the new order IS playlist order — staying on it is the point
         viewModelScope.launch {
             val pid = currentProfileId() ?: return@launch
-            contentOrderDao.replaceContext(
-                profileId = pid,
-                type = MediaType.LIVE,
-                contextKey = s.contextKey,
-                rows = s.items.mapIndexed { i, ch ->
+            // glcn: Favorites spans every playlist, so ordering what one shows must keep the others' order.
+            val rows = s.items.mapIndexed { i, ch ->
                     ContentOrderEntity(profileId = pid, mediaType = MediaType.LIVE, contextKey = s.contextKey, itemId = ch.id, position = i)
-                },
-            )
+                }
+            if (s.contextKey == ContentOrderEntity.FAV_CONTEXT) contentOrderDao.replaceKeepingOthers(pid, MediaType.LIVE, s.contextKey, rows)
+            else contentOrderDao.replaceContext(pid, MediaType.LIVE, s.contextKey, rows)
         }
     }
 

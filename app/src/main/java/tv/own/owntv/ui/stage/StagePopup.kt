@@ -1,5 +1,7 @@
 package tv.own.owntv.ui.stage
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -93,7 +95,9 @@ fun StagePopup(
             ) {
                 StagePopupHeading(title, eyebrow, eyebrowAccent, eyebrowIcon, body)
                 // Text given no style of its own reads as the popup's body text.
-                androidx.tv.material3.ProvideTextStyle(stageText(19, 500)) { content() }
+                // glcn: a menu's items share one focus box that glides between them.
+                if (scroll) tv.own.owntv.glcn.SlideFocusHost { Column { androidx.tv.material3.ProvideTextStyle(stageText(19, 500)) { content() } } }
+                else androidx.tv.material3.ProvideTextStyle(stageText(19, 500)) { content() }
                 if (buttons != null) {
                     Row(
                         Modifier.fillMaxWidth().padding(top = 24.mpx),
@@ -126,12 +130,15 @@ fun StageConfirm(
     onBack: () -> Unit = onCancel,
 ) {
     val first = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
-    androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.delay(60); runCatching { first.requestFocus() } }
+    // A popup opened by a long press is still under the finger: the OK being released would otherwise
+    // click the focused button at once and close it before it could be read, so answers wait a moment.
+    var armed by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.delay(60); runCatching { first.requestFocus() }; kotlinx.coroutines.delay(500); armed = true }
     StagePopup(
         onDismiss = onBack, title = title, body = body, eyebrow = eyebrow, width = width,
         buttons = {
-            StageButton(cancel, onClick = onCancel, height = 56.mpx, textSize = 19, modifier = if (focusCancel) Modifier.focusRequester(first) else Modifier)
-            StageButton(confirm, onClick = onConfirm, height = 56.mpx, textSize = 19, tinted = true, modifier = if (focusCancel) Modifier else Modifier.focusRequester(first))
+            StageButton(cancel, onClick = { if (armed) onCancel() }, height = 56.mpx, textSize = 19, modifier = if (focusCancel) Modifier.focusRequester(first) else Modifier)
+            StageButton(confirm, onClick = { if (armed) onConfirm() }, height = 56.mpx, textSize = 19, tinted = true, modifier = if (focusCancel) Modifier else Modifier.focusRequester(first))
         },
     )
 }

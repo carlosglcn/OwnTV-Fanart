@@ -46,6 +46,7 @@ fun ChannelLogoTile(
     imageModifier: Modifier = Modifier.fillMaxSize(),
     fill: Color = tv.own.owntv.ui.theme.StageColors.Ink.copy(alpha = 0.04f),
     contentScale: ContentScale = ContentScale.Fit,
+    surfaceLuminance: Float = tv.own.owntv.ui.theme.StageColors.GlassOff.luminance(),
     fallback: @Composable () -> Unit,
 ) {
     // null = still loading, true = loaded, false = failed. Keyed on the URL so a recycled row
@@ -71,7 +72,6 @@ fun ChannelLogoTile(
         pending = null
     }
 
-    val surfaceLuminance = tv.own.owntv.ui.theme.StageColors.GlassOff.luminance()
     // glcn: 0 classic (upstream), 1 none.
     val needsPlate = LogoPlate.mode == 0 && ink != LOGO_INK_NONE &&
         contrastRatio(Color(ink).luminance(), surfaceLuminance) < MIN_CONTRAST

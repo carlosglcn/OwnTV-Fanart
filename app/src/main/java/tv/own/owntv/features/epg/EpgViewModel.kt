@@ -920,7 +920,8 @@ class EpgViewModel(
         // Respect customizations: hidden channels stay out of the guide, renames show.
         val cust = customize.observe(pid, MediaType.LIVE).first()
         val q = _query.value.trim()
-        val rawChannels = if (settings.guideShowEmpty.first()) channelDao.channelsForGuide(playlistIds, q, MAX_CHANNELS)
+        val showEmpty = settings.guideShowEmpty.first()
+        val rawChannels = if (showEmpty) channelDao.channelsForGuide(playlistIds, q, MAX_CHANNELS)
             else channelDao.channelsWithGuide(ids, q, MAX_CHANNELS)
         val favoriteIds = favoriteDao.observeFavoriteIds(pid, MediaType.LIVE).first().toSet()
         val sortGuideMode = settings.sortGuide.first()
@@ -947,10 +948,19 @@ class EpgViewModel(
                 historyDao.getForProfileType(pid, MediaType.LIVE).mapTo(HashSet()) { it.itemId }
             else -> null
         }
+        // glcn: Favourites keep the user's own order from the Favorites folder (moved ones first, then newest) —
+        // "Favourites first" and the Favourites category follow it, not the provider's order.
+        val favRank: Map<Long, Int> =
+            if (sortGuideMode == SettingsRepository.GuideSort.FAVORITES || filter == tv.own.owntv.core.live.LiveKey.Favorites) {
+                runCatching {
+                    channelDao.snapshotFavoritesManual(pid, tv.own.owntv.core.database.entity.ContentOrderEntity.FAV_CONTEXT, playlistIds, 20_000)
+                        .withIndex().associate { it.value.id to it.index }
+                }.getOrDefault(emptyMap())
+            } else emptyMap()
         // Heavy work — filter hidden, apply renames + manual EPG matches, sort, category-filter — runs off
         // the main thread (#3/#5) so a 50k-channel playlist never freezes the UI building the guide list.
-        val channels = withContext(Dispatchers.Default) {
-            val auto = rawChannels
+        suspend fun buildChannels(raw: List<ChannelEntity>): List<ChannelEntity> = withContext(Dispatchers.Default) {
+            val auto = raw
                 .filter { CustomizeKeys.channel(it) !in cust.hiddenItems }
                 .filter {
                     memberIds != null || it.categoryId == null || it.categoryId !in hiddenCatIds
@@ -965,7 +975,7 @@ class EpgViewModel(
                 SettingsRepository.GuideSort.ALPHA -> matched.sortedWith(byAlpha)
                 SettingsRepository.GuideSort.PROVIDER -> matched.sortedWith(byProvider)
                 SettingsRepository.GuideSort.CATCHUP -> matched.sortedWith(compareByDescending<ChannelEntity> { it.catchup }.then(byProvider))
-                SettingsRepository.GuideSort.FAVORITES -> matched.sortedWith(compareByDescending<ChannelEntity> { it.id in favoriteIds }.then(byProvider))
+                SettingsRepository.GuideSort.FAVORITES -> matched.sortedWith(compareBy<ChannelEntity> { favRank[it.id] ?: Int.MAX_VALUE }.then(byProvider))
                 // LIVE_TV, the old default, is the provider's order too (Channel number was the same thing).
                 SettingsRepository.GuideSort.LIVE_TV -> matched.sortedWith(byProvider)
             }.let { sorted ->
@@ -975,9 +985,17 @@ class EpgViewModel(
                     is tv.own.owntv.core.live.LiveKey.Folder -> sorted.filter { ch ->
                         ch.categoryId == filter.id && (folderKey == null || cust.movedFromOrigin[CustomizeKeys.channel(ch)] != folderKey)
                     }
+                    tv.own.owntv.core.live.LiveKey.Favorites -> sorted.filter { it.id in memberIds.orEmpty() }.sortedBy { favRank[it.id] ?: Int.MAX_VALUE }
                     else -> sorted.filter { it.id in memberIds.orEmpty() }
                 }
             }
+        }
+        var channels = buildChannels(rawChannels)
+        // glcn: a category the person picked is never shown empty just because none of its channels has guide
+        // data (a list with someone else's guide, say): its channels show, with empty rows, as with "Channels
+        // without guide" on. Only for a picked category — "All" stays as the setting says.
+        if (channels.isEmpty() && !showEmpty && q.isEmpty() && filter != null && filter != tv.own.owntv.core.live.LiveKey.All) {
+            channels = buildChannels(channelDao.channelsForGuide(playlistIds, q, MAX_CHANNELS))
         }
         val stored = epgDao.countForSources(ids)
 

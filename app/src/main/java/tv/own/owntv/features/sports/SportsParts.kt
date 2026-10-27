@@ -1,5 +1,7 @@
 package tv.own.owntv.features.sports
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,7 +59,21 @@ internal fun Crest(team: Team?, size: Int) {
                 style = stageText(size * 0.3f, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         } else {
-            AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding((size * 0.1f).mpx))
+            // A player's photo fills the circle (initials underneath stay if it never loads); a crest sits inside it.
+            if (team.isAthlete) {
+                // The initials hold the place until the photo has loaded; behind a photo with a clear background they would show through.
+                var loaded by androidx.compose.runtime.remember(url) { androidx.compose.runtime.mutableStateOf(false) }
+                if (!loaded) Text(
+                    team.abbreviation.ifBlank { null } ?: initials(team.shortName),
+                    style = stageText(size * 0.3f, 800), color = StageColors.Text, maxLines = 1,
+                )
+                AsyncImage(
+                    model = url, contentDescription = null, contentScale = ContentScale.Crop, alignment = Alignment.TopCenter,
+                    onSuccess = { loaded = true }, modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding((size * 0.1f).mpx))
+            }
         }
     }
 }
@@ -83,6 +99,7 @@ internal fun sportLabel(sport: Sport): String = stringResource(
     when (sport) {
         Sport.SOCCER -> R.string.sports_sport_soccer
         Sport.BASKETBALL -> R.string.sports_sport_basketball
+        Sport.HANDBALL -> R.string.sports_sport_handball
         Sport.TENNIS -> R.string.sports_sport_tennis
         Sport.CRICKET -> R.string.sports_sport_cricket
         Sport.RACING -> R.string.sports_sport_motorsport
@@ -103,6 +120,7 @@ internal fun sportLabel(sport: Sport): String = stringResource(
 internal fun sportEmoji(sport: Sport): String = when (sport) {
     Sport.SOCCER -> "⚽"
     Sport.BASKETBALL -> "🏀"
+    Sport.HANDBALL -> "🤾"
     Sport.TENNIS -> "🎾"
     Sport.CRICKET -> "🏏"
     Sport.RACING -> "🏎"

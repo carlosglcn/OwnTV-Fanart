@@ -200,13 +200,20 @@ internal fun VodCinematicBackdrop(url: String?, series: Boolean, modifier: Modif
         }
         url?.let { if (seen.size > 300) seen.clear(); seen += it }
     }
+    // glcn: the title changes at once, so the old title's art must not stay behind it while the new one loads —
+    // it fades out fast; the new art then dissolves in as before.
+    val waiting = url != settled && (url == null || url !in seen)
+    val holdSpec = ownTvTween<Float>(if (waiting) 140 else 300)
+    val hold by androidx.compose.animation.core.animateFloatAsState(if (waiting) 0f else 1f, holdSpec, label = "vodBackdropHold")
     val wash = StageColors.Wash
     // object-position 30% 40% (Movies) / 100% 40% (Series), as drawn.
     val focus = BiasAlignment(if (series) 1f else -0.4f, -0.2f)
     Box(modifier.fillMaxWidth(1400f / 1920f).aspectRatio(1400f / 720f).dissolveEdges(start = 0.34f, bottom = 0.38f)) {
-        Crossfade(targetState = settled, animationSpec = ownTvTween(420), label = "vodBackdrop") { u ->
-            if (!u.isNullOrBlank()) {
-                AsyncImage(model = u, contentDescription = null, contentScale = ContentScale.Crop, alignment = focus, modifier = Modifier.fillMaxSize())
+        Box(Modifier.fillMaxSize().graphicsLayer { alpha = hold }) {
+            Crossfade(targetState = settled, animationSpec = ownTvTween(420), label = "vodBackdrop") { u ->
+                if (!u.isNullOrBlank()) {
+                    AsyncImage(model = u, contentDescription = null, contentScale = ContentScale.Crop, alignment = focus, modifier = Modifier.fillMaxSize())
+                }
             }
         }
         Box(
@@ -680,7 +687,17 @@ internal class VodStepper(private val scope: CoroutineScope, private val state: 
             if (delta != 0f) runCatching { list.scrollBy(delta) }
             if (list.layoutInfo.visibleItemsInfo.none { it.index == i }) runCatching { list.scrollToItem(i) }
             withFrameNanos { }
-            runCatching { focus(i).requestFocus() }
+            // An item can be missing for a moment (a page still arriving, a row not composed yet): try
+            // again once it has had time, and if it never appears step over it rather than stopping.
+            var at = i
+            var tries = 0
+            while (tries < 6 && runCatching { focus(at).requestFocus() }.isFailure) {
+                tries++
+                if (tries % 2 == 0) at++ else runCatching { list.scrollToItem(at) }
+                target = at
+                kotlinx.coroutines.delay(60)
+                withFrameNanos { }
+            }
             target = null
         }
     }

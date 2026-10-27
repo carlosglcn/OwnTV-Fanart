@@ -96,7 +96,11 @@ fun SportsLeagueScreen(vm: SportsViewModel, onOpenMatch: (Match) -> Unit, onBack
                 LeagueTab.FIXTURES -> state.matches.filter { it.state == MatchState.PRE }
                 LeagueTab.RESULTS -> state.matches.filter { it.state == MatchState.POST }
             }
-            if (tab == LeagueTab.TABLE) {
+            if (tab == LeagueTab.TABLE && state.ranking != null && state.table == null) {
+                LazyColumn(Modifier.width(960.mpx).fillMaxSize(), contentPadding = PaddingValues(bottom = 60.mpx)) {
+                    item { RankingColumns(state.ranking) }
+                }
+            } else if (tab == LeagueTab.TABLE) {
                 LazyColumn(Modifier.width(960.mpx).fillMaxSize(), contentPadding = PaddingValues(bottom = 60.mpx)) {
                     item { StandingsHeader() }
                     state.table?.groups?.forEach { g ->

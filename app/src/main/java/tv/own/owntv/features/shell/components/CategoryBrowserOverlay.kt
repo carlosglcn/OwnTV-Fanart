@@ -71,7 +71,9 @@ fun CategoryBrowserOverlay(
 ) {
     val layoutDirection = LocalLayoutDirection.current
     val (entries, groupsHeading) = liveCategoryEntries(railItems, railCounts)
-    val selectedIndex = remember(entries, currentKey) { entries.indexOfFirst { it.item.key == currentKey }.coerceAtLeast(0) }
+    // glcn: worked out when the sheet opens (or the current category changes), not whenever the entries do —
+    // switching playlist briefly changes them, and re-deriving the row threw the list down to the current group and back.
+    val selectedIndex = remember(currentKey) { entries.indexOfFirst { it.item.key == currentKey }.coerceAtLeast(0) }
     val listState = rememberLazyListState()
     val listFocus = remember { FocusRequester() }
     // Paging moves focus by setting the row to land on; the sheet scrolls to it and reports back.
@@ -80,6 +82,8 @@ fun CategoryBrowserOverlay(
     var hasFocus by remember { mutableStateOf(false) }
     // While the search is being typed in, ◀/▶ move the text cursor; OK or Back ends typing first.
     var typing by remember { mutableStateOf(false) }
+    // glcn: on the playlist chips ◀ steps to the previous chip; it only leaves the sheet from the categories.
+    var onChips by remember { mutableStateOf(false) }
     val settingsVm: SettingsViewModel = koinViewModel()
     val chNavEnabled by settingsVm.chNavEnabled.collectAsStateWithLifecycle()
     val chNavUpSkip by settingsVm.chNavUpSkip.collectAsStateWithLifecycle()
@@ -102,7 +106,8 @@ fun CategoryBrowserOverlay(
     var peeked by remember { mutableStateOf<List<tv.own.owntv.core.database.entity.ChannelEntity>>(emptyList()) }
     var peekedNow by remember { mutableStateOf<Map<Long, tv.own.owntv.core.database.entity.EpgProgrammeEntity>>(emptyMap()) }
     val focusedKey = entries.getOrNull(focusedIndex)?.item?.key
-    LaunchedEffect(focusedKey) {
+    val activePlaylistId = tv.own.owntv.features.live.LocalCategoryPlaylists.current?.activeId
+    LaunchedEffect(focusedKey, activePlaylistId) {
         if (peekChannels == null || focusedKey == null) return@LaunchedEffect
         kotlinx.coroutines.delay(300)
         val list = runCatching { peekChannels(focusedKey) }.getOrDefault(emptyList())
@@ -137,6 +142,7 @@ fun CategoryBrowserOverlay(
             onRowFocused = { focusRow = null },
             onRowFocus = { focusedIndex = it },
             onSearchEditingChange = { typing = it },
+            onChipsFocused = { onChips = it },
             modifier = Modifier
                 .align(Alignment.CenterStart)
                 .padding(horizontal = 20.mpx, vertical = 22.mpx)
@@ -145,7 +151,7 @@ fun CategoryBrowserOverlay(
                 .onFocusChanged { hasFocus = it.hasFocus }
                 .onPreviewKeyEvent { e ->
                     // Pushing outward from logical Start returns to the channel list.
-                    if (!typing && e.type == KeyEventType.KeyDown && e.key.horizontalDirection(layoutDirection) == HorizontalDirection.START) {
+                    if (!typing && !onChips && e.type == KeyEventType.KeyDown && e.key.horizontalDirection(layoutDirection) == HorizontalDirection.START) {
                         onDismiss(); true
                     } else false
                 }
@@ -163,7 +169,8 @@ fun CategoryBrowserOverlay(
             title = entries.getOrNull(focusedIndex)?.label.orEmpty(),
             channels = peeked,
             now = peekedNow,
-            onTune = onTune,
+            // glcn: the channel tuned from here makes this category the list the player zaps in.
+            onTune = { ch -> focusedKey?.let(onSelect); onTune(ch) },
             onBack = { runCatching { listFocus.requestFocus() } },
             focus = channelFocus,
             modifier = Modifier

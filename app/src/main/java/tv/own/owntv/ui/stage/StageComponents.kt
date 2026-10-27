@@ -66,6 +66,8 @@ import tv.own.owntv.ui.theme.stageAccent
 import tv.own.owntv.ui.theme.stageShadow
 
 import tv.own.owntv.ui.theme.stageText
+import tv.own.owntv.glcn.slideFocusReport
+import tv.own.owntv.glcn.slideRegion
 
 /*
  * The Stage component set (the design's `.mine` classes). Idle = nothing, selected = accent text + dot or bar,
@@ -83,7 +85,10 @@ enum class StageFocus { FX, FILLED, PRIMARY, POSTER }
 fun Modifier.stageFocusLook(style: StageFocus, radius: Dp): Modifier =
     stageFocusDecor(style, radius, stageAccent, LocalStagePalette.current)
 
-private fun Modifier.stageFocusDecor(style: StageFocus, radius: Dp, a: StageAccent, palette: StagePalette) = drawBehind {
+private fun Modifier.stageFocusDecor(style: StageFocus, radius: Dp, a: StageAccent, palette: StagePalette) = drawBehind { drawStageFocus(style, radius, a, palette) }
+
+/** glcn: the focus treatment as a drawing, for an overlay that slides between items. */
+fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocus(style: StageFocus, radius: Dp, a: StageAccent, palette: StagePalette) {
     val r = radius.toPx()
     val px = 1.mpx.toPx()
     if (palette.isLight) {
@@ -109,7 +114,7 @@ private fun Modifier.stageFocusDecor(style: StageFocus, radius: Dp, a: StageAcce
                 drawOuterRing(a.accent, 4 * px, r, inset = 3 * px)
             }
         }
-        return@drawBehind
+        return
     }
     when (style) {
         StageFocus.FX -> {
@@ -158,15 +163,22 @@ fun StageSurface(
     highlighted: Boolean = false,
     /** The focus colours; the player's chrome passes its on-video accent. */
     accent: StageAccent = stageAccent,
+    /** glcn: false when a shared focus box drawn elsewhere (one that slides between controls) stands in for it. */
+    focusDecor: Boolean = true,
     content: @Composable BoxScope.(focused: Boolean) -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val focused = interaction.collectIsFocusedAsState().value || highlighted
+    val real = interaction.collectIsFocusedAsState().value
+    val focused = real || highlighted
     val palette = LocalStagePalette.current
+    // glcn: inside a list or menu with a sliding focus box, the item leaves the focus drawing to it.
+    val slide = tv.own.owntv.glcn.LocalSlideFocus.current?.takeIf { focusDecor && (focusStyle == StageFocus.FILLED || focusStyle == StageFocus.FX) }
+    val sliding = slide != null && real
     Box(
         modifier = modifier
             .stageLift(focused, focusStyle)
-            .then(if (focused) Modifier.stageFocusDecor(focusStyle, radius, accent, palette) else idle)
+            .then(if (slide != null) Modifier.slideFocusReport(slide, focusStyle, radius, accent) else Modifier)
+            .then(if (focused && focusDecor && !sliding) Modifier.stageFocusDecor(focusStyle, radius, accent, palette) else if (focused) Modifier else idle)
             .stageClickable(interaction, enabled, onClick, onLongClick),
         contentAlignment = contentAlignment,
     ) { content(focused) }
@@ -382,9 +394,9 @@ fun StageTool(
  * with a 4 px accent underline glowing at 70%. Focused = FILLED.
  */
 @Composable
-fun StageTab(label: String, count: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun StageTab(label: String, count: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, onLongClick: (() -> Unit)? = null) {
     val a = stageAccent
-    StageSurface(onClick = onClick, radius = 12.mpx, modifier = modifier) { focused ->
+    StageSurface(onClick = onClick, radius = 12.mpx, modifier = modifier, onLongClick = onLongClick) { focused ->
         Row(
             Modifier
                 .padding(horizontal = 12.mpx)
@@ -801,6 +813,8 @@ fun StagePoster(
     watched: Boolean = false,
     /** glcn: added to the library in the last week and not started yet — a small "New" label. */
     fresh: Boolean = false,
+    /** glcn: Runway — take the width the parent gives (it changes while the row glides) instead of [width]. */
+    fillWidth: Boolean = false,
     artwork: @Composable BoxScope.() -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -808,18 +822,26 @@ fun StagePoster(
     val accent = stageAccent
     val r = StageRadii.Poster
     val badge = Color(8, 12, 14)
+    // glcn: inside a grid with a sliding focus box the poster does not lift: the box glides to it and wraps its art.
+    val slide = tv.own.owntv.glcn.LocalSlideFocus.current
+    val region = remember { tv.own.owntv.glcn.SlideRegion() }
     Column(
         modifier
-            .width(width)
-            .stageLift(focused, StageFocus.POSTER)
-            .stageTilt(focused)
+            .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier.width(width))
+            .then(
+                if (slide != null) Modifier.slideFocusReport(slide, StageFocus.POSTER, r, accent, region)
+                else Modifier.stageLift(focused, StageFocus.POSTER).stageTilt(focused),
+            )
             .stageClickable(interaction, true, onClick, onLongClick),
     ) {
         Box(
             Modifier
-                .size(width, height)
+                .then(if (fillWidth) Modifier.fillMaxWidth().height(height) else Modifier.size(width, height))
+                .then(if (slide != null) Modifier.slideRegion(region) else Modifier)
                 .then(
-                    if (focused) {
+                    if (focused && slide != null) {
+                        Modifier
+                    } else if (focused) {
                         Modifier.stageFocusDecor(StageFocus.POSTER, r, accent, LocalStagePalette.current)
                     } else {
                         // `.mine.light .pc .img`: a soft green-grey shadow instead of black.
@@ -887,6 +909,8 @@ fun StageStill(
     progress: Float? = null,
     /** glcn: hold OK — the card's menu. */
     onLongClick: (() -> Unit)? = null,
+    /** glcn: false keeps the card its own size on focus (no lift, no tilt) — for cards that sit flush in a row. */
+    lift: Boolean = true,
     artwork: @Composable BoxScope.() -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -896,8 +920,7 @@ fun StageStill(
     Column(
         modifier
             .width(width)
-            .stageLift(focused, StageFocus.POSTER)
-            .stageTilt(focused)
+            .then(if (lift) Modifier.stageLift(focused, StageFocus.POSTER).stageTilt(focused) else Modifier)
             .stageClickable(interaction, true, onClick, onLongClick),
     ) {
         Box(

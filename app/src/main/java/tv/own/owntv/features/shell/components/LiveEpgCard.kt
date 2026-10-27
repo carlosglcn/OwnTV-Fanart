@@ -76,7 +76,7 @@ fun LiveEpgCard(
     // Side by side, the two halves fought for the corner and the "now" half shrank to one word a line.
     Column(
         modifier = modifier
-            .widthIn(min = 300.dp, max = if (bare) 470.dp else 500.dp)
+            .widthIn(min = 280.dp, max = if (bare) 400.dp else 440.dp)
             .then(if (bare) Modifier else Modifier.clip(RoundedCornerShape(10.dp)).background(hudShade(0.72f)))
             .then(
                 if (archive) Modifier
@@ -105,17 +105,17 @@ fun LiveEpgCard(
             SlotLabel(stringResource(if (archive) R.string.content_archive_playing else R.string.content_live_now), tv.own.owntv.ui.theme.stageAccent.accent)
             Text(
                 now.title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
                 color = hudInk,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             val remaining = ((now.stopMs - nowMs) / 60_000L).toInt()
             Text(
                 if (remaining in 1..600) stringResource(R.string.content_live_time_remaining, formatTime(now.stopMs), remaining)
                 else stringResource(R.string.content_live_time_range, formatTime(now.startMs), formatTime(now.stopMs)),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = hudInk.copy(alpha = 0.7f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -130,28 +130,36 @@ fun LiveEpgCard(
             }
             // What the programme actually IS, not just what it is called.
             now.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
-                Text(
+                // glcn: three lines, and a longer text drifts slowly down and back instead of ending in "…".
+                DriftingSynopsis(
                     synopsis,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = hudInk.copy(alpha = 0.82f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = if (bare) 3.dp else 6.dp),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    color = hudInk.copy(alpha = 0.82f),
+                    lines = if (bare) 2 else 3, // glcn: the player's banner is kept low — the text drifts if it is longer
                 )
             }
         }
         epg.next?.let { entry ->
-            Row(
-                Modifier.padding(top = if (now != null) (if (bare) 4.dp else 8.dp) else 0.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                SlotLabel(stringResource(if (archive) R.string.content_archive_then else R.string.content_live_next), hudInk.copy(alpha = 0.6f))
+            val nextLabel = stringResource(if (archive) R.string.content_archive_then else R.string.content_live_next)
+            if (bare) {
+                // glcn: label and programme on one line, to keep the player's banner low.
+                Row(Modifier.padding(top = if (now != null) 3.dp else 0.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SlotLabel(nextLabel, hudInk.copy(alpha = 0.6f))
+                    Text(
+                        formatTime(entry.startMs) + "  " + entry.title,
+                        style = MaterialTheme.typography.labelSmall, color = hudInk.copy(alpha = 0.85f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                return@let
+            }
+            Column(Modifier.padding(top = if (now != null) (if (bare) 4.dp else 8.dp) else 0.dp)) {
+                SlotLabel(nextLabel, hudInk.copy(alpha = 0.6f))
                 Text(
                     formatTime(entry.startMs) + "  " + entry.title,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = hudInk.copy(alpha = 0.85f),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -177,7 +185,7 @@ fun LiveEpgCardWithArt(epg: EpgNowNext?, art: String?, modifier: Modifier = Modi
     ) {
         tv.own.owntv.ui.components.ProgrammeArt(
             url = art,
-            modifier = Modifier.size(width = 150.dp, height = 84.dp).clip(RoundedCornerShape(10.dp)),
+            modifier = Modifier.size(width = 128.dp, height = 72.dp).clip(RoundedCornerShape(10.dp)),
         )
         LiveEpgCard(epg, bare = true)
     }
@@ -235,7 +243,7 @@ fun ZapGuideLines(epg: EpgNowNext?, modifier: Modifier = Modifier) {
 private fun SlotLabel(text: String, color: Color) {
     Text(
         text.uppercase(),
-        style = tv.own.owntv.ui.theme.stageText(20, 500).copy(letterSpacing = 1.2.sp),
+        style = tv.own.owntv.ui.theme.stageText(16, 500).copy(letterSpacing = 1.2.sp),
         color = color,
         fontWeight = FontWeight.Bold,
         maxLines = 1,

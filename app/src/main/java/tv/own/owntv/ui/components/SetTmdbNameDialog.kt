@@ -55,13 +55,15 @@ fun SetTmdbNameDialog(
     initialTitle: String,
     initialYear: Int?,
     hasOverride: Boolean,
-    onSave: (title: String, year: Int?) -> Unit,
+    initialTmdbId: Int? = null,
+    onSave: (title: String, year: Int?, tmdbId: Int?) -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     OwnTVPopup(onDismissRequest = onDismiss, stageLayout = true) {
         var title by remember { mutableStateOf(initialTitle) }
         var year by remember { mutableStateOf(initialYear?.toString() ?: "") }
+        var tmdbId by remember { mutableStateOf(initialTmdbId?.toString().orEmpty()) }
         val titleFocus = remember { FocusRequester() }
         LaunchedEffect(Unit) { runCatching { titleFocus.requestFocus() } }
         BackHandler { onDismiss() }
@@ -95,20 +97,30 @@ fun SetTmdbNameDialog(
                     stringResource(R.string.setup_tmdb_description), style = stageText(18, 400).copy(lineHeight = (18 * 1.45f).mpxSp),
                     color = StageColors.Muted, modifier = Modifier.padding(top = 10.mpx, bottom = 24.mpx),
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
-                    tv.own.owntv.features.settings.StageFieldRow(
-                        icon = tv.own.owntv.ui.components.OwnTVIcon.PENCIL,
-                        label = stringResource(R.string.common_title),
-                        value = title,
-                        onValueChange = { title = it },
-                        modifier = Modifier.weight(1f).focusRequester(titleFocus),
-                    )
+                // glcn: the title has the full width; year and TMDB id share the line under it, each wide enough to read its label.
+                tv.own.owntv.features.settings.StageFieldRow(
+                    icon = tv.own.owntv.ui.components.OwnTVIcon.PENCIL,
+                    label = stringResource(R.string.common_title),
+                    value = title,
+                    onValueChange = { title = it },
+                    modifier = Modifier.fillMaxWidth().focusRequester(titleFocus),
+                )
+                Row(Modifier.padding(top = 14.mpx), horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                     tv.own.owntv.features.settings.StageFieldRow(
                         icon = tv.own.owntv.ui.components.OwnTVIcon.PENCIL,
                         label = stringResource(R.string.setup_year_optional),
                         value = year,
                         onValueChange = { s -> year = s.filter { it.isDigit() }.take(4) },
-                        modifier = Modifier.width(200.mpx),
+                        modifier = Modifier.weight(1f),
+                        keyboardType = KeyboardType.Number,
+                    )
+                    // glcn: the exact TMDB id, when the name and year find the wrong film.
+                    tv.own.owntv.features.settings.StageFieldRow(
+                        icon = tv.own.owntv.ui.components.OwnTVIcon.PENCIL,
+                        label = stringResource(R.string.setup_tmdb_id_optional),
+                        value = tmdbId,
+                        onValueChange = { s -> tmdbId = s.filter { it.isDigit() }.take(9) },
+                        modifier = Modifier.weight(1f),
                         keyboardType = KeyboardType.Number,
                     )
                 }
@@ -122,7 +134,7 @@ fun SetTmdbNameDialog(
                     Spacer(Modifier.weight(1f))
                     StageButton(
                         stringResource(R.string.common_save),
-                        onClick = { if (title.isNotBlank()) onSave(title.trim(), year.trim().toIntOrNull()) },
+                        onClick = { if (title.isNotBlank()) onSave(title.trim(), year.trim().toIntOrNull(), tmdbId.trim().toIntOrNull()) },
                         height = 56.mpx, textSize = 19, tinted = true,
                     )
                 }

@@ -241,7 +241,8 @@ fun MoviesScreen(
     val settingsVm: tv.own.owntv.features.settings.SettingsViewModel = koinViewModel()
     val vodLayout by settingsVm.vodLayout.collectAsStateWithLifecycle()
     // Cinematic is the browse section's; More → Favourites / History pin the plain Separate list.
-    val cinematic = vodLayout == SettingsRepository.VodLayout.CINEMATIC && lockedKey == null
+    val runway = vodLayout == SettingsRepository.VodLayout.RUNWAY && lockedKey == null
+    val cinematic = (vodLayout == SettingsRepository.VodLayout.CINEMATIC || runway) && lockedKey == null
     val cinematicDetailsPct by settingsVm.cinematicDetailsHeight(PanelSection.MOVIES).collectAsStateWithLifecycle()
     // Cinematic is grid-only: the List rows have nowhere to put a full-bleed backdrop. The stored
     // choice is deliberately not rewritten, so switching back to Separate restores the user's List.
@@ -259,6 +260,7 @@ fun MoviesScreen(
     val perCategoryMovieIds = remember { mutableStateMapOf<LiveKey, Long>() }
     // NOTE: plain constructors, not remember*State() — these are created lazily inside getOrPut, so a
     // @Composable/rememberSaveable call here would register slots conditionally and corrupt the slot table.
+    val glideScope = androidx.compose.runtime.rememberCoroutineScope()
     val effectiveGridState = if (rememberMovies) perCategoryGrid.getOrPut(selectedKey) { LazyGridState() } else gridState
     val effectiveListState = if (rememberMovies) perCategoryList.getOrPut(selectedKey) { LazyListState() } else listState
     LaunchedEffect(selectedKey, rememberMovies) {
@@ -266,7 +268,12 @@ fun MoviesScreen(
     }
     // The List view scrolls a LazyListState, the grids (Cinematic and Separate) a LazyGridState.
     val usesList = viewMode == SettingsRepository.VodViewMode.LIST
+    // glcn: the Runway layout is one row of posters; it has no lazy state, only the index it is centred on.
+    var runwayAt by remember(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
+    var runwayWindow by remember { mutableStateOf(0..0) }
+    val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
     suspend fun scrollToIndex(i: Int) {
+        if (runway) { runwayAt = i; return }
         runCatching { if (usesList) effectiveListState.scrollToItem(i) else effectiveGridState.scrollToItem(i) }
     }
     val stepper = remember { VodStepper(scope) { effectiveListState } }
@@ -286,14 +293,15 @@ fun MoviesScreen(
     // focus, so the placeholder is only shown when nothing at all is known. peek() reads the loaded
     // page without triggering a fetch.
     val cachedPosters by vm.cachedPosters.collectAsStateWithLifecycle()
-    LaunchedEffect(effectiveGridState, effectiveListState, viewMode, movies) {
+    val overridden by vm.overriddenMovies.collectAsStateWithLifecycle()
+    LaunchedEffect(effectiveGridState, effectiveListState, viewMode, movies, runway) {
         val grid = !usesList
         snapshotFlow {
-            val info = if (grid) effectiveGridState.layoutInfo.visibleItemsInfo.map { it.index }
+            val info = if (runway) runwayWindow.toList() else if (grid) effectiveGridState.layoutInfo.visibleItemsInfo.map { it.index }
             else effectiveListState.layoutInfo.visibleItemsInfo.map { it.index }
-            info.filter { it < movies.itemCount }
-                .mapNotNull { movies.peek(it) }
-                .filter { it.posterUrl.isNullOrBlank() }
+            val shown = info.filter { it < movies.itemCount }.mapNotNull { movies.peek(it) }
+            vm.onMoviesVisible(shown)
+            shown.filter { it.posterUrl.isNullOrBlank() || it.id in overridden }
         }.distinctUntilChanged().collect { vm.onPosterlessVisible(it) }
     }
     // Returning from the player: scroll to and focus the movie you just played (waits for the grid to load).
@@ -429,7 +437,11 @@ fun MoviesScreen(
     val panelShares = rememberPanelShares(PanelSection.MOVIES, settingsVm)
     val cinematicSheetPct by settingsVm.cinematicSheetWidth(PanelSection.MOVIES).collectAsStateWithLifecycle()
     val selectedMeta = selectedMovieMeta?.takeIf { it.movieId == selectedMovie?.id }?.cache
-    val titleInfo = selectedMovie?.let { movieTitleInfo(it, selectedMeta, metadataMode.tmdbWins) }
+    val titleInfo = selectedMovie?.let { movieTitleInfo(it, selectedMeta, metadataMode.tmdbWins || it.id in overridden) }
+    LaunchedEffect(selectedMovie?.id, titleInfo?.backdropUrl) {
+        val id = selectedMovie?.id ?: return@LaunchedEffect
+        titleInfo?.backdropUrl?.takeIf { it.isNotBlank() }?.let { runwayBackdrops[id] = it }
+    }
     val (categoryEntries, groupsHeading) = vodCategoryEntries(railItems, railCounts, playlistMarks, series = false)
     val headerLabel = if (selectedItem?.key is LiveKey.Folder || selectedItem?.key is LiveKey.Custom) ProviderTags.parse(selectedLabel).name else selectedLabel
 
@@ -480,11 +492,17 @@ fun MoviesScreen(
         vm.onMovieFocused(movie)
         if (rememberMovies) perCategoryMovieIds[selectedKey] = movie.id
     }
-    val posterOf: (MovieEntity) -> String? = { it.posterUrl?.takeIf { u -> u.isNotBlank() } ?: cachedPosters[it.id] }
+    val posterOf: (MovieEntity) -> String? = {
+        val own = it.posterUrl?.takeIf { u -> u.isNotBlank() }
+        if (it.id in overridden) cachedPosters[it.id] ?: own else own ?: cachedPosters[it.id]
+    }
     val playHint = stringResource(R.string.common_ok) to stringResource(R.string.content_play)
     val optionsHint = stringResource(R.string.content_key_hold_ok) to stringResource(R.string.content_key_options)
 
     // The toolbar and the titles: one focus group, entered on a title, never the search field.
+    // glcn: Up from the search / sort row is a deliberate move to the menu above; from the grid it stays trapped (a held key
+    // outrunning the lazy grid must not escape there).
+    var toolbarHasFocus by remember { mutableStateOf(false) }
     val paneModifier = Modifier
         .onFocusChanged { gridPaneFocused = it.hasFocus }
         .chNavPaging(
@@ -537,20 +555,17 @@ fun MoviesScreen(
                     androidx.compose.ui.focus.FocusDirection.Right -> cancelFocusChange()
                     // Pinned (More) keeps Up for its tabs.
                     androidx.compose.ui.focus.FocusDirection.Up, androidx.compose.ui.focus.FocusDirection.Down ->
-                        if (lockedKey == null) cancelFocusChange()
+                        if (lockedKey == null && !(requestedFocusDirection == androidx.compose.ui.focus.FocusDirection.Up && toolbarHasFocus)) cancelFocusChange()
                     else -> Unit
                 }
             }
         }
         .focusGroup()
-    // ◀ from the search field opens the categories, as from the titles — with a query too (a search that
-    // found nothing here may be in another category), but not while typing, where ◀ moves the cursor.
+    // ◀ from the search field goes to the menu, but not while typing, where ◀ moves the cursor.
     var searchEditing by remember { mutableStateOf(false) }
     val searchLeft = Modifier.onPreviewKeyEvent { e ->
-        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft && !searchEditing && lockedKey == null) {
-            if (cinematic) categoriesOpen = true else runCatching { railFocus.requestFocus() }
-            true
-        } else false
+        // glcn: ◀ is not taken here — the shell moves it to the menu.
+        e.key == Key.Unknown
     }
     val emptyText = if (searchQuery.isNotBlank()) stringResource(R.string.content_no_movies_found, searchQuery.trim()) else stringResource(R.string.content_no_movies_here)
 
@@ -578,6 +593,7 @@ fun MoviesScreen(
                         Modifier.padding(start = fx(68), end = fx(64)).fillMaxWidth()
                             // ▼ from the toolbar returns to the title the hero shows, not the poster below the tool.
                             .onPreviewKeyEvent { e -> e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown && focusCurrentTitle() }
+                            .onFocusChanged { toolbarHasFocus = it.hasFocus }
                             .focusGroup(),
                         horizontalArrangement = Arrangement.spacedBy(10.mpx),
                         verticalAlignment = Alignment.CenterVertically,
@@ -591,7 +607,7 @@ fun MoviesScreen(
                         VodSortTool(sortMode, Modifier.focusRequester(sortFocus)) { sortOpen = true }
                         StageTool(text = stringResource(R.string.content_category_browser_title), icon = OwnTVIcon.LIST, onClick = { categoriesOpen = true })
                         Spacer(Modifier.weight(1f))
-                        StageKeyHints(listOf(playHint, optionsHint, "◀" to stringResource(R.string.content_category_browser_title)))
+                        StageKeyHints(listOf(playHint, optionsHint))
                     }
                     if (movies.itemCount == 0) {
                         Text(emptyText, style = stageText(20, 500), color = StageColors.Muted, modifier = Modifier.padding(start = fx(84), top = 60.mpx))
@@ -603,27 +619,28 @@ fun MoviesScreen(
                         val columns = ((rowW + 26.mpx) / 222.mpx).toInt().coerceAtLeast(1)
                         // A fixed gap under the toolbar that scrolling posters never enter; the grid's own
                         // top padding is only the room the focused poster's lift and ring need.
-                        Spacer(Modifier.height(14.mpx))
-                        CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
-                            LazyVerticalGrid(
-                                state = effectiveGridState,
-                                columns = GridCells.Fixed(columns),
-                                horizontalArrangement = Arrangement.spacedBy(26.mpx),
-                                verticalArrangement = Arrangement.spacedBy(30.mpx),
-                                contentPadding = PaddingValues(start = fx(84), end = fx(64), top = 14.mpx, bottom = glowRoom),
-                                modifier = Modifier.fillMaxWidth().weight(1f),
-                            ) {
-                                items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
-                                    val movie = movies[index] ?: return@items
+                        Spacer(Modifier.height(24.mpx))
+                        val glide = remember(effectiveGridState) { tv.own.owntv.glcn.GlideScroller(effectiveGridState, glideScope) }
+                        if (runway) {
+                            Spacer(Modifier.height(10.mpx))
+                            tv.own.owntv.glcn.PosterRunway(
+                                count = movies.itemCount,
+                                focusedAt = runwayAt.coerceIn(0, (movies.itemCount - 1).coerceAtLeast(0)),
+                                narrow = 196.mpx, wide = 520.mpx, gap = 26.mpx,
+                                modifier = Modifier.padding(start = fx(84), end = fx(64)).fillMaxWidth().padding(vertical = 18.mpx),
+                                onWindow = { runwayWindow = it },
+                            ) { index, wideness ->
+                                val movie = movies[index]
+                                if (movie == null) Spacer(Modifier.fillMaxWidth().height(294.mpx)) else {
                                     val prog = movieProgress[movie.id]
                                     val done = prog?.let { vm.isMovieCompleted(it) } == true
                                     StagePoster(
                                         title = movie.name,
                                         rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
-                                        width = 196.mpx, height = 294.mpx,
+                                        width = 196.mpx, height = 294.mpx, fillWidth = true,
                                         progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
                                         watched = done,
-                                    fresh = tv.own.owntv.ui.stage.isFreshlyAdded(movie.addedAt),
+                                        fresh = tv.own.owntv.ui.stage.isFreshlyAdded(movie.addedAt),
                                         onClick = { startMovie(movie) },
                                         onLongClick = { openMenu(movie, index) },
                                         modifier = Modifier
@@ -633,17 +650,62 @@ fun MoviesScreen(
                                                 selectedId = targetMovieId, selectedFocus = selFocus,
                                                 firstItemFocus = firstItemFocus,
                                             )
-                                            .onFocusChanged { if (it.isFocused) onMovieFocus(movie) }
+                                            .onFocusChanged { if (it.isFocused) { onMovieFocus(movie); runwayAt = index } }
                                             .onPreviewKeyEvent { e ->
-                                                if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                                                when (e.key) {
-                                                    Key.Menu -> { openMenu(movie, index); true }
-                                                    // ◀ from the first column opens the categories.
-                                                    Key.DirectionLeft -> index % columns == 0 && run { categoriesOpen = true; true }
-                                                    else -> false
-                                                }
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true } else false
                                             },
-                                    ) { VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES) }
+                                    ) {
+                                        VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES)
+                                        val wide = runwayBackdrops[movie.id]
+                                        if (wide != null) coil3.compose.AsyncImage(
+                                            model = wide, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = wideness() },
+                                        )
+                                    }
+                                }
+                            }
+                        } else
+                        CompositionLocalProvider(LocalBringIntoViewSpec provides tv.own.owntv.glcn.NoBringIntoViewSpec) {
+                            tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f)) {
+                                LazyVerticalGrid(
+                                    state = effectiveGridState,
+                                    columns = GridCells.Fixed(columns),
+                                    horizontalArrangement = Arrangement.spacedBy(26.mpx),
+                                    verticalArrangement = Arrangement.spacedBy(30.mpx),
+                                    contentPadding = PaddingValues(start = fx(84), end = fx(64), top = 14.mpx, bottom = glowRoom),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
+                                        val movie = movies[index] ?: return@items
+                                        val prog = movieProgress[movie.id]
+                                        val done = prog?.let { vm.isMovieCompleted(it) } == true
+                                        StagePoster(
+                                            title = movie.name,
+                                            rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
+                                            width = 196.mpx, height = 294.mpx,
+                                            progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
+                                            watched = done,
+                                        fresh = tv.own.owntv.ui.stage.isFreshlyAdded(movie.addedAt),
+                                            onClick = { startMovie(movie) },
+                                            onLongClick = { openMenu(movie, index) },
+                                            modifier = Modifier
+                                                .gridFocusTarget(
+                                                    itemId = movie.id, index = index,
+                                                    contextId = contextMovieId, contextFocus = contextFocus,
+                                                    selectedId = targetMovieId, selectedFocus = selFocus,
+                                                    firstItemFocus = firstItemFocus,
+                                                )
+                                                .onFocusChanged { if (it.isFocused) { onMovieFocus(movie); glide.focused(index) } }
+                                                .onPreviewKeyEvent { e ->
+                                                    if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                                    when (e.key) {
+                                                        Key.Menu -> { openMenu(movie, index); true }
+                                                        // ◀ from the first column goes to the menu; categories open from their button or a shortcut.
+                                                        else -> false
+                                                    }
+                                                },
+                                        ) { VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES) }
+                                    }
                                 }
                             }
                         }
@@ -692,7 +754,7 @@ fun MoviesScreen(
             }
             Column(Modifier.padding(start = listX, top = top).width(listW).fillMaxHeight().then(paneModifier)) {
                 Row(
-                    Modifier.fillMaxWidth().focusGroup(),
+                    Modifier.fillMaxWidth().onFocusChanged { toolbarHasFocus = it.hasFocus }.focusGroup(),
                     horizontalArrangement = Arrangement.spacedBy(10.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -775,40 +837,42 @@ fun MoviesScreen(
                     // A fixed gap under the toolbar that scrolled posters never enter (as Cinematic).
                     Spacer(Modifier.height(20.mpx))
                     CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
-                        LazyVerticalGrid(
-                            state = effectiveGridState,
-                            columns = GridCells.Fixed(columns),
-                            horizontalArrangement = Arrangement.spacedBy(20.mpx),
-                            verticalArrangement = Arrangement.spacedBy(30.mpx),
-                            contentPadding = PaddingValues(start = glowRoom, end = glowRoom, top = 12.mpx, bottom = 24.mpx),
-                            modifier = Modifier.fillMaxWidth().weight(1f).then(glowWide),
-                        ) {
-                            items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
-                                val movie = movies[index] ?: return@items
-                                val prog = movieProgress[movie.id]
-                                val done = prog?.let { vm.isMovieCompleted(it) } == true
-                                StagePoster(
-                                    title = movie.name,
-                                    rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
-                                    width = posterW, height = posterW * 1.5f,
-                                    compact = true,
-                                    progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
-                                    watched = done,
-                                    fresh = tv.own.owntv.ui.stage.isFreshlyAdded(movie.addedAt),
-                                    onClick = { startMovie(movie) },
-                                    onLongClick = { openMenu(movie, index) },
-                                    modifier = Modifier
-                                        .gridFocusTarget(
-                                            itemId = movie.id, index = index,
-                                            contextId = contextMovieId, contextFocus = contextFocus,
-                                            selectedId = targetMovieId, selectedFocus = selFocus,
-                                            firstItemFocus = firstItemFocus,
-                                        )
-                                        .onFocusChanged { if (it.isFocused) onMovieFocus(movie) }
-                                        .onPreviewKeyEvent { e ->
-                                            if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true } else false
-                                        },
-                                ) { VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES) }
+                        tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f).then(glowWide)) {
+                            LazyVerticalGrid(
+                                state = effectiveGridState,
+                                columns = GridCells.Fixed(columns),
+                                horizontalArrangement = Arrangement.spacedBy(20.mpx),
+                                verticalArrangement = Arrangement.spacedBy(30.mpx),
+                                contentPadding = PaddingValues(start = glowRoom, end = glowRoom, top = 12.mpx, bottom = 24.mpx),
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
+                                    val movie = movies[index] ?: return@items
+                                    val prog = movieProgress[movie.id]
+                                    val done = prog?.let { vm.isMovieCompleted(it) } == true
+                                    StagePoster(
+                                        title = movie.name,
+                                        rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
+                                        width = posterW, height = posterW * 1.5f,
+                                        compact = true,
+                                        progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
+                                        watched = done,
+                                        fresh = tv.own.owntv.ui.stage.isFreshlyAdded(movie.addedAt),
+                                        onClick = { startMovie(movie) },
+                                        onLongClick = { openMenu(movie, index) },
+                                        modifier = Modifier
+                                            .gridFocusTarget(
+                                                itemId = movie.id, index = index,
+                                                contextId = contextMovieId, contextFocus = contextFocus,
+                                                selectedId = targetMovieId, selectedFocus = selFocus,
+                                                firstItemFocus = firstItemFocus,
+                                            )
+                                            .onFocusChanged { if (it.isFocused) onMovieFocus(movie) }
+                                            .onPreviewKeyEvent { e ->
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true } else false
+                                            },
+                                    ) { VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES) }
+                                }
                             }
                         }
                     }
@@ -1032,7 +1096,7 @@ fun MoviesScreen(
             value = runCatching { vm.relatedTo(m) }.getOrDefault(emptyList())
         }
         MediaDetailsScreen(
-            details = buildMovieDetails(m, cache, metadataMode.tmdbWins).copy(related = related),
+            details = buildMovieDetails(m, cache, metadataMode.tmdbWins || m.id in overridden).copy(related = related),
             onExit = { detailsMovie = null },
         )
     }
@@ -1052,9 +1116,10 @@ fun MoviesScreen(
                 initialTitle = p.title,
                 initialYear = p.year,
                 hasOverride = p.hasOverride,
-                onSave = { title, year ->
+                initialTmdbId = p.tmdbId,
+                onSave = { title, year, tmdbId ->
                     setTmdbNameMovie = null
-                    vm.setMovieTmdbName(m, title, year)
+                    vm.setMovieTmdbName(m, title, year, tmdbId)
                     toast.show(researchingTmdbMessage)
                 },
                 onClear = {

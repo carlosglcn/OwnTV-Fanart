@@ -294,7 +294,7 @@ class MoreCountsViewModel(
         val pid = ctx.value.profileId.takeIf { it >= 0 } ?: return
         val key = ContentOrderEntity.FAV_CONTEXT
         viewModelScope.launch {
-            contentOrderDao.replaceContext(
+            contentOrderDao.replaceKeepingOthers(
                 profileId = pid, type = m.type, contextKey = key,
                 rows = m.ids.mapIndexed { i, id -> ContentOrderEntity(profileId = pid, mediaType = m.type, contextKey = key, itemId = id, position = i) },
             )

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,6 +32,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +43,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -271,19 +275,20 @@ internal fun LiveStagePane(
                 .background(Color.Black),
             contentAlignment = Alignment.Center,
         ) {
-            if (channel != null) {
+            // glcn: until the video plays — and while a new channel loads — the frame holds the channel's logo alone;
+            // the programme's picture is already the screen's backdrop.
+            if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
+            if (channel != null && (!playing || loading)) {
+                // The channel's logo, large and soft toward the right — you can tell which channel it is
+                // without it competing with the programme.
+                if (loading) Box(Modifier.fillMaxSize().background(Color.Black))
                 ChannelLogoTile(
                     logoUrl = channel.displayLogoUrl,
-                    modifier = Modifier.size(288.mpx),
+                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f).graphicsLayer { alpha = 0.34f },
                     fill = Color.Transparent,
                 ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(56.mpx)) }
+                Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.5f to Color.Transparent)))
             }
-            // glcn: the programme's own picture fills the frame until the video plays over it.
-            val art = nowNext?.nowDetails?.imageUrl
-            if (!playing && !art.isNullOrBlank()) {
-                tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
-            }
-            if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
             if (loading) OwnTVSpinner(sizeDp = 28)
             // `.shade`: black 72% at the bottom, clear by 42% up — a video-sized gradient, one pass.
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.58f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.72f))))
@@ -302,11 +307,8 @@ internal fun LiveStagePane(
                     horizontalArrangement = Arrangement.spacedBy(14.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    LivePlate(channel.displayLogoUrl, 64.mpx, 46.mpx)
-                    Column {
-                        channel.number?.let { Text(it.toString(), style = stageText(15, 600), color = Color(0xFFCFD8D4), maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                        Text(channelName.orEmpty(), style = stageText(22, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
+                    channel.number?.let { Text(it.toString(), style = stageText(30, 800), color = stageAccent.accent, maxLines = 1) }
+                    Text(channelName.orEmpty(), style = stageText(24, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             if (singleSessionBlocked && !playing) {
@@ -318,9 +320,9 @@ internal fun LiveStagePane(
             }
         }
         val now = nowNext?.now
-        // glcn: the programme's picture beside its words — seen whole, never under the text.
-        val infoArt = nowNext?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() }
-        Row(Modifier.fillMaxWidth().padding(start = 4.mpx, end = 4.mpx, top = 34.mpx)) {
+        Box(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(start = 4.mpx, end = 4.mpx, top = 34.mpx)) {
+        Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             if (now != null) {
                 Text(now.title, style = stageText(42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -336,41 +338,53 @@ internal fun LiveStagePane(
                     StageProgress(progressOf(now), Modifier.weight(1f))
                     Text(timeLeftText(minutesLeft(now)), style = stageText(17, 400).copy(fontFeatureSettings = Tabular), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                now.description?.takeIf { it.isNotBlank() }?.let {
-                    Text(
-                        it, style = stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp), color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
-                        maxLines = 4, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 18.mpx),
-                    )
-                }
             }
-            val next = nowNext?.next
-            val later = nowNext?.upcoming?.firstOrNull()
-            if (next != null) {
-                Row(
-                    Modifier
-                        .padding(top = 22.mpx)
-                        .offset(x = (-12).mpx)
-                        .focusGroup(),
-                    // 30 between the two, less the 12 + 12 each entry pads itself with for its focus fill.
-                    horizontalArrangement = Arrangement.spacedBy(6.mpx),
-                ) {
-                    // ◀ from next goes back to the channel it belongs to, not to whatever lies to the left.
+        }
+        }
+        // glcn: the synopsis runs the full width.
+        val resolver: tv.own.owntv.core.metadata.ProgrammeArtResolver = org.koin.compose.koinInject()
+        val lentOverview by androidx.compose.runtime.produceState<String?>(null, now?.title) {
+            value = null
+            val n = now ?: return@produceState
+            if (!n.description.isNullOrBlank()) return@produceState
+            kotlinx.coroutines.delay(300)
+            value = runCatching { resolver.detailsFor(n.title, null) }.getOrNull()?.overview
+        }
+        (now?.description?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
+            tv.own.owntv.features.shell.components.DriftingSynopsis(
+                it,
+                modifier = Modifier.padding(top = 14.mpx),
+                style = stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp),
+                color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
+            )
+        }
+        val next = nowNext?.next
+        // glcn: what follows, several — the next one and the two after it.
+        val later = nowNext?.upcoming.orEmpty().take(2)
+        if (next != null) {
+            Column(
+                Modifier
+                    .padding(top = 14.mpx)
+                    .offset(x = (-12).mpx)
+                    .focusGroup(),
+            ) {
+                // ◀ from next goes back to the channel it belongs to, not to whatever lies to the left.
+                LiveScheduleItem(
+                    next, accentTime = true, onClick = { onOpenProgramme(next) },
+                    modifier = Modifier.focusRequester(scheduleFocus).onPreviewKeyEvent { e ->
+                        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onBackToList(); true } else false
+                    },
+                )
+                later.forEach { l ->
                     LiveScheduleItem(
-                        next, accentTime = true, onClick = { onOpenProgramme(next) },
-                        modifier = Modifier.focusRequester(scheduleFocus).onPreviewKeyEvent { e ->
+                        l, accentTime = false, onClick = { onOpenProgramme(l) },
+                        modifier = Modifier.onPreviewKeyEvent { e ->
                             if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onBackToList(); true } else false
                         },
                     )
-                    if (later != null) LiveScheduleItem(later, accentTime = false, onClick = { onOpenProgramme(later) })
                 }
             }
         }
-        if (now != null && infoArt != null) {
-            Box(
-                Modifier.padding(start = 28.mpx, top = 6.mpx).width(260.mpx).aspectRatio(16f / 9f)
-                    .clip(RoundedCornerShape(16.mpx)).background(Color(0xFF15191C)),
-            ) { tv.own.owntv.ui.components.ProgrammeArt(url = infoArt, modifier = Modifier.fillMaxSize()) }
         }
         }
     }
@@ -403,6 +417,7 @@ private fun LiveScheduleItem(p: XtEpgEntry, accentTime: Boolean, onClick: () -> 
 /** Scroll only as far as the focused item, plus one row of room, needs (the TV default pins it a third down). */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 internal val edgeScrollSpec = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
+    override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float> get() = tv.own.owntv.glcn.SmoothScroll.animation
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
         // One row of room kept ahead of the highlight, so the next row is already laid out: a held
         // ▲/▼ otherwise outran the list at the edge and stopped.
@@ -495,6 +510,8 @@ internal fun LiveCategories(
     onSelect: (Int) -> Unit,
     onLongSelect: (Int) -> Unit,
     onNavigateRight: () -> Unit,
+    /** glcn: whether the cursor rests on the playlist chips, where ◀ moves between them. */
+    onChipsFocused: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
     focusRowIndex: Int? = null,
@@ -533,7 +550,8 @@ internal fun LiveCategories(
     val searchFocus = remember { FocusRequester() }
     // glcn: playlist rows — "All playlists" then each playlist; the active one sits open above its categories.
     val switcher = if (showPlaylists) LocalCategoryPlaylists.current?.takeIf { it.playlists.size > 1 } else null
-    val allPlaylistsText = stringResource(R.string.content_all_playlists)
+    // glcn: "All" on the chip, so the three chips fit the sheet and the row never scrolls sideways when the cursor moves.
+    val allPlaylistsText = stringResource(R.string.content_all_playlists_short)
     val activePlaylist = if (switcher != null && switcher.activeId > 0L) switcher.activeId else -1L
     val allPlaylistRows = remember(switcher?.playlists, allPlaylistsText) {
         switcher?.let { listOf(-1L to allPlaylistsText) + it.playlists.map { src -> src.id to src.name } }.orEmpty()
@@ -557,18 +575,65 @@ internal fun LiveCategories(
     var hasFocus by remember { mutableStateOf(false) }
     // glcn: while the cursor rests on the playlist chips, switching list must not pull it down to a row.
     var chipsFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(chipsFocused) { onChipsFocused(chipsFocused) }
     // The chip the cursor last rested on; cleared when it moves to the search or a row. Switching list rebuilds
     // the rows below, and the cursor must not be dragged down with them.
     var lastChipId by remember { mutableStateOf<Long?>(null) }
-    val chipFocusers = remember(playlistRows) { playlistRows.associate { it.first to FocusRequester() } }
+    var pickerOpen by remember { mutableStateOf(false) }
+    // glcn: keyed by the chips' ids, not the list instance — switching list rebuilds the rows but the chips are the
+    // same, and new focus requesters on them dropped the cursor for a frame (the highlight blinked).
+    val chipIds = if (playlistRows.isEmpty()) emptyList() else listOf(PICKER_CHIP)
+    val chipFocusers = remember(chipIds) { chipIds.associateWith { FocusRequester() } }
     LaunchedEffect(entries) {
         val id = lastChipId ?: return@LaunchedEffect
         val target = chipFocusers[id] ?: return@LaunchedEffect
         withFrameNanos { }
         if (!chipsFocused) {
-            runCatching { listState.scrollToItem(0) }
-            withFrameNanos { }
+            if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
+                runCatching { listState.scrollToItem(0) }
+                withFrameNanos { }
+            }
             runCatching { target.requestFocus() }
+        }
+    }
+    // glcn: ▲ ▼ by row number, as the channel list does. A held key outran the lazy list: the row it was heading for
+    // was not composed yet, focus was lost, and coming back in landed on the selected category far away — the list
+    // went off to a group and returned. Scroll just enough, wait a frame, then focus the row; the newest press wins.
+    // Where the fixed entries end and the provider groups begin (the "GROUPS · DE" heading).
+    val firstGroup = entries.indexOfFirst { it.item.key is tv.own.owntv.core.live.LiveKey.Folder || it.item.key is tv.own.owntv.core.live.LiveKey.Custom }
+    var stepTarget by remember { mutableStateOf<Int?>(null) }
+    var stepJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    fun lazyIndexOf(pos: Int): Int {
+        val groupsHeading = query.isBlank() && firstGroup >= 0 && visible.indexOf(firstGroup).let { it in 0..pos }
+        return headerCount + pos + if (groupsHeading) 1 else 0
+    }
+    fun stepTo(pos: Int) {
+        stepTarget = pos
+        stepJob?.cancel()
+        stepJob = scope.launch {
+            val li = lazyIndexOf(pos)
+            val info = listState.layoutInfo
+            val row = info.visibleItemsInfo.firstOrNull { it.index == li }
+            val step = (info.visibleItemsInfo.lastOrNull { it.index >= headerCount }?.size ?: 56).toFloat()
+            val delta = when {
+                row == null -> if (li > (info.visibleItemsInfo.lastOrNull()?.index ?: 0)) step * 2 else -step * 2
+                row.offset - step < info.viewportStartOffset -> row.offset - step - info.viewportStartOffset
+                row.offset + row.size + step > info.viewportEndOffset -> row.offset + row.size + step - info.viewportEndOffset
+                else -> 0f
+            }
+            if (row != null) {
+                // glcn: the row is already composed — the highlight moves at once and the list glides under it.
+                runCatching { rowFocusers[pos].requestFocus() }
+                if (delta != 0f) runCatching {
+                    listState.animateScrollBy(delta, androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                }
+            } else {
+                if (delta != 0f) runCatching { listState.scrollBy(delta) }
+                if (listState.layoutInfo.visibleItemsInfo.none { it.index == li }) runCatching { listState.scrollToItem(li) }
+                withFrameNanos { }
+                runCatching { rowFocusers[pos].requestFocus() }
+            }
+            stepTarget = null
         }
     }
     LaunchedEffect(selectedIndex) {
@@ -601,12 +666,33 @@ internal fun LiveCategories(
             runCatching { searchFocus.requestFocus() }
         }
     }
-    // Where the fixed entries end and the provider groups begin (the "GROUPS · DE" heading).
-    val firstGroup = entries.indexOfFirst { it.item.key is tv.own.owntv.core.live.LiveKey.Folder || it.item.key is tv.own.owntv.core.live.LiveKey.Custom }
     val rightKey = Modifier.onPreviewKeyEvent { e ->
         if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionRight) { onNavigateRight(); true } else false
     }
     val a = stageAccent
+    if (pickerOpen) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { pickerOpen = false }) {
+            val first = remember { FocusRequester() }
+            LaunchedEffect(Unit) { withFrameNanos { }; runCatching { first.requestFocus() } }
+            Column(Modifier.width(560.mpx).stageGlass(StageRadii.Sheet, overContent = true).padding(horizontal = 16.mpx, vertical = 22.mpx)) {
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 560.mpx)) {
+                    items(playlistRows.size, key = { playlistRows[it].first }) { row ->
+                        val (id, name) = playlistRows[row]
+                        StageSheetItem(
+                            text = name,
+                            onClick = { pickerOpen = false; if (id != activePlaylist) switcher?.onSelect?.invoke(id) },
+                            selected = id == activePlaylist,
+                            onLongClick = if (id > 0L && id != activePlaylist) ({
+                                tv.own.owntv.glcn.HiddenCategories.hide(appCtx, tv.own.owntv.glcn.HiddenCategories.playlistKey(id))
+                                android.widget.Toast.makeText(appCtx, R.string.glcn_category_hidden_toast, android.widget.Toast.LENGTH_SHORT).show()
+                            }) else null,
+                            modifier = if (id == activePlaylist || (activePlaylist <= 0L && id == -1L)) Modifier.focusRequester(first) else Modifier,
+                        )
+                    }
+                }
+            }
+        }
+    }
     Column(
         modifier
             .then(if (sheet) Modifier.stageGlass(StageRadii.Sheet, overContent = true).padding(horizontal = 16.mpx, vertical = 26.mpx) else Modifier),
@@ -623,11 +709,11 @@ internal fun LiveCategories(
         }
         // Edge-only scrolling, as the channel list (no double step on ▼).
         androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
+        tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f)) {
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
+                .fillMaxSize()
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                 .onFocusChanged { hasFocus = it.hasFocus }
                 .focusProperties {
@@ -665,46 +751,28 @@ internal fun LiveCategories(
                 )
             }
             if (playlistRows.isNotEmpty()) item(key = "__playlists__") {
-                androidx.compose.foundation.lazy.LazyRow(
-                    modifier = Modifier.fillMaxWidth().onFocusChanged { chipsFocused = it.hasFocus }
-                        // ▲/▼ is the user leaving the chips on purpose; anything else that moves the cursor is undone.
+                // glcn: one button with the current list; OK opens a quick picker. Nothing is chosen by resting on it,
+                // so moving past the list never reloads the categories under the cursor.
+                val current = playlistRows.firstOrNull { it.first == activePlaylist }?.second ?: allPlaylistsText
+                StageSurface(
+                    onClick = { pickerOpen = true },
+                    radius = 22.mpx,
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(start = if (sheet) 8.mpx else 0.mpx, end = if (sheet) 8.mpx else 0.mpx, bottom = if (sheet) 14.mpx else 12.mpx)
+                        .height(46.mpx)
+                        .focusRequester(chipFocusers.getValue(PICKER_CHIP))
+                        .onFocusChanged { chipsFocused = it.hasFocus; if (it.hasFocus) lastChipId = PICKER_CHIP }
                         .onPreviewKeyEvent { e ->
                             if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp)) lastChipId = null
-                            false
-                        }.padding(start = if (sheet) 8.mpx else 0.mpx, end = if (sheet) 8.mpx else 0.mpx, bottom = if (sheet) 14.mpx else 12.mpx),
-                    horizontalArrangement = Arrangement.spacedBy(8.mpx),
-                    contentPadding = PaddingValues(horizontal = 4.mpx, vertical = 4.mpx),
-                ) {
-                    items(playlistRows.size, key = { playlistRows[it].first }) { row ->
-                        val (id, name) = playlistRows[row]
-                        val open = id == activePlaylist
-                        // glcn: the lists listed here are the active ones — resting on one shows it, no OK needed.
-                        var chipFocused by remember { mutableStateOf(false) }
-                        LaunchedEffect(chipFocused, open) {
-                            if (chipFocused && !open) {
-                                kotlinx.coroutines.delay(350)
-                                switcher?.onSelect?.invoke(id)
-                            }
-                        }
-                        StageSurface(
-                            onClick = { if (!open) switcher?.onSelect?.invoke(id) },
-                            onLongClick = if (id > 0L && !open) ({
-                                tv.own.owntv.glcn.HiddenCategories.hide(appCtx, tv.own.owntv.glcn.HiddenCategories.playlistKey(id))
-                                android.widget.Toast.makeText(appCtx, R.string.glcn_category_hidden_toast, android.widget.Toast.LENGTH_SHORT).show()
-                            }) else null,
-                            radius = 22.mpx,
-                            modifier = Modifier.height(46.mpx)
-                                .then(chipFocusers[id]?.let { Modifier.focusRequester(it) } ?: Modifier)
-                                .onFocusChanged { chipFocused = it.hasFocus; if (it.hasFocus) lastChipId = id },
-                        ) { focused ->
-                            Row(Modifier.padding(horizontal = 18.mpx).height(46.mpx), verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    name, style = stageText(18, 700), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    color = if (focused) a.onAccent else if (open) a.accent else StageColors.Muted,
-                                    modifier = Modifier.widthIn(max = 220.mpx),
-                                )
-                            }
-                        }
+                            e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft
+                        },
+                ) { focused ->
+                    Row(Modifier.padding(horizontal = 18.mpx).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            current, style = stageText(18, 700), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            color = if (focused) a.onAccent else a.accent, modifier = Modifier.weight(1f),
+                        )
+                        Text("▾", style = stageText(18, 700), color = if (focused) a.onAccent else StageColors.Muted)
                     }
                 }
             }
@@ -722,6 +790,16 @@ internal fun LiveCategories(
                 item(key = entry.item.key.toString()) {
                     val rowModifier = Modifier.focusRequester(rowFocusers[pos]).then(rightKey)
                         .onFocusChanged { if (it.hasFocus) onRowFocus(index) }
+                        .onPreviewKeyEvent { e ->
+                            val down = e.key == Key.DirectionDown
+                            if (e.type != KeyEventType.KeyDown || (!down && e.key != Key.DirectionUp)) return@onPreviewKeyEvent false
+                            val to = (stepTarget ?: pos) + if (down) 1 else -1
+                            when {
+                                to < 0 -> false // ▲ from the first row goes on to the playlists or the search
+                                to >= visible.size -> true
+                                else -> { stepTo(to); true }
+                            }
+                        }
                     val selected = index == selectedIndex
                     if (sheet) {
                         StageSheetItem(
@@ -753,8 +831,11 @@ internal fun LiveCategories(
             }
         }
         }
+        }
     }
 }
+
+private const val PICKER_CHIP = -2L
 
 /**
  * `.fcat` (the Separate column): 52 high, radius 15, 18.5/600, gap 12, 2 px between rows; the

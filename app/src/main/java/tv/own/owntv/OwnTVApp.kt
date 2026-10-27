@@ -79,6 +79,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
     }
 
     override fun onCreate() {
+        tv.own.owntv.glcn.LowRam.detect(this)
         Perf.begin() // zero-point for the OwnTVPerf startup timeline (adb logcat -s OwnTVPerf)
         super.onCreate()
         // "Restart now" after an icon change runs a few milliseconds in a process of its own; nothing
@@ -182,7 +183,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             .build()
         return ImageLoader.Builder(context)
             .components { add(OkHttpNetworkFetcherFactory(callFactory = { imageHttpClient })) }
-            .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.10).build() }
+            .memoryCache { MemoryCache.Builder().maxSizePercent(context, if (tv.own.owntv.glcn.LowRam.on) 0.06 else 0.10).build() }
             // Explicit bounded disk cache: posters/logos survive across sessions instead of
             // re-downloading, capped so a 220k-item catalog can't eat the box's storage.
             .diskCache {
@@ -194,7 +195,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             // Opaque poster art doesn't need an alpha channel; RGB_565 halves bitmap memory
             // under the deliberately small memory cap.
             .allowRgb565(true)
-            .crossfade(true)
+            .crossfade(!tv.own.owntv.glcn.LowRam.on)
             .build()
     }
 
@@ -223,6 +224,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         if (level >= TRIM_MEMORY_RUNNING_LOW) {
             runCatching { SingletonImageLoader.get(this).memoryCache?.clear() }
         }
+        if (level >= TRIM_MEMORY_RUNNING_CRITICAL) tv.own.owntv.glcn.LowRam.onMemoryCritical(this)
         // The engines judge the level themselves: UI_HIDDEN (every Home press) is not pressure for them,
         // and used to leave mpv on a trimmed cache for the rest of the session.
         runCatching { GlobalContext.getOrNull()?.getOrNull<tv.own.owntv.player.PlaybackEngines>()?.onTrimMemory(level) }
