@@ -42,6 +42,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -310,7 +311,8 @@ internal fun Modifier.toolFocus(label: String, value: String? = null): Modifier 
 internal fun ToolFocusBox(st: ToolFocusState, modifier: Modifier = Modifier) {
     val alpha = remember { androidx.compose.animation.core.Animatable(0f) }
     val on = st.current != null
-    androidx.compose.runtime.LaunchedEffect(on) { alpha.animateTo(if (on) 1f else 0f, ownTvTween(140)) }
+    val fade = ownTvTween<Float>(140)
+    androidx.compose.runtime.LaunchedEffect(on) { alpha.animateTo(if (on) 1f else 0f, fade) }
     val accent = hudFocus(ring = hudAccent)
     val palette = tv.own.owntv.ui.theme.LocalStagePalette.current
     androidx.compose.foundation.Canvas(modifier) {
@@ -331,7 +333,11 @@ internal fun ToolFocusBox(st: ToolFocusState, modifier: Modifier = Modifier) {
 internal fun ToolLabelLine(st: ToolFocusState) {
     val alpha = remember { androidx.compose.animation.core.Animatable(0f) }
     val on = st.current != null
-    androidx.compose.runtime.LaunchedEffect(on) { alpha.animateTo(if (on) 1f else 0f, ownTvTween(140)) }
+    val fade = ownTvTween<Float>(140)
+    val inF = ownTvTween<Float>(200)
+    val inSlide = ownTvTween<androidx.compose.ui.unit.IntOffset>(200)
+    val outF = ownTvTween<Float>(90)
+    androidx.compose.runtime.LaunchedEffect(on) { alpha.animateTo(if (on) 1f else 0f, fade) }
     val text = st.label + (st.value?.let { " · $it" } ?: "")
     Box(
         Modifier.fillMaxWidth().height(30.dp).padding(start = 12.dp, end = 12.dp, bottom = 4.dp).graphicsLayer { this.alpha = alpha.value },
@@ -341,7 +347,7 @@ internal fun ToolLabelLine(st: ToolFocusState) {
             targetState = text,
             transitionSpec = {
                 if (tv.own.owntv.glcn.LowRam.on) androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
-                else (fadeIn(ownTvTween(200)) + androidx.compose.animation.slideInVertically(ownTvTween(200)) { it / 3 }) togetherWith fadeOut(ownTvTween(90))
+                else (fadeIn(inF) + androidx.compose.animation.slideInVertically(inSlide) { it / 3 }) togetherWith fadeOut(outF)
             },
             label = "toolName",
         ) { t ->
