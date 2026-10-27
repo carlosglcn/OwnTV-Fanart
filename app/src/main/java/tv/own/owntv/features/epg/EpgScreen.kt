@@ -79,6 +79,7 @@ import tv.own.owntv.ui.stage.StageButton
 import tv.own.owntv.ui.stage.shownColor
 import tv.own.owntv.ui.stage.stageFocusLook
 import tv.own.owntv.ui.stage.drawStageFocus
+import tv.own.owntv.glcn.staggerAt
 import tv.own.owntv.ui.stage.StageSearchField
 import tv.own.owntv.ui.stage.StageTool
 import tv.own.owntv.ui.theme.StageColors
@@ -655,6 +656,7 @@ fun EpgScreen(
                             }
                         }
                     }
+                    val rowsGate = tv.own.owntv.glcn.rememberStaggerGate(categoryKey)
                     CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
                         LazyColumn(
                             state = rowListState,
@@ -681,6 +683,7 @@ fun EpgScreen(
                                     scrollPx = scrollPx,
                                     cursor = cursor,
                                     rowIndex = index,
+                                    gate = rowsGate,
                                     onCursorBox = ::glideToCell,
                                     focusRequester = rowFocus(index),
                                     selectedRow = gridHasFocus && index == focusedRow,
@@ -892,6 +895,7 @@ private fun GuideRow(
     scrollPx: () -> Int,
     cursor: GuideCursor,
     rowIndex: Int,
+    gate: tv.own.owntv.glcn.StaggerGate,
     onCursorBox: (Float, Float) -> Unit,
     focusRequester: FocusRequester,
     selectedRow: Boolean,
@@ -927,7 +931,7 @@ private fun GuideRow(
         if (focused && cellMode) programmes?.let { cellBoxContent(it, cursorTime, windowStart, windowEnd, cellPxPerMin, cellPx)?.let { (x, w) -> onCursorBox(x, w) } }
     }
     val rowSelected = focused && !cellMode
-    Row(Modifier.fillMaxWidth().height(GuideGridDefaults.RowHeight), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.staggerAt(rowIndex, gate, step = 45, cap = 8).fillMaxWidth().height(GuideGridDefaults.RowHeight), verticalAlignment = Alignment.CenterVertically) {
         GuideChannelLabel(channel, name, dot, selected = selectedRow, numberWidth = numberWidth, modifier = Modifier.width(labelWidth))
         Box(
             Modifier

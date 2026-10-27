@@ -290,11 +290,12 @@ fun LumenHome(
             val focusedAt = items.indexOfFirst { it.key == focusedKey }.coerceAtLeast(0)
             val pos = remember { androidx.compose.animation.core.Animatable(0f) }
             val lastTab = remember { mutableIntStateOf(selected) }
-            val rowAlpha = remember { androidx.compose.animation.core.Animatable(1f) }
+            // 0 → 2.04: card i is in once it passes 0.13·i, each fading for one unit — a card every ~58 ms.
+            val rowAlpha = remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 2.04f else 0f) }
             LaunchedEffect(selected) {
                 if (tv.own.owntv.glcn.LowRam.on) return@LaunchedEffect
                 rowAlpha.snapTo(0f)
-                rowAlpha.animateTo(1f, androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                rowAlpha.animateTo(2.04f, androidx.compose.animation.core.tween(920, easing = androidx.compose.animation.core.LinearEasing))
             }
             LaunchedEffect(selected, focusedAt) {
                 if (lastTab.intValue != selected || tv.own.owntv.glcn.LowRam.on) {
@@ -312,7 +313,7 @@ fun LumenHome(
             val to = (maxOf(k, focusedAt) + 9).coerceAtMost(items.lastIndex)
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides NoBringIntoView) {
             androidx.compose.ui.layout.Layout(
-                modifier = Modifier.padding(top = 18.mpx, start = 30.mpx).fillMaxWidth().graphicsLayer { alpha = rowAlpha.value }.focusRestorer().focusGroup(),
+                modifier = Modifier.padding(top = 18.mpx, start = 30.mpx).fillMaxWidth().focusRestorer().focusGroup(),
                 content = {
                     for (i in from..to) {
                         val item = items[i]
@@ -373,7 +374,12 @@ fun LumenHome(
                         val x = (left[j] - scroll).toInt()
                         // A card that has glided past the left edge dissolves away instead of being cut.
                         val a = if (x >= 0) 1f else (1f + x / (0.7f * ws[j])).coerceIn(0f, 1f)
-                        p.placeWithLayer(x, top, zIndex = if (i == focusedAt) 1f else 0f) { alpha = a }
+                        p.placeWithLayer(x, top, zIndex = if (i == focusedAt) 1f else 0f) {
+                            // Each card arrives a beat after the one before it: fading in while rising a little.
+                            val e = androidx.compose.animation.core.FastOutSlowInEasing.transform((rowAlpha.value - 0.13f * minOf(i, 8)).coerceIn(0f, 1f))
+                            alpha = a * e
+                            translationY = (1f - e) * 24.mpx.toPx()
+                        }
                     }
                 }
             }

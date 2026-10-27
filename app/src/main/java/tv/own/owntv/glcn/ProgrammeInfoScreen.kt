@@ -210,20 +210,3 @@ fun ProgrammeInfoScreen(
 }
 
 
-/**
- * glcn: a piece of the screen that arrives on its own beat — fading in while rising a few pixels (or sliding in
- * from the right), a little after the one before it, so the screen builds up instead of appearing whole.
- */
-@Composable
-private fun Modifier.staggerIn(delayMs: Int, fromRight: Boolean = false): Modifier {
-    if (tv.own.owntv.glcn.LowRam.on) return this
-    val p = remember { androidx.compose.animation.core.Animatable(0f) }
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(delayMs.toLong())
-        p.animateTo(1f, androidx.compose.animation.core.tween(520, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)))
-    }
-    return this.graphicsLayer {
-        alpha = p.value
-        if (fromRight) translationX = (1f - p.value) * 48.mpx.toPx() else translationY = (1f - p.value) * 24.mpx.toPx()
-    }
-}

@@ -52,6 +52,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.focus.FocusRequester as RowFocus
 import tv.own.owntv.ui.theme.mpx
+import tv.own.owntv.glcn.staggerAt
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
@@ -912,6 +913,8 @@ fun LiveScreen(
                     // Scroll only as far as the focused row needs to be on screen, as Home does: the TV
                     // default pins focus a third of the way down, so each ▼ moved the highlight a row
                     // and then slid the whole list back under it — a double step.
+                    // glcn: the first rows of a category arrive one after another; later ones are just there.
+                    val rowsGate = tv.own.owntv.glcn.rememberStaggerGate(selectedKey)
                     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
                     LazyColumn(
                         state = effectiveListState,
@@ -951,7 +954,7 @@ fun LiveScreen(
                                     isFavorite = favoriteIds.contains(channel.id),
                                     showNumber = showChannelNumbers,
                                     mark = playlistMarks[channel.sourceId],
-                                    modifier = Modifier.gridFocusTarget(
+                                    modifier = Modifier.staggerAt(index, rowsGate, step = 40, cap = 9).gridFocusTarget(
                                         itemId = channel.id, index = index,
                                         contextId = contextChannelId, contextFocus = contextFocus,
                                         selectedId = if (isTarget) channel.id else null, selectedFocus = selFocus,

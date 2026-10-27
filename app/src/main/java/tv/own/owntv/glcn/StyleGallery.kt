@@ -51,7 +51,7 @@ fun StylePickerPopup(current: GlcnStyle?, onPick: (GlcnStyle?) -> Unit, onDismis
                         StageSurface(
                             onClick = { onPick(st); onDismiss() },
                             radius = 18.mpx,
-                            modifier = Modifier.weight(1f).then(if ((current == null && r == 0 && c == 0) || picked) Modifier.focusRequester(first) else Modifier),
+                            modifier = Modifier.weight(1f).staggerAt(r * 5 + c, step = 55).then(if ((current == null && r == 0 && c == 0) || picked) Modifier.focusRequester(first) else Modifier),
                         ) { focused ->
                             Column(Modifier.padding(10.mpx), verticalArrangement = Arrangement.spacedBy(6.mpx)) {
                                 StyleSketch(st, focused, Modifier.fillMaxWidth().height(112.mpx))
@@ -68,7 +68,7 @@ fun StylePickerPopup(current: GlcnStyle?, onPick: (GlcnStyle?) -> Unit, onDismis
                     }
                 }
             }
-            StageSurface(onClick = { onPick(null); onDismiss() }, radius = 14.mpx, modifier = Modifier.fillMaxWidth()) { focused ->
+            StageSurface(onClick = { onPick(null); onDismiss() }, radius = 14.mpx, modifier = Modifier.fillMaxWidth().staggerIn(GlcnStyle.entries.size * 55 + 40)) { focused ->
                 Column(Modifier.padding(horizontal = 18.mpx, vertical = 12.mpx)) {
                     Text(
                         stringResource(R.string.glcn_style_none), style = stageText(19, 800),

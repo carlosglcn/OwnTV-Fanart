@@ -98,3 +98,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ Emby: the app no longer signs in to your server again on every refresh, so it stops announcing a new login each time
 - 🗓️ TV Guide: one focus box now glides from row to row and from programme to programme, and the timeline slides instead of jumping
 - ✨ Softer handovers: the words on Home and in the guide fade and rise into place, and the programme screen builds up piece by piece
+- ✨ Cards and rows now arrive one after another (Home styles and layouts, every Home layout, channel lists, the TV Guide and the zapping strip) instead of all appearing at once

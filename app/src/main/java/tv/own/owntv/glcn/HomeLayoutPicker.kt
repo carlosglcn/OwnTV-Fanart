@@ -57,7 +57,7 @@ fun HomeLayoutPicker(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit)
                 StageSurface(
                     onClick = { onPick(mode); onDismiss() },
                     radius = 22.mpx,
-                    modifier = Modifier.weight(1f).then(if (mode == current.coerceIn(0, 3)) Modifier.focusRequester(first) else Modifier),
+                    modifier = Modifier.weight(1f).staggerAt(mode, step = 90).then(if (mode == current.coerceIn(0, 3)) Modifier.focusRequester(first) else Modifier),
                 ) { focused ->
                     Column(Modifier.padding(14.mpx), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
                         Sketch(mode, focused, Modifier.fillMaxWidth().height(150.mpx))

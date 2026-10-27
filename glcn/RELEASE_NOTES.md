@@ -29,6 +29,7 @@
 - 🖼️ **TV Guide: channel logos are a third larger**
 - ✨ **TV Guide: the focus glides from row to row and programme to programme, and the timeline slides smoothly**
 - ✨ **Softer handovers: the words on Home and in the guide fade and rise into place, and the programme screen builds up piece by piece**
+- ✨ **Cards and rows arrive one after another — in the style and layout choosers, every Home layout, channel lists, the TV Guide and the zapping strip**
 - 🛠️ **Delete profile confirmation no longer closes by itself**
 
 ### 🙏 Thank you

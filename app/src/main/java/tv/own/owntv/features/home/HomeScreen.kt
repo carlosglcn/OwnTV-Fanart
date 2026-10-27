@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import tv.own.owntv.glcn.staggerAt
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -437,6 +438,7 @@ fun HomeScreen(
         trendingItem?.let { TrendingBackdrop(it, folded = inRows, modifier = Modifier.align(Alignment.TopEnd)) }
         posterItem?.let { TrendingBackdrop(it, folded = true, modifier = Modifier.align(Alignment.TopEnd)) }
         CompositionLocalProvider(LocalBringIntoViewSpec provides homeBringIntoViewSpec, LocalHomeFocusArt provides { if (it == null) billboardFocused = true else { billboardFocused = false; focusArt = it } }, LocalHomeFocusInfo provides { focusInfo = it; if (it != null) billboardFocused = false }, LocalHomeCardWidth provides panelCardWidth) {
+            val homeGate = tv.own.owntv.glcn.rememberStaggerGate()
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -460,11 +462,11 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(RowGap),
             ) {
                 if (!fullBleed && backdropStyle != 1) item("glcn-greeting") { HomeGreeting(state.profileName, contentStart, mark = if (seasonMode > 0) tv.own.owntv.core.theme.Seasons.mark(season) else null) }
-                itemsIndexed(renderRows, key = { _, row -> row.name }) { _, row ->
+                itemsIndexed(renderRows, key = { _, row -> row.name }) { rowIndex, row ->
                     // glcn: whichever row is first — the billboard, Keep watching or any other — reaching it
                     // brings the top of the page (the greeting) back, not just the row itself.
                     Box(
-                        (if (row == renderRows.firstOrNull() && !fullBleed) Modifier.onFocusChanged {
+                        Modifier.staggerAt(rowIndex, homeGate, step = 110, cap = 6).then(if (row == renderRows.firstOrNull() && !fullBleed) Modifier.onFocusChanged {
                             if (it.hasFocus) homeScope.launch { scrollHomeToTop(listState) }
                         } else Modifier).then(
                             // glcn: ▲ always reaches the row above. The row above can be off screen and

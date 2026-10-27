@@ -58,6 +58,8 @@ import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.stageText
+import tv.own.owntv.glcn.staggerAt
+import tv.own.owntv.glcn.staggerIn
 
 /**
  * glcn: the channel list over the player as picture cards — what each channel shows now, with its
@@ -126,6 +128,7 @@ fun ZapPosterOverlay(
     var showNext by remember { androidx.compose.runtime.mutableStateOf(false) }
     val timeFmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
     val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
+    val zapGate = tv.own.owntv.glcn.rememberStaggerGate()
     Box(
         modifier.fillMaxSize().onPreviewKeyEvent { e ->
             val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
@@ -152,7 +155,7 @@ fun ZapPosterOverlay(
                 },
         ) {
             Row(
-                Modifier.padding(start = 64.mpx, end = 64.mpx, bottom = 14.mpx),
+                Modifier.staggerIn(0).padding(start = 64.mpx, end = 64.mpx, bottom = 14.mpx),
                 horizontalArrangement = Arrangement.spacedBy(14.mpx),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -183,7 +186,7 @@ fun ZapPosterOverlay(
                 modifier = Modifier.focusGroup(),
             ) {
                 itemsIndexed(channels, key = { _, c -> c.id }) { index, ch ->
-                    Column(Modifier.width(360.mpx)) {
+                    Column(Modifier.staggerAt((index - start + 1).coerceAtLeast(0), zapGate, step = 70, cap = 6).width(360.mpx)) {
                     tv.own.owntv.features.home.ArtLiveCard(
                         channel = ch,
                         programme = programmes[ch.id],
@@ -208,7 +211,7 @@ fun ZapPosterOverlay(
             programmes = programmes,
             loadSchedule = loadSchedule,
             cache = scheduleCache,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.mpx, bottom = if (showNext) 530.mpx else 392.mpx),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.mpx, bottom = if (showNext) 530.mpx else 392.mpx).staggerIn(260, fromRight = true),
         )
     }
 }
@@ -218,8 +221,8 @@ fun ZapPosterOverlay(
 private fun ZapNextList(rows: List<EpgProgrammeEntity>, fmt: java.text.DateFormat) {
     Column(Modifier.fillMaxWidth().padding(start = 6.mpx, end = 6.mpx, top = 12.mpx), verticalArrangement = Arrangement.spacedBy(3.mpx)) {
         Text(stringResource(R.string.content_live_next), style = stageText(15, 700), color = stageAccent.accent, maxLines = 1)
-        rows.forEach { n ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
+        rows.forEachIndexed { ni, n ->
+            Row(Modifier.staggerIn(ni * 50), horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
                 Text(fmt.format(java.util.Date(n.startMs)), style = stageText(16, 700), color = StageColors.Muted, maxLines = 1, modifier = Modifier.width(66.mpx))
                 Text(n.title, style = stageText(16, 500), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             }

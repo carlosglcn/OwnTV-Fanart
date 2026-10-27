@@ -64,6 +64,7 @@ import tv.own.owntv.ui.stage.StageProgress
 import tv.own.owntv.ui.stage.StageSurface
 import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.mpx
+import tv.own.owntv.glcn.staggerAt
 import tv.own.owntv.ui.theme.mpxSp
 import tv.own.owntv.ui.theme.stageText
 
@@ -191,6 +192,7 @@ internal fun LiveCinematicPane(
                     modifier = Modifier.padding(start = 64.mpx, top = 40.mpx),
                 )
             } else {
+                val cardsGate = tv.own.owntv.glcn.rememberStaggerGate()
                 CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
                     LazyRow(
                         state = listState,
@@ -208,7 +210,7 @@ internal fun LiveCinematicPane(
                                 val rows = programmes[channel.id].orEmpty()
                                 val current = rows.firstOrNull { now in it.startMs until it.stopMs }
                                 val next = rows.filter { it.startMs >= (current?.stopMs ?: now) }.take(1)
-                                Column(Modifier.width(CARD_W.mpx)) {
+                                Column(Modifier.staggerAt(index, cardsGate, step = 70, cap = 7).width(CARD_W.mpx)) {
                                     LiveChannelCard(
                                         channel = channel,
                                         programme = current,

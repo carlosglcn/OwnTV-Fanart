@@ -46,12 +46,12 @@ internal fun GalleryPopup(title: Int, body: Int?, options: List<GalleryOption>, 
     LaunchedEffect(Unit) { delay(80); runCatching { first.requestFocus() } }
     StagePopup(onDismiss = onDismiss, title = stringResource(title), body = body?.let { stringResource(it) }, width = 1620.mpx) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
-            options.forEach { o ->
+            options.forEachIndexed { oi, o ->
                 val picked = o.key == current
                 StageSurface(
                     onClick = { onPick(o.key); onDismiss() },
                     radius = 22.mpx,
-                    modifier = Modifier.weight(1f).then(if (picked || (options.none { it.key == current } && o === options.first())) Modifier.focusRequester(first) else Modifier),
+                    modifier = Modifier.weight(1f).staggerAt(oi, step = 90).then(if (picked || (options.none { it.key == current } && o === options.first())) Modifier.focusRequester(first) else Modifier),
                 ) { focused ->
                     Column(Modifier.padding(14.mpx), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
                         GallerySketch(o.sketch, focused, Modifier.fillMaxWidth().height(170.mpx))
