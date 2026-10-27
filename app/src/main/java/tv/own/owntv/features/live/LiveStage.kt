@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -585,6 +586,36 @@ internal fun LiveCategories(
             runCatching { target.requestFocus() }
         }
     }
+    // glcn: ▲ ▼ by row number, as the channel list does. A held key outran the lazy list: the row it was heading for
+    // was not composed yet, focus was lost, and coming back in landed on the selected category far away — the list
+    // went off to a group and returned. Scroll just enough, wait a frame, then focus the row; the newest press wins.
+    var stepTarget by remember { mutableStateOf<Int?>(null) }
+    var stepJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    fun lazyIndexOf(pos: Int): Int {
+        val groupsHeading = query.isBlank() && firstGroup >= 0 && visible.indexOf(firstGroup).let { it in 0..pos }
+        return headerCount + pos + if (groupsHeading) 1 else 0
+    }
+    fun stepTo(pos: Int) {
+        stepTarget = pos
+        stepJob?.cancel()
+        stepJob = scope.launch {
+            val li = lazyIndexOf(pos)
+            val info = listState.layoutInfo
+            val row = info.visibleItemsInfo.firstOrNull { it.index == li }
+            val step = (info.visibleItemsInfo.lastOrNull { it.index >= headerCount }?.size ?: 56).toFloat()
+            val delta = when {
+                row == null -> if (li > (info.visibleItemsInfo.lastOrNull()?.index ?: 0)) step * 2 else -step * 2
+                row.offset - step < info.viewportStartOffset -> row.offset - step - info.viewportStartOffset
+                row.offset + row.size + step > info.viewportEndOffset -> row.offset + row.size + step - info.viewportEndOffset
+                else -> 0f
+            }
+            if (delta != 0f) runCatching { listState.scrollBy(delta) }
+            if (listState.layoutInfo.visibleItemsInfo.none { it.index == li }) runCatching { listState.scrollToItem(li) }
+            withFrameNanos { }
+            runCatching { rowFocusers[pos].requestFocus() }
+            stepTarget = null
+        }
+    }
     LaunchedEffect(selectedIndex) {
         val pos = visible.indexOf(selectedIndex)
         if (!hasFocus || chipsFocused || pos < 0) return@LaunchedEffect
@@ -738,6 +769,16 @@ internal fun LiveCategories(
                 item(key = entry.item.key.toString()) {
                     val rowModifier = Modifier.focusRequester(rowFocusers[pos]).then(rightKey)
                         .onFocusChanged { if (it.hasFocus) onRowFocus(index) }
+                        .onPreviewKeyEvent { e ->
+                            val down = e.key == Key.DirectionDown
+                            if (e.type != KeyEventType.KeyDown || (!down && e.key != Key.DirectionUp)) return@onPreviewKeyEvent false
+                            val to = (stepTarget ?: pos) + if (down) 1 else -1
+                            when {
+                                to < 0 -> false // ▲ from the first row goes on to the playlists or the search
+                                to >= visible.size -> true
+                                else -> { stepTo(to); true }
+                            }
+                        }
                     val selected = index == selectedIndex
                     if (sheet) {
                         StageSheetItem(
