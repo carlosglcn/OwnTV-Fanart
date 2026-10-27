@@ -102,11 +102,14 @@ launcher, D-pad first.
 
 ## 💬 Community
 
-Questions, ideas, bug reports — **join the OwnTV Telegram group:**
+Questions, ideas, bug reports — **join the Telegram groups:**
 
-### 👉 [t.me/owntvplayer](https://t.me/owntvplayer)
+| OwnTV Fanart (this version) | OwnTV (original app) |
+|---|---|
+| ### 👉 [t.me/owntvfanart](https://t.me/owntvfanart) | ### 👉 [t.me/owntvplayer](https://t.me/owntvplayer) |
+| <a href="https://t.me/owntvfanart"><img src="extras/qr-codes/telegram_owntvfanart_qr.png" alt="Scan to join the OwnTV Fanart Telegram group" width="150"></a> | <a href="https://t.me/owntvplayer"><img src="extras/qr-codes/telegram_qr_code.jpg" alt="Scan to join the OwnTV Telegram group" width="150"></a> |
 
-<a href="https://t.me/owntvplayer"><img src="extras/qr-codes/telegram_qr_code.jpg" alt="Scan to join the OwnTV Telegram group" width="150"></a>
+Problems with **this version** go to the Fanart group; the original group is for the upstream app.
 
 ---
 

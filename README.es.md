@@ -27,6 +27,17 @@ OwnTV Fanart es gratis y se hace en ratos libres. Si te gusta cómo deja tu TV, 
 
 <p align="center"><a href="https://ko-fi.com/galcn10"><img src="extras/glcn/support.svg" alt="¿Te gusta OwnTV Fanart? Apoya el proyecto en Ko-fi" width="560"></a></p>
 
+## 💬 Comunidad
+
+Dudas, ideas o fallos — **únete a los grupos de Telegram:**
+
+| OwnTV Fanart (esta versión) | OwnTV (app original) |
+|---|---|
+| ### 👉 [t.me/owntvfanart](https://t.me/owntvfanart) | ### 👉 [t.me/owntvplayer](https://t.me/owntvplayer) |
+| <a href="https://t.me/owntvfanart"><img src="extras/qr-codes/telegram_owntvfanart_qr.png" alt="Escanea para unirte al grupo de OwnTV Fanart" width="150"></a> | <a href="https://t.me/owntvplayer"><img src="extras/qr-codes/telegram_qr_code.jpg" alt="Escanea para unirte al grupo de OwnTV" width="150"></a> |
+
+Los problemas de **esta versión** van al grupo de Fanart; el otro es para la app original.
+
 ## ✨ Qué cambia respecto a OwnTV
 
 - **Fanart en todas partes** — imágenes de los programas de la guía (`<icon>` de XMLTV) en Inicio, TV en directo, la guía y el banner de zapping; imágenes anchas de TMDB cuando la guía solo trae un cartel.
