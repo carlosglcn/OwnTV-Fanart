@@ -216,6 +216,8 @@ internal fun ArtLiveCard(
                             rateTitle = programme?.title,
                             rateCategories = programme?.categories,
                             channel = channel.takeIf { startLabel == null },
+                            art = art,
+                            programmeId = programme?.id,
                         ),
                     )
                 }
@@ -565,6 +567,10 @@ internal data class HomeFocusInfo(
     val rateCategories: String? = null,
     /** A channel on air now: the panels then read its programme in full (synopsis, progress, what's next). */
     val channel: ChannelEntity? = null,
+    /** glcn: the card's own picture, so the side panel always shows what has focus (never the last backdrop). */
+    val art: String? = null,
+    /** glcn: a guide programme whose synopsis was left out of the light rail query; the panel reads it. */
+    val programmeId: Long? = null,
 )
 
 /** A card tells Home what it is when it takes focus (alongside [LocalHomeFocusArt]). */
@@ -614,6 +620,15 @@ private fun FocusInfoBlock(info: HomeFocusInfo, titleSize: Int, plotLines: Int, 
     val live by androidx.compose.runtime.produceState<Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?>(null, info.channel?.id) {
         value = info.channel?.let { ch -> runCatching { nowArt.nowAndNext(ch) }.getOrNull() }
     }
+    // glcn: Home's rails read the guide without synopses (a light query); the one in focus reads its own.
+    val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
+    val loadedPlot by androidx.compose.runtime.produceState<String?>(null, info.programmeId, info.plot) {
+        value = if (info.plot.isNullOrBlank() && info.programmeId != null) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { epgDao.programmeDescription(info.programmeId) }.getOrNull()
+            }
+        } else null
+    }
     val context = androidx.compose.ui.platform.LocalContext.current
     val fmt = remember { android.text.format.DateFormat.getTimeFormat(context) }
     Column(modifier) {
@@ -647,7 +662,7 @@ private fun FocusInfoBlock(info: HomeFocusInfo, titleSize: Int, plotLines: Int, 
                 Text(fmt.format(java.util.Date(p.stopMs)), style = stageText(16, 600), color = StageColors.Text.copy(alpha = 0.7f))
             }
         }
-        (info.plot?.takeIf { it.isNotBlank() } ?: live?.first?.description?.takeIf { it.isNotBlank() })?.let {
+        (info.plot?.takeIf { it.isNotBlank() } ?: loadedPlot?.takeIf { it.isNotBlank() } ?: live?.first?.description?.takeIf { it.isNotBlank() })?.let {
             Text(
                 it, style = stageText(19, 400).copy(lineHeight = (19 * 1.45f).mpxSp), color = StageColors.Text.copy(alpha = 0.88f),
                 maxLines = plotLines, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx),
@@ -725,7 +740,10 @@ internal fun HomePanelBackdrop(url: String?, modifier: Modifier = Modifier) {
 /** The side panel of the "Panel" style: the picture small and sharp, then what it is. */
 @Composable
 internal fun HomeInfoPanel(url: String?, info: HomeFocusInfo?, modifier: Modifier = Modifier) {
-    val (art, shown) = rememberSettled(url, info)
+    val (backdrop, shown) = rememberSettled(url, info)
+    // glcn: the card's own picture when it says what it is — a card without one shows no picture rather
+    // than the backdrop left over from the card before (which then belonged to something else).
+    val art = if (shown != null) shown.art?.takeIf { it.isNotBlank() } else backdrop
     // glcn: nothing focused that it can describe (the billboard says it all itself): no empty box.
     if (art.isNullOrBlank() && shown == null) return
     Column(
@@ -738,12 +756,12 @@ internal fun HomeInfoPanel(url: String?, info: HomeFocusInfo?, modifier: Modifie
             .background(if (StageColors.Text.luminance() < 0.5f) Color.White.copy(alpha = 0.78f) else Color.Black.copy(alpha = 0.38f))
             .padding(24.mpx),
     ) {
-        Box(Modifier.fillMaxWidth().height(PANEL_WIDTH * 9f / 16f - 30.mpx).clip(RoundedCornerShape(18.mpx)).background(Color.White.copy(alpha = 0.06f))) {
+        if (!art.isNullOrBlank()) Box(Modifier.fillMaxWidth().height(PANEL_WIDTH * 9f / 16f - 30.mpx).clip(RoundedCornerShape(18.mpx)).background(Color.White.copy(alpha = 0.06f))) {
             Crossfade(targetState = art, label = "panelArt") { u ->
-                if (!u.isNullOrBlank()) AsyncImage(model = u, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                AsyncImage(model = u, contentDescription = null, contentScale = ContentScale.Crop, alignment = androidx.compose.ui.BiasAlignment(0f, -0.4f), modifier = Modifier.fillMaxSize())
             }
         }
-        if (shown != null) FocusInfoBlock(shown, titleSize = 34, plotLines = 7, modifier = Modifier.padding(top = 22.mpx))
+        if (shown != null) FocusInfoBlock(shown, titleSize = 34, plotLines = 7, modifier = Modifier.padding(top = if (art.isNullOrBlank()) 0.mpx else 22.mpx))
     }
 }
 

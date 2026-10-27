@@ -394,6 +394,15 @@ fun HomeScreen(
     // The full-screen styles take over only where Home has no hero of its own.
     val backdropStyle = if (trendingItem == null && posterItem == null && !fullBleed) backdropSetting else 0
     val reminders by vm.reminderRows.collectAsStateWithLifecycle()
+    // glcn (Panel): the row with focus. The billboard and Sports run the full width; the side panel only
+    // slides in (and the rows give it room) once focus goes down to a row it describes.
+    var focusedRow by remember { mutableStateOf<HomeRow?>(null) }
+    val panelOn = backdropStyle == 2 && !billboardFocused && focusedRow != null && focusedRow !in PANEL_WIDE_ROWS
+    val panelRoom by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (panelOn) PANEL_WIDTH + 48.mpx else 0.mpx,
+        animationSpec = if (tv.own.owntv.ui.theme.animationsOn) androidx.compose.animation.core.tween(420, easing = androidx.compose.animation.core.FastOutSlowInEasing) else androidx.compose.animation.core.snap(),
+        label = "panelRoom",
+    )
     val homeFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
     // The Stage page itself is painted by the shell, full width, so it also runs under a docked rail.
     androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize()) {
@@ -446,7 +455,7 @@ fun HomeScreen(
                         when (backdropStyle) {
                             1 -> Modifier.padding(top = CINEMA_ROWS_TOP)
                             // glcn: the rows stop 48 short of the panel, never under it.
-                            2 -> Modifier.padding(end = PANEL_WIDTH + 48.mpx)
+                            2 -> Modifier.padding(end = panelRoom)
                             else -> Modifier
                         },
                     )
@@ -466,7 +475,7 @@ fun HomeScreen(
                     // glcn: whichever row is first — the billboard, Keep watching or any other — reaching it
                     // brings the top of the page (the greeting) back, not just the row itself.
                     Box(
-                        Modifier.staggerAt(rowIndex, homeGate, step = 110, cap = 6).then(if (row == renderRows.firstOrNull() && !fullBleed) Modifier.onFocusChanged {
+                        Modifier.staggerAt(rowIndex, homeGate, step = 110, cap = 6).onFocusChanged { if (it.hasFocus) focusedRow = row }.then(if (row == renderRows.firstOrNull() && !fullBleed) Modifier.onFocusChanged {
                             if (it.hasFocus) homeScope.launch { scrollHomeToTop(listState) }
                         } else Modifier).then(
                             // glcn: ▲ always reaches the row above. The row above can be off screen and
@@ -816,7 +825,14 @@ fun HomeScreen(
                 }
             }
         }
-        if (backdropStyle == 2 && !billboardFocused) HomeInfoPanel(focusArt, focusInfo, Modifier.align(Alignment.TopEnd))
+        if (backdropStyle == 2) androidx.compose.animation.AnimatedVisibility(
+            visible = panelOn,
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(320)) +
+                androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(420, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { it / 3 },
+            exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220)) +
+                androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(320)) { it / 3 },
+            modifier = Modifier.align(Alignment.TopEnd),
+        ) { HomeInfoPanel(focusArt, focusInfo) }
     }
 
     // The preview starts after the card has settled, so decoder setup does not compete with the focus
@@ -1316,7 +1332,7 @@ private fun KeepWatchingRow(
                             onCardFocusChanged(index, it.hasFocus)
                             if (it.hasFocus) {
                                 (still as? HomeStill.Picture)?.url?.let(setArt)
-                                setInfo(HomeFocusInfo(title = cardTitle, line = cardLine, plot = meta?.plot))
+                                setInfo(HomeFocusInfo(title = cardTitle, line = cardLine, plot = meta?.plot, art = (still as? HomeStill.Picture)?.url))
                             }
                         },
                 ) {
@@ -1442,8 +1458,24 @@ private fun ContinuePosterRow(
             modifier = Modifier.focusRestorer().focusGroup(),
         ) {
             itemsIndexed(items, key = { _, item -> item.stableKey }) { index, item ->
+                // glcn: an episode goes under its show's name (the poster is the show's); the episode itself,
+                // what is left of it and its synopsis go to the panel — with the show's own picture.
+                val showName = item.containerTitle?.takeIf { it.isNotBlank() } ?: item.title
+                val left = if (item.durationMs > 0 && item.positionMs > 0) {
+                    timeLeftText(((item.durationMs - item.positionMs).coerceAtLeast(0L) + 59_999L) / 60_000L)
+                } else null
+                val episode = if (item.seasonNumber != null && item.episodeNumber != null) {
+                    stringResource(R.string.content_season_episode, item.seasonNumber!!, item.episodeNumber!!)
+                } else null
+                val info = HomeFocusInfo(
+                    title = showName,
+                    line = listOfNotNull(episode, item.title.takeIf { it != showName }, item.year?.takeIf { episode == null }?.toString(), left)
+                        .joinToString("  ·  ").ifBlank { null },
+                    plot = item.plot,
+                    art = item.backdropUrl?.takeIf { it.isNotBlank() } ?: item.posterUrl,
+                )
                 StagePoster(
-                    title = item.title,
+                    title = showName,
                     onClick = { onItemClick(item) },
                     onLongClick = if (onRemove != null) ({ menuFor = item }) else null,
                     width = 196.mpx,
@@ -1451,7 +1483,13 @@ private fun ContinuePosterRow(
                     modifier = Modifier
                         .then(if (index == 0 && firstItemFocusRequester != null) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
                         .tracked(track = track)
-                        .onFocusChanged { if (it.hasFocus) { onFocus(); setInfo(HomeFocusInfo(item.title)) } },
+                        .onFocusChanged {
+                            if (it.hasFocus) {
+                                onFocus()
+                                item.backdropUrl?.takeIf { u -> u.isNotBlank() }?.let(setArt)
+                                setInfo(info)
+                            }
+                        },
                 ) {
                     AsyncImage(model = item.posterUrl, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }
@@ -1499,7 +1537,7 @@ private fun <T> FavoritePosterRow(
                                 // glcn: only a wide picture becomes the backdrop — a poster cropped to the
                                 // screen looked broken; without one the backdrop that is there stays.
                                 onFocus(); backdrop(item)?.takeIf { it.isNotBlank() }?.let(setArt)
-                                setInfo(posterInfo(item, name(item)))
+                                setInfo(posterInfo(item, name(item)).copy(art = backdrop(item)?.takeIf { it.isNotBlank() } ?: poster(item)))
                             }
                         },
                 ) {
@@ -1815,3 +1853,6 @@ private fun Modifier.topFade(height: androidx.compose.ui.unit.Dp): Modifier = th
             blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
         )
     }
+
+/** glcn (Panel): rows that keep the whole width — they say what they are themselves, so no side panel. */
+private val PANEL_WIDE_ROWS = setOf(HomeRow.FEATURED, HomeRow.SPORTS_NOW)
