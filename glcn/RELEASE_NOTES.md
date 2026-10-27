@@ -31,6 +31,7 @@
 - ✨ **Softer handovers: the words on Home and in the guide fade and rise into place, and the programme screen builds up piece by piece**
 - ✨ **Cards and rows arrive one after another — in the style and layout choosers, every Home layout, channel lists, the TV Guide and the zapping strip**
 - 🎛️ **Player bar: the tools no longer move — one focus box glides from tool to tool and the tool name shows in a fixed line above; ◀ from the first tool jumps straight to Info**
+- 🗂️ **Categories: holding ▲ or ▼ in the list no longer jumps to another group and back**
 - 🛠️ **Delete profile confirmation no longer closes by itself**
 
 ### 🙏 Thank you

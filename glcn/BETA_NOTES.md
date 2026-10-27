@@ -100,3 +100,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ✨ Softer handovers: the words on Home and in the guide fade and rise into place, and the programme screen builds up piece by piece
 - ✨ Cards and rows now arrive one after another (Home styles and layouts, every Home layout, channel lists, the TV Guide and the zapping strip) instead of all appearing at once
 - 🎛️ Player bar: the tools stay still — one focus box glides from tool to tool and the tool’s name is shown in one fixed line above, instead of the focused button growing and pushing the others; ◀ from the first tool jumps to Info, ▶ from the last returns to the start
+- 🗂️ Categories: holding ▲ or ▼ in the category list no longer jumps off to another group and back — it moves one row at a time
