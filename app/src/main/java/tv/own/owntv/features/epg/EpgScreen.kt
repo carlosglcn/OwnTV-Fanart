@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -74,6 +76,7 @@ import tv.own.owntv.ui.components.OwnTVSpinner
 import tv.own.owntv.ui.stage.StageButton
 import tv.own.owntv.ui.stage.shownColor
 import tv.own.owntv.ui.stage.stageFocusLook
+import tv.own.owntv.ui.stage.drawStageFocus
 import tv.own.owntv.ui.stage.StageSearchField
 import tv.own.owntv.ui.stage.StageTool
 import tv.own.owntv.ui.theme.StageColors
@@ -230,14 +233,17 @@ fun EpgScreen(
     // --- The time axis: one scroll position shared by the ruler, the now-line and every row. ----------
     val ppm = with(density) { GuideGridDefaults.PxPerMin.toPx() }
     var timelinePx by remember { mutableIntStateOf(0) }
-    var scrollPx by remember { mutableIntStateOf(0) }
+    // glcn: the target; the shown position glides to it (instantly when focus is not in the grid, or on a long jump).
+    var scrollTarget by remember { mutableIntStateOf(0) }
+    val scrollAnim = remember { androidx.compose.animation.core.Animatable(0f) }
+    val scrollPx: () -> Int = remember { { scrollAnim.value.toInt() } }
     fun pxAt(t: Long): Float = (t - state.windowStart) / 60_000f * ppm
     fun maxScroll(): Int = (pxAt(state.windowEnd) - timelinePx).toInt().coerceAtLeast(0)
     fun timeAt(px: Float): Long = state.windowStart + (px / ppm * 60_000f).toLong()
     // A time is shown 3/8 of the way across, as the guide always had it: the programme on now keeps room
     // on both sides and its title is never cut.
     fun showTime(t: Long) {
-        scrollPx = (pxAt(t) - timelinePx * 3f / 8f).toInt().coerceIn(0, maxScroll())
+        scrollTarget = (pxAt(t) - timelinePx * 3f / 8f).toInt().coerceIn(0, maxScroll())
     }
     LaunchedEffect(state.windowStart, timelinePx, state.channels.isNotEmpty()) {
         if (timelinePx > 0 && state.channels.isNotEmpty()) showTime(System.currentTimeMillis())
@@ -299,8 +305,53 @@ fun EpgScreen(
         val x = pxAt(cursorTime)
         val margin = GuideGridDefaults.SlotMin * ppm
         when {
-            x < scrollPx + margin -> scrollPx = (x - margin).toInt().coerceIn(0, maxScroll())
-            x > scrollPx + timelinePx - margin -> scrollPx = (x - timelinePx + margin).toInt().coerceIn(0, maxScroll())
+            x < scrollTarget + margin -> scrollTarget = (x - margin).toInt().coerceIn(0, maxScroll())
+            x > scrollTarget + timelinePx - margin -> scrollTarget = (x - timelinePx + margin).toInt().coerceIn(0, maxScroll())
+        }
+    }
+
+    LaunchedEffect(scrollTarget) {
+        val to = scrollTarget.toFloat()
+        if (!gridHasFocus || tv.own.owntv.glcn.LowRam.on || kotlin.math.abs(to - scrollAnim.value) > timelinePx * 2f) scrollAnim.snapTo(to)
+        else scrollAnim.animateTo(to, androidx.compose.animation.core.tween(380, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+    }
+
+    // glcn: the focus box — one for the whole guide, slid from row to row and from cell to cell, with the
+    // rows only colouring their text by how near it is.
+    val rowStride = with(density) { (GuideGridDefaults.RowHeight + GuideGridDefaults.RowGap).toPx() }
+    val rowsTop = with(density) { 48.mpx.toPx() }
+    fun rowY(index: Int): Float = rowsTop + (index - rowListState.firstVisibleItemIndex) * rowStride - rowListState.firstVisibleItemScrollOffset
+    val drawnY = remember { floatArrayOf(Float.NaN) }
+    val cursor = remember {
+        GuideCursor(
+            x = androidx.compose.animation.core.Animatable(0f), w = androidx.compose.animation.core.Animatable(0f),
+            rowOff = androidx.compose.animation.core.Animatable(0f),
+            rowAlpha = androidx.compose.animation.core.Animatable(0f), cellAlpha = androidx.compose.animation.core.Animatable(0f),
+        )
+    }
+    val glide = androidx.compose.animation.core.spring<Float>(dampingRatio = 1f, stiffness = 420f)
+    LaunchedEffect(gridHasFocus, inCellMode) {
+        val rowTo = if (gridHasFocus && !inCellMode) 1f else 0f
+        val cellTo = if (gridHasFocus && inCellMode) 1f else 0f
+        launch { cursor.rowAlpha.animateTo(rowTo, androidx.compose.animation.core.tween(if (tv.own.owntv.glcn.LowRam.on) 0 else 160)) }
+        launch { cursor.cellAlpha.animateTo(cellTo, androidx.compose.animation.core.tween(if (tv.own.owntv.glcn.LowRam.on) 0 else 160)) }
+    }
+    // The row changes: the box starts from where it was drawn, so an instant list scroll cannot make it jump.
+    fun glideToRow(index: Int) {
+        val start = drawnY[0]
+        scope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
+            if (start.isNaN() || tv.own.owntv.glcn.LowRam.on || cursor.rowAlpha.value + cursor.cellAlpha.value < 0.05f) cursor.rowOff.snapTo(0f)
+            else {
+                val from = (start - rowY(index)).coerceIn(-rowStride * 6, rowStride * 6)
+                cursor.rowOff.snapTo(from)
+                cursor.rowOff.animateTo(0f, glide)
+            }
+        }
+    }
+    fun glideToCell(x: Float, w: Float) {
+        scope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
+            if (tv.own.owntv.glcn.LowRam.on || cursor.cellAlpha.value < 0.05f) { cursor.x.snapTo(x); cursor.w.snapTo(w) }
+            else { launch { cursor.x.animateTo(x, glide) }; launch { cursor.w.animateTo(w, glide) } }
         }
     }
 
@@ -494,7 +545,7 @@ fun EpgScreen(
         }
 
         // The control line (452): one row with every guide header button.
-        val viewTime = timeAt(scrollPx + timelinePx * 3f / 8f)
+        val viewTime = timeAt(scrollTarget + timelinePx * 3f / 8f)
         val viewDay = localMidnight(viewTime)
         Row(
             Modifier.padding(start = fx(68), end = fx(64), top = 48.mpx).fillMaxWidth().height(48.mpx),
@@ -573,6 +624,35 @@ fun EpgScreen(
                         windowStart = state.windowStart, windowEnd = state.windowEnd, now = liveNow, scrollPx = scrollPx,
                         modifier = Modifier.padding(start = gx).width(timelineW).height(40.mpx),
                     )
+                    val cursorAccent = stageAccent
+                    val cursorPalette = tv.own.owntv.ui.theme.LocalStagePalette.current
+                    val gxPx = with(density) { gx.toPx() }
+                    val timelineWPx = with(density) { timelineW.toPx() }
+                    androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                        val y = rowY(focusedRow) + cursor.rowOff.value
+                        drawnY[0] = y
+                        val rowH = GuideGridDefaults.RowHeight.toPx()
+                        val px = 1.mpx.toPx()
+                        if (cursor.rowAlpha.value > 0.01f) {
+                            androidx.compose.ui.graphics.drawscope.inset(gxPx, y, size.width - gxPx - timelineWPx, size.height - y - rowH) {
+                                withLayerAlpha(cursor.rowAlpha.value, androidx.compose.ui.geometry.Rect(-80 * px, -80 * px, size.width + 80 * px, size.height + 80 * px)) {
+                                    drawStageFocus(tv.own.owntv.ui.stage.StageFocus.FX, 14.mpx, cursorAccent, cursorPalette)
+                                }
+                            }
+                        }
+                        if (cursor.cellAlpha.value > 0.01f && cursor.w.value > 0f) {
+                            val x0 = gxPx + cursor.x.value - scrollPx()
+                            val l = maxOf(x0, gxPx + 4 * px)
+                            val rr = minOf(x0 + cursor.w.value, gxPx + timelineWPx - 4 * px)
+                            if (rr > l) {
+                                androidx.compose.ui.graphics.drawscope.clipRect(left = gxPx, top = 0f, right = size.width, bottom = size.height) {
+                                    withLayerAlpha(cursor.cellAlpha.value, androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height)) {
+                                        drawGuideCursor(androidx.compose.ui.geometry.Rect(l, y, rr, y + rowH), cursorAccent, cursorPalette, px)
+                                    }
+                                }
+                            }
+                        }
+                    }
                     CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
                         LazyColumn(
                             state = rowListState,
@@ -597,6 +677,9 @@ fun EpgScreen(
                                     windowEnd = state.windowEnd,
                                     now = liveNow,
                                     scrollPx = scrollPx,
+                                    cursor = cursor,
+                                    rowIndex = index,
+                                    onCursorBox = ::glideToCell,
                                     focusRequester = rowFocus(index),
                                     selectedRow = gridHasFocus && index == focusedRow,
                                     cursorTime = cursorTime,
@@ -609,6 +692,7 @@ fun EpgScreen(
                                     recordingStarts = recordingsByChannel[channel.id].orEmpty(),
                                     reminderStarts = remindersByChannel[channel.id].orEmpty(),
                                     onFocused = {
+                                        if (focusedRow != index) glideToRow(index)
                                         focusedRow = index
                                         if (cursorTime !in state.windowStart until state.windowEnd) cursorTime = System.currentTimeMillis()
                                         if (!effectivePreview) liveVm.onChannelFocused(channel)
@@ -631,13 +715,18 @@ fun EpgScreen(
                         }
                     }
                     // The now-line, 3 px with its glow, over every row.
-                    val nowX = with(density) { (pxAt(liveNow) - scrollPx).toDp() }
-                    if (liveNow in state.windowStart..state.windowEnd && nowX >= 0.mpx && nowX <= timelineW) {
+                    if (liveNow in state.windowStart..state.windowEnd) {
+                        val nowContent = pxAt(liveNow)
                         Box(
                             Modifier
-                                .padding(start = gx + nowX - 1.5.mpx, top = 38.mpx, bottom = 24.mpx)
+                                .padding(top = 38.mpx, bottom = 24.mpx)
+                                .offset { androidx.compose.ui.unit.IntOffset((gxPx + nowContent - scrollPx() - 1.5.mpx.toPx()).toInt(), 0) }
                                 .width(3.mpx)
                                 .fillMaxHeight()
+                                .graphicsLayer {
+                                    val x = gxPx + nowContent - scrollPx()
+                                    alpha = if (x >= gxPx && x <= gxPx + timelineWPx) 1f else 0f
+                                }
                                 .guideNowLine(stageAccent.accent),
                         )
                     }
@@ -732,7 +821,7 @@ fun EpgScreen(
         }
         GuideDayMenu(
             days = days,
-            currentDay = localMidnight(timeAt(scrollPx + timelinePx * 3f / 8f)),
+            currentDay = localMidnight(timeAt(scrollTarget + timelinePx * 3f / 8f)),
             onPick = { day ->
                 val now = System.currentTimeMillis()
                 showTime(day + (now - localMidnight(now)))
@@ -798,7 +887,10 @@ private fun GuideRow(
     windowStart: Long,
     windowEnd: Long,
     now: Long,
-    scrollPx: Int,
+    scrollPx: () -> Int,
+    cursor: GuideCursor,
+    rowIndex: Int,
+    onCursorBox: (Float, Float) -> Unit,
     focusRequester: FocusRequester,
     selectedRow: Boolean,
     cursorTime: Long,
@@ -827,6 +919,11 @@ private fun GuideRow(
     var focused by remember { mutableStateOf(false) }
     var okDown by remember { mutableStateOf(false) }
     LaunchedEffect(focused, cursorTime, programmes) { if (focused) onShow(programmeAt(programmes, cursorTime)) }
+    val cellPxPerMin = with(androidx.compose.ui.platform.LocalDensity.current) { GuideGridDefaults.PxPerMin.toPx() }
+    val cellPx = with(androidx.compose.ui.platform.LocalDensity.current) { 1.mpx.toPx() }
+    LaunchedEffect(focused, cellMode, cursorTime, programmes, windowStart, windowEnd) {
+        if (focused && cellMode) programmes?.let { cellBoxContent(it, cursorTime, windowStart, windowEnd, cellPxPerMin, cellPx)?.let { (x, w) -> onCursorBox(x, w) } }
+    }
     val rowSelected = focused && !cellMode
     Row(Modifier.fillMaxWidth().height(GuideGridDefaults.RowHeight), verticalAlignment = Alignment.CenterVertically) {
         GuideChannelLabel(channel, name, dot, selected = selectedRow, numberWidth = numberWidth, modifier = Modifier.width(labelWidth))
@@ -864,8 +961,7 @@ private fun GuideRow(
                         else -> false
                     }
                 }
-                .focusable()
-                .then(if (rowSelected) Modifier.stageFocusLook(tv.own.owntv.ui.stage.StageFocus.FX, 14.mpx) else Modifier),
+                .focusable(),
         ) {
             programmes?.let { progs ->
                 val catchupIds = remember(progs, channel, now) { progs.filter { vm.canCatchup(channel, it, now) }.mapTo(HashSet()) { it.id } }
@@ -879,6 +975,8 @@ private fun GuideRow(
                     recordingStarts = recordingStarts,
                     reminderStarts = reminderStarts,
                     scrollPx = scrollPx,
+                    cursor = cursor,
+                    rowIndex = rowIndex,
                 )
             }
         }
@@ -959,4 +1057,14 @@ private fun GuideBackdrop(url: String?, modifier: Modifier = Modifier) {
             Modifier.fillMaxSize().backdropLeftWash(0f to 0.80f, 0.35f to 0.40f, 0.70f to 0.10f, 1f to 0f),
         )
     }
+}
+
+
+/** glcn: [block] drawn into its own layer at [alpha], so a glow and a fill fade as one. */
+private inline fun androidx.compose.ui.graphics.drawscope.DrawScope.withLayerAlpha(alpha: Float, bounds: androidx.compose.ui.geometry.Rect, block: () -> Unit) {
+    if (alpha >= 0.999f) { block(); return }
+    val paint = androidx.compose.ui.graphics.Paint().apply { this.alpha = alpha }
+    drawContext.canvas.saveLayer(bounds, paint)
+    block()
+    drawContext.canvas.restore()
 }

@@ -83,7 +83,10 @@ enum class StageFocus { FX, FILLED, PRIMARY, POSTER }
 fun Modifier.stageFocusLook(style: StageFocus, radius: Dp): Modifier =
     stageFocusDecor(style, radius, stageAccent, LocalStagePalette.current)
 
-private fun Modifier.stageFocusDecor(style: StageFocus, radius: Dp, a: StageAccent, palette: StagePalette) = drawBehind {
+private fun Modifier.stageFocusDecor(style: StageFocus, radius: Dp, a: StageAccent, palette: StagePalette) = drawBehind { drawStageFocus(style, radius, a, palette) }
+
+/** glcn: the focus treatment as a drawing, for an overlay that slides between items. */
+fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocus(style: StageFocus, radius: Dp, a: StageAccent, palette: StagePalette) {
     val r = radius.toPx()
     val px = 1.mpx.toPx()
     if (palette.isLight) {
@@ -109,7 +112,7 @@ private fun Modifier.stageFocusDecor(style: StageFocus, radius: Dp, a: StageAcce
                 drawOuterRing(a.accent, 4 * px, r, inset = 3 * px)
             }
         }
-        return@drawBehind
+        return
     }
     when (style) {
         StageFocus.FX -> {
