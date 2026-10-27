@@ -44,6 +44,7 @@ Los problemas de **esta versión** van al grupo de Fanart; el otro es para la ap
 
 - **Fanart en todas partes** — imágenes de los programas de la guía (`<icon>` de XMLTV) en Inicio, TV en directo, la guía y el banner de zapping; imágenes anchas de TMDB cuando la guía solo trae un cartel.
 - **Un Inicio nuevo** — cuatro diseños (*Clásico*, *Cine*, *Panel* y *Dock*), con destacados, Deportes ahora, Esta noche (con recordatorios) y películas y series recientes.
+- **Tres diseños para Películas y Series** — los tres paneles clásicos, **Cinematográfico** (la portada del título enfocado a pantalla completa) o **Pasarela**: una fila de pósters donde el enfocado se abre ancho con su fondo y los demás se deslizan a un lado.
 - **Una pantalla para lo que estás viendo** — pulsa Info en TV en directo: fanart del programa, logo, valoración, sinopsis, qué viene después y cuándo se vuelve a emitir esta semana.
 - **Valoración, año y sinopsis de TMDB** junto a películas y series en directo.
 - **Deportes** — fútbol, baloncesto (ACB, Euroliga), balonmano, tenis, Fórmula 1 y MotoGP con calendarios, marcadores en directo y clasificaciones.

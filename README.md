@@ -131,7 +131,7 @@ Problems with **this version** go to the Fanart group; the original group is for
 - **Multiple playlists** at once, with provider labels everywhere they could be confused
 - Rename, hide, reorder and combine categories; bulk rename rules
 - **TMDB** posters, plots, cast and trailers in 40 languages — scales to ~50k channels / ~168k movies
-- **Two layouts for Movies & Series** — the classic three panels, or **Cinematic**: the focused title's artwork full-bleed behind the whole screen, with its details and cast above a wide poster grid
+- **Three layouts for Movies & Series** — the classic three panels, **Cinematic**: the focused title's artwork full-bleed behind the whole screen, with its details and cast above a wide poster grid, or **Runway**: one row of posters where the focused one opens wide with its backdrop and the rest glide to the side
 - Adjustable panel widths per section, including hiding the preview pane entirely
 
 ### 📥 Sources & EPG

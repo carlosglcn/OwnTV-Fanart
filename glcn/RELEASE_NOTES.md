@@ -8,6 +8,8 @@
 - ▼ **Channel strip over the player: press Down to see what each channel gives next**
 - 🎚️ **Quality button in the live player: switch between the copies of a channel (FHD, HD, SD…)**
 - 👁️ **Preview with OK: nothing plays while you move through the list; OK starts the preview, OK again goes full screen**
+- 🎞️ **Runway: a new Movies & Series layout — one row of posters where the focused one opens wide with its backdrop and the rest glide to the side, like the Home Dock (Settings → Movies & Series layout)**
+- 🗂️ **Live categories: the list chips are now one button with the current list; OK opens a quick picker**
 - 🏎️ **Motorsport: Formula 1 and MotoGP sessions with classification, standings, pit stops and race-director notes**
 - 🤾 **Handball (Liga ASOBAL) with calendar, results, live score and table; tennis players show their photo**
 - 🌟 **Home featured: after the first live sport, a film, premiere or documentary on TV right now**
@@ -31,6 +33,9 @@
 - ✨ **Softer handovers: the words on Home and in the guide fade and rise into place, and the programme screen builds up piece by piece**
 - ✨ **Cards and rows arrive one after another — in the style and layout choosers, every Home layout, channel lists, the TV Guide and the zapping strip**
 - 🎛️ **Player bar: the tools no longer move — one focus box glides from tool to tool and the tool name shows in a fixed line above; ◀ from the first tool jumps straight to Info**
+- 🪟 **Dock: "Keep watching" cards now open wide too, with their backdrop and synopsis**
+- ℹ️ **Programme info: channel logos and title lettering that vanished against the picture are now legible**
+- 🧭 **Live TV: ▲ from the tool row (Guide, provider, search…) reaches the top menu**
 - 🗂️ **Categories: holding ▲ or ▼ in the list no longer jumps to another group and back**
 - 🧭 **Categories and menus: one focus box glides from item to item instead of jumping**
 - 🛠️ **Delete profile confirmation no longer closes by itself**
