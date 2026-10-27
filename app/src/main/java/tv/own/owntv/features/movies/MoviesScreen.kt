@@ -286,14 +286,15 @@ fun MoviesScreen(
     // focus, so the placeholder is only shown when nothing at all is known. peek() reads the loaded
     // page without triggering a fetch.
     val cachedPosters by vm.cachedPosters.collectAsStateWithLifecycle()
+    val overridden by vm.overriddenMovies.collectAsStateWithLifecycle()
     LaunchedEffect(effectiveGridState, effectiveListState, viewMode, movies) {
         val grid = !usesList
         snapshotFlow {
             val info = if (grid) effectiveGridState.layoutInfo.visibleItemsInfo.map { it.index }
             else effectiveListState.layoutInfo.visibleItemsInfo.map { it.index }
-            info.filter { it < movies.itemCount }
-                .mapNotNull { movies.peek(it) }
-                .filter { it.posterUrl.isNullOrBlank() }
+            val shown = info.filter { it < movies.itemCount }.mapNotNull { movies.peek(it) }
+            vm.onMoviesVisible(shown)
+            shown.filter { it.posterUrl.isNullOrBlank() || it.id in overridden }
         }.distinctUntilChanged().collect { vm.onPosterlessVisible(it) }
     }
     // Returning from the player: scroll to and focus the movie you just played (waits for the grid to load).
@@ -429,7 +430,7 @@ fun MoviesScreen(
     val panelShares = rememberPanelShares(PanelSection.MOVIES, settingsVm)
     val cinematicSheetPct by settingsVm.cinematicSheetWidth(PanelSection.MOVIES).collectAsStateWithLifecycle()
     val selectedMeta = selectedMovieMeta?.takeIf { it.movieId == selectedMovie?.id }?.cache
-    val titleInfo = selectedMovie?.let { movieTitleInfo(it, selectedMeta, metadataMode.tmdbWins) }
+    val titleInfo = selectedMovie?.let { movieTitleInfo(it, selectedMeta, metadataMode.tmdbWins || it.id in overridden) }
     val (categoryEntries, groupsHeading) = vodCategoryEntries(railItems, railCounts, playlistMarks, series = false)
     val headerLabel = if (selectedItem?.key is LiveKey.Folder || selectedItem?.key is LiveKey.Custom) ProviderTags.parse(selectedLabel).name else selectedLabel
 
@@ -480,7 +481,10 @@ fun MoviesScreen(
         vm.onMovieFocused(movie)
         if (rememberMovies) perCategoryMovieIds[selectedKey] = movie.id
     }
-    val posterOf: (MovieEntity) -> String? = { it.posterUrl?.takeIf { u -> u.isNotBlank() } ?: cachedPosters[it.id] }
+    val posterOf: (MovieEntity) -> String? = {
+        val own = it.posterUrl?.takeIf { u -> u.isNotBlank() }
+        if (it.id in overridden) cachedPosters[it.id] ?: own else own ?: cachedPosters[it.id]
+    }
     val playHint = stringResource(R.string.common_ok) to stringResource(R.string.content_play)
     val optionsHint = stringResource(R.string.content_key_hold_ok) to stringResource(R.string.content_key_options)
 
@@ -1028,7 +1032,7 @@ fun MoviesScreen(
             value = runCatching { vm.relatedTo(m) }.getOrDefault(emptyList())
         }
         MediaDetailsScreen(
-            details = buildMovieDetails(m, cache, metadataMode.tmdbWins).copy(related = related),
+            details = buildMovieDetails(m, cache, metadataMode.tmdbWins || m.id in overridden).copy(related = related),
             onExit = { detailsMovie = null },
         )
     }

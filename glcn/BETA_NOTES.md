@@ -1,6 +1,7 @@
 ## Beta
 
 Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
+- 🎬 Movies: a title you correct with "Set TMDB name" / id now shows TMDB's own cover, synopsis and rating (not the provider's wrong ones), also in the grid
 - 🎾 Sports: a tennis match of any round is found on the channel whose guide only names the tournament ("Torneo de Viena"), including tournaments ESPN names after a sponsor (Erste Bank Open → Vienna)
 - 🔔 Programme reminders: a small glass card in the top-right corner instead of a big window; it closes by itself after 8 seconds (counts as dismissed), takes no focus, and is accepted with OK in the player or Play/Pause elsewhere
 - 🙈 Programme reminders: no card when you are already watching that channel, in any quality (HD, FHD, 4K…)

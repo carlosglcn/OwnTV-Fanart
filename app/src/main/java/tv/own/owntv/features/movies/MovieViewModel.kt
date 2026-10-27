@@ -331,6 +331,22 @@ class MovieViewModel(
 
     fun onPosterlessVisible(movies: List<MovieEntity>) { _posterProbe.value = movies }
 
+    // glcn: a title the user hand-corrected (Set TMDB name / id) shows TMDB's own cover, synopsis and rating, as the
+    // "TMDB only" setting would — whatever the provider sent was for the wrong title, or they would not have corrected it.
+    private val _overridden = MutableStateFlow<Set<Long>>(emptySet())
+    val overriddenMovies: StateFlow<Set<Long>> = _overridden.asStateFlow()
+    private val overrideChecked = HashSet<Long>()
+
+    /** The movies on screen: reads which of them carry a hand-set TMDB override (each once). */
+    fun onMoviesVisible(movies: List<MovieEntity>) {
+        val fresh = movies.filter { overrideChecked.add(it.id) }
+        if (fresh.isEmpty()) return
+        viewModelScope.launch {
+            val hit = fresh.filter { runCatching { metadata.movieOverride(it) }.getOrNull() != null }.map { it.id }
+            if (hit.isNotEmpty()) _overridden.value = _overridden.value + hit
+        }
+    }
+
     /** Source mode — the detail pane uses it to flip provider/TMDB field precedence. */
     val metadataMode: StateFlow<tv.own.owntv.core.metadata.MetadataMode> = settings.metadataMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), tv.own.owntv.core.metadata.MetadataMode.PROVIDER_PLUS_TMDB)
@@ -379,11 +395,19 @@ class MovieViewModel(
                 .collectLatest { probe ->
                     val wanted = probe.filterNot { it.id in _cachedPosters.value }
                     if (wanted.isEmpty()) return@collectLatest
-                    val found = runCatching { metadata.cachedMoviePosters(wanted) }.getOrDefault(emptyMap())
-                    if (found.isEmpty()) return@collectLatest
-                    // Bounded: a session spent browsing a 170k catalog would otherwise grow this forever.
-                    val base = if (_cachedPosters.value.size > 500) emptyMap() else _cachedPosters.value
-                    _cachedPosters.value = base + found
+                    var pending = wanted
+                    // glcn: a title just hand-corrected is still being looked up when the first read comes back empty.
+                    for (attempt in 0..3) {
+                        val found = runCatching { metadata.cachedMoviePosters(pending) }.getOrDefault(emptyMap())
+                        if (found.isNotEmpty()) {
+                            // Bounded: a session spent browsing a 170k catalog would otherwise grow this forever.
+                            val base = if (_cachedPosters.value.size > 500) emptyMap() else _cachedPosters.value
+                            _cachedPosters.value = base + found
+                        }
+                        pending = pending.filter { it.id in _overridden.value && it.id !in found }
+                        if (pending.isEmpty() || attempt == 3) break
+                        kotlinx.coroutines.delay(2_000)
+                    }
                 }
         }
     }
@@ -602,6 +626,9 @@ class MovieViewModel(
     fun setMovieTmdbName(movie: MovieEntity, title: String, year: Int?, tmdbId: Int? = null) {
         viewModelScope.launch {
             runCatching { metadata.setMovieOverride(movie, title, year, tmdbId) }
+            overrideChecked.add(movie.id)
+            _overridden.value = _overridden.value + movie.id
+            _cachedPosters.value = _cachedPosters.value - movie.id
             resolvedMeta.remove(movie.id)
             _metaRefreshTick.value++
         }
@@ -611,6 +638,8 @@ class MovieViewModel(
     fun clearMovieTmdbName(movie: MovieEntity) {
         viewModelScope.launch {
             runCatching { metadata.clearMovieOverride(movie) }
+            _overridden.value = _overridden.value - movie.id
+            _cachedPosters.value = _cachedPosters.value - movie.id
             resolvedMeta.remove(movie.id)
             _metaRefreshTick.value++
         }
