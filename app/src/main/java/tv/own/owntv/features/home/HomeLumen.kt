@@ -144,9 +144,9 @@ fun LumenHome(
         )
         buildList {
             val keep = state.continueMovies.map { c ->
-                LumenItem("p" + c.stableKey, c.title, c.subtitle, null, c.posterUrl, null, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false) { onPlayMovie(c.sourceItemId, c.positionMs) }
+                LumenItem("p" + c.stableKey, c.title, c.subtitle, c.plot, c.posterUrl, c.backdropUrl, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false) { onPlayMovie(c.sourceItemId, c.positionMs) }
             } + state.continueSeries.map { c ->
-                LumenItem("p" + c.stableKey, c.title, c.subtitle, null, c.posterUrl, null, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false) { onPlayEpisode(0L, c.targetItemId, c.positionMs) }
+                LumenItem("p" + c.stableKey, c.title, c.subtitle, c.plot, c.posterUrl, c.backdropUrl, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false) { onPlayEpisode(0L, c.targetItemId, c.positionMs) }
             }
             if (keep.isNotEmpty() && order.any { it == HomeRow.HERO || it == HomeRow.CONTINUE_MOVIES || it == HomeRow.CONTINUE_SERIES }) add(LumenTab(HomeRow.HERO, keep))
             if (state.recentLive.isNotEmpty() && HomeRow.RECENT_CHANNELS in order) add(LumenTab(HomeRow.RECENT_CHANNELS, state.recentLive.map { channelItem(it, state.recentGuide, state.recentLive) }))

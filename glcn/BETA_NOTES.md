@@ -124,3 +124,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - Movies/Series (Cinematic): the poster grid now glides like the Dock — speed carries across key presses, so a held ▲/▼ flows.
 - 🎬 New Movies & Series layout "Runway" (Pasarela): one row of posters where the focused one opens wide and the rest glide to the side, like the Home Dock. Pick it in Settings → Movies & Series layout. (Cinematic stays as it was.)
 - 🎞️ Emby: the sync and the watch-state refresh now share one sign-in, so the server announces one login, not two, each time.
+- Dock: «Seguir viendo» ahora también se abre ancho (fondo y sinopsis).
