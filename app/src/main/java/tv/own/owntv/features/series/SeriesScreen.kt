@@ -341,14 +341,15 @@ private fun SeriesGrid(
     // Tiles the provider gave no artwork for: ask for the TMDB poster already cached from an earlier
     // focus, so the placeholder is only shown when nothing at all is known (mirrors Movies).
     val cachedPosters by vm.cachedPosters.collectAsStateWithLifecycle()
+    val overridden by vm.overriddenSeries.collectAsStateWithLifecycle()
     LaunchedEffect(effectiveGridState, effectiveListState, viewMode, series) {
         val grid = !usesList
         snapshotFlow {
             val indices = if (grid) effectiveGridState.layoutInfo.visibleItemsInfo.map { it.index }
             else effectiveListState.layoutInfo.visibleItemsInfo.map { it.index }
-            indices.filter { it < series.itemCount }
-                .mapNotNull { series.peek(it) }
-                .filter { it.posterUrl.isNullOrBlank() }
+            val shown = indices.filter { it < series.itemCount }.mapNotNull { series.peek(it) }
+            vm.onSeriesVisible(shown)
+            shown.filter { it.posterUrl.isNullOrBlank() || it.id in overridden }
         }.distinctUntilChanged().collect { vm.onPosterlessVisible(it) }
     }
 
@@ -491,7 +492,7 @@ private fun SeriesGrid(
     val panelShares = rememberPanelShares(PanelSection.SERIES, settingsVm)
     val cinematicSheetPct by settingsVm.cinematicSheetWidth(PanelSection.SERIES).collectAsStateWithLifecycle()
     val selectedMeta = selectedSeriesMeta?.takeIf { it.seriesId == selectedSeries?.id }?.cache
-    val titleInfo = selectedSeries?.let { seriesTitleInfo(it, selectedMeta, metadataMode.tmdbWins) }
+    val titleInfo = selectedSeries?.let { seriesTitleInfo(it, selectedMeta, metadataMode.tmdbWins || it.id in overridden) }
     val (categoryEntries, groupsHeading) = vodCategoryEntries(railItems, railCounts, playlistMarks, series = true)
     val headerLabel = if (selectedItem?.key is LiveKey.Folder || selectedItem?.key is LiveKey.Custom) ProviderTags.parse(selectedLabel).name else selectedLabel
 
@@ -542,7 +543,10 @@ private fun SeriesGrid(
         vm.onSeriesFocused(show)
         if (rememberSeries) perCategorySeriesIds[selectedKey] = show.id
     }
-    val posterOf: (tv.own.owntv.core.database.entity.SeriesEntity) -> String? = { it.posterUrl?.takeIf { u -> u.isNotBlank() } ?: cachedPosters[it.id] }
+    val posterOf: (tv.own.owntv.core.database.entity.SeriesEntity) -> String? = {
+        val own = it.posterUrl?.takeIf { u -> u.isNotBlank() }
+        if (it.id in overridden) cachedPosters[it.id] ?: own else own ?: cachedPosters[it.id]
+    }
     val playHint = stringResource(R.string.common_ok) to stringResource(R.string.content_episodes)
     val optionsHint = stringResource(R.string.content_key_hold_ok) to stringResource(R.string.content_key_options)
 
@@ -1033,7 +1037,7 @@ private fun SeriesGrid(
             value = runCatching { vm.relatedTo(s) }.getOrDefault(emptyList())
         }
         tv.own.owntv.features.shell.components.MediaDetailsScreen(
-            details = buildSeriesDetails(s, cache, metadataMode.tmdbWins).copy(related = related),
+            details = buildSeriesDetails(s, cache, metadataMode.tmdbWins || s.id in overridden).copy(related = related),
             onExit = { detailsSeries = null },
         )
     }
@@ -1291,7 +1295,9 @@ private fun EpisodeView(
     // from Home or a Continue pill never focused it in the grid.
     LaunchedEffect(series.id) { vm.onSeriesFocused(series) }
     val seriesMeta = selectedSeriesMeta?.takeIf { it.seriesId == series.id }?.cache
-    val info = seriesTitleInfo(series, seriesMeta, metadataMode.tmdbWins)
+    val overriddenIds by vm.overriddenSeries.collectAsStateWithLifecycle()
+    val handFixed = series.id in overriddenIds
+    val info = seriesTitleInfo(series, seriesMeta, metadataMode.tmdbWins || handFixed)
     val categoryName = series.categoryId
         ?.let { id -> railItems.firstOrNull { it.key == LiveKey.Folder(id) } }
         ?.let { ProviderTags.parse(it.displayLabel(R.string.content_category_all_series)).name }
@@ -1838,7 +1844,7 @@ private fun EpisodeView(
             value = runCatching { vm.relatedTo(series) }.getOrDefault(emptyList())
         }
         tv.own.owntv.features.shell.components.MediaDetailsScreen(
-            details = buildSeriesDetails(series, seriesMeta, metadataMode.tmdbWins).copy(related = related),
+            details = buildSeriesDetails(series, seriesMeta, metadataMode.tmdbWins || handFixed).copy(related = related),
             onExit = { showSeriesDetails = false },
         )
     }

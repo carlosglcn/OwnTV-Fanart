@@ -325,6 +325,22 @@ class SeriesViewModel(
 
     fun onPosterlessVisible(series: List<SeriesEntity>) { _posterProbe.value = series }
 
+    // glcn: a show the user hand-corrected (Set TMDB name / id) shows TMDB's own cover, synopsis and rating,
+    // as the "TMDB only" setting would — what the provider sent was for the wrong title (mirrors Movies).
+    private val _overridden = MutableStateFlow<Set<Long>>(emptySet())
+    val overriddenSeries: StateFlow<Set<Long>> = _overridden.asStateFlow()
+    private val overrideChecked = HashSet<Long>()
+
+    /** The shows on screen: reads which of them carry a hand-set TMDB override (each once). */
+    fun onSeriesVisible(shows: List<SeriesEntity>) {
+        val fresh = shows.filter { overrideChecked.add(it.id) }
+        if (fresh.isEmpty()) return
+        viewModelScope.launch {
+            val hit = fresh.filter { runCatching { metadata.seriesOverride(it) }.getOrNull() != null }.map { it.id }
+            if (hit.isNotEmpty()) _overridden.value = _overridden.value + hit
+        }
+    }
+
     /** Source mode — the pane/details use it to flip provider/TMDB precedence. */
     val metadataMode: StateFlow<tv.own.owntv.core.metadata.MetadataMode> = settings.metadataMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), tv.own.owntv.core.metadata.MetadataMode.PROVIDER_PLUS_TMDB)
@@ -397,11 +413,19 @@ class SeriesViewModel(
                 .collectLatest { probe ->
                     val wanted = probe.filterNot { it.id in _cachedPosters.value }
                     if (wanted.isEmpty()) return@collectLatest
-                    val found = runCatching { metadata.cachedSeriesPosters(wanted) }.getOrDefault(emptyMap())
-                    if (found.isEmpty()) return@collectLatest
-                    // Bounded: a long browse of a huge catalog would otherwise grow this forever.
-                    val base = if (_cachedPosters.value.size > 500) emptyMap() else _cachedPosters.value
-                    _cachedPosters.value = base + found
+                    var pending = wanted
+                    // glcn: a show just hand-corrected is still being looked up when the first read comes back empty.
+                    for (attempt in 0..3) {
+                        val found = runCatching { metadata.cachedSeriesPosters(pending) }.getOrDefault(emptyMap())
+                        if (found.isNotEmpty()) {
+                            // Bounded: a long browse of a huge catalog would otherwise grow this forever.
+                            val base = if (_cachedPosters.value.size > 500) emptyMap() else _cachedPosters.value
+                            _cachedPosters.value = base + found
+                        }
+                        pending = pending.filter { it.id in _overridden.value && it.id !in found }
+                        if (pending.isEmpty() || attempt == 3) break
+                        kotlinx.coroutines.delay(2_000)
+                    }
                 }
         }
         // In-season advance (auto-next / HUD prev-next) happens inside the player — re-point the
@@ -749,6 +773,9 @@ class SeriesViewModel(
     fun setSeriesTmdbName(series: SeriesEntity, title: String, year: Int?, tmdbId: Int? = null) {
         viewModelScope.launch {
             runCatching { metadata.setSeriesOverride(series, title, year, tmdbId) }
+            overrideChecked.add(series.id)
+            _overridden.value = _overridden.value + series.id
+            _cachedPosters.value = _cachedPosters.value - series.id
             resolvedMeta.remove(series.id)
             _seriesMetaTick.value++
         }
@@ -758,6 +785,8 @@ class SeriesViewModel(
     fun clearSeriesTmdbName(series: SeriesEntity) {
         viewModelScope.launch {
             runCatching { metadata.clearSeriesOverride(series) }
+            _overridden.value = _overridden.value - series.id
+            _cachedPosters.value = _cachedPosters.value - series.id
             resolvedMeta.remove(series.id)
             _seriesMetaTick.value++
         }

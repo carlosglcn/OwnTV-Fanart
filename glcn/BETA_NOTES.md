@@ -111,3 +111,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🗂️ Categories: holding ▲ or ▼ in the category list no longer jumps off to another group and back — it moves one row at a time
 - 🧭 Categories and menus: one focus box now glides from item to item instead of jumping
 - 📺 Android TV home: "Recent channels" now shows the fanart of the programme on air (the channel's logo when the guide has no picture), with the programme's name; it refreshes when you open the app, when you watch a channel and about every 30 minutes
+- 🖼️ Series: a show whose TMDB name or id you corrected by hand now shows TMDB's cover, synopsis and rating (as Movies already does)
+- 📺 App icon: the icon mark is crisp and the launcher banner is 4K, so the start screen looks sharp on a 4K TV
