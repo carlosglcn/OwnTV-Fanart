@@ -188,7 +188,14 @@ internal fun GuideProgrammeBlock(
     modifier: Modifier = Modifier,
 ) {
     val a = stageAccent
-    Column(modifier) {
+    // glcn: a new programme's words rise in softly rather than cutting over.
+    val rise = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(1f) }
+    androidx.compose.runtime.LaunchedEffect(title, eyebrow) {
+        if (tv.own.owntv.glcn.LowRam.on) return@LaunchedEffect
+        rise.snapTo(0f)
+        rise.animateTo(1f, androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+    }
+    Column(modifier.graphicsLayer { alpha = 0.2f + 0.8f * rise.value; translationY = (1f - rise.value) * 10.mpx.toPx() }) {
         if (eyebrow != null) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                 OwnTVIcon(OwnTVIcon.CLOCK, a.accent, Modifier.size(18.mpx))

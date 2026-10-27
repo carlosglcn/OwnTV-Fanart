@@ -2,6 +2,7 @@
 package tv.own.owntv.features.home
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -236,9 +237,17 @@ fun LumenHome(
             Text(tab.row.displayTitle(), style = stageText(19, 700), color = accent.accent, maxLines = 1)
             Spacer(Modifier.height(14.mpx))
             // glcn: the words change with a short cross-fade, not a cut, as the focus moves.
-            androidx.compose.animation.Crossfade(
+            // glcn: the old words fade out quickly, the new ones fade in while rising a few pixels — one soft handover.
+            androidx.compose.animation.AnimatedContent(
                 targetState = shown?.key,
-                animationSpec = if (tv.own.owntv.glcn.LowRam.on) androidx.compose.animation.core.snap<Float>() else androidx.compose.animation.core.tween<Float>(180),
+                transitionSpec = {
+                    if (tv.own.owntv.glcn.LowRam.on) androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
+                    else (
+                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(320, delayMillis = 90, easing = androidx.compose.animation.core.FastOutSlowInEasing)) +
+                            androidx.compose.animation.slideInVertically(androidx.compose.animation.core.tween(380, delayMillis = 60, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))) { it / 16 }
+                        ) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(110)) using
+                        androidx.compose.animation.SizeTransform(clip = false) { _, _ -> androidx.compose.animation.core.snap() }
+                },
                 label = "lumen-words",
             ) { k ->
                 val it0 = tab.items.firstOrNull { x -> x.key == k }

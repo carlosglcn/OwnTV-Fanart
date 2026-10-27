@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -115,7 +116,7 @@ fun ProgrammeInfoScreen(
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color(0xE6050809))))
 
         Column(Modifier.padding(start = 96.mpx, top = 80.mpx, end = 96.mpx).width(1020.mpx)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
+            Row(Modifier.staggerIn(0), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
                 val logo = channel.displayLogoUrl?.takeIf { it.isNotBlank() }
                 if (logo != null) ChannelLogoTile(logoUrl = logo, modifier = Modifier.size(132.mpx, 80.mpx), fill = Color.Transparent) { }
                 Column {
@@ -136,21 +137,21 @@ fun ProgrammeInfoScreen(
                 if (!titleLogo.isNullOrBlank() && !logoFailed) {
                     tv.own.owntv.ui.stage.StageTitleArt(
                         url = titleLogo!!, contentDescription = cur.title,
-                        modifier = Modifier.width(640.mpx).height(150.mpx), alignment = Alignment.CenterStart,
+                        modifier = Modifier.staggerIn(80).width(640.mpx).height(150.mpx), alignment = Alignment.CenterStart,
                         onFailed = { logoFailed = true },
                     )
                 } else {
-                    Text(cur.title, style = stageText(58f, 800), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(cur.title, style = stageText(58f, 800), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.staggerIn(80))
                 }
                 val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
                 Text(
                     if (remaining in 1..600) stringResource(R.string.content_live_time_remaining, timeFmt.format(java.util.Date(cur.stopMs)), remaining)
                     else stringResource(R.string.content_live_time_range, timeFmt.format(java.util.Date(cur.startMs)), timeFmt.format(java.util.Date(cur.stopMs))),
-                    style = stageText(24, 600), color = Soft, modifier = Modifier.padding(top = 10.mpx), maxLines = 1,
+                    style = stageText(24, 600), color = Soft, modifier = Modifier.staggerIn(160).padding(top = 10.mpx), maxLines = 1,
                 )
                 val span = (cur.stopMs - cur.startMs).coerceAtLeast(1L)
                 val f = ((nowMs - cur.startMs).toFloat() / span).coerceIn(0f, 1f)
-                Box(Modifier.padding(top = 14.mpx).width(560.mpx).height(5.mpx).clip(RoundedCornerShape(3.mpx)).background(Color(0x33FFFFFF))) {
+                Box(Modifier.staggerIn(200).padding(top = 14.mpx).width(560.mpx).height(5.mpx).clip(RoundedCornerShape(3.mpx)).background(Color(0x33FFFFFF))) {
                     Box(Modifier.fillMaxWidth(f).height(5.mpx).background(accent))
                 }
                 val facts = (
@@ -160,14 +161,14 @@ fun ProgrammeInfoScreen(
                         lent?.rating?.let { "★ " + ProgrammeArtResolver.format(it) },
                     )
                     ).filter { it.isNotBlank() }.joinToString("  ·  ")
-                if (facts.isNotEmpty()) Text(facts, style = stageText(20, 600), color = Dim, modifier = Modifier.padding(top = 16.mpx), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (facts.isNotEmpty()) Text(facts, style = stageText(20, 600), color = Dim, modifier = Modifier.staggerIn(250).padding(top = 16.mpx), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 (cur.description?.takeIf { it.isNotBlank() } ?: lent?.overview)?.let {
-                    DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(960.mpx), style = stageText(21, 400), color = Soft, lines = 6, fade = true)
+                    DriftingSynopsis(it, modifier = Modifier.staggerIn(300).padding(top = 16.mpx).width(960.mpx), style = stageText(21, 400), color = Soft, lines = 6, fade = true)
                 }
                 if (next.isNotEmpty()) {
-                    Text(stringResource(R.string.glcn_pi_next), style = stageText(16, 800), color = accent, modifier = Modifier.padding(top = 22.mpx))
-                    next.forEach { n ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), modifier = Modifier.padding(top = 4.mpx)) {
+                    Text(stringResource(R.string.glcn_pi_next), style = stageText(16, 800), color = accent, modifier = Modifier.staggerIn(380).padding(top = 22.mpx))
+                    next.forEachIndexed { ni, n ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), modifier = Modifier.staggerIn(420 + ni * 50).padding(top = 4.mpx)) {
                             Text(timeFmt.format(java.util.Date(n.startMs)), style = stageText(19, 700), color = Dim, modifier = Modifier.width(84.mpx), maxLines = 1)
                             Text(n.title, style = stageText(19, 500), color = Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
@@ -178,7 +179,7 @@ fun ProgrammeInfoScreen(
 
         // Right: when it airs again this week.
         if (cur != null) Column(
-            Modifier.align(Alignment.TopEnd).padding(end = 96.mpx, top = 150.mpx).width(420.mpx)
+            Modifier.align(Alignment.TopEnd).padding(end = 96.mpx, top = 150.mpx).staggerIn(340, fromRight = true).width(420.mpx)
                 .clip(RoundedCornerShape(20.mpx)).background(Color(0x990A1012)).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
@@ -205,5 +206,24 @@ fun ProgrammeInfoScreen(
             )
         }
         if (showTech) StreamInfoOverlay(player, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 96.mpx, bottom = 56.mpx))
+    }
+}
+
+
+/**
+ * glcn: a piece of the screen that arrives on its own beat — fading in while rising a few pixels (or sliding in
+ * from the right), a little after the one before it, so the screen builds up instead of appearing whole.
+ */
+@Composable
+private fun Modifier.staggerIn(delayMs: Int, fromRight: Boolean = false): Modifier {
+    if (tv.own.owntv.glcn.LowRam.on) return this
+    val p = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(delayMs.toLong())
+        p.animateTo(1f, androidx.compose.animation.core.tween(520, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+    }
+    return this.graphicsLayer {
+        alpha = p.value
+        if (fromRight) translationX = (1f - p.value) * 48.mpx.toPx() else translationY = (1f - p.value) * 24.mpx.toPx()
     }
 }
