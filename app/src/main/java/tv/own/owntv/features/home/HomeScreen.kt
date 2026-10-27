@@ -394,7 +394,7 @@ fun HomeScreen(
     // The full-screen styles take over only where Home has no hero of its own.
     val backdropStyle = if (trendingItem == null && posterItem == null && !fullBleed) backdropSetting else 0
     val reminders by vm.reminderRows.collectAsStateWithLifecycle()
-    // glcn (Panel): the row with focus. The billboard and Sports run the full width; the side panel only
+    // glcn (Panel): the row with focus. The billboard and the Sports scores run the full width; the side panel only
     // slides in (and the rows give it room) once focus goes down to a row it describes.
     var focusedRow by remember { mutableStateOf<HomeRow?>(null) }
     val panelOn = backdropStyle == 2 && !billboardFocused && focusedRow != null && focusedRow !in PANEL_WIDE_ROWS
@@ -1854,5 +1854,6 @@ private fun Modifier.topFade(height: androidx.compose.ui.unit.Dp): Modifier = th
         )
     }
 
-/** glcn (Panel): rows that keep the whole width — they say what they are themselves, so no side panel. */
-private val PANEL_WIDE_ROWS = setOf(HomeRow.FEATURED, HomeRow.SPORTS_NOW)
+/** glcn (Panel): rows that keep the whole width — the billboard and the Sports scores say what they are
+ * themselves; "Sports now" is channel cards, and those the panel describes. */
+private val PANEL_WIDE_ROWS = setOf(HomeRow.FEATURED, HomeRow.LIVE_SPORTS)

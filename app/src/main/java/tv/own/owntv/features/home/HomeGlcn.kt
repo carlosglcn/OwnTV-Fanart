@@ -590,7 +590,8 @@ private fun rememberSettled(url: String?, info: HomeFocusInfo?): Pair<String?, H
 @Composable
 private fun FullBackdrop(url: String?, modifier: Modifier = Modifier) {
     val animate = tv.own.owntv.ui.theme.animationsOn
-    Crossfade(targetState = url, label = "homeFullArt", modifier = modifier) { u ->
+    // glcn: clipped — the slow push-in drew the picture past its own edges, out beside the menu rail.
+    Crossfade(targetState = url, label = "homeFullArt", modifier = modifier.clipToBounds()) { u ->
         if (!u.isNullOrBlank()) {
             val drift = remember(u) { androidx.compose.animation.core.Animatable(1f) }
             val driftOn = animate && !tv.own.owntv.ui.stage.GlcnMotion.subtle
