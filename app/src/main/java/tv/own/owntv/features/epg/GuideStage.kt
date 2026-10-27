@@ -279,7 +279,7 @@ internal fun GuideChannelLabel(channel: ChannelEntity, name: String, dot: Color?
             // Always whole: the column fits the longest number in the list; only the name is cut.
             maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(numberWidth),
         )
-        LivePlate(channel.displayLogoUrl, 52.mpx, 38.mpx, radius = 10.mpx)
+        LivePlate(channel.displayLogoUrl, 68.mpx, 50.mpx, radius = 10.mpx)
         Text(name, style = stageText(17, 700), color = if (selected) a.accent else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
     }
 }

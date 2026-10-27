@@ -94,3 +94,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏠 Dock: moving back to the left works again after scrolling right
 - ⚙️ Settings and other lists: the focused item keeps some room from the screen edge instead of sitting flush against it
 - 🗓️ TV Guide: a category whose channels have no guide data at all now shows its channels (with empty rows) instead of an empty screen
+- 🖼️ TV Guide: channel logos are a third larger
