@@ -88,12 +88,31 @@ fun SlideFocusHost(modifier: Modifier = Modifier, content: @Composable () -> Uni
     }
 }
 
+/** Where the box goes when it is not the whole focusable — a poster's art, not its title — set by [slideRegion]. */
+class SlideRegion {
+    var rect: Rect = Rect.Zero
+    internal var onChange: ((Rect) -> Unit)? = null
+}
+
+/** Marks the part of an item the sliding box wraps. */
+fun Modifier.slideRegion(region: SlideRegion): Modifier = onGloballyPositioned {
+    val r = it.boundsInWindow()
+    region.rect = r
+    region.onChange?.invoke(r)
+}
+
 /** An item's side of it: reports focus and position to the host. */
 @Composable
-fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp, accent: StageAccent): Modifier {
+fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp, accent: StageAccent, region: SlideRegion? = null): Modifier {
     val id = remember { Any() }
     var rect by remember { mutableStateOf(Rect.Zero) }
     val scope = rememberCoroutineScope()
+    if (region != null) {
+        androidx.compose.runtime.SideEffect {
+            if (rect == Rect.Zero) rect = region.rect
+            region.onChange = { r -> rect = r; if (st.current === id) st.live = r }
+        }
+    }
     return this
         .onFocusChanged {
             if (it.isFocused) {
@@ -112,8 +131,10 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
                 }
             } else if (st.current === id) st.current = null
         }
-        .onGloballyPositioned {
-            rect = it.boundsInWindow()
-            if (st.current === id) st.live = rect
-        }
+        .then(
+            if (region != null) Modifier else Modifier.onGloballyPositioned {
+                rect = it.boundsInWindow()
+                if (st.current === id) st.live = rect
+            },
+        )
 }

@@ -70,6 +70,7 @@ import tv.own.owntv.ui.components.longPressMenuGuard
 import tv.own.owntv.ui.components.trapAllFocusExit
 import tv.own.owntv.ui.stage.StageFocus
 import tv.own.owntv.ui.stage.StageKeyHints
+import tv.own.owntv.ui.stage.stageGlass
 import tv.own.owntv.ui.stage.StageMenu
 import tv.own.owntv.ui.stage.StageMenuHeader
 import tv.own.owntv.ui.stage.StageMenuItem
@@ -316,7 +317,9 @@ fun SportsHubScreen(
                 stringResource(R.string.common_ok) to stringResource(R.string.sports_hint_match_page),
                 stringResource(R.string.content_key_hold_ok) to stringResource(R.string.sports_hint_follow_remind),
             ),
-            Modifier.align(Alignment.BottomEnd).padding(end = 60.mpx, bottom = 27.mpx),
+            // glcn: on a glass capsule, so the hints never run into the cards' text beneath them.
+            Modifier.align(Alignment.BottomEnd).padding(end = 48.mpx, bottom = 18.mpx)
+                .stageGlass(22.mpx, overContent = true).padding(horizontal = 20.mpx, vertical = 10.mpx),
             textSize = 18,
         )
     }

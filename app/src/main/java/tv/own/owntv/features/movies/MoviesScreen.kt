@@ -606,44 +606,46 @@ fun MoviesScreen(
                         // top padding is only the room the focused poster's lift and ring need.
                         Spacer(Modifier.height(24.mpx))
                         CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
-                            LazyVerticalGrid(
-                                state = effectiveGridState,
-                                columns = GridCells.Fixed(columns),
-                                horizontalArrangement = Arrangement.spacedBy(26.mpx),
-                                verticalArrangement = Arrangement.spacedBy(30.mpx),
-                                contentPadding = PaddingValues(start = fx(84), end = fx(64), top = 14.mpx, bottom = glowRoom),
-                                modifier = Modifier.fillMaxWidth().weight(1f),
-                            ) {
-                                items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
-                                    val movie = movies[index] ?: return@items
-                                    val prog = movieProgress[movie.id]
-                                    val done = prog?.let { vm.isMovieCompleted(it) } == true
-                                    StagePoster(
-                                        title = movie.name,
-                                        rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
-                                        width = 196.mpx, height = 294.mpx,
-                                        progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
-                                        watched = done,
-                                    fresh = tv.own.owntv.ui.stage.isFreshlyAdded(movie.addedAt),
-                                        onClick = { startMovie(movie) },
-                                        onLongClick = { openMenu(movie, index) },
-                                        modifier = Modifier
-                                            .gridFocusTarget(
-                                                itemId = movie.id, index = index,
-                                                contextId = contextMovieId, contextFocus = contextFocus,
-                                                selectedId = targetMovieId, selectedFocus = selFocus,
-                                                firstItemFocus = firstItemFocus,
-                                            )
-                                            .onFocusChanged { if (it.isFocused) onMovieFocus(movie) }
-                                            .onPreviewKeyEvent { e ->
-                                                if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                                                when (e.key) {
-                                                    Key.Menu -> { openMenu(movie, index); true }
-                                                    // ◀ from the first column goes to the menu; categories open from their button or a shortcut.
-                                                    else -> false
-                                                }
-                                            },
-                                    ) { VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES) }
+                            tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f)) {
+                                LazyVerticalGrid(
+                                    state = effectiveGridState,
+                                    columns = GridCells.Fixed(columns),
+                                    horizontalArrangement = Arrangement.spacedBy(26.mpx),
+                                    verticalArrangement = Arrangement.spacedBy(30.mpx),
+                                    contentPadding = PaddingValues(start = fx(84), end = fx(64), top = 14.mpx, bottom = glowRoom),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
+                                        val movie = movies[index] ?: return@items
+                                        val prog = movieProgress[movie.id]
+                                        val done = prog?.let { vm.isMovieCompleted(it) } == true
+                                        StagePoster(
+                                            title = movie.name,
+                                            rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
+                                            width = 196.mpx, height = 294.mpx,
+                                            progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
+                                            watched = done,
+                                        fresh = tv.own.owntv.ui.stage.isFreshlyAdded(movie.addedAt),
+                                            onClick = { startMovie(movie) },
+                                            onLongClick = { openMenu(movie, index) },
+                                            modifier = Modifier
+                                                .gridFocusTarget(
+                                                    itemId = movie.id, index = index,
+                                                    contextId = contextMovieId, contextFocus = contextFocus,
+                                                    selectedId = targetMovieId, selectedFocus = selFocus,
+                                                    firstItemFocus = firstItemFocus,
+                                                )
+                                                .onFocusChanged { if (it.isFocused) onMovieFocus(movie) }
+                                                .onPreviewKeyEvent { e ->
+                                                    if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                                    when (e.key) {
+                                                        Key.Menu -> { openMenu(movie, index); true }
+                                                        // ◀ from the first column goes to the menu; categories open from their button or a shortcut.
+                                                        else -> false
+                                                    }
+                                                },
+                                        ) { VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES) }
+                                    }
                                 }
                             }
                         }
@@ -775,40 +777,42 @@ fun MoviesScreen(
                     // A fixed gap under the toolbar that scrolled posters never enter (as Cinematic).
                     Spacer(Modifier.height(20.mpx))
                     CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
-                        LazyVerticalGrid(
-                            state = effectiveGridState,
-                            columns = GridCells.Fixed(columns),
-                            horizontalArrangement = Arrangement.spacedBy(20.mpx),
-                            verticalArrangement = Arrangement.spacedBy(30.mpx),
-                            contentPadding = PaddingValues(start = glowRoom, end = glowRoom, top = 12.mpx, bottom = 24.mpx),
-                            modifier = Modifier.fillMaxWidth().weight(1f).then(glowWide),
-                        ) {
-                            items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
-                                val movie = movies[index] ?: return@items
-                                val prog = movieProgress[movie.id]
-                                val done = prog?.let { vm.isMovieCompleted(it) } == true
-                                StagePoster(
-                                    title = movie.name,
-                                    rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
-                                    width = posterW, height = posterW * 1.5f,
-                                    compact = true,
-                                    progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
-                                    watched = done,
-                                    fresh = tv.own.owntv.ui.stage.isFreshlyAdded(movie.addedAt),
-                                    onClick = { startMovie(movie) },
-                                    onLongClick = { openMenu(movie, index) },
-                                    modifier = Modifier
-                                        .gridFocusTarget(
-                                            itemId = movie.id, index = index,
-                                            contextId = contextMovieId, contextFocus = contextFocus,
-                                            selectedId = targetMovieId, selectedFocus = selFocus,
-                                            firstItemFocus = firstItemFocus,
-                                        )
-                                        .onFocusChanged { if (it.isFocused) onMovieFocus(movie) }
-                                        .onPreviewKeyEvent { e ->
-                                            if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true } else false
-                                        },
-                                ) { VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES) }
+                        tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f).then(glowWide)) {
+                            LazyVerticalGrid(
+                                state = effectiveGridState,
+                                columns = GridCells.Fixed(columns),
+                                horizontalArrangement = Arrangement.spacedBy(20.mpx),
+                                verticalArrangement = Arrangement.spacedBy(30.mpx),
+                                contentPadding = PaddingValues(start = glowRoom, end = glowRoom, top = 12.mpx, bottom = 24.mpx),
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
+                                    val movie = movies[index] ?: return@items
+                                    val prog = movieProgress[movie.id]
+                                    val done = prog?.let { vm.isMovieCompleted(it) } == true
+                                    StagePoster(
+                                        title = movie.name,
+                                        rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
+                                        width = posterW, height = posterW * 1.5f,
+                                        compact = true,
+                                        progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
+                                        watched = done,
+                                        fresh = tv.own.owntv.ui.stage.isFreshlyAdded(movie.addedAt),
+                                        onClick = { startMovie(movie) },
+                                        onLongClick = { openMenu(movie, index) },
+                                        modifier = Modifier
+                                            .gridFocusTarget(
+                                                itemId = movie.id, index = index,
+                                                contextId = contextMovieId, contextFocus = contextFocus,
+                                                selectedId = targetMovieId, selectedFocus = selFocus,
+                                                firstItemFocus = firstItemFocus,
+                                            )
+                                            .onFocusChanged { if (it.isFocused) onMovieFocus(movie) }
+                                            .onPreviewKeyEvent { e ->
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true } else false
+                                            },
+                                    ) { VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES) }
+                                }
                             }
                         }
                     }

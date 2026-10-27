@@ -274,9 +274,13 @@ internal fun LiveStagePane(
                 .background(Color.Black),
             contentAlignment = Alignment.Center,
         ) {
-            if (channel != null && !playing) {
-                // glcn: the channel's logo, large and soft toward the right — you can tell which channel it is
+            // glcn: until the video plays — and while a new channel loads — the frame holds the channel's logo alone;
+            // the programme's picture is already the screen's backdrop.
+            if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
+            if (channel != null && (!playing || loading)) {
+                // The channel's logo, large and soft toward the right — you can tell which channel it is
                 // without it competing with the programme.
+                if (loading) Box(Modifier.fillMaxSize().background(Color.Black))
                 ChannelLogoTile(
                     logoUrl = channel.displayLogoUrl,
                     modifier = Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f).graphicsLayer { alpha = 0.34f },
@@ -284,8 +288,6 @@ internal fun LiveStagePane(
                 ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(56.mpx)) }
                 Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.5f to Color.Transparent)))
             }
-            // glcn: until the video plays the frame holds the channel's logo alone — the programme's picture is already the screen's backdrop.
-            if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
             if (loading) OwnTVSpinner(sizeDp = 28)
             // `.shade`: black 72% at the bottom, clear by 42% up — a video-sized gradient, one pass.
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.58f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.72f))))

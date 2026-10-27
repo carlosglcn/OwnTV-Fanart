@@ -1,6 +1,10 @@
 ## Beta
 
 Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
+- 🎞️ Movies and series: the focus box now glides from poster to poster (Cinematic and Separate) instead of each poster lifting on its own
+- 🖼️ Movies and series: moving to another title fades the previous backdrop out at once, so it no longer lingers behind the new title
+- ⏳ Guide and Live TV: while a channel's preview loads you see its logo or picture instead of a black square with a spinner
+- 🏟️ Sports: the key hints sit on a glass capsule, so they no longer run over the text of the cards below
 - 🎬 Movies: a title you correct with "Set TMDB name" / id now shows TMDB's own cover, synopsis and rating (not the provider's wrong ones), also in the grid
 - 🎾 Sports: a tennis match of any round is found on the channel whose guide only names the tournament ("Torneo de Viena"), including tournaments ESPN names after a sponsor (Erste Bank Open → Vienna)
 - 🔔 Programme reminders: a small glass card in the top-right corner instead of a big window; it closes by itself after 8 seconds (counts as dismissed), takes no focus, and is accepted with OK in the player or Play/Pause elsewhere

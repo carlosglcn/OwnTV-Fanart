@@ -819,18 +819,26 @@ fun StagePoster(
     val accent = stageAccent
     val r = StageRadii.Poster
     val badge = Color(8, 12, 14)
+    // glcn: inside a grid with a sliding focus box the poster does not lift: the box glides to it and wraps its art.
+    val slide = tv.own.owntv.glcn.LocalSlideFocus.current
+    val region = remember { tv.own.owntv.glcn.SlideRegion() }
     Column(
         modifier
             .width(width)
-            .stageLift(focused, StageFocus.POSTER)
-            .stageTilt(focused)
+            .then(
+                if (slide != null) Modifier.slideFocusReport(slide, StageFocus.POSTER, r, accent, region)
+                else Modifier.stageLift(focused, StageFocus.POSTER).stageTilt(focused),
+            )
             .stageClickable(interaction, true, onClick, onLongClick),
     ) {
         Box(
             Modifier
                 .size(width, height)
+                .then(if (slide != null) Modifier.slideRegion(region) else Modifier)
                 .then(
-                    if (focused) {
+                    if (focused && slide != null) {
+                        Modifier
+                    } else if (focused) {
                         Modifier.stageFocusDecor(StageFocus.POSTER, r, accent, LocalStagePalette.current)
                     } else {
                         // `.mine.light .pc .img`: a soft green-grey shadow instead of black.

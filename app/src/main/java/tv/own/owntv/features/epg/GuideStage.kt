@@ -118,6 +118,7 @@ internal fun GuideVideo(
     val previewState by previewEngine.state.collectAsStateWithLifecycle()
     val playing = showVideo && previewState != tv.own.owntv.player.LivePreviewEngine.State.ERROR &&
         previewState != tv.own.owntv.player.LivePreviewEngine.State.IDLE
+    val loading = showVideo && previewState == tv.own.owntv.player.LivePreviewEngine.State.LOADING
     val r = 28.mpx
     val videoShadow = tv.own.owntv.ui.theme.stageShadow(0.55f)
     Box(
@@ -128,8 +129,11 @@ internal fun GuideVideo(
             .background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
-        if (channel != null && !playing) {
-            // glcn: the channel's logo large and soft toward the right while nothing plays, as in Live TV.
+        if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
+        if (channel != null && (!playing || loading)) {
+            // glcn: the channel's logo large and soft toward the right while nothing plays — and while the new channel
+            // is still loading, instead of a black square with a spinner.
+            if (loading) Box(Modifier.fillMaxSize().background(Color.Black))
             ChannelLogoTile(
                 logoUrl = channel.displayLogoUrl,
                 modifier = Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f).graphicsLayer { alpha = 0.34f },
@@ -137,7 +141,6 @@ internal fun GuideVideo(
             ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(48.mpx)) }
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.5f to Color.Transparent)))
         }
-        if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
         if (showVideo && previewState == tv.own.owntv.player.LivePreviewEngine.State.LOADING) OwnTVSpinner(sizeDp = 24)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.58f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.72f))))
         Box(Modifier.fillMaxSize().drawBehind { drawInnerRing(Color.White.copy(alpha = 0.08f), 1.mpx.toPx(), r.toPx()) })

@@ -412,14 +412,18 @@ private fun LiveCinematicVideo(
         modifier.clip(RoundedCornerShape(24.mpx)).background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
-        if (!art.isNullOrBlank()) {
-            tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
-        } else if (channel != null) {
-            ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.size(220.mpx), fill = Color.Transparent) {
-                OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(56.mpx))
+        if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
+        // glcn: the picture shows until the video plays and while a new channel loads, not a black square.
+        if (!playing || loading) {
+            if (!art.isNullOrBlank()) {
+                tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
+            } else if (channel != null) {
+                if (loading) Box(Modifier.fillMaxSize().background(Color.Black))
+                ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.size(220.mpx), fill = Color.Transparent) {
+                    OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(56.mpx))
+                }
             }
         }
-        if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
         if (loading) OwnTVSpinner(sizeDp = 28)
         if (channel != null) {
             Box(Modifier.align(Alignment.TopStart).padding(start = 18.mpx, top = 16.mpx)) { StageLiveBadge(stringResource(R.string.player_live)) }

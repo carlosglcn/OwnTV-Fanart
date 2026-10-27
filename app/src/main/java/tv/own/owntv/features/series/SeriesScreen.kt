@@ -664,42 +664,44 @@ private fun SeriesGrid(
                         // top padding is only the room the focused poster's lift and ring need.
                         Spacer(Modifier.height(24.mpx))
                         CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
-                            LazyVerticalGrid(
-                                state = effectiveGridState,
-                                columns = GridCells.Fixed(columns),
-                                horizontalArrangement = Arrangement.spacedBy(26.mpx),
-                                verticalArrangement = Arrangement.spacedBy(30.mpx),
-                                contentPadding = PaddingValues(start = fx(84), end = fx(64), top = 14.mpx, bottom = glowRoom),
-                                modifier = Modifier.fillMaxWidth().weight(1f),
-                            ) {
-                                items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
-                                    val show = series[index] ?: return@items
-                                    StagePoster(
-                                        title = show.name,
-                                        rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
-                                        width = 196.mpx, height = 294.mpx,
-                                        progress = seriesProgress[show.id],
-                                        watched = show.id in completedSeries,
-                                        fresh = tv.own.owntv.ui.stage.isFreshlyAdded(show.addedAt),
-                                        onClick = { onOpenAt(index); vm.openSeries(show) },
-                                        onLongClick = { openMenu(show, index) },
-                                        modifier = Modifier
-                                            .gridFocusTarget(
-                                                itemId = show.id, index = index,
-                                                contextId = contextSeriesId, contextFocus = contextFocus,
-                                                selectedId = targetSeriesId, selectedFocus = gridSelFocus,
-                                                firstItemFocus = firstItemFocus,
-                                            )
-                                            .onFocusChanged { if (it.isFocused) onShowFocus(show) }
-                                            .onPreviewKeyEvent { e ->
-                                                if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                                                when (e.key) {
-                                                    Key.Menu -> { openMenu(show, index); true }
-                                                    // ◀ from the first column goes to the menu; categories open from their button or a shortcut.
-                                                    else -> false
-                                                }
-                                            },
-                                    ) { VodPosterArt(posterOf(show), OwnTVIcon.SERIES) }
+                            tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f)) {
+                                LazyVerticalGrid(
+                                    state = effectiveGridState,
+                                    columns = GridCells.Fixed(columns),
+                                    horizontalArrangement = Arrangement.spacedBy(26.mpx),
+                                    verticalArrangement = Arrangement.spacedBy(30.mpx),
+                                    contentPadding = PaddingValues(start = fx(84), end = fx(64), top = 14.mpx, bottom = glowRoom),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
+                                        val show = series[index] ?: return@items
+                                        StagePoster(
+                                            title = show.name,
+                                            rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
+                                            width = 196.mpx, height = 294.mpx,
+                                            progress = seriesProgress[show.id],
+                                            watched = show.id in completedSeries,
+                                            fresh = tv.own.owntv.ui.stage.isFreshlyAdded(show.addedAt),
+                                            onClick = { onOpenAt(index); vm.openSeries(show) },
+                                            onLongClick = { openMenu(show, index) },
+                                            modifier = Modifier
+                                                .gridFocusTarget(
+                                                    itemId = show.id, index = index,
+                                                    contextId = contextSeriesId, contextFocus = contextFocus,
+                                                    selectedId = targetSeriesId, selectedFocus = gridSelFocus,
+                                                    firstItemFocus = firstItemFocus,
+                                                )
+                                                .onFocusChanged { if (it.isFocused) onShowFocus(show) }
+                                                .onPreviewKeyEvent { e ->
+                                                    if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                                    when (e.key) {
+                                                        Key.Menu -> { openMenu(show, index); true }
+                                                        // ◀ from the first column goes to the menu; categories open from their button or a shortcut.
+                                                        else -> false
+                                                    }
+                                                },
+                                        ) { VodPosterArt(posterOf(show), OwnTVIcon.SERIES) }
+                                    }
                                 }
                             }
                         }
@@ -829,38 +831,40 @@ private fun SeriesGrid(
                     // A fixed gap under the toolbar that scrolled posters never enter (as Cinematic).
                     Spacer(Modifier.height(20.mpx))
                     CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
-                        LazyVerticalGrid(
-                            state = effectiveGridState,
-                            columns = GridCells.Fixed(columns),
-                            horizontalArrangement = Arrangement.spacedBy(20.mpx),
-                            verticalArrangement = Arrangement.spacedBy(30.mpx),
-                            contentPadding = PaddingValues(start = glowRoom, end = glowRoom, top = 12.mpx, bottom = 24.mpx),
-                            modifier = Modifier.fillMaxWidth().weight(1f).then(glowWide),
-                        ) {
-                            items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
-                                val show = series[index] ?: return@items
-                                StagePoster(
-                                    title = show.name,
-                                    rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
-                                    width = posterW, height = posterW * 1.5f,
-                                    compact = true,
-                                    progress = seriesProgress[show.id],
-                                    watched = show.id in completedSeries,
-                                    fresh = tv.own.owntv.ui.stage.isFreshlyAdded(show.addedAt),
-                                    onClick = { onOpenAt(index); vm.openSeries(show) },
-                                    onLongClick = { openMenu(show, index) },
-                                    modifier = Modifier
-                                        .gridFocusTarget(
-                                            itemId = show.id, index = index,
-                                            contextId = contextSeriesId, contextFocus = contextFocus,
-                                            selectedId = targetSeriesId, selectedFocus = gridSelFocus,
-                                            firstItemFocus = firstItemFocus,
-                                        )
-                                        .onFocusChanged { if (it.isFocused) onShowFocus(show) }
-                                        .onPreviewKeyEvent { e ->
-                                            if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true } else false
-                                        },
-                                ) { VodPosterArt(posterOf(show), OwnTVIcon.SERIES) }
+                        tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f).then(glowWide)) {
+                            LazyVerticalGrid(
+                                state = effectiveGridState,
+                                columns = GridCells.Fixed(columns),
+                                horizontalArrangement = Arrangement.spacedBy(20.mpx),
+                                verticalArrangement = Arrangement.spacedBy(30.mpx),
+                                contentPadding = PaddingValues(start = glowRoom, end = glowRoom, top = 12.mpx, bottom = 24.mpx),
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
+                                    val show = series[index] ?: return@items
+                                    StagePoster(
+                                        title = show.name,
+                                        rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
+                                        width = posterW, height = posterW * 1.5f,
+                                        compact = true,
+                                        progress = seriesProgress[show.id],
+                                        watched = show.id in completedSeries,
+                                        fresh = tv.own.owntv.ui.stage.isFreshlyAdded(show.addedAt),
+                                        onClick = { onOpenAt(index); vm.openSeries(show) },
+                                        onLongClick = { openMenu(show, index) },
+                                        modifier = Modifier
+                                            .gridFocusTarget(
+                                                itemId = show.id, index = index,
+                                                contextId = contextSeriesId, contextFocus = contextFocus,
+                                                selectedId = targetSeriesId, selectedFocus = gridSelFocus,
+                                                firstItemFocus = firstItemFocus,
+                                            )
+                                            .onFocusChanged { if (it.isFocused) onShowFocus(show) }
+                                            .onPreviewKeyEvent { e ->
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true } else false
+                                            },
+                                    ) { VodPosterArt(posterOf(show), OwnTVIcon.SERIES) }
+                                }
                             }
                         }
                     }
