@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.inset
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -634,7 +636,7 @@ fun EpgScreen(
                         val rowH = GuideGridDefaults.RowHeight.toPx()
                         val px = 1.mpx.toPx()
                         if (cursor.rowAlpha.value > 0.01f) {
-                            androidx.compose.ui.graphics.drawscope.inset(gxPx, y, size.width - gxPx - timelineWPx, size.height - y - rowH) {
+                            inset(gxPx, y, size.width - gxPx - timelineWPx, size.height - y - rowH) {
                                 withLayerAlpha(cursor.rowAlpha.value, androidx.compose.ui.geometry.Rect(-80 * px, -80 * px, size.width + 80 * px, size.height + 80 * px)) {
                                     drawStageFocus(tv.own.owntv.ui.stage.StageFocus.FX, 14.mpx, cursorAccent, cursorPalette)
                                 }
@@ -645,7 +647,7 @@ fun EpgScreen(
                             val l = maxOf(x0, gxPx + 4 * px)
                             val rr = minOf(x0 + cursor.w.value, gxPx + timelineWPx - 4 * px)
                             if (rr > l) {
-                                androidx.compose.ui.graphics.drawscope.clipRect(left = gxPx, top = 0f, right = size.width, bottom = size.height) {
+                                clipRect(left = gxPx, top = 0f, right = size.width, bottom = size.height) {
                                     withLayerAlpha(cursor.cellAlpha.value, androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height)) {
                                         drawGuideCursor(androidx.compose.ui.geometry.Rect(l, y, rr, y + rowH), cursorAccent, cursorPalette, px)
                                     }
