@@ -504,6 +504,7 @@ fun LiveScreen(
     // glcn: the Cinematic layout — hero with the programme's picture over a row of channel cards.
     val cinematic = liveLayout == tv.own.owntv.core.settings.SettingsRepository.LiveLayout.CINEMATIC && lockedKey == null
     var categoriesOpen by remember { mutableStateOf(false) }
+    var toolRowHasFocus by remember { mutableStateOf(false) }
     // glcn: the "Sports now" overlay.
     var sportsOpen by remember { mutableStateOf(false) }
     var sheetHadFocus by remember { mutableStateOf(false) }
@@ -846,7 +847,9 @@ fun LiveScreen(
                             when (requestedFocusDirection) {
                                 // The rows handle ◀ and ▶ themselves; from the tool row neither leaves the pane.
                                 FocusDirection.Left, FocusDirection.Right -> cancelFocusChange()
-                                FocusDirection.Up, FocusDirection.Down -> if (lockedKey == null) cancelFocusChange()
+                                // glcn: ▲ from the tool row (search, categories, view, order…) is a deliberate move to the menu.
+                                FocusDirection.Up, FocusDirection.Down ->
+                                    if (lockedKey == null && !(requestedFocusDirection == FocusDirection.Up && toolRowHasFocus)) cancelFocusChange()
                                 else -> Unit
                             }
                         }
@@ -856,7 +859,7 @@ fun LiveScreen(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.mpx),
-                    modifier = Modifier.padding(start = 4.mpx).focusGroup(),
+                    modifier = Modifier.padding(start = 4.mpx).onFocusChanged { toolRowHasFocus = it.hasFocus }.focusGroup(),
                 ) {
                     tv.own.owntv.ui.stage.StageSearchField(
                         query = searchQuery,
