@@ -813,6 +813,8 @@ fun StagePoster(
     watched: Boolean = false,
     /** glcn: added to the library in the last week and not started yet — a small "New" label. */
     fresh: Boolean = false,
+    /** glcn: Runway — take the width the parent gives (it changes while the row glides) instead of [width]. */
+    fillWidth: Boolean = false,
     artwork: @Composable BoxScope.() -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -825,7 +827,7 @@ fun StagePoster(
     val region = remember { tv.own.owntv.glcn.SlideRegion() }
     Column(
         modifier
-            .width(width)
+            .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier.width(width))
             .then(
                 if (slide != null) Modifier.slideFocusReport(slide, StageFocus.POSTER, r, accent, region)
                 else Modifier.stageLift(focused, StageFocus.POSTER).stageTilt(focused),
@@ -834,7 +836,7 @@ fun StagePoster(
     ) {
         Box(
             Modifier
-                .size(width, height)
+                .then(if (fillWidth) Modifier.fillMaxWidth().height(height) else Modifier.size(width, height))
                 .then(if (slide != null) Modifier.slideRegion(region) else Modifier)
                 .then(
                     if (focused && slide != null) {

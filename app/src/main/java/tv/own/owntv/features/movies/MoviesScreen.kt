@@ -637,7 +637,7 @@ fun MoviesScreen(
                                     StagePoster(
                                         title = movie.name,
                                         rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
-                                        width = 196.mpx, height = 294.mpx,
+                                        width = 196.mpx, height = 294.mpx, fillWidth = true,
                                         progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
                                         watched = done,
                                         fresh = tv.own.owntv.ui.stage.isFreshlyAdded(movie.addedAt),

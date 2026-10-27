@@ -697,7 +697,7 @@ private fun SeriesGrid(
                                     StagePoster(
                                         title = show.name,
                                         rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
-                                        width = 196.mpx, height = 294.mpx,
+                                        width = 196.mpx, height = 294.mpx, fillWidth = true,
                                         progress = seriesProgress[show.id],
                                         watched = show.id in completedSeries,
                                         fresh = tv.own.owntv.ui.stage.isFreshlyAdded(show.addedAt),
