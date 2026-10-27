@@ -85,10 +85,30 @@ fun ProgrammeInfoScreen(
     val week by produceState<List<EpgProgrammeEntity>?>(null, channel.id) {
         value = runCatching { loadWeek(channel) }.getOrDefault(emptyList())
     }
+    // glcn: a daily show changes its title every night ("El hormiguero T21 · <guests>"), so a show is also
+    // found by its own name — the title without the episode, the season and what follows " · ". Never for
+    // sport (a league's name is the same for every match) nor for a name too short to tell shows apart:
+    // those still need the very same title.
     val again = remember(cur?.title, week) {
-        val t = cur?.title?.trim()?.lowercase()
-        if (cur == null || t == null) emptyList()
-        else week.orEmpty().filter { it.startMs >= cur.stopMs && it.title.trim().lowercase() == t }.take(7)
+        if (cur == null) return@remember emptyList<Pair<EpgProgrammeEntity, String?>>()
+        val exact = ProgrammeArtResolver.fold(cur.title)
+        val show = ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(cur.title))
+        val byShow = show.length >= 4 && show != exact && !tv.own.owntv.core.live.SportsNow.isSport(cur)
+        week.orEmpty()
+            .filter { it.startMs >= cur.stopMs }
+            .mapNotNull { p ->
+                val t = ProgrammeArtResolver.fold(p.title)
+                when {
+                    t == exact -> p to null
+                    byShow && !tv.own.owntv.core.live.SportsNow.isSport(p) &&
+                        ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(p.title)) == show ->
+                        // Another night of the show: say which one (its guests, its episode).
+                        p to p.title.substringAfter(" · ", "").trim().takeIf { it.isNotBlank() }
+                    else -> null
+                }
+            }
+            .distinctBy { it.first.startMs }
+            .take(7)
     }
 
     // The zap cache keeps programmes without their synopsis (it is heavy); this one is read on demand.
@@ -195,10 +215,11 @@ fun ProgrammeInfoScreen(
             when {
                 week == null -> Unit
                 again.isEmpty() -> Text(stringResource(R.string.glcn_pi_no_repeats), style = stageText(17, 500), color = Dim)
-                else -> again.forEach { a ->
+                else -> again.forEach { (a, episode) ->
                     Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
                         Text(dayFmt.format(java.util.Date(a.startMs)), style = stageText(19, 700), color = Ink, modifier = Modifier.width(110.mpx), maxLines = 1)
                         Text(timeFmt.format(java.util.Date(a.startMs)), style = stageText(19, 500), color = Soft, maxLines = 1)
+                        episode?.let { Text(it, style = stageText(17, 500), color = Dim, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
                     }
                 }
             }
