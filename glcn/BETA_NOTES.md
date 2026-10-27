@@ -115,3 +115,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 App icon: the icon mark is crisp and the launcher banner is 4K, so the start screen looks sharp on a 4K TV
 - 📺 Mini player: docked at a top corner it now sits below the menu bar, so the bar stays visible behind it
 - 🧭 Categories: switching list no longer blinks the list chips or jumps the sheet back to the top
+- 📺 Live TV (light theme): the programme's picture behind the details is calmer and fades out at the bottom, so the title, synopsis and key hints read clearly

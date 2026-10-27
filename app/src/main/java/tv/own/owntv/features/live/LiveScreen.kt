@@ -48,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.focus.FocusRequester as RowFocus
@@ -641,10 +642,15 @@ fun LiveScreen(
             if (backdrop != null) {
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
                 Box(Modifier.align(Alignment.BottomEnd).fillMaxWidth(0.5f).fillMaxHeight(0.62f)) {
-                    tv.own.owntv.ui.components.ProgrammeArt(url = backdrop, modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.85f })
+                    // glcn: dark text on a light page needs a calmer picture behind it (title, synopsis, key hints).
+                    val light = page.luminance() > 0.5f
+                    tv.own.owntv.ui.components.ProgrammeArt(url = backdrop, modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.5f else 0.85f })
+                    if (light) Box(Modifier.fillMaxSize().background(page.copy(alpha = 0.32f)))
                     // Soft towards the left and the top only: the corner itself stays clear.
                     Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.55f to page.copy(alpha = 0f))))
                     Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.5f to page.copy(alpha = 0f))))
+                    // …and, on a light page, towards the bottom where the key hints sit.
+                    if (light) Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0.72f to page.copy(alpha = 0f), 1f to page.copy(alpha = 0.8f))))
                 }
             }
         }
