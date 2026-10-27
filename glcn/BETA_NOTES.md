@@ -110,3 +110,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎛️ Player bar: the tools stay still — one focus box glides from tool to tool and the tool’s name is shown in one fixed line above, instead of the focused button growing and pushing the others; ◀ from the first tool jumps to Info, ▶ from the last returns to the start
 - 🗂️ Categories: holding ▲ or ▼ in the category list no longer jumps off to another group and back — it moves one row at a time
 - 🧭 Categories and menus: one focus box now glides from item to item instead of jumping
+- 📺 Android TV home: "Recent channels" now shows the fanart of the programme on air (the channel's logo when the guide has no picture), with the programme's name; it refreshes when you open the app, when you watch a channel and about every 30 minutes
