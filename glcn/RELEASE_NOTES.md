@@ -27,6 +27,8 @@
 - ⚙️ **Settings and lists keep a little room between the focused item and the screen edge**
 - 🗓️ **TV Guide: a category whose channels have no guide data now shows its channels instead of an empty screen**
 - 🖼️ **TV Guide: channel logos are a third larger**
+- ✨ **TV Guide: the focus glides from row to row and programme to programme, and the timeline slides smoothly**
+- ✨ **Softer handovers: the words on Home and in the guide fade and rise into place, and the programme screen builds up piece by piece**
 - 🛠️ **Delete profile confirmation no longer closes by itself**
 
 ### 🙏 Thank you
