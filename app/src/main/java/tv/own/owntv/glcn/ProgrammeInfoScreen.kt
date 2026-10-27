@@ -173,7 +173,7 @@ fun ProgrammeInfoScreen(
                 }
                 val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
                 Text(
-                    if (remaining in 1..600) stringResource(R.string.content_live_time_remaining, timeFmt.format(java.util.Date(cur.stopMs)), remaining)
+                    if (remaining in 1..600) stringResource(R.string.glcn_pi_ends_left, timeFmt.format(java.util.Date(cur.stopMs)), remaining)
                     else stringResource(R.string.content_live_time_range, timeFmt.format(java.util.Date(cur.startMs)), timeFmt.format(java.util.Date(cur.stopMs))),
                     style = stageText(24, 600), color = Soft, modifier = Modifier.staggerIn(160).padding(top = 10.mpx), maxLines = 1,
                 )
