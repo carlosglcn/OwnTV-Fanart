@@ -71,6 +71,16 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import tv.own.owntv.ui.theme.animationsOn
 import tv.own.owntv.ui.theme.ownTvTween
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.ui.graphics.drawscope.inset
+import tv.own.owntv.glcn.drawAtAlpha
+import tv.own.owntv.ui.stage.drawStageFocus
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
 import tv.own.owntv.ui.format.localizedDecimal
 import tv.own.owntv.ui.format.rememberSystemTimeFormatter
 
@@ -242,49 +252,111 @@ internal fun GoLivePill(enabled: Boolean, onClick: () -> Unit) {
  *  the same size in every language rather than sized by whichever word it happens to hold. */
 private const val GO_LIVE_SLOT_DP = 108
 
-/** The label a focused tool grows to show, and the value that follows it (a track count, the speed,
- *  the engine name). Growth is horizontal and in place: because each cluster is anchored to its own
- *  screen edge, the button can only push its unvisited neighbours toward the centre gap, never the
- *  ones the user has already walked past. Capped and ellipsised as a last-resort backstop — every
- *  translation is written to the 14-character ceiling, so this should never actually bite. */
+/**
+ * glcn: the tools row keeps every button the same size, always. One focus box slides from the focused tool to the
+ * next (the same glide as the guide's), and the tool's name is written in one fixed place above the row, changing
+ * with a short fade — nothing grows, nothing is pushed, and no label chases the focus around.
+ */
+internal class ToolFocusState {
+    /** The tool holding focus now; null while focus is elsewhere. */
+    var current by androidx.compose.runtime.mutableStateOf<Any?>(null)
+    var label by androidx.compose.runtime.mutableStateOf("")
+    var value by androidx.compose.runtime.mutableStateOf<String?>(null)
+    /** Where the tools row sits in the window, to turn a tool's window bounds into the row's own. */
+    var origin = androidx.compose.ui.geometry.Offset.Zero
+    var top = 0f
+    var height = 0f
+    var placed = false
+    val left = androidx.compose.animation.core.Animatable(0f)
+    val width = androidx.compose.animation.core.Animatable(0f)
+}
+
+internal val LocalToolFocus = androidx.compose.runtime.compositionLocalOf<ToolFocusState?> { null }
+
+/** Marks a tool as one the shared focus box can sit on; [label] (and [value], a count or a rate) is what the line above says. */
 @Composable
-private fun ExpandingLabel(visible: Boolean, label: String, value: String?, tint: Color) {
-    AnimatedVisibility(
-        visible = visible,
-        enter = expandHorizontally(ownTvTween(140)) + fadeIn(ownTvTween(140)),
-        exit = shrinkHorizontally(ownTvTween(140)) + fadeOut(ownTvTween(140)),
-    ) {
-        Row(
-            Modifier.padding(start = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                label,
-                style = tv.own.owntv.ui.theme.stageText(25, 600),
-                color = tint,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = TOOL_LABEL_MAX_DP.dp),
-            )
-            // The count that overlapped the icon's corner while collapsed reads as plain text here.
-            if (value != null) {
-                Text(value, style = tv.own.owntv.ui.theme.stageText(25, 600), color = tint.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+internal fun Modifier.toolFocus(label: String, value: String? = null): Modifier {
+    val st = LocalToolFocus.current ?: return this
+    val id = remember { Any() }
+    var focused by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var rect by remember { androidx.compose.runtime.mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
+    androidx.compose.runtime.LaunchedEffect(focused, rect, label, value) {
+        if (!focused || rect == androidx.compose.ui.geometry.Rect.Zero) return@LaunchedEffect
+        st.label = label
+        st.value = value
+        st.top = rect.top - st.origin.y
+        st.height = rect.height
+        val l = rect.left - st.origin.x
+        if (!st.placed || tv.own.owntv.glcn.LowRam.on) {
+            st.left.snapTo(l); st.width.snapTo(rect.width); st.placed = true
+        } else {
+            val glide = androidx.compose.animation.core.spring<Float>(dampingRatio = 1f, stiffness = 520f)
+            kotlinx.coroutines.coroutineScope {
+                launch { st.left.animateTo(l, glide) }
+                launch { st.width.animateTo(rect.width, glide) }
+            }
+        }
+    }
+    return this
+        .onFocusChanged {
+            focused = it.isFocused
+            if (it.isFocused) st.current = id else if (st.current === id) st.current = null
+        }
+        .onGloballyPositioned { rect = it.boundsInWindow() }
+}
+
+/** The sliding focus box, drawn behind the tools. */
+@Composable
+internal fun ToolFocusBox(st: ToolFocusState, modifier: Modifier = Modifier) {
+    val alpha = remember { androidx.compose.animation.core.Animatable(0f) }
+    val on = st.current != null
+    androidx.compose.runtime.LaunchedEffect(on) { alpha.animateTo(if (on) 1f else 0f, ownTvTween(140)) }
+    val accent = hudFocus(ring = hudAccent)
+    val palette = tv.own.owntv.ui.theme.LocalStagePalette.current
+    androidx.compose.foundation.Canvas(modifier) {
+        val a = alpha.value
+        if (a <= 0.01f || st.height <= 0f) return@Canvas
+        val l = st.left.value
+        val w = st.width.value
+        inset(l, st.top, size.width - l - w, size.height - st.top - st.height) {
+            drawAtAlpha(a, androidx.compose.ui.geometry.Rect(-80f, -80f, size.width + 80f, size.height + 80f)) {
+                drawStageFocus(StageFocus.FX, 12.dp, accent, palette)
             }
         }
     }
 }
 
-/** Backstop width for a label written to the 14-character ceiling. */
-private const val TOOL_LABEL_MAX_DP = 132
+/** The name of the tool in focus, in one fixed spot above the row, a margin in from the dock's edge. */
+@Composable
+internal fun ToolLabelLine(st: ToolFocusState) {
+    val alpha = remember { androidx.compose.animation.core.Animatable(0f) }
+    val on = st.current != null
+    androidx.compose.runtime.LaunchedEffect(on) { alpha.animateTo(if (on) 1f else 0f, ownTvTween(140)) }
+    val text = st.label + (st.value?.let { " · $it" } ?: "")
+    Box(
+        Modifier.fillMaxWidth().height(30.dp).padding(start = 12.dp, end = 12.dp, bottom = 4.dp).graphicsLayer { this.alpha = alpha.value },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        AnimatedContent(
+            targetState = text,
+            transitionSpec = {
+                if (tv.own.owntv.glcn.LowRam.on) androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
+                else (fadeIn(ownTvTween(200)) + androidx.compose.animation.slideInVertically(ownTvTween(200)) { it / 3 }) togetherWith fadeOut(ownTvTween(90))
+            },
+            label = "toolName",
+        ) { t ->
+            Text(t, style = tv.own.owntv.ui.theme.stageText(22, 600), color = hudAccent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
 
 @Composable
 internal fun SpeedButton(label: String, active: Boolean, toolLabel: String, onClick: () -> Unit) {
     StageSurface(
         onClick = onClick,
         radius = 12.dp,
-        modifier = Modifier.heightIn(min = 44.dp),
+        modifier = Modifier.heightIn(min = 44.dp).toolFocus(toolLabel),
+        focusDecor = LocalToolFocus.current == null,
         // Focus as light: the accent rim, a wash of it and a soft glow, all from the accent that reads over video.
         focusStyle = StageFocus.FX,
         accent = hudFocus(ring = hudAccent),
@@ -296,7 +368,6 @@ internal fun SpeedButton(label: String, active: Boolean, toolLabel: String, onCl
         val tint = if (active) hudAccent else if (focused) hudInk else hudInk.copy(alpha = 0.78f)
         Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = tv.own.owntv.ui.theme.stageText(25, 600), color = tint, fontWeight = FontWeight.SemiBold)
-            ExpandingLabel(focused, toolLabel, value = null, tint = tint)
         }
     }
 }
@@ -315,7 +386,8 @@ internal fun EngineToggle(label: String, active: Boolean, toolLabel: String, onC
     StageSurface(
         onClick = onClick,
         radius = 12.dp,
-        modifier = Modifier.heightIn(min = 44.dp),
+        modifier = Modifier.heightIn(min = 44.dp).toolFocus(toolLabel),
+        focusDecor = LocalToolFocus.current == null,
         // Focus as light: the accent rim, a wash of it and a soft glow, all from the accent that reads over video.
         focusStyle = StageFocus.FX,
         accent = hudFocus(ring = hudAccent),
@@ -331,7 +403,6 @@ internal fun EngineToggle(label: String, active: Boolean, toolLabel: String, onC
             // The engine name stays the value; focus adds the word for the thing it switches, so the
             // pill reads "EXO Player" rather than leaving MPV/EXO to be guessed at.
             Text(label, style = tv.own.owntv.ui.theme.stageText(25, 600), color = tint, fontWeight = FontWeight.SemiBold)
-            ExpandingLabel(focused, toolLabel, value = null, tint = tint)
         }
     }
 }
@@ -350,30 +421,26 @@ internal fun CtrlButton(
     StageSurface(
         onClick = onClick,
         radius = 12.dp,
-        // A square 44 dp while collapsed; focus lets it grow sideways to fit its label.
-        modifier = Modifier.height(44.dp).widthIn(min = 44.dp),
+        // A square 44 dp, always: the name is written above the row, not grown from the button.
+        modifier = Modifier.height(44.dp).widthIn(min = 44.dp).toolFocus(label, badge?.let { stringResource(R.string.common_number_grouped, it) }),
+        focusDecor = LocalToolFocus.current == null,
         // Focus as light: the accent rim, a wash of it and a soft glow, all from the accent that reads over video.
         focusStyle = StageFocus.FX,
         accent = hudFocus(ring = hudAccent),
         contentAlignment = Alignment.Center,
     ) { focused ->
-        val pad by animateDpAsState(if (focused) 12.dp else 0.dp, ownTvTween(140), label = "toolPadding")
         val tint = if (active) activeTint else if (focused) hudInk else hudInk.copy(alpha = 0.78f)
-        Row(Modifier.padding(horizontal = pad), verticalAlignment = Alignment.CenterVertically) {
-            Box(contentAlignment = Alignment.Center) {
-                OwnTVIcon(icon, tint = tint, filled = true, modifier = Modifier.size(22.dp))
-                // Collapsed, the count sits on the icon's corner; expanded it moves inline after the
-                // label instead, where it no longer covers a third of the glyph.
-                if (badge != null && !focused) {
-                    Box(
-                        Modifier.align(Alignment.TopEnd).size(15.dp).clip(CircleShape).background(hudAccent),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(stringResource(R.string.common_number_grouped, badge), style = tv.own.owntv.ui.theme.stageText(20, 500), color = hudOnAccent, fontWeight = FontWeight.Bold)
-                    }
+        Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+            OwnTVIcon(icon, tint = tint, filled = true, modifier = Modifier.size(22.dp))
+            // The count sits on the icon's corner; its number is also in the line above while focused.
+            if (badge != null) {
+                Box(
+                    Modifier.align(Alignment.TopEnd).padding(top = 5.dp, end = 5.dp).size(15.dp).clip(CircleShape).background(hudAccent),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(stringResource(R.string.common_number_grouped, badge), style = tv.own.owntv.ui.theme.stageText(20, 500), color = hudOnAccent, fontWeight = FontWeight.Bold)
                 }
             }
-            ExpandingLabel(focused, label, badge?.let { stringResource(R.string.common_number_grouped, it) }, tint)
         }
     }
 }

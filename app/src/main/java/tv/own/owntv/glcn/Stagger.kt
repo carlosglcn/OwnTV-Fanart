@@ -48,3 +48,12 @@ fun Modifier.staggerIn(delayMs: Int, fromRight: Boolean = false, gate: StaggerGa
         if (fromRight) translationX = (1f - p.value) * 48.mpx.toPx() else translationY = (1f - p.value) * 24.mpx.toPx()
     }
 }
+
+/** glcn: [block] drawn into its own layer at [alpha], so a glow and a fill fade as one. */
+inline fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAtAlpha(alpha: Float, bounds: androidx.compose.ui.geometry.Rect, block: () -> Unit) {
+    if (alpha >= 0.999f) { block(); return }
+    val paint = androidx.compose.ui.graphics.Paint().apply { this.alpha = alpha }
+    drawContext.canvas.saveLayer(bounds, paint)
+    block()
+    drawContext.canvas.restore()
+}

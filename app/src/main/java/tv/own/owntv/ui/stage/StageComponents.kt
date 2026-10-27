@@ -161,6 +161,8 @@ fun StageSurface(
     highlighted: Boolean = false,
     /** The focus colours; the player's chrome passes its on-video accent. */
     accent: StageAccent = stageAccent,
+    /** glcn: false when a shared focus box drawn elsewhere (one that slides between controls) stands in for it. */
+    focusDecor: Boolean = true,
     content: @Composable BoxScope.(focused: Boolean) -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -169,7 +171,7 @@ fun StageSurface(
     Box(
         modifier = modifier
             .stageLift(focused, focusStyle)
-            .then(if (focused) Modifier.stageFocusDecor(focusStyle, radius, accent, palette) else idle)
+            .then(if (focused && focusDecor) Modifier.stageFocusDecor(focusStyle, radius, accent, palette) else if (focused) Modifier else idle)
             .stageClickable(interaction, enabled, onClick, onLongClick),
         contentAlignment = contentAlignment,
     ) { content(focused) }
