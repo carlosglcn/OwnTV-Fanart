@@ -589,6 +589,8 @@ internal fun LiveCategories(
     // glcn: ▲ ▼ by row number, as the channel list does. A held key outran the lazy list: the row it was heading for
     // was not composed yet, focus was lost, and coming back in landed on the selected category far away — the list
     // went off to a group and returned. Scroll just enough, wait a frame, then focus the row; the newest press wins.
+    // Where the fixed entries end and the provider groups begin (the "GROUPS · DE" heading).
+    val firstGroup = entries.indexOfFirst { it.item.key is tv.own.owntv.core.live.LiveKey.Folder || it.item.key is tv.own.owntv.core.live.LiveKey.Custom }
     var stepTarget by remember { mutableStateOf<Int?>(null) }
     var stepJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun lazyIndexOf(pos: Int): Int {
@@ -646,8 +648,6 @@ internal fun LiveCategories(
             runCatching { searchFocus.requestFocus() }
         }
     }
-    // Where the fixed entries end and the provider groups begin (the "GROUPS · DE" heading).
-    val firstGroup = entries.indexOfFirst { it.item.key is tv.own.owntv.core.live.LiveKey.Folder || it.item.key is tv.own.owntv.core.live.LiveKey.Custom }
     val rightKey = Modifier.onPreviewKeyEvent { e ->
         if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionRight) { onNavigateRight(); true } else false
     }
