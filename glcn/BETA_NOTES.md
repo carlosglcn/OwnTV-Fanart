@@ -122,3 +122,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - Live categories: the list chips are now one button with the current list; OK opens a quick picker (no more switching by resting on a chip). Smoother ▲▼ glide in the category list.
 - Programme info: channel logo and title lettering that vanished against the picture now get a plate / light lettering.
 - Movies/Series (Cinematic): the poster grid now glides like the Dock — speed carries across key presses, so a held ▲/▼ flows.
+- 🎬 New Movies & Series layout "Runway" (Pasarela): one row of posters where the focused one opens wide and the rest glide to the side, like the Home Dock. Pick it in Settings → Movies & Series layout. (Cinematic stays as it was.)
+- 🎞️ Emby: the sync and the watch-state refresh now share one sign-in, so the server announces one login, not two, each time.

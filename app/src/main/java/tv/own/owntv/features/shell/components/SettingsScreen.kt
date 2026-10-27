@@ -890,7 +890,7 @@ fun SettingsScreen(
             title = stringResource(R.string.settings_vod_layout),
             desc = stringResource(R.string.settings_vod_layout_description),
             chip = stringResource(vodLayoutLabelRes(vodLayout)),
-            chipTone = if (vodLayout == tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC) TileTone.PRIMARY else TileTone.SECONDARY,
+            chipTone = if (vodLayout != tv.own.owntv.core.settings.SettingsRepository.VodLayout.SEPARATE) TileTone.PRIMARY else TileTone.SECONDARY,
             focus = vodLayoutRowFocus,
             onClick = { saveScroll(); dialogReturn = vodLayoutRowFocus; showVodLayout = true },
         ),
@@ -1208,7 +1208,7 @@ fun SettingsScreen(
             SettingsSearchEntry(stringResource(R.string.settings_group_layout), stringResource(R.string.settings_ch_paging), stringResource(R.string.settings_search_keywords_ch), OwnTVIcon.CH_NAV, TileTone.PRIMARY,
                 chip = if (chNavEnabled) stringResource(R.string.common_on) else stringResource(R.string.common_off), chipTone = if (chNavEnabled) TileTone.PRIMARY else TileTone.SECONDARY) { open(SettingsTab.CH_NAV) },
             SettingsSearchEntry(stringResource(R.string.settings_group_layout), stringResource(R.string.settings_vod_layout), stringResource(R.string.settings_search_keywords_vod_layout), OwnTVIcon.LIST_GRID, TileTone.PRIMARY,
-                chip = stringResource(vodLayoutLabelRes(vodLayout)), chipTone = if (vodLayout == tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC) TileTone.PRIMARY else TileTone.SECONDARY) { saveScroll(); dialogReturn = searchFieldFocus; showVodLayout = true },
+                chip = stringResource(vodLayoutLabelRes(vodLayout)), chipTone = if (vodLayout != tv.own.owntv.core.settings.SettingsRepository.VodLayout.SEPARATE) TileTone.PRIMARY else TileTone.SECONDARY) { saveScroll(); dialogReturn = searchFieldFocus; showVodLayout = true },
             SettingsSearchEntry(stringResource(R.string.settings_group_layout), stringResource(R.string.settings_panel_width), stringResource(R.string.settings_search_keywords_panel_width), OwnTVIcon.PANEL_WIDTH, TileTone.PRIMARY,
                 chip = if (panelWidthCustom) stringResource(R.string.settings_live_latency_custom) else stringResource(R.string.settings_subtitle_default), chipTone = if (panelWidthCustom) TileTone.PRIMARY else TileTone.SECONDARY) { open(SettingsTab.PANEL_WIDTH) },
         SettingsSearchEntry(stringResource(R.string.settings_group_layout), stringResource(R.string.settings_guide_width), stringResource(R.string.settings_search_keywords_guide_width), OwnTVIcon.EPG, TileTone.PRIMARY,
@@ -2110,10 +2110,10 @@ private fun navStyleLabel(style: tv.own.owntv.core.settings.SettingsRepository.N
 
 /** Chip and option label for the Movies & Series layout choice. */
 private fun vodLayoutLabelRes(layout: tv.own.owntv.core.settings.SettingsRepository.VodLayout): Int =
-    if (layout == tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC) {
-        R.string.settings_vod_layout_cinematic
-    } else {
-        R.string.settings_vod_layout_separate
+    when (layout) {
+        tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC -> R.string.settings_vod_layout_cinematic
+        tv.own.owntv.core.settings.SettingsRepository.VodLayout.RUNWAY -> R.string.settings_vod_layout_runway
+        else -> R.string.settings_vod_layout_separate
     }
 
 /**
@@ -2132,7 +2132,7 @@ private fun VodLayoutPreviewBars(layout: tv.own.owntv.core.settings.SettingsRepo
         modifier = Modifier.fillMaxWidth().height(30.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        if (layout == tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC) {
+        if (layout != tv.own.owntv.core.settings.SettingsRepository.VodLayout.SEPARATE) {
             Box(Modifier.width(48.dp).fillMaxHeight().clip(shape).background(bar.copy(alpha = 0.07f)))
             Box(
                 Modifier
@@ -2999,7 +2999,7 @@ private fun stageRowExtras(
     val liveLayouts = tv.own.owntv.core.settings.SettingsRepository.LiveLayout.entries
     val liveViews = tv.own.owntv.core.settings.SettingsRepository.LiveView.entries
     // Cinematic first.
-    val vodLayouts = listOf(tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC, tv.own.owntv.core.settings.SettingsRepository.VodLayout.SEPARATE)
+    val vodLayouts = listOf(tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC, tv.own.owntv.core.settings.SettingsRepository.VodLayout.RUNWAY, tv.own.owntv.core.settings.SettingsRepository.VodLayout.SEPARATE)
     val presets = tv.own.owntv.core.theme.AccentColor.entries
     val presetColors = presets.map { it.primary(true) }
     val current = tv.own.owntv.ui.theme.stageAccent.accent
@@ -3085,7 +3085,7 @@ private fun stageRowExtras(
             onClick = { vm.setLiveView(cycle(liveViews, liveView, 1)) },
         ),
         "vod_layout" to RowExtra(
-            SettingValue.Segmented(vodLayouts.map { stringResource(if (it == tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC) R.string.settings_vod_layout_cinematic else R.string.settings_seg_separate) }, vodLayouts.indexOf(vodLayout)),
+            SettingValue.Segmented(vodLayouts.map { stringResource(if (it == tv.own.owntv.core.settings.SettingsRepository.VodLayout.SEPARATE) R.string.settings_seg_separate else vodLayoutLabelRes(it)) }, vodLayouts.indexOf(vodLayout)),
             onStep = { vm.setVodLayout(cycle(vodLayouts, vodLayout, it)) },
             onClick = { vm.setVodLayout(cycle(vodLayouts, vodLayout, 1)) },
         ),

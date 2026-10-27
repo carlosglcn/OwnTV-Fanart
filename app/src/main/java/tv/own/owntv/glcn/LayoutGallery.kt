@@ -167,6 +167,17 @@ private val vodCinematic: DrawScope.(Color, Color, Color) -> Unit = { ink, accen
     tiles(w * 0.07f, h * 0.76f, 6, w * 0.125f, h * 0.20f, w * 0.015f, tintsOf(accent), first = 3)
 }
 
+/** Runway: one row of posters — the focused one open wide, the rest sliding to the side — under the details. */
+private val vodRunway: DrawScope.(Color, Color, Color) -> Unit = { ink, accent, _ ->
+    val w = size.width; val h = size.height
+    art(0f, 0f, w, h, Coral, accent, alpha = 0.55f, r = 14f)
+    fade(w, h)
+    bars(w * 0.07f, h * 0.14f, listOf(w * 0.36f, w * 0.22f, w * 0.30f), 8f, Color.White.copy(alpha = 0.92f))
+    val t = tintsOf(accent)
+    box(w * 0.07f, h * 0.50f, w * 0.30f, h * 0.40f, t[0].copy(alpha = 0.85f), 7f)
+    repeat(4) { i -> box(w * (0.39f + i * 0.145f), h * 0.50f, w * 0.125f, h * 0.40f, t[(i + 1) % 5].copy(alpha = 0.7f), 7f) }
+}
+
 @Composable
 fun LiveLayoutGallery(current: SettingsRepository.LiveLayout, onPick: (SettingsRepository.LiveLayout) -> Unit, onDismiss: () -> Unit) =
     GalleryPopup(
@@ -186,6 +197,7 @@ fun VodLayoutGallery(current: SettingsRepository.VodLayout, onPick: (SettingsRep
         options = listOf(
             GalleryOption(SettingsRepository.VodLayout.SEPARATE.name, R.string.settings_vod_layout_separate, R.string.settings_vod_layout_separate_description, vodSeparate),
             GalleryOption(SettingsRepository.VodLayout.CINEMATIC.name, R.string.settings_vod_layout_cinematic, R.string.settings_vod_layout_cinematic_description, vodCinematic),
+            GalleryOption(SettingsRepository.VodLayout.RUNWAY.name, R.string.settings_vod_layout_runway, R.string.settings_vod_layout_runway_description, vodRunway),
         ),
         current = current.name, onPick = { onPick(SettingsRepository.VodLayout.valueOf(it)) }, onDismiss = onDismiss,
     )

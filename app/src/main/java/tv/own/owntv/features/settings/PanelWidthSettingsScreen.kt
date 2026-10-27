@@ -91,7 +91,7 @@ fun PanelWidthSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val rowWidth = maxWidth - BrowseContainerPadding * 2
         val vodLayout by vm.vodLayout.collectAsStateWithLifecycle()
-        val cinematic = vodLayout == tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC
+        val cinematic = vodLayout != tv.own.owntv.core.settings.SettingsRepository.VodLayout.SEPARATE
         val liveLayout by vm.liveLayout.collectAsStateWithLifecycle()
         val liveStage = liveLayout == tv.own.owntv.core.settings.SettingsRepository.LiveLayout.STAGE
         val liveStageSaved by vm.liveStageWidths.collectAsStateWithLifecycle()
@@ -216,7 +216,7 @@ private fun PanelWidthDialog(
     val savedShares by vm.panelShares.getValue(section).collectAsStateWithLifecycle()
     val livePreviewEnabled by vm.livePreviewEnabled.collectAsStateWithLifecycle()
     val vodLayout by vm.vodLayout.collectAsStateWithLifecycle()
-    val cinematic = vodLayout == tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC
+    val cinematic = vodLayout != tv.own.owntv.core.settings.SettingsRepository.VodLayout.SEPARATE
     val stock = remember(section, rowWidth) { defaultPanelShares(section, rowWidth) }
     // Cinematic's detail block is a HEIGHT, so it is its own stored value and takes no part in the
     // 100% row budget below. Live TV is never Cinematic and never shows this row.
