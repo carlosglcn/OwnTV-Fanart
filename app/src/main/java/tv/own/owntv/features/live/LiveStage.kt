@@ -668,11 +668,11 @@ internal fun LiveCategories(
         }
         // Edge-only scrolling, as the channel list (no double step on ▼).
         androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
+        tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f)) {
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
+                .fillMaxSize()
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                 .onFocusChanged { hasFocus = it.hasFocus }
                 .focusProperties {
@@ -808,6 +808,7 @@ internal fun LiveCategories(
                     modifier = Modifier.padding(top = 6.mpx).then(rightKey),
                 )
             }
+        }
         }
         }
     }

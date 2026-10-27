@@ -95,7 +95,9 @@ fun StagePopup(
             ) {
                 StagePopupHeading(title, eyebrow, eyebrowAccent, eyebrowIcon, body)
                 // Text given no style of its own reads as the popup's body text.
-                androidx.tv.material3.ProvideTextStyle(stageText(19, 500)) { content() }
+                // glcn: a menu's items share one focus box that glides between them.
+                if (scroll) tv.own.owntv.glcn.SlideFocusHost { Column { androidx.tv.material3.ProvideTextStyle(stageText(19, 500)) { content() } } }
+                else androidx.tv.material3.ProvideTextStyle(stageText(19, 500)) { content() }
                 if (buttons != null) {
                     Row(
                         Modifier.fillMaxWidth().padding(top = 24.mpx),

@@ -32,6 +32,7 @@
 - ✨ **Cards and rows arrive one after another — in the style and layout choosers, every Home layout, channel lists, the TV Guide and the zapping strip**
 - 🎛️ **Player bar: the tools no longer move — one focus box glides from tool to tool and the tool name shows in a fixed line above; ◀ from the first tool jumps straight to Info**
 - 🗂️ **Categories: holding ▲ or ▼ in the list no longer jumps to another group and back**
+- 🧭 **Categories and menus: one focus box glides from item to item instead of jumping**
 - 🛠️ **Delete profile confirmation no longer closes by itself**
 
 ### 🙏 Thank you

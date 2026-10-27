@@ -66,6 +66,7 @@ import tv.own.owntv.ui.theme.stageAccent
 import tv.own.owntv.ui.theme.stageShadow
 
 import tv.own.owntv.ui.theme.stageText
+import tv.own.owntv.glcn.slideFocusReport
 
 /*
  * The Stage component set (the design's `.mine` classes). Idle = nothing, selected = accent text + dot or bar,
@@ -166,12 +167,17 @@ fun StageSurface(
     content: @Composable BoxScope.(focused: Boolean) -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val focused = interaction.collectIsFocusedAsState().value || highlighted
+    val real = interaction.collectIsFocusedAsState().value
+    val focused = real || highlighted
     val palette = LocalStagePalette.current
+    // glcn: inside a list or menu with a sliding focus box, the item leaves the focus drawing to it.
+    val slide = tv.own.owntv.glcn.LocalSlideFocus.current?.takeIf { focusDecor && (focusStyle == StageFocus.FILLED || focusStyle == StageFocus.FX) }
+    val sliding = slide != null && real
     Box(
         modifier = modifier
             .stageLift(focused, focusStyle)
-            .then(if (focused && focusDecor) Modifier.stageFocusDecor(focusStyle, radius, accent, palette) else if (focused) Modifier else idle)
+            .then(if (slide != null) Modifier.slideFocusReport(slide, focusStyle, radius, accent) else Modifier)
+            .then(if (focused && focusDecor && !sliding) Modifier.stageFocusDecor(focusStyle, radius, accent, palette) else if (focused) Modifier else idle)
             .stageClickable(interaction, enabled, onClick, onLongClick),
         contentAlignment = contentAlignment,
     ) { content(focused) }
