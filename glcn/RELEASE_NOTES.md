@@ -23,4 +23,5 @@
 - 🗓️ **TV Guide: the focused programme stays whole inside the visible timeline**
 - 📺 **Live player: the programme card is always up to date and never cut**
 - ⚙️ **Settings and lists keep a little room between the focused item and the screen edge**
+- 🗓️ **TV Guide: a category whose channels have no guide data now shows its channels instead of an empty screen**
 - 🛠️ **Delete profile confirmation no longer closes by itself**
