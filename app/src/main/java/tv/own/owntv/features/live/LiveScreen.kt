@@ -642,14 +642,19 @@ fun LiveScreen(
             val backdrop = nowNext?.takeIf { it.now != null }?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() }
             if (backdrop != null) {
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
-                Box(Modifier.align(Alignment.BottomEnd).fillMaxWidth(0.5f).fillMaxHeight(0.62f)) {
+                // glcn: the whole picture, in the room under the preview (not a crop running up behind it):
+                // as tall as that room, 16:9, against the right edge.
+                val roomTop = 120.mpx + stageW * 9f / 16f
+                val roomH = (maxHeight - roomTop).coerceAtLeast(1.dp)
+                val artW = minOf(stageW + margin, roomH * 16f / 9f)
+                Box(Modifier.align(Alignment.BottomEnd).width(artW).height(artW * 9f / 16f)) {
                     // glcn: dark text on a light page needs a calmer picture behind it (title, synopsis, key hints).
                     val light = page.luminance() > 0.5f
                     tv.own.owntv.ui.components.ProgrammeArt(url = backdrop, modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.5f else 0.85f })
                     if (light) Box(Modifier.fillMaxSize().background(page.copy(alpha = 0.32f)))
-                    // Soft towards the left and the top only: the corner itself stays clear.
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.55f to page.copy(alpha = 0f))))
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.5f to page.copy(alpha = 0f))))
+                    // Soft at its left and top edges only, so it melts into the page and stays whole.
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.3f to page.copy(alpha = 0f))))
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.22f to page.copy(alpha = 0f))))
                     // …and, on a light page, towards the bottom where the key hints sit.
                     if (light) Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0.72f to page.copy(alpha = 0f), 1f to page.copy(alpha = 0.8f))))
                 }
