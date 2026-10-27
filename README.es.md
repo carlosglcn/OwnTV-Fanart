@@ -10,6 +10,8 @@ imágenes en primer plano: el fanart de la guía en Inicio, TV en directo y la g
 
 > Los problemas de esta versión, por favor, repórtalos **aquí**, no al autor original.
 
+https://github.com/user-attachments/assets/faacb82b-6903-47c0-ae53-6854024aa5b6
+
 ## ⬇️ Descarga
 
 | Dispositivo | Última versión | Código de Downloader |
