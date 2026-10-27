@@ -164,6 +164,8 @@ fun OwnTVShell(
     // does not close a film that is playing.
     val shellVm = org.koin.androidx.compose.koinViewModel<ShellViewModel>()
     var playerMode by shellVm.playerMode
+    // glcn: the programme-reminder card takes no focus; while it shows, this accepts it (set where the card is drawn).
+    var reminderAccept by remember { mutableStateOf<(() -> Unit)?>(null) }
     // Deep-link: the Guide's "Add EPG" button switches to Settings and opens EPG Sources → add.
     var openEpgAdd by remember { mutableStateOf(false) }
     // Setup's "Add a TV guide" lands on the same page once the shell is up.
@@ -1030,6 +1032,15 @@ fun OwnTVShell(
     Box(
         modifier = modifier.fillMaxSize().background(shellBase)
             .onPreviewKeyEvent { e ->
+                // glcn: Play/Pause accepts the reminder card; OK does too while the player is full screen (there it only
+                // opens the controls). Anywhere else OK keeps working the screen underneath.
+                reminderAccept?.let { accept ->
+                    val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
+                    if ((e.key == Key.MediaPlayPause || (ok && playerMode == PlayerMode.FULLSCREEN)) && e.type == KeyEventType.KeyDown) {
+                        accept()
+                        return@onPreviewKeyEvent true
+                    }
+                }
                 if (e.type == KeyEventType.KeyDown) {
                     if (e.key == Key.DirectionLeft || e.key == Key.DirectionRight) railKeyAt = android.os.SystemClock.uptimeMillis()
                     // A key pressed on the rail is the user using it, however focus got there.
@@ -2083,8 +2094,12 @@ fun OwnTVShell(
                     }
                 }
                 val reminderText = dueReminder?.let { listOf(it.title, tv.own.owntv.features.epg.reminderEyebrow(it)).joinToString(" · ") }
-                LaunchedEffect(dueReminder?.id, reminderMode) {
+                // glcn: already watching that channel (in any quality) — nothing to announce.
+                val alreadyWatching = dueReminder != null && playerMode != PlayerMode.NONE && zapSource == MainSection.LIVE_TV &&
+                    tv.own.owntv.glcn.isReminderChannel(dueReminder, previewChannel)
+                LaunchedEffect(dueReminder?.id, reminderMode, alreadyWatching) {
                     val r = dueReminder ?: return@LaunchedEffect
+                    if (alreadyWatching) { reminderManager.dismiss(r.id); return@LaunchedEffect }
                     when (reminderMode) {
                         tv.own.owntv.core.settings.SettingsRepository.ReminderMode.SWITCH -> watchReminder(r)
                         tv.own.owntv.core.settings.SettingsRepository.ReminderMode.NOTIFY -> {
@@ -2094,10 +2109,17 @@ fun OwnTVShell(
                         tv.own.owntv.core.settings.SettingsRepository.ReminderMode.ASK -> Unit
                     }
                 }
-                if (dueReminder != null && reminderMode == tv.own.owntv.core.settings.SettingsRepository.ReminderMode.ASK) {
-                    tv.own.owntv.features.epg.ReminderPrompt(
+                val showCard = dueReminder != null && !alreadyWatching &&
+                    reminderMode == tv.own.owntv.core.settings.SettingsRepository.ReminderMode.ASK
+                DisposableEffect(showCard, dueReminder?.id) {
+                    reminderAccept = if (showCard && dueReminder != null) ({ watchReminder(dueReminder) }) else null
+                    onDispose { reminderAccept = null }
+                }
+                if (showCard && dueReminder != null) {
+                    tv.own.owntv.glcn.ReminderCard(
                         reminder = dueReminder,
-                        onWatch = { watchReminder(dueReminder) },
+                        eyebrow = tv.own.owntv.features.epg.reminderEyebrow(dueReminder),
+                        keyHint = if (playerMode == PlayerMode.FULLSCREEN) "OK" else "\u23EF",
                         onDismiss = { scope.launch { reminderManager.dismiss(dueReminder.id) } },
                     )
                 }

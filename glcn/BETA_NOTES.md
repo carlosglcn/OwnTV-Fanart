@@ -1,6 +1,8 @@
 ## Beta
 
 Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
+- 🔔 Programme reminders: a small glass card in the top-right corner instead of a big window; it closes by itself after 8 seconds (counts as dismissed), takes no focus, and is accepted with OK in the player or Play/Pause elsewhere
+- 🙈 Programme reminders: no card when you are already watching that channel, in any quality (HD, FHD, 4K…)
 - 📺 Live player: the programme card shows the whole title (two lines) and up to four lines of synopsis instead of cutting them.
 - 🖼️ Live player: the programme picture is loaded as soon as the channel opens and kept, so the info card shows it at once instead of popping it in late.
 - 🤾 Handball: Liga ASOBAL with the calendar, results, live score and the table (points and draws). Data comes from the league's own site; a live match is read every half minute.

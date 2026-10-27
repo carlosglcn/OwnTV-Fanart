@@ -602,6 +602,7 @@
 2	technical	app/src/main/java/tv/own/owntv/features/setup/SetupWizard.kt	+
 3	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	\0
 1	json	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	,
+1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	OK
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	ass
 1	performance	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	epg-preload
 1	performance	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	shell-composed
@@ -610,6 +611,7 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	vtt
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	webvtt
 1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	·
+1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	⏯
 8	technical	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	\0
 1	log	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	OwnTVHome
 1	log	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	activeProfileChanged profile=$pid androidTvHomeEnabled=${settings.androidTvHomeEnabled.first()}
@@ -891,6 +893,9 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	EEE d
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	·
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	★
+2	technical	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	\0
+1	regex	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	(?i)\\b(?:8K|4K|UHD|2160P|FHD|1080P|HD|720P|SD|HEVC|H265)\\b
+1	regex	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	[^\\p{L}\\p{N}]+
 2	empty	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	eq
 1	technical	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	eqBar$i
