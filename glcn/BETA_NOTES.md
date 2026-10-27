@@ -119,3 +119,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 Programme info screen: the programme's synopsis shows again (it was missing for programmes the guide described)
 - 🎬 Movies and Series: with the menu on top, ▲ from the search field or the sort button now goes up to the menu
 - 🧭 Categories: the "All" list chip is short ("All") so the three list chips fit without sliding sideways, and a list is chosen after resting a little longer on its chip
+- Live categories: the list chips are now one button with the current list; OK opens a quick picker (no more switching by resting on a chip). Smoother ▲▼ glide in the category list.
+- Programme info: channel logo and title lettering that vanished against the picture now get a plate / light lettering.

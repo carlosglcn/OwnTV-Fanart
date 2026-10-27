@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -578,9 +579,10 @@ internal fun LiveCategories(
     // The chip the cursor last rested on; cleared when it moves to the search or a row. Switching list rebuilds
     // the rows below, and the cursor must not be dragged down with them.
     var lastChipId by remember { mutableStateOf<Long?>(null) }
+    var pickerOpen by remember { mutableStateOf(false) }
     // glcn: keyed by the chips' ids, not the list instance — switching list rebuilds the rows but the chips are the
     // same, and new focus requesters on them dropped the cursor for a frame (the highlight blinked).
-    val chipIds = playlistRows.map { it.first }
+    val chipIds = if (playlistRows.isEmpty()) emptyList() else listOf(PICKER_CHIP)
     val chipFocusers = remember(chipIds) { chipIds.associateWith { FocusRequester() } }
     LaunchedEffect(entries) {
         val id = lastChipId ?: return@LaunchedEffect
@@ -619,10 +621,18 @@ internal fun LiveCategories(
                 row.offset + row.size + step > info.viewportEndOffset -> row.offset + row.size + step - info.viewportEndOffset
                 else -> 0f
             }
-            if (delta != 0f) runCatching { listState.scrollBy(delta) }
-            if (listState.layoutInfo.visibleItemsInfo.none { it.index == li }) runCatching { listState.scrollToItem(li) }
-            withFrameNanos { }
-            runCatching { rowFocusers[pos].requestFocus() }
+            if (row != null) {
+                // glcn: the row is already composed — the highlight moves at once and the list glides under it.
+                runCatching { rowFocusers[pos].requestFocus() }
+                if (delta != 0f) runCatching {
+                    listState.animateScrollBy(delta, androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                }
+            } else {
+                if (delta != 0f) runCatching { listState.scrollBy(delta) }
+                if (listState.layoutInfo.visibleItemsInfo.none { it.index == li }) runCatching { listState.scrollToItem(li) }
+                withFrameNanos { }
+                runCatching { rowFocusers[pos].requestFocus() }
+            }
             stepTarget = null
         }
     }
@@ -660,6 +670,29 @@ internal fun LiveCategories(
         if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionRight) { onNavigateRight(); true } else false
     }
     val a = stageAccent
+    if (pickerOpen) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { pickerOpen = false }) {
+            val first = remember { FocusRequester() }
+            LaunchedEffect(Unit) { withFrameNanos { }; runCatching { first.requestFocus() } }
+            Column(Modifier.width(560.mpx).stageGlass(StageRadii.Sheet, overContent = true).padding(horizontal = 16.mpx, vertical = 22.mpx)) {
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 560.mpx)) {
+                    items(playlistRows.size, key = { playlistRows[it].first }) { row ->
+                        val (id, name) = playlistRows[row]
+                        StageSheetItem(
+                            text = name,
+                            onClick = { pickerOpen = false; if (id != activePlaylist) switcher?.onSelect?.invoke(id) },
+                            selected = id == activePlaylist,
+                            onLongClick = if (id > 0L && id != activePlaylist) ({
+                                tv.own.owntv.glcn.HiddenCategories.hide(appCtx, tv.own.owntv.glcn.HiddenCategories.playlistKey(id))
+                                android.widget.Toast.makeText(appCtx, R.string.glcn_category_hidden_toast, android.widget.Toast.LENGTH_SHORT).show()
+                            }) else null,
+                            modifier = if (id == activePlaylist || (activePlaylist <= 0L && id == -1L)) Modifier.focusRequester(first) else Modifier,
+                        )
+                    }
+                }
+            }
+        }
+    }
     Column(
         modifier
             .then(if (sheet) Modifier.stageGlass(StageRadii.Sheet, overContent = true).padding(horizontal = 16.mpx, vertical = 26.mpx) else Modifier),
@@ -718,48 +751,28 @@ internal fun LiveCategories(
                 )
             }
             if (playlistRows.isNotEmpty()) item(key = "__playlists__") {
-                androidx.compose.foundation.lazy.LazyRow(
-                    modifier = Modifier.fillMaxWidth().onFocusChanged { chipsFocused = it.hasFocus }
-                        // ▲/▼ is the user leaving the chips on purpose; anything else that moves the cursor is undone.
+                // glcn: one button with the current list; OK opens a quick picker. Nothing is chosen by resting on it,
+                // so moving past the list never reloads the categories under the cursor.
+                val current = playlistRows.firstOrNull { it.first == activePlaylist }?.second ?: allPlaylistsText
+                StageSurface(
+                    onClick = { pickerOpen = true },
+                    radius = 22.mpx,
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(start = if (sheet) 8.mpx else 0.mpx, end = if (sheet) 8.mpx else 0.mpx, bottom = if (sheet) 14.mpx else 12.mpx)
+                        .height(46.mpx)
+                        .focusRequester(chipFocusers.getValue(PICKER_CHIP))
+                        .onFocusChanged { chipsFocused = it.hasFocus; if (it.hasFocus) lastChipId = PICKER_CHIP }
                         .onPreviewKeyEvent { e ->
                             if (e.type == KeyEventType.KeyDown && (e.key == Key.DirectionDown || e.key == Key.DirectionUp)) lastChipId = null
-                            false
-                        }.padding(start = if (sheet) 8.mpx else 0.mpx, end = if (sheet) 8.mpx else 0.mpx, bottom = if (sheet) 14.mpx else 12.mpx),
-                    horizontalArrangement = Arrangement.spacedBy(8.mpx),
-                    contentPadding = PaddingValues(horizontal = 4.mpx, vertical = 4.mpx),
-                ) {
-                    items(playlistRows.size, key = { playlistRows[it].first }) { row ->
-                        val (id, name) = playlistRows[row]
-                        val open = id == activePlaylist
-                        // glcn: the lists listed here are the active ones — resting on one shows it, no OK needed.
-                        var chipFocused by remember { mutableStateOf(false) }
-                        LaunchedEffect(chipFocused, open) {
-                            if (chipFocused && !open) {
-                                kotlinx.coroutines.delay(600)
-                                switcher?.onSelect?.invoke(id)
-                            }
-                        }
-                        StageSurface(
-                            onClick = { if (!open) switcher?.onSelect?.invoke(id) },
-                            onLongClick = if (id > 0L && !open) ({
-                                tv.own.owntv.glcn.HiddenCategories.hide(appCtx, tv.own.owntv.glcn.HiddenCategories.playlistKey(id))
-                                android.widget.Toast.makeText(appCtx, R.string.glcn_category_hidden_toast, android.widget.Toast.LENGTH_SHORT).show()
-                            }) else null,
-                            radius = 22.mpx,
-                            modifier = Modifier.height(46.mpx)
-                                .then(chipFocusers[id]?.let { Modifier.focusRequester(it) } ?: Modifier)
-                                .onFocusChanged { chipFocused = it.hasFocus; if (it.hasFocus) lastChipId = id }
-                                // glcn: ◀ on the first playlist stops there — it must not leave the sheet for the quick guide.
-                                .onPreviewKeyEvent { e -> row == 0 && e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft },
-                        ) { focused ->
-                            Row(Modifier.padding(horizontal = 18.mpx).height(46.mpx), verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    name, style = stageText(18, 700), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    color = if (focused) a.onAccent else if (open) a.accent else StageColors.Muted,
-                                    modifier = Modifier.widthIn(max = 220.mpx),
-                                )
-                            }
-                        }
+                            e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft
+                        },
+                ) { focused ->
+                    Row(Modifier.padding(horizontal = 18.mpx).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            current, style = stageText(18, 700), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            color = if (focused) a.onAccent else a.accent, modifier = Modifier.weight(1f),
+                        )
+                        Text("▾", style = stageText(18, 700), color = if (focused) a.onAccent else StageColors.Muted)
                     }
                 }
             }
@@ -821,6 +834,8 @@ internal fun LiveCategories(
         }
     }
 }
+
+private const val PICKER_CHIP = -2L
 
 /**
  * `.fcat` (the Separate column): 52 high, radius 15, 18.5/600, gap 12, 2 px between rows; the

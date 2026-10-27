@@ -126,7 +126,7 @@ fun ProgrammeInfoScreen(
         Column(Modifier.padding(start = 96.mpx, top = 80.mpx, end = 96.mpx).width(1020.mpx)) {
             Row(Modifier.staggerIn(0), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
                 val logo = channel.displayLogoUrl?.takeIf { it.isNotBlank() }
-                if (logo != null) ChannelLogoTile(logoUrl = logo, modifier = Modifier.size(132.mpx, 80.mpx), fill = Color.Transparent) { }
+                if (logo != null) ChannelLogoTile(logoUrl = logo, modifier = Modifier.size(132.mpx, 80.mpx), fill = Color.Transparent, surfaceLuminance = 0.02f) { }
                 Column {
                     Text(stringResource(R.string.glcn_pi_on_air).uppercase(), style = stageText(15, 800), color = accent, maxLines = 1)
                     Text(
@@ -146,7 +146,7 @@ fun ProgrammeInfoScreen(
                     tv.own.owntv.ui.stage.StageTitleArt(
                         url = titleLogo!!, contentDescription = cur.title,
                         modifier = Modifier.staggerIn(80).width(640.mpx).height(150.mpx), alignment = Alignment.CenterStart,
-                        onFailed = { logoFailed = true },
+                        onFailed = { logoFailed = true }, onDarkScreen = true,
                     )
                 } else {
                     Text(cur.title, style = stageText(58f, 800), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.staggerIn(80))
