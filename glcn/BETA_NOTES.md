@@ -121,3 +121,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🧭 Categories: the "All" list chip is short ("All") so the three list chips fit without sliding sideways, and a list is chosen after resting a little longer on its chip
 - Live categories: the list chips are now one button with the current list; OK opens a quick picker (no more switching by resting on a chip). Smoother ▲▼ glide in the category list.
 - Programme info: channel logo and title lettering that vanished against the picture now get a plate / light lettering.
+- Movies/Series (Cinematic): the poster grid now glides like the Dock — speed carries across key presses, so a held ▲/▼ flows.

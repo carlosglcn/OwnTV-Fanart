@@ -259,6 +259,7 @@ fun MoviesScreen(
     val perCategoryMovieIds = remember { mutableStateMapOf<LiveKey, Long>() }
     // NOTE: plain constructors, not remember*State() — these are created lazily inside getOrPut, so a
     // @Composable/rememberSaveable call here would register slots conditionally and corrupt the slot table.
+    val glideScope = androidx.compose.runtime.rememberCoroutineScope()
     val effectiveGridState = if (rememberMovies) perCategoryGrid.getOrPut(selectedKey) { LazyGridState() } else gridState
     val effectiveListState = if (rememberMovies) perCategoryList.getOrPut(selectedKey) { LazyListState() } else listState
     LaunchedEffect(selectedKey, rememberMovies) {
@@ -609,7 +610,8 @@ fun MoviesScreen(
                         // A fixed gap under the toolbar that scrolling posters never enter; the grid's own
                         // top padding is only the room the focused poster's lift and ring need.
                         Spacer(Modifier.height(24.mpx))
-                        CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
+                        val glide = remember(effectiveGridState) { tv.own.owntv.glcn.GlideScroller(effectiveGridState, glideScope) }
+                        CompositionLocalProvider(LocalBringIntoViewSpec provides tv.own.owntv.glcn.NoBringIntoViewSpec) {
                             tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f)) {
                                 LazyVerticalGrid(
                                     state = effectiveGridState,
@@ -639,7 +641,7 @@ fun MoviesScreen(
                                                     selectedId = targetMovieId, selectedFocus = selFocus,
                                                     firstItemFocus = firstItemFocus,
                                                 )
-                                                .onFocusChanged { if (it.isFocused) onMovieFocus(movie) }
+                                                .onFocusChanged { if (it.isFocused) { onMovieFocus(movie); glide.focused(index) } }
                                                 .onPreviewKeyEvent { e ->
                                                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                     when (e.key) {
