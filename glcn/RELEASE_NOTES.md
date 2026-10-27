@@ -19,6 +19,7 @@
 - 🐢 **Calmer motion: drifting text is slower and every row, grid and list now glides to the focus**
 
 ### 🔧 Fixes
+- 🎞️ **Emby: the app no longer signs in to your server again on every refresh, so it stops announcing a new login each time**
 - 🏠 **Home no longer rebuilds its whole feed every time you come back to it**
 - 🗓️ **TV Guide: the focused programme stays whole inside the visible timeline**
 - 📺 **Live player: the programme card is always up to date and never cut**
