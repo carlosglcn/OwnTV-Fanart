@@ -15,10 +15,11 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 object SmoothScroll {
     val animation: AnimationSpec<Float>
-        // glcn: a gentle ease (soft start, soft landing) over a little more than half a second. A spring here made
+        // glcn: a gentle ease over a little more than half a second: it eases in (no jolt at the start) and lands long and
+        // soft, the last third of the way taking as long as the first two. A spring here made
         // the focus glide lag behind a held ▼ until the page stopped following it.
         get() = if (LowRam.on) snap<Float>() else androidx.compose.animation.core.tween<Float>(
-            GLIDE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f),
+            GLIDE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.33f, 0f, 0.12f, 1f),
         )
 
     /** The app-wide default: scroll only as far as the focused item needs, eased. */
@@ -98,4 +99,4 @@ val NoBringIntoViewSpec = object : BringIntoViewSpec {
 }
 
 /** Long enough to be seen gliding, short enough that a held ▼ never outruns it. */
-private const val GLIDE_MS = 480
+private const val GLIDE_MS = 560

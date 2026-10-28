@@ -98,3 +98,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏀 League pages (ACB, EuroLeague and every other): Fixtures and Results cover the season around now — last month, this month and next — not only today and tomorrow; live matches keep their running score
 - 🏎️ Racing: while a session runs, the match page's Standings tab opens with the live order — every driver, position by position — above the season standings (F1, IndyCar and the other ESPN series; MotoGP's feed gives no live order)
 - 🖼️ Quick lists' preview: a programme "picture" that is really a channel logo on a transparent background (some guides send one) is now shown whole in the middle, not cropped
+- 🧈 Row-to-row glide a little longer (0.56 s) and softer: eases in with no jolt and lands long and gentle
