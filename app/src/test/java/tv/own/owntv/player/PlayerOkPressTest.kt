@@ -58,13 +58,14 @@ class PlayerOkPressTest {
     }
 
     @Test
-    fun aHeldOkFiresOnlyTheHoldActionOnRelease() {
+    fun aHeldOkFiresTheHoldActionWhileHeldAndOnlyOnce() {
         val tracker = PlayerOkPressTracker()
         val plan = PlayerOkPlan(PlayerOkOutcome.GUIDE, PlayerOkOutcome.CHANNEL_LIST)
         assertEquals(PlayerOkResult.Swallow, tracker.onKey(true, 0, 1_000, plan))
         assertEquals(PlayerOkResult.Swallow, tracker.onKey(true, 1, 1_400, plan))
-        assertEquals(PlayerOkResult.Swallow, tracker.onKey(true, 2, 1_700, plan))
-        assertEquals(PlayerOkResult.Fire(PlayerOkOutcome.GUIDE), tracker.onKey(false, 0, 1_800, plan))
+        assertEquals(PlayerOkResult.Fire(PlayerOkOutcome.GUIDE), tracker.onKey(true, 2, 1_700, plan))
+        assertEquals(PlayerOkResult.Swallow, tracker.onKey(true, 3, 1_750, plan))
+        assertEquals(PlayerOkResult.Swallow, tracker.onKey(false, 0, 1_800, plan))
         // The press is over: a stray release afterwards is not ours.
         assertEquals(PlayerOkResult.Pass, tracker.onKey(false, 0, 1_900, plan))
     }

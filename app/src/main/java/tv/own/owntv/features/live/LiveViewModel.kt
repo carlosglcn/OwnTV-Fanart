@@ -1239,6 +1239,13 @@ class LiveViewModel(
         else -> channelsInRail(key)
     }.take(PEEK_LIMIT)
 
+    /** glcn: a group's whole list for the zap deck — bounded like a zap list, not cut to a peek. */
+    suspend fun deckChannels(key: LiveKey): List<ChannelEntity> = when (key) {
+        is LiveKey.Folder -> channelsInCategory(key.id)
+        is LiveKey.Custom -> channelsInCustom(key)
+        else -> channelsInRail(key)
+    }
+
     /** Load channels for a category picked in the browser into the zap list. */
     fun loadChannelsForCategory(key: LiveKey) {
         val close = { _showCategoryBrowser.value = false }

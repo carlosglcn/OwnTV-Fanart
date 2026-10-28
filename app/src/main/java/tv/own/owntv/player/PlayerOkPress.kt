@@ -60,20 +60,32 @@ fun isPlayerOkKey(key: Key): Boolean = key == Key.DirectionCenter || key == Key.
 class PlayerOkPressTracker {
     private var downAt = NOT_PRESSED
     private var plan: PlayerOkPlan? = null
+    private var heldFired = false
 
     fun onKey(down: Boolean, repeatCount: Int, eventTimeMs: Long, currentPlan: PlayerOkPlan?): PlayerOkResult {
         if (down && repeatCount == 0) {
             plan = currentPlan
+            heldFired = false
             downAt = if (currentPlan != null) eventTimeMs else NOT_PRESSED
             return if (currentPlan != null) PlayerOkResult.Swallow else PlayerOkResult.Pass
         }
         val pressPlan = plan
         if (downAt == NOT_PRESSED || pressPlan == null) return PlayerOkResult.Pass
-        if (down) return PlayerOkResult.Swallow
         val heldMs = eventTimeMs - downAt
+        if (down) {
+            // glcn: the hold action fires as soon as OK has been held long enough, not on release — holding
+            // and seeing nothing happen read as "it does not work". The release then only ends the press.
+            if (!heldFired && pressPlan.hold != null && heldMs >= PLAYER_OK_HOLD_MS) {
+                heldFired = true
+                return PlayerOkResult.Fire(pressPlan.hold)
+            }
+            return PlayerOkResult.Swallow
+        }
+        val fired = heldFired
         downAt = NOT_PRESSED
         plan = null
-        return PlayerOkResult.Fire(pressPlan.outcome(heldMs))
+        heldFired = false
+        return if (fired) PlayerOkResult.Swallow else PlayerOkResult.Fire(pressPlan.outcome(heldMs))
     }
 
     private companion object {

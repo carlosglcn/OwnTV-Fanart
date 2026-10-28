@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -91,6 +92,8 @@ fun ZapDeck(
     /** The list the player zaps in, and its key (the group it came from). */
     channels: List<ChannelEntity>,
     currentKey: LiveKey?,
+    /** True when [channels] really is [currentKey]'s list; false when the player came from elsewhere (a Home row). */
+    listIsGroup: Boolean,
     currentId: Long?,
     showNumbers: Boolean,
     /** 0 = programme picture, 1 = schedule. */
@@ -118,30 +121,45 @@ fun ZapDeck(
     var column by remember { mutableIntStateOf(1) }
     var groupIdx by remember { mutableIntStateOf(entries.indexOfFirst { it.item.key == currentKey }.coerceAtLeast(0)) }
     var chipIdx by remember { mutableIntStateOf(chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0)) }
-    // The group whose channels are shown: the playing list's own, or one peeked at from the groups column.
+    // The group whose channels are shown: the zap list itself when it is that group's, else the group read whole.
+    // A channel opened from a Home row zaps in that row (twenty recent channels), not in its group, so the
+    // group is read here rather than labelling those twenty with the group's name.
+    fun usesZap(key: LiveKey?) = listIsGroup && key == currentKey
     var shownKey by remember { mutableStateOf(currentKey) }
-    var peeked by remember { mutableStateOf<List<ChannelEntity>>(emptyList()) }
-    val list = if (shownKey == currentKey) channels else peeked
-    var chIdx by remember { mutableIntStateOf(channels.indexOfFirst { it.id == currentId }.coerceAtLeast(0)) }
+    var loaded by remember { mutableStateOf<List<ChannelEntity>>(emptyList()) }
+    var loadedFor by remember { mutableStateOf<Pair<LiveKey?, Long>?>(null) }
+    val list = if (usesZap(shownKey)) channels else loaded
+    var chIdx by remember { mutableIntStateOf(if (listIsGroup) channels.indexOfFirst { it.id == currentId }.coerceAtLeast(0) else 0) }
     var listVersion by remember { mutableIntStateOf(0) }
     var nowMap by remember { mutableStateOf<Map<Long, EpgProgrammeEntity>>(emptyMap()) }
 
-    // Resting on a group shows its channels.
-    LaunchedEffect(groupIdx, column, entries.size) {
+    LaunchedEffect(Unit) {
+        val key = currentKey ?: return@LaunchedEffect
+        if (usesZap(key)) return@LaunchedEffect
+        loaded = runCatching { peekChannels(key) }.getOrDefault(emptyList())
+        loadedFor = key to activeChip
+        chIdx = loaded.indexOfFirst { it.id == currentId }.coerceAtLeast(0)
+        listVersion++
+    }
+    // Resting on a group shows its channels (read again when the playlist changes).
+    LaunchedEffect(groupIdx, column, entries.size, activeChip) {
         if (column != 0) return@LaunchedEffect
         val key = entries.getOrNull(groupIdx)?.item?.key ?: return@LaunchedEffect
-        if (key == shownKey) return@LaunchedEffect
-        if (key == currentKey) {
-            shownKey = key
-            chIdx = channels.indexOfFirst { it.id == currentId }.coerceAtLeast(0)
-            listVersion++
+        if (usesZap(key)) {
+            if (shownKey != key) {
+                shownKey = key
+                chIdx = channels.indexOfFirst { it.id == currentId }.coerceAtLeast(0)
+                listVersion++
+            }
             return@LaunchedEffect
         }
+        if (shownKey == key && loadedFor == key to activeChip) return@LaunchedEffect
         delay(220)
         val got = runCatching { peekChannels(key) }.getOrDefault(emptyList())
-        peeked = got
+        loaded = got
+        loadedFor = key to activeChip
         shownKey = key
-        chIdx = 0
+        chIdx = got.indexOfFirst { it.id == currentId }.coerceAtLeast(0)
         listVersion++
     }
     // What is on: the rows around the cursor, read once the cursor rests.
@@ -167,7 +185,7 @@ fun ZapDeck(
     fun tuneFocused() {
         val ch = list.getOrNull(chIdx) ?: return
         val key = shownKey
-        if (key != null && key != currentKey) onArmCategory(key)
+        if (key != null && !usesZap(key)) onArmCategory(key)
         onTune(ch)
     }
 
@@ -215,7 +233,8 @@ fun ZapDeck(
                     Key.DirectionRight -> {
                         when (column) {
                             0 -> if (list.isNotEmpty() && entries.getOrNull(groupIdx)?.item?.key == shownKey) column = 1
-                            1 -> if (first) onCycleDetail?.invoke()
+                            // ▶ from the channels gives the picture back, as Back does.
+                            1 -> if (first) { if (onCycleDetail != null) onCycleDetail() else onDismiss() }
                             -1 -> chipIdx = (chipIdx + 1).coerceAtMost(chips.lastIndex)
                         }
                         true
@@ -320,7 +339,7 @@ fun ZapDeck(
                         stringResource(R.string.common_ok) to stringResource(R.string.content_key_watch),
                         "◀" to stringResource(R.string.content_category_browser_title),
                         if (onCycleDetail != null) "▶" to stringResource(R.string.glcn_zap_view_next) else null,
-                        stringResource(R.string.common_back) to stringResource(R.string.content_close),
+                        (if (onCycleDetail != null) stringResource(R.string.common_back) else "▶ / " + stringResource(R.string.common_back)) to stringResource(R.string.content_close),
                     ),
                     textSize = 15,
                     modifier = Modifier.padding(start = 14.mpx, top = 12.mpx),
@@ -450,11 +469,19 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
 @Composable
 private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: Int) {
     val accent = stageAccent.accent
-    Row(
-        Modifier.fillMaxWidth().padding(start = 6.mpx),
+    // Whole names on one row that slides to the chip under the cursor (or the active one).
+    val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val target = if (cursor >= 0) cursor else chips.indexOfFirst { it.first == activeId }.coerceAtLeast(0)
+    LaunchedEffect(target) { runCatching { rowState.animateScrollToItem((target - 1).coerceAtLeast(0)) } }
+    androidx.compose.foundation.lazy.LazyRow(
+        state = rowState,
+        userScrollEnabled = false,
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.mpx),
         horizontalArrangement = Arrangement.spacedBy(8.mpx),
     ) {
-        chips.forEachIndexed { i, (id, name) ->
+        items(chips.size) { i ->
+            val (id, name) = chips[i]
             val focused = i == cursor
             val on = id == activeId
             val bg by animateColorAsState(
@@ -471,7 +498,7 @@ private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: I
                 color = if (focused) stageAccent.onAccent else if (on) StageColors.Text else StageColors.Muted,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .weight(1f, fill = false)
+                    .widthIn(max = 240.mpx)
                     .clip(RoundedCornerShape(50))
                     .background(bg)
                     .padding(horizontal = 14.mpx, vertical = 7.mpx),

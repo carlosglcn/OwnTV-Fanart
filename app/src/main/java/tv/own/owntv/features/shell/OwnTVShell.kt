@@ -2219,14 +2219,8 @@ fun OwnTVShell(
                         // hold a single channel, so this renders for any non-empty list.
                         // glcn: the poster view of the same list (▶ in the list switches views; ▲ comes back).
                         // glcn: the zap deck — groups, channels and the focused programme in one sheet (TiviMate's idea, our
-                        // look). ▶ steps its right column through the views on in Settings; the posters view stays one of them.
+                        // look). Its right column follows the zap view chosen in Settings (picture or schedule); ▶ closes it.
                         val deckDetail = if (glcnZapPanel == 1 || (glcnZapPanel == 2 && tv.own.owntv.core.settings.ZapViews.has(glcnZapViews, 1))) 1 else 0
-                        val deckViews = (0..2).filter { tv.own.owntv.core.settings.ZapViews.has(glcnZapViews, it) }
-                        val deckCycle: (() -> Unit)? = if (deckViews.size < 2) null else ({
-                            val cur = if (deckPosters) 2 else deckDetail
-                            val next = deckViews[(deckViews.indexOf(cur).coerceAtLeast(0) + 1) % deckViews.size]
-                            if (next == 2) deckPosters = true else { deckPosters = false; scope.launch { settingsRepo.setZapPanel(next) } }
-                        })
                         if (deckPosters) tv.own.owntv.features.shell.components.ZapPosterOverlay(
                             channels = zapChannels,
                             currentId = previewChannel?.id,
@@ -2242,11 +2236,15 @@ fun OwnTVShell(
                             railCounts = browserRailCounts,
                             channels = zapChannels,
                             currentKey = zapListKey ?: previewChannel?.categoryId?.let { tv.own.owntv.core.live.LiveKey.Folder(it) },
+                            // The zap list is the group's own only when it holds the whole group: a channel opened from
+                            // a Home row zaps in a short window of it, which must not be shown as the group.
+                            listIsGroup = zapListKey != null || (zapListKey ?: previewChannel?.categoryId?.let { tv.own.owntv.core.live.LiveKey.Folder(it) })
+                                ?.let { browserRailCounts[it] }?.let { zapChannels.size >= it } == true,
                             currentId = previewChannel?.id,
                             showNumbers = directTuneEnabled,
                             detail = deckDetail,
-                            onCycleDetail = deckCycle,
-                            peekChannels = { liveVm.peekCategoryChannels(it) },
+                            onCycleDetail = null,
+                            peekChannels = { liveVm.deckChannels(it) },
                             loadNowMany = { liveVm.nowMany(it) },
                             loadNow = { liveVm.nowFull(it) },
                             loadSchedule = { liveVm.scheduleFor(it) },
