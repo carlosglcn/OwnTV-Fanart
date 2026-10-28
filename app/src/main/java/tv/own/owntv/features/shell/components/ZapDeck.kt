@@ -209,6 +209,7 @@ fun ZapDeck(
     Box(
         modifier
             .fillMaxSize()
+            .okAfterFreshPress()
             .graphicsLayer { alpha = enter.value }
             .gradientWash(false, 0f to shade.copy(alpha = 0.78f), 0.55f to shade.copy(alpha = 0.5f), 0.85f to Color.Transparent)
             .focusRequester(focus)

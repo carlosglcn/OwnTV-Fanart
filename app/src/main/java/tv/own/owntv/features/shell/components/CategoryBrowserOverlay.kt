@@ -113,13 +113,21 @@ fun CategoryBrowserOverlay(
         val list = runCatching { peekChannels(focusedKey) }.getOrDefault(emptyList())
         peeked = list
         peekedNow = emptyMap()
-        if (loadNow != null && list.isNotEmpty()) peekedNow = runCatching { loadNow(list.take(40)) }.getOrDefault(emptyMap())
+        // glcn: the whole category, forty at a time — only the first forty used to get what is on, so further down
+        // the list channels seemed to have no guide.
+        if (loadNow != null && list.isNotEmpty()) {
+            for (chunk in list.chunked(40)) {
+                val got = runCatching { loadNow(chunk) }.getOrDefault(emptyMap())
+                peekedNow = peekedNow + got
+            }
+        }
     }
 
     val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
     Box(
         modifier = modifier
             .fillMaxSize()
+            .okAfterFreshPress()
             .gradientWash(false, 0f to shade.copy(alpha = 0.72f), 0.38f to shade.copy(alpha = 0.45f), 0.62f to Color.Transparent),
     ) {
         LiveCategories(
@@ -128,6 +136,7 @@ fun CategoryBrowserOverlay(
             selectedIndex = selectedIndex,
             groupsHeading = groupsHeading,
             sheet = true,
+            sheetGlass = tv.own.owntv.features.live.PLAYER_SHEET_GLASS,
             listState = listState,
             onSelect = { onSelect(entries[it].item.key) },
             onLongSelect = {},
@@ -199,7 +208,7 @@ private fun CategoryChannelsColumn(
     val wrapScope = androidx.compose.runtime.rememberCoroutineScope()
     androidx.compose.foundation.layout.Column(
         modifier
-            .stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true)
+            .stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS)
             .padding(horizontal = 16.mpx, vertical = 22.mpx)
             .onPreviewKeyEvent { e ->
                 if (e.type == KeyEventType.KeyDown && e.key == androidx.compose.ui.input.key.Key.DirectionLeft) { onBack(); true } else false

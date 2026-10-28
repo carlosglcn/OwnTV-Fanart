@@ -84,3 +84,8 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎙️ Remotes with a microphone (air mice, Bluetooth remotes): their mic button opens Search and starts listening straight away — when the remote sends the Search key (the SHIELD's own remote keeps calling the Assistant)
 - 🖼️ "Now playing" in launchers (Projectivy, the TV's own card): the channel's logo (or the title's picture) instead of a generic icon
 - 🆕 Movies and Series open sorted by date added (newest first) unless you chose another order
+- ✋ Hold OK in the player: the quick guide opens after the hold time by the clock, not when the remote's key repeat happens to arrive (some remotes repeat late or never); and releasing OK no longer "clicks" the list it opened (it used to close again and retune the same channel) — the zap panel, quick guide and categories only take OK from a fresh press
+- 🪟 Categories over the player, the quick guide and the picture strip's card are see-through too (a share of the glass, no frosted slice), so the picture shows behind them
+- 📺 Categories over the player: every channel of the focused category gets what is on — only the first forty did, so further down it looked as if they had no guide
+- 📤 Error log › Share: the QR popup no longer closes itself on the release of the OK that opened it
+- 🎬 Live TV Cinematic with the menu on top: the "next" boxes under the cards give way so "You may like" shows whole pictures

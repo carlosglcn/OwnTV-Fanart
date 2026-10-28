@@ -231,10 +231,14 @@ internal fun LiveCinematicPane(
                                             .then(cardModifier(index, channel))
                                             .onFocusChanged { if (it.hasFocus) onFocus(channel) },
                                     )
-                                    Spacer(Modifier.height(10.mpx))
-                                    next.forEach { p ->
-                                        UpNextBox(p)
-                                        Spacer(Modifier.height(4.mpx))
+                                    // glcn: with the menu on top there is no room for both: what comes next gives way, so
+                                    // "You may like" keeps its whole pictures.
+                                    if (short <= 0.mpx) {
+                                        Spacer(Modifier.height(10.mpx))
+                                        next.forEach { p ->
+                                            UpNextBox(p)
+                                            Spacer(Modifier.height(4.mpx))
+                                        }
                                     }
                                 }
                             }

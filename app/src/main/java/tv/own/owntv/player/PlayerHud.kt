@@ -460,6 +460,8 @@ fun PlayerHud(
     // glcn: a held shortcut acts once it has been held long enough, not only on release.
     var shortcutLongFired by remember { mutableStateOf(false) }
     val okPress = remember { PlayerOkPressTracker() }
+    val okHoldScope = androidx.compose.runtime.rememberCoroutineScope()
+    val okHoldJob = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
     val dispatchPlayerShortcut: (RemoteShortcutAction) -> Unit = { action ->
         when (action) {
             RemoteShortcutAction.OPEN_SUBTITLE_CONTROLS -> { controlsVisible = true; dialog = HudDialog.SUBS }
@@ -592,12 +594,25 @@ fun PlayerHud(
                 val okPlan = if (controlsVisible || showNextCard || inert || dialog != HudDialog.NONE || digitsActive || onToastOk != null) null
                     else playerOkPlan(remoteOptions, PlayerOkTargets(channelList = onOpenChannelList != null, guide = isLive, programmeInfo = isLive))
                 val ok = okPress.onKey(e.type == KeyEventType.KeyDown, e.nativeKeyEvent.repeatCount, e.nativeKeyEvent.eventTime, okPlan)
-                if (ok is PlayerOkResult.Fire) when (ok.outcome) {
-                    PlayerOkOutcome.SHOW_CONTROLS -> controlsVisible = true
-                    PlayerOkOutcome.CHANNEL_LIST -> (onOpenQuickGuide ?: onOpenChannelList)?.invoke()
-                    PlayerOkOutcome.GUIDE -> dispatchPlayerShortcut(RemoteShortcutAction.OPEN_GUIDE)
-                    PlayerOkOutcome.PROGRAMME_INFO -> channelFlash++
+                val doOk: (PlayerOkOutcome) -> Unit = { outcome ->
+                    when (outcome) {
+                        PlayerOkOutcome.SHOW_CONTROLS -> controlsVisible = true
+                        PlayerOkOutcome.CHANNEL_LIST -> (onOpenQuickGuide ?: onOpenChannelList)?.invoke()
+                        PlayerOkOutcome.GUIDE -> dispatchPlayerShortcut(RemoteShortcutAction.OPEN_GUIDE)
+                        PlayerOkOutcome.PROGRAMME_INFO -> channelFlash++
+                    }
                 }
+                // glcn: the hold is timed from the first KeyDown, not left to the remote's key repeat.
+                if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0 && okPlan?.hold != null) {
+                    okHoldJob[0]?.cancel()
+                    okHoldJob[0] = okHoldScope.launch {
+                        kotlinx.coroutines.delay(PLAYER_OK_HOLD_MS)
+                        okPress.holdDue(android.os.SystemClock.uptimeMillis())?.let(doOk)
+                    }
+                } else if (e.type == KeyEventType.KeyUp) {
+                    okHoldJob[0]?.cancel(); okHoldJob[0] = null
+                }
+                if (ok is PlayerOkResult.Fire) doOk(ok.outcome)
                 if (ok != PlayerOkResult.Pass) return@onPreviewKeyEvent true
             }
             // ---- Existing key handling (unchanged, but skip for digit KeyUp already consumed above) ----

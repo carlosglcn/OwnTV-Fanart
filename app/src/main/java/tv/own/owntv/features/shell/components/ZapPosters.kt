@@ -279,7 +279,7 @@ private fun ZapPosterInfo(
     val logo = ch.displayLogoUrl?.takeIf { it.isNotBlank() }
     val accent = stageAccent.accent
     Column(
-        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true).padding(18.mpx),
+        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS).padding(18.mpx),
         verticalArrangement = Arrangement.spacedBy(8.mpx),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {

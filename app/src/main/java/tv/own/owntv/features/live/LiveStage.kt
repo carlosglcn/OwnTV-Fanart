@@ -529,6 +529,8 @@ internal fun LiveCategories(
     onSearchEditingChange: (Boolean) -> Unit = {},
     /** glcn: list the playlists (when there are several) with the active one opened onto its categories. */
     showPlaylists: Boolean = false,
+    /** glcn: the share of glass a sheet draws (below 1 over the player, so the picture shows through). */
+    sheetGlass: Float = 1f,
 ) {
     var localQuery by remember { mutableStateOf("") }
     val query = searchQuery ?: localQuery
@@ -695,7 +697,7 @@ internal fun LiveCategories(
     }
     Column(
         modifier
-            .then(if (sheet) Modifier.stageGlass(StageRadii.Sheet, overContent = true).padding(horizontal = 16.mpx, vertical = 26.mpx) else Modifier),
+            .then(if (sheet) Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = sheetGlass).padding(horizontal = 16.mpx, vertical = 26.mpx) else Modifier),
     ) {
         if (sheet) {
             Row(
@@ -880,3 +882,6 @@ private fun LiveColumnItem(
         }
     }
 }
+
+/** glcn: the share of the glass the categories sheet draws over the player, so the picture shows through. */
+internal const val PLAYER_SHEET_GLASS = 0.78f

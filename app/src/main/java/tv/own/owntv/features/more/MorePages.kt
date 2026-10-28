@@ -655,15 +655,18 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
     if (sharing) {
         val st by companion.state.collectAsStateWithLifecycle()
         val done = remember { FocusRequester() }
-        LaunchedEffect(Unit) { runCatching { done.requestFocus() } }
+        // glcn: the popup opens while OK (on Share) is still down; its release must not press Done at once, which
+        // closed the popup before it was seen. Done takes focus, and works, a moment later.
+        var armed by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { kotlinx.coroutines.delay(600); armed = true; runCatching { done.requestFocus() } }
         DisposableEffect(Unit) { onDispose { companion.stop() } }
         tv.own.owntv.ui.stage.StagePopup(
-            onDismiss = { sharing = false },
+            onDismiss = { if (armed) sharing = false },
             title = stringResource(R.string.glcn_share_log_title),
             body = stringResource(R.string.glcn_share_log_body),
             width = 820.mpx,
             buttons = {
-                tv.own.owntv.ui.stage.StageButton(stringResource(R.string.common_done), onClick = { sharing = false }, height = 56.mpx, textSize = 19, modifier = Modifier.focusRequester(done))
+                tv.own.owntv.ui.stage.StageButton(stringResource(R.string.common_done), onClick = { if (armed) sharing = false }, height = 56.mpx, textSize = 19, modifier = Modifier.focusRequester(done))
             },
         ) { tv.own.owntv.ui.components.StageCompanionStatus(st) }
     }

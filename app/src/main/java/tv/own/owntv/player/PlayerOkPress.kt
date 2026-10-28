@@ -88,6 +88,18 @@ class PlayerOkPressTracker {
         return if (fired) PlayerOkResult.Swallow else PlayerOkResult.Fire(pressPlan.outcome(heldMs))
     }
 
+    /**
+     * glcn: the hold, answered by the clock rather than by a key repeat — some remotes repeat late or never, and the
+     * quick guide then needed OK held far longer than the threshold. Null when nothing is due (no press, no hold in
+     * the plan, already fired, or not long enough yet); otherwise marks the hold fired, so the release is swallowed.
+     */
+    fun holdDue(nowMs: Long): PlayerOkOutcome? {
+        val hold = plan?.hold ?: return null
+        if (downAt == NOT_PRESSED || heldFired || nowMs - downAt < PLAYER_OK_HOLD_MS) return null
+        heldFired = true
+        return hold
+    }
+
     private companion object {
         const val NOT_PRESSED = -1L
     }
