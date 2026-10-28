@@ -32,6 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -238,7 +240,34 @@ fun LumenHome(
     }
     if (state.isLoading) return
 
-    Box(modifier.fillMaxSize()) {
+    // glcn: resting — after a few seconds the picture becomes the title's trailer (silent; not in light mode), and
+    // after twenty the words and the dock fade away, leaving the picture alone; the next key brings them back.
+    val lastKeyAt = remember { longArrayOf(android.os.SystemClock.uptimeMillis()) }
+    var resting by remember { mutableStateOf(false) }
+    var ambientKey by remember { mutableStateOf<String?>(null) }
+    val shownTrailer by androidx.compose.runtime.rememberUpdatedState(shown?.let { metas[it.key]?.trailerKey })
+    val animsOn by androidx.compose.runtime.rememberUpdatedState(tv.own.owntv.ui.theme.animationsOn)
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(500)
+            val quiet = android.os.SystemClock.uptimeMillis() - lastKeyAt[0]
+            if (!resting && quiet >= DOCK_REST_MS) resting = true
+            if (ambientKey == null && quiet >= DOCK_TRAILER_MS && !tv.own.owntv.glcn.LowRam.on && animsOn) {
+                ambientKey = shownTrailer
+            }
+        }
+    }
+    LaunchedEffect(shown?.key) { ambientKey = null }
+    val chrome by androidx.compose.animation.core.animateFloatAsState(if (resting) 0f else 1f, androidx.compose.animation.core.tween(if (resting) 1200 else 250), label = "dockRest")
+
+    Box(
+        modifier.fillMaxSize().onPreviewKeyEvent { e ->
+            lastKeyAt[0] = android.os.SystemClock.uptimeMillis()
+            if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) ambientKey = null
+            // The first key after resting only wakes the page.
+            if (resting) { if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyUp) resting = false; true } else false
+        },
+    ) {
         // The focused card's wide picture, settled before it swaps; the page's own colour washes it out.
         var settled by remember { mutableStateOf<String?>(null) }
         val wanted = shown?.backdrop ?: shown?.art?.takeIf { shown.landscape.not() }
@@ -249,6 +278,7 @@ fun LumenHome(
         Crossfade(settled, modifier = Modifier.fillMaxSize(), label = "lumen-backdrop") { url ->
             if (url != null) AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(1f))
         }
+        ambientKey?.let { key -> androidx.compose.runtime.key(key) { tv.own.owntv.ui.components.AmbientTrailer(key, Modifier.fillMaxSize()) { ambientKey = null } } }
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(palette.page.copy(alpha = 0.78f), palette.page.copy(alpha = 0.34f), palette.page.copy(alpha = 0f)))))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to palette.page.copy(alpha = 0.95f))))
 
@@ -264,7 +294,7 @@ fun LumenHome(
             )
         }
         if (tab == null) return@Box
-        Column(Modifier.padding(start = contentStart + 24.mpx, top = 120.mpx).width(1240.mpx)) {
+        Column(Modifier.padding(start = contentStart + 24.mpx, top = 120.mpx).width(1240.mpx).graphicsLayer { alpha = chrome }) {
             Text(tab.row.displayTitle(), style = stageText(19, 700), color = accent.accent, maxLines = 1)
             Spacer(Modifier.height(14.mpx))
             // glcn: the words change with a short cross-fade, not a cut, as the focus moves.
@@ -314,12 +344,13 @@ fun LumenHome(
 
         // glcn: no box — a gradient from clear to the page's own colour, so the dock grows out of the picture.
         Box(
-            Modifier.align(Alignment.BottomStart).fillMaxWidth().height(560.mpx)
+            Modifier.align(Alignment.BottomStart).fillMaxWidth().height(560.mpx).graphicsLayer { alpha = chrome }
                 .background(Brush.verticalGradient(0f to Color.Transparent, 0.3f to palette.page.copy(alpha = 0.7f), 1f to palette.page.copy(alpha = 0.96f))),
         )
         Column(
             Modifier
                 .align(Alignment.BottomStart)
+                .graphicsLayer { alpha = chrome }
                 .padding(start = contentStart, end = 56.mpx, bottom = 28.mpx)
                 .fillMaxWidth()
                 .height(452.mpx)
@@ -475,3 +506,7 @@ private val NoBringIntoView = object : androidx.compose.foundation.gestures.Brin
 private data class TrendingFacts(val name: String, val poster: String?, val backdrop: String?, val plot: String?, val year: Int?)
 
 private fun ratingOf(r: Double): String = String.format(java.util.Locale.getDefault(), "%.1f", r)
+
+/** glcn: quiet this long and the title's trailer replaces its picture; this long and the words and dock fade away. */
+private const val DOCK_TRAILER_MS = 3_000L
+private const val DOCK_REST_MS = 20_000L

@@ -96,6 +96,7 @@
 3	empty	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	%.1f
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	c
+1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	dockRest
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	lumen-backdrop
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	lumen-words
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	m
@@ -976,6 +977,7 @@
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHudControls.kt	· $it
 1	technical	app/src/main/java/tv/own/owntv/player/RecordingBadge.kt	rec
 1	technical	app/src/main/java/tv/own/owntv/player/RecordingBadge.kt	recPulse
+1	technical	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	ambientTrailer
 1	file-path	app/src/main/java/tv/own/owntv/ui/components/BackgroundImageChooserDialog.kt	background_${System.currentTimeMillis()}.$ext
 1	file-path	app/src/main/java/tv/own/owntv/ui/components/BackgroundImageChooserDialog.kt	png
 1	log	app/src/main/java/tv/own/owntv/ui/components/BackgroundPicture.kt	BgImage
