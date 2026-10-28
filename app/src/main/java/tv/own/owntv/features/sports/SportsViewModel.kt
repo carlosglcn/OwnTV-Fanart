@@ -305,6 +305,14 @@ class SportsViewModel(
         }
     }
 
+    /** glcn: follow what is usually followed in [country] (adds only), then fetch the board again. */
+    fun applyPreset(country: String) = viewModelScope.launch {
+        val preset = tv.own.owntv.core.sports.SportsPresets.leaguesFor(country)
+        if (preset.isEmpty()) return@launch
+        settings.updateSportsConfig(settings.activeProfileIdNow()) { c -> c.copy(leagues = c.leagues + preset.filter { it !in c.leagues }) }
+        repository.rebuild()
+    }
+
     fun follows(config: SportsConfig, feed: String): Boolean = feed in config.followedLeagues()
 
     /** Follow or unfollow a team (Hold OK on a card). */

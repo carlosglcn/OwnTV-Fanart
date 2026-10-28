@@ -18,3 +18,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⚡ Movies and Series: when focus rests on a title, the backdrops of the titles around it are fetched and decoded ahead, so the next step shows its picture at once
 - 🧠 Pictures: the in-memory picture cache grows with the box (twice as large on 3 GB boxes such as the SHIELD; unchanged in light mode), so going back to a row shows its pictures without decoding them again
 - 🩺 More › Error log › Export now also says how the app last closed (Android 11+): a freeze the system closed, with what each part of the app was doing at that moment, a crash inside a player engine, or the system reclaiming memory — the cases that used to leave no trace
+- 🌍 Sports: follow the usual competitions of a country with one press — from the empty Sports page ("Follow the usual for Spain", or another country) or in Settings › Sports › Leagues of a country. It only adds; nothing you follow is removed
