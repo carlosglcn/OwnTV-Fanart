@@ -37,3 +37,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⚡ Zap panel: the focused channel's picture appears at once when moving — the programmes and pictures of the channels around the cursor are read and decoded ahead
 - 🖼️ TV guide pictures: when a guide offers a wide picture for a programme (XMLTV <image type="backdrop">, a still or a landscape icon), it is used instead of the upright poster, whose printed title used to clash with the programme's own title. Applies from the next guide update
 - ¹² TV guide and zap panels: a channel's feed number written as a superscript (M+ Terror ¹, M+ Terror ²) is kept in its name, so two feeds of one channel no longer look like the same row
+- 🙈 TV guide: switching "Show channels without guide" to No hides them at once, without opening the guide again
+- 🔀 TV guide: turning on another playlist (from the playlist menu) links its channels to the guide by name straight away, and if it still has no guide (a playlist added after the guide was last read), the guide is read again by itself — no more "Without guide" until a manual sync

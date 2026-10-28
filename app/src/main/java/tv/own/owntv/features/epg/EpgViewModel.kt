@@ -377,23 +377,19 @@ class EpgViewModel(
         runCatching { epgDao.programmeById(programmeId) }.getOrNull()
 
     init {
-        // glcn: link the channels that have no guide to a guide channel of the same name by itself, once per
-        // launch and only the confident hits — nothing to review, nothing on screen.
+        // glcn: link the channels that have no guide to a guide channel of the same name by itself — once per
+        // launch for each playlist, and again for a playlist turned on later (switching lists left the new
+        // ones without guide until a manual sync). Only the confident hits; nothing to review, nothing on screen.
         viewModelScope.launch {
             kotlinx.coroutines.delay(8_000)
-            if (SilentEpgMatch.ran || _matching.value) return@launch
-            runCatching {
-                val pid = settings.activeProfileId.first().takeIf { it >= 0 } ?: return@runCatching
-                val playlistIds = activeSourceIds(settings, sourceDao, pid, MediaType.LIVE)
-                if (playlistIds.isEmpty()) return@runCatching
-                SilentEpgMatch.ran = true
-                val outcome = autoMatcher.run(customize.observe(pid, MediaType.LIVE).first(), playlistIds)
-                if (outcome.hadCandidates && outcome.applied.isNotEmpty()) {
-                    saveEpgMatches(pid, outcome.applied)
-                    fillMatchedInBackground(outcome.applied.map { it.second })
-                }
-            }
+            silentMatchNewPlaylists()
         }
+        settings.defaultSourceId
+            .combine(settings.activeSourceSet) { id, set -> id to set }
+            .drop(1)
+            .distinctUntilChanged()
+            .onEach { kotlinx.coroutines.delay(1_500); silentMatchNewPlaylists() }
+            .launchIn(viewModelScope)
         // Re-filter the grid as the user types (DB-level, so it searches ALL guide channels, not
         // just the visible rows). drop(1): the screen triggers the initial load itself.
         _query
@@ -456,6 +452,32 @@ class EpgViewModel(
             .launchIn(viewModelScope)
     }
 
+    private suspend fun silentMatchNewPlaylists() {
+        if (_matching.value) return
+        runCatching {
+            val pid = settings.activeProfileId.first().takeIf { it >= 0 } ?: return
+            val playlistIds = activeSourceIds(settings, sourceDao, pid, MediaType.LIVE)
+            val fresh = playlistIds.filter { it !in SilentEpgMatch.done }
+            if (fresh.isEmpty()) return
+            SilentEpgMatch.done += fresh
+            val outcome = autoMatcher.run(customize.observe(pid, MediaType.LIVE).first(), playlistIds)
+            if (outcome.hadCandidates && outcome.applied.isNotEmpty()) {
+                saveEpgMatches(pid, outcome.applied)
+                fillMatchedInBackground(outcome.applied.map { it.second })
+                load()
+                return
+            }
+            // A playlist added after the guide was last read: the guide keeps only the programmes of the
+            // channels it knew then, so these have none until it is read again. Read it now, once, instead
+            // of showing "Without guide" until a manual sync.
+            val ids = playlistIds + epgSourceStore.getAll().map { it.id }
+            if (channelDao.channelsWithGuide(ids, "", 1).isEmpty() && epgActivity.active.value.isEmpty()) {
+                refreshAllEpgFromNetwork()
+                load()
+            }
+        }
+    }
+
     /** The Guide's current sort, for the header button. */
     val sortGuide: StateFlow<SettingsRepository.GuideSort> = settings.sortGuide
         .stateIn(viewModelScope, SharingStarted.Eagerly, SettingsRepository.GuideSort.LIVE_TV)
@@ -465,7 +487,12 @@ class EpgViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     fun setShowEmpty(show: Boolean) {
-        viewModelScope.launch { settings.setGuideShowEmpty(show) }
+        // glcn: rebuild the grid straight away — waiting for the setting's flow to come round left the
+        // channels without guide on screen until the guide was opened again.
+        viewModelScope.launch {
+            settings.setGuideShowEmpty(show)
+            load()
+        }
     }
 
     /** Order ▾ › Show › Video preview: the focused channel plays in the pane; off shows its logo only. */
@@ -1158,4 +1185,5 @@ class EpgViewModel(
 }
 
 /** glcn: the silent guide matching runs once per launch, whichever screen opened first. */
-private object SilentEpgMatch { @Volatile var ran = false }
+/** glcn: the playlists already silently matched in this run of the app. */
+private object SilentEpgMatch { val done: MutableSet<Long> = java.util.Collections.synchronizedSet(HashSet()) }
