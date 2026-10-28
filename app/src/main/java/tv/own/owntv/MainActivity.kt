@@ -287,6 +287,8 @@ open class MainActivity : ComponentActivity() {
                 tv.own.owntv.glcn.UiSounds.startup(season)
             }
         }
+        // glcn: how the screen keeps up, to suggest light mode once if it stutters again and again.
+        tv.own.owntv.glcn.JankWatch.install(this)
         setContent {
             // First composition pass — splits "process start → Compose is running" from
             // "Compose is running → the destination's data arrived".

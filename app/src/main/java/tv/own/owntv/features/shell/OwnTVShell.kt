@@ -413,7 +413,11 @@ fun OwnTVShell(
     val browserRailCounts by liveVm.railCounts.collectAsStateWithLifecycle()
     val previewChannel by liveVm.previewChannel.collectAsStateWithLifecycle()
     // glcn: kept in step with every way the player opens, docks or closes (see LiveViewModel.onChannelFocused).
-    LaunchedEffect(playerMode) { liveVm.playerFullscreen = playerMode == PlayerMode.FULLSCREEN }
+    LaunchedEffect(playerMode) {
+        liveVm.playerFullscreen = playerMode == PlayerMode.FULLSCREEN
+        // glcn: the light-mode question waits until the person is back in the menus.
+        tv.own.owntv.glcn.LowRam.holdPrompt = playerMode == PlayerMode.FULLSCREEN
+    }
     val playerRecording by liveVm.playerRecording.collectAsStateWithLifecycle()
     // glcn: the playing programme's picture is fetched and loaded as soon as the channel opens — the
     // player's card then has it on screen the first time it is shown, with no late pop-in.
@@ -2355,6 +2359,16 @@ fun OwnTVShell(
                         loadSchedule = if (glcnZapPanel == 1) ({ liveVm.scheduleFor(it) }) else null,
                         modifier = Modifier.fillMaxSize(),
                     )
+                }
+                // glcn: the channel gives no picture and its only other copy is in another playlist: say so first.
+                val crossCopy by liveVm.crossCopy.collectAsStateWithLifecycle()
+                crossCopy?.let { offer ->
+                    androidx.compose.runtime.key(offer.to.id) {
+                        tv.own.owntv.features.shell.components.CrossCopyCard(
+                            channel = offer.to.name, playlist = offer.playlist,
+                            onAccept = { liveVm.acceptCrossCopy() }, onDecline = { liveVm.declineCrossCopy() },
+                        )
+                    }
                 }
                 zapOptionsChannel?.let { ch ->
                     androidx.compose.runtime.key(ch.id) { tv.own.owntv.features.live.PlayerChannelOptions(liveVm, ch, onDismiss = { zapOptionsChannel = null }) }

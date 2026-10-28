@@ -1873,6 +1873,34 @@ class LiveViewModel(
 
     init {
         viewModelScope.launch { player.error.collect { f -> if (f != null) runCatching { tryFailover() } } }
+        // glcn: also when the ladder gives up without an error (ExoPlayer reconnecting with no picture, mpv timing out).
+        viewModelScope.launch { live.gaveUp.collect { ch -> if (ch.id == _previewChannel.value?.id) runCatching { tryFailover() } } }
+    }
+
+    /** glcn: a copy of the failing channel in another playlist, offered with a countdown before switching. */
+    data class CrossCopyOffer(val from: ChannelEntity, val to: ChannelEntity, val playlist: String)
+
+    private val _crossCopy = MutableStateFlow<CrossCopyOffer?>(null)
+    val crossCopy: StateFlow<CrossCopyOffer?> = _crossCopy.asStateFlow()
+
+    fun acceptCrossCopy() {
+        val offer = _crossCopy.value ?: return
+        _crossCopy.value = null
+        if (_previewChannel.value?.id != offer.from.id) return
+        _failoverNotice.tryEmit(offer.to.name)
+        live.launch { playChannel(offer.to) }
+    }
+
+    fun declineCrossCopy() { _crossCopy.value = null }
+
+    /** The best copy of [cur] in the profile's other playlists, or null. */
+    private suspend fun copyElsewhere(cur: ChannelEntity): ChannelEntity? {
+        val epgKey = cur.epgChannelId?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "\u0000"
+        val token = tv.own.owntv.core.live.ChannelFailover.searchToken(cur.name) ?: "\u0000"
+        val others = ctx.value.sourceIds.filter { it != cur.sourceId }
+        if (others.isEmpty()) return null
+        val pool = withContext(Dispatchers.IO) { others.flatMap { channelDao.siblingCandidates(it, epgKey, token) } }
+        return tv.own.owntv.core.live.ChannelFailover.rank(cur, pool).firstOrNull { it.id !in failoverTried }
     }
 
     /** glcn: the other copies of [cur] in its own playlist (FHD / HD / SD…), with [cur] among them, best first. */
@@ -1892,9 +1920,17 @@ class LiveViewModel(
         if (!player.isLiveContent || _catchupActive.value || timeshift.isRewound || externalPlayerOn.value) return
         failoverTried += cur.id
         val pool = siblingPool(cur)
-        val next = tv.own.owntv.core.live.ChannelFailover.rank(cur, pool).firstOrNull { it.id !in failoverTried } ?: return
-        _failoverNotice.tryEmit(next.name)
-        live.launch { playChannel(next) }
+        val next = tv.own.owntv.core.live.ChannelFailover.rank(cur, pool).firstOrNull { it.id !in failoverTried }
+        if (next != null) {
+            // The same playlist: straight over, with the usual short notice.
+            _failoverNotice.tryEmit(next.name)
+            live.launch { playChannel(next) }
+            return
+        }
+        // glcn: none left there — another playlist's copy, but only after saying so (see crossCopy).
+        val elsewhere = copyElsewhere(cur) ?: return
+        failoverTried += elsewhere.id
+        _crossCopy.value = CrossCopyOffer(cur, elsewhere, sourceNameOf(elsewhere.sourceId).orEmpty())
     }
 
     private val _catchupUnavailable = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
