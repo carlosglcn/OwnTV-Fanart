@@ -383,30 +383,12 @@ internal fun ZapPreviewPanel(
     ) {
         val logo = channel?.displayLogoUrl?.takeIf { it.isNotBlank() }
         val art = p.imageUrl?.takeIf { it.isNotBlank() }
-        if (art != null) {
-            tv.own.owntv.ui.components.ProgrammeArt(
-                url = art,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(if (framed) 16f / 9f else bareAspect)
-                    .clip(RoundedCornerShape(StageRadii.Sheet)),
-            )
-        } else if (logo != null) {
-            // glcn: no picture for the programme → the channel's logo; no logo either → the words alone.
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(if (framed) 120.mpx else 90.mpx)
-                    .clip(RoundedCornerShape(StageRadii.Sheet))
-                    .background(StageColors.Ink.copy(alpha = 0.06f)),
-            ) {
-                tv.own.owntv.ui.components.ChannelLogoTile(
-                    logoUrl = logo,
-                    modifier = Modifier.align(Alignment.Center).size(180.mpx, 80.mpx),
-                    fill = Color.Transparent,
-                ) { }
-            }
-        }
+        // glcn: the programme's picture; a "picture" that is really a logo (squarish, small, or the channel's own logo),
+        // and a channel with no picture at all, show the logo whole and sharp in the middle of the same frame —
+        // not cropped into a blurred strip, nor floating faint in a short box.
+        val shape = if (framed) 16f / 9f else bareAspect
+        val pic = art ?: logo
+        if (pic != null) PreviewPicture(url = pic, logoLike = art == null || art == logo, aspect = shape)
         Text(p.title, style = stageText(24, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(
             fmt.format(java.util.Date(p.startMs)) + " – " + fmt.format(java.util.Date(p.stopMs)),
@@ -545,4 +527,39 @@ internal fun NeighbourArtPrefetch(
             kotlinx.coroutines.delay(25)
         }
     }
+}
+
+/** glcn: the preview's picture — a wide picture fills its frame; a logo-like one stands whole, sharp, on a soft tile. */
+@Composable
+private fun PreviewPicture(url: String, logoLike: Boolean, aspect: Float) {
+    var asLogo by remember(url) { mutableStateOf(logoLike || (PreviewShapes.logoLike[url] ?: false)) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    Box(
+        Modifier.fillMaxWidth().aspectRatio(aspect).clip(RoundedCornerShape(StageRadii.Sheet))
+            .then(if (asLogo) Modifier.background(StageColors.Ink.copy(alpha = 0.06f)) else Modifier),
+    ) {
+        coil3.compose.AsyncImage(
+            model = remember(url, asLogo) {
+                coil3.request.ImageRequest.Builder(ctx).data(url)
+                    // A logo is small: read it whole, so it is not scaled up from a thumbnail.
+                    .apply { if (asLogo) size(coil3.size.Size.ORIGINAL) }
+                    .build()
+            },
+            contentDescription = null,
+            contentScale = if (asLogo) androidx.compose.ui.layout.ContentScale.Fit else androidx.compose.ui.layout.ContentScale.Crop,
+            onSuccess = { st ->
+                val img = st.result.image
+                if (!asLogo && img.height > 0) {
+                    val r = img.width.toFloat() / img.height
+                    if (r < 1.25f || img.width < 360) { asLogo = true; PreviewShapes.logoLike[url] = true }
+                }
+            },
+            modifier = if (asLogo) Modifier.align(Alignment.Center).fillMaxWidth(0.56f).fillMaxHeight(0.56f) else Modifier.fillMaxSize(),
+        )
+    }
+}
+
+private object PreviewShapes {
+    /** Pictures found to be logos, so the next time they open as such straight away. */
+    val logoLike = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 }

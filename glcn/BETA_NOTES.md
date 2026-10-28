@@ -73,3 +73,9 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⚽ Sports: Ourense CF is named as such (ESPN calls it "Auriense"), so its matches also find their channel
 - ✨ Channel options over the player (hold OK on a strip card): a see-through sheet slides in from the right, leaving the picture in view — the programme on air at its head (picture, title, times, progress), then the channel and the options
 - ⏹️ With "Back in the player: Window" on, holding Back in the full-screen player (about a second) closes it outright — back to the menu with no window; a short press still leaves it in the window
+- 🛠️ Crash fixed (SHIELD, 28 Oct, "index 4, size 4"): the zap panel's lists no longer read past the end of a list that has just become shorter, and the rows that jump back to their start ask it of their next layout instead of forcing one from a background task. Builds now keep their R8 map, so a crash report can be read back to the exact line
+- 🧈 Home: moving from card to card or row to row no longer recomposes the whole page — the "last focused card" and the focused row were state read at the top of Home, so every key press rebuilt every row on screen (the stall that turned the glide into a jump)
+- 📤 Error log › Share: the report goes to your phone — scan the QR on the same Wi-Fi, type the PIN, and read, copy or save it there (the system share sheet did nothing on TV boxes)
+- ⚽ "Other channels for this match": a see-through sheet from the right, readable in light and dark, with both crests and the competition at its head; its player button now has the sports mark instead of the list one
+- 🖼️ Quick lists' preview: a logo (no programme picture, or a "picture" that is really a logo) stands whole and sharp in the middle of the frame instead of being cropped and blurred
+- 🌫️ Live TV Cinematic: the shade behind the title and synopsis is a soft oval with no edges

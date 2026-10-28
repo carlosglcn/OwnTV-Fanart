@@ -235,13 +235,15 @@ fun HomeScreen(
     val playFocus = rowFocusRequester(HomeRow.TRENDING) ?: trendingPrimaryFocus
     // The control that last had focus on Home, so ▶ out of the rail comes back to exactly it (rail
     // carry-over). Compose's own restorer cannot follow a card inside a lazy row inside a lazy column.
-    var lastFocus by remember { mutableStateOf<FocusRequester?>(null) }
-    val track: (FocusRequester) -> Unit = { lastFocus = it }
-    val latestEntry by androidx.compose.runtime.rememberUpdatedState(
-        lastFocus ?: if (fullBleed) playFocus else renderRows.firstOrNull()?.let(rowFocusRequester),
+    // glcn: a plain holder, not state, read only when the rail hands focus back. As state read here, every card the
+    // focus touched recomposed the whole of Home (and the new `track` lambda each time re-composed every row).
+    val lastFocus = remember { arrayOfNulls<FocusRequester>(1) }
+    val track: (FocusRequester) -> Unit = remember { { lastFocus[0] = it } }
+    val fallbackEntry by androidx.compose.runtime.rememberUpdatedState(
+        if (fullBleed) playFocus else renderRows.firstOrNull()?.let(rowFocusRequester),
     )
     DisposableEffect(onEntryHook) {
-        onEntryHook?.invoke { latestEntry?.let { runCatching { it.requestFocus() }.getOrDefault(false) } ?: false }
+        onEntryHook?.invoke { (lastFocus[0] ?: fallbackEntry)?.let { runCatching { it.requestFocus() }.getOrDefault(false) } ?: false }
         onDispose { onEntryHook?.invoke(null) }
     }
 
@@ -417,7 +419,16 @@ fun HomeScreen(
     // glcn (Panel): the row with focus. The billboard and the Sports scores run the full width; the side panel only
     // slides in (and the rows give it room) once focus goes down to a row it describes.
     var focusedRow by remember { mutableStateOf<HomeRow?>(null) }
-    val panelOn = backdropStyle == 2 && !billboardFocused && focusedRow != null && focusedRow !in PANEL_WIDE_ROWS
+    // glcn: read through a derived state, so a focus moving from row to row recomposes only what the answer changes.
+    // Read straight in this function's body, every row change re-ran the whole of Home — all the rows on screen
+    // composed again on the very frame the glide starts, a 100–200 ms stall that turned the glide into a jump.
+    val styleNow by androidx.compose.runtime.rememberUpdatedState(backdropStyle)
+    val panelOn by remember {
+        androidx.compose.runtime.derivedStateOf {
+            val r = focusedRow
+            styleNow == 2 && !billboardFocused && r != null && r !in PANEL_WIDE_ROWS
+        }
+    }
     val panelRoom by androidx.compose.animation.core.animateDpAsState(
         targetValue = if (panelOn) PANEL_WIDTH + 48.mpx else 0.mpx,
         animationSpec = if (tv.own.owntv.ui.theme.animationsOn) androidx.compose.animation.core.tween(420, easing = androidx.compose.animation.core.FastOutSlowInEasing) else androidx.compose.animation.core.snap(),

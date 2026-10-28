@@ -297,7 +297,7 @@ fun ZapDeck(
                     resetKey = entries.size to activeChip,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) { i, focused ->
-                    val entry = entries[i]
+                    val entry = entries.getOrNull(i) ?: return@GlideColumn
                     val shown = entry.item.key == shownKey
                     val tint by animateColorAsState(
                         when {
@@ -344,10 +344,11 @@ fun ZapDeck(
                     resetKey = listVersion,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) { i, focused ->
+                    val ch = list.getOrNull(i) ?: return@GlideColumn
                     DeckChannelRow(
-                        channel = list[i],
-                        now = nowMap[list[i].id],
-                        playing = list[i].id == currentId,
+                        channel = ch,
+                        now = nowMap[ch.id],
+                        playing = ch.id == currentId,
                         lit = focused && column == 1,
                         showNumber = showNumbers,
                     )
@@ -416,6 +417,7 @@ private fun GlideColumn(
     val density = LocalDensity.current
     val h = with(density) { rowHeight.toPx() }
     val cursor = androidx.compose.runtime.rememberUpdatedState(index)
+    val liveCount = androidx.compose.runtime.rememberUpdatedState(count)
     val accent = stageAccent.accent
     val fill by animateColorAsState(if (active) accent else accent.copy(alpha = 0.20f), tween(180), label = "deckFill")
     BoxWithConstraints(modifier.clipToBounds()) {
@@ -438,7 +440,9 @@ private fun GlideColumn(
         // on every frame (as before) measured it again sixty times a second, and in whole pixels, which is
         // what made the scroll judder, worst of all on slower boxes.
         val firstRow by remember(resetKey) { derivedStateOf { (scroll.value / h).toInt().coerceAtLeast(0) } }
-        LaunchedEffect(listState, firstRow) { runCatching { listState.scrollToItem(firstRow, 0) } }
+        // Asked of the list's next layout (no forced re-measure from inside a coroutine, which is where a list that had
+        // just become shorter could be read past its end).
+        LaunchedEffect(listState, firstRow) { listState.requestScrollToItem(firstRow.coerceAtMost(liveCount.value), 0) }
         if (count > 0) {
             Box(
                 Modifier
@@ -465,7 +469,9 @@ private fun GlideColumn(
             items(count) { i ->
                 // Only the row that gains or loses the cursor is composed again, not every row on screen.
                 val lit by remember(i) { derivedStateOf { cursor.value == i } }
-                Box(Modifier.fillMaxWidth().height(rowHeight)) { row(i, lit) }
+                // glcn: a row the list still holds (the focused one is kept composed) can outlive a shorter list for a
+                // frame; it draws nothing then rather than read past the end (the crash of 28 Oct: index 4, size 4).
+                Box(Modifier.fillMaxWidth().height(rowHeight)) { if (i < liveCount.value) row(i, lit) }
             }
             // Room below the last row, so the list can always be placed on the row the glide is in.
             item { Spacer(Modifier.fillMaxWidth().height(rowHeight)) }
@@ -524,7 +530,7 @@ private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: I
         horizontalArrangement = Arrangement.spacedBy(8.mpx),
     ) {
         items(chips.size) { i ->
-            val (id, name) = chips[i]
+            val (id, name) = chips.getOrNull(i) ?: return@items
             val focused = i == cursor
             val on = id == activeId
             val bg by animateColorAsState(

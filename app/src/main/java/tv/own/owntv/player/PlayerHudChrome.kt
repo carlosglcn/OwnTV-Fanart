@@ -531,7 +531,7 @@ internal fun BottomBar(
                         // Sports Hub: only for a channel started from a match.
                         PlayerControl.OTHER_CHANNELS -> {
                             if (onOtherChannels != null) {
-                                CtrlButton(OwnTVIcon.LIST, label = stringResource(R.string.sports_other_channels_count, otherChannelsCount)) { onOtherChannels() }
+                                CtrlButton(OwnTVIcon.SPORTS, label = stringResource(R.string.sports_other_channels_count, otherChannelsCount)) { onOtherChannels() }
                             }
                             // glcn: live — switch between the copies of this channel (FHD / HD / SD), nothing else.
                             if (onChannelCopies != null) {

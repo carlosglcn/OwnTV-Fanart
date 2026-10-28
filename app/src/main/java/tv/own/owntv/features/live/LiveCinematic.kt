@@ -38,6 +38,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -362,15 +363,21 @@ private fun LiveCinematicHero(
         Column(
             Modifier.width(if (showVideo) 1000.mpx else 1100.mpx).padding(top = 6.mpx)
                 .drawBehind {
-                    val pad = 28.mpx.toPx()
-                    drawRect(
-                        Brush.horizontalGradient(
-                            0f to wash.copy(alpha = 0.82f), 0.62f to wash.copy(alpha = 0.66f), 1f to wash.copy(alpha = 0f),
-                            startX = -pad, endX = size.width + pad,
-                        ),
-                        topLeft = androidx.compose.ui.geometry.Offset(-pad, -pad),
-                        size = androidx.compose.ui.geometry.Size(size.width + 2 * pad, size.height + 2 * pad),
-                    )
+                    // glcn: a soft oval of the page colour, no edges anywhere: strongest behind the words, fading out
+                    // well past them on every side (a radial glow stretched to the text's shape).
+                    val cx = size.width * 0.42f
+                    val cy = size.height * 0.5f
+                    val rx = size.width * 0.78f
+                    val ry = size.height * 0.95f
+                    scale(scaleX = rx / ry, scaleY = 1f, pivot = androidx.compose.ui.geometry.Offset(cx, cy)) {
+                        drawCircle(
+                            Brush.radialGradient(
+                                0f to wash.copy(alpha = 0.80f), 0.55f to wash.copy(alpha = 0.6f), 1f to wash.copy(alpha = 0f),
+                                center = androidx.compose.ui.geometry.Offset(cx, cy), radius = ry,
+                            ),
+                            radius = ry, center = androidx.compose.ui.geometry.Offset(cx, cy),
+                        )
+                    }
                 },
         ) {
             if (channel != null) {

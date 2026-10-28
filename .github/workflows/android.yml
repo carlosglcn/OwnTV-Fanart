@@ -283,6 +283,17 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+      # glcn: R8's map for this exact build, so a crash report from a user's TV (obfuscated names like "s67.w")
+      # can be read back to the real class and line.
+      - name: Upload R8 mapping
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mapping-${{ steps.ver.outputs.name }}
+          path: app/build/outputs/mapping/**/mapping.txt
+          if-no-files-found: warn
+          retention-days: 90
+
       - name: Extract release notes from CHANGELOG.md
         if: env.IS_TAG == 'true'
         env:
