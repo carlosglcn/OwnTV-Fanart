@@ -28,7 +28,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
@@ -343,14 +342,14 @@ fun LumenHome(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) { item.crests.forEach { tv.own.owntv.features.sports.Crest(it, 84) } }
                                 else if (item.logo != null) {
-                                    // glcn: a channel. Closed: its programme's picture softened and dimmed, the channel's logo whole in
+                                    // glcn: a channel. Closed: its programme's picture dimmed (no GPU blur: it would be redrawn on every frame of the glide), the channel's logo whole in
                                     // the middle (no picture: the logo on a tint). Opening: the picture comes up sharp as the logo fades.
                                     val pic = item.art
                                     if (pic != null) AsyncImage(
                                         model = pic, contentDescription = null, contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize().then(if (tv.own.owntv.glcn.LowRam.on) Modifier else Modifier.blur(10.mpx)),
+                                        modifier = Modifier.fillMaxSize(),
                                     ) else Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.16f)))
-                                    if (pic != null) Box(Modifier.fillMaxSize().graphicsLayer { alpha = 1f - wideness(i, pos.value) }.background(Color.Black.copy(alpha = 0.45f)))
+                                    if (pic != null) Box(Modifier.fillMaxSize().graphicsLayer { alpha = 1f - wideness(i, pos.value) }.background(Color.Black.copy(alpha = 0.55f)))
                                     if (near && pic != null) AsyncImage(
                                         model = pic, contentDescription = null, contentScale = ContentScale.Crop,
                                         modifier = Modifier.fillMaxSize().graphicsLayer { alpha = wideness(i, pos.value) },
