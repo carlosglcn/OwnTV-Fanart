@@ -353,6 +353,8 @@ fun OwnTVShell(
     }.collectAsStateWithLifecycle(emptyList())
     // In-player channel-list overlay (Left while controls hidden, live only).
     var showChannelList by remember { mutableStateOf(false) }
+    // glcn: held OK — the quick guide (list, picture, schedule, posters; ▶ steps the view and it is remembered).
+    var showQuickGuide by remember { mutableStateOf(false) }
     // glcn: the zap deck's posters view, until ▶ steps back to the deck; every opening starts on the deck.
     var deckPosters by remember { mutableStateOf(false) }
     LaunchedEffect(showChannelList) { if (!showChannelList) deckPosters = false }
@@ -475,8 +477,8 @@ fun OwnTVShell(
     // Shares the Live list's resolved titles, so opening the overlay over a list already on screen
     // asks for nothing, and only genuinely new channels cost a query.
     val overlayNowPlaying by liveVm.nowPlaying.collectAsStateWithLifecycle()
-    LaunchedEffect(showChannelList, zapChannels) {
-        if (showChannelList && zapChannels.size > 1) liveVm.ensureNowPlaying(zapChannels)
+    LaunchedEffect(showChannelList, showQuickGuide, zapChannels) {
+        if ((showChannelList || showQuickGuide) && zapChannels.size > 1) liveVm.ensureNowPlaying(zapChannels)
     }
     // Recently-watched channels for the right-hand history overlay — re-read each time it opens (and
     // after a zap, since tuning writes a new history row) so the newest channel is always on top.
@@ -624,6 +626,7 @@ fun OwnTVShell(
         playerMode = PlayerMode.NONE
         liveVm.playerFullscreen = false
         showChannelList = false
+        showQuickGuide = false
         showHistoryList = false
         liveVm.hideCategoryBrowser()
         liveVm.onFullscreenExited() // no longer full-screen on ExoPlayer → let the preview re-take the engine
@@ -1914,10 +1917,11 @@ fun OwnTVShell(
                     onAudioMode = toAudioMode,
                     // The channel-list overlay draws ABOVE the HUD; while it's open the HUD goes inert so
                     // its hide/error focus grabs can't yank D-pad focus off the overlay.
-                    inert = showChannelList || showHistoryList || showCategoryBrowser || showSubtitleSearch || showLocalSubPicker || showOtherChannels || showCopies || showProgramInfo,
+                    inert = showChannelList || showQuickGuide || showHistoryList || showCategoryBrowser || showSubtitleSearch || showLocalSubPicker || showOtherChannels || showCopies || showProgramInfo,
                     onChannelUp = zap?.let { z -> { z(-1) } },
                     onChannelDown = zap?.let { z -> { z(1) } },
                     onOpenChannelList = if (isTunedLive && liveCanZap) { { showChannelList = true } } else null,
+                    onOpenQuickGuide = if (isTunedLive && liveCanZap) { { showQuickGuide = true } } else null,
                     // Live channels only, and only once Multiview is switched on: the channel on screen
                     // becomes tile 1 and the grid takes over. Everything it needs is already tuned.
                     onMultiview = if (multiviewEnabled && isTunedLive && previewChannel != null) {
@@ -2243,11 +2247,7 @@ fun OwnTVShell(
                             currentId = previewChannel?.id,
                             showNumbers = directTuneEnabled,
                             detail = deckDetail,
-                            // glcn: ▶ switches the right column between the picture and the schedule when both
-                            // views are on in Settings; with one only, ▶ closes the panel.
-                            onCycleDetail = if (tv.own.owntv.core.settings.ZapViews.has(glcnZapViews, 0) && tv.own.owntv.core.settings.ZapViews.has(glcnZapViews, 1)) ({
-                                scope.launch { settingsRepo.setZapPanel(if (deckDetail == 1) 0 else 1) }
-                            }) else null,
+                            onCycleDetail = null, // glcn: ▶ closes; the views are the quick guide's (held OK)
                             peekChannels = { liveVm.deckChannels(it) },
                             loadNowMany = { liveVm.nowMany(it) },
                             loadNow = { liveVm.nowFull(it) },
@@ -2255,6 +2255,51 @@ fun OwnTVShell(
                             onArmCategory = { liveVm.loadChannelsForCategory(it) },
                             onTune = { liveVm.ensurePlaying(it); showChannelList = false },
                             onDismiss = { showChannelList = false },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
+                // glcn: held OK — the quick guide as it was: the playing list with the picture beside it, its schedule,
+                // or posters; ▶ steps the view (remembered), ◀ opens every category.
+                if (showQuickGuide && isLiveChannel) {
+                    if (showCategoryBrowser) {
+                        tv.own.owntv.features.shell.components.CategoryBrowserOverlay(
+                            railItems = browserRailItems,
+                            railCounts = browserRailCounts,
+                            currentKey = zapListKey ?: previewChannel?.categoryId?.let { tv.own.owntv.core.live.LiveKey.Folder(it) },
+                            onSelect = { key -> liveVm.loadChannelsForCategory(key) },
+                            peekChannels = { liveVm.peekCategoryChannels(it) },
+                            loadNow = { liveVm.nowMany(it) },
+                            onTune = { liveVm.ensurePlaying(it); liveVm.hideCategoryBrowser(); showQuickGuide = false },
+                            onDismiss = { liveVm.hideCategoryBrowser() },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else if (zapChannels.isNotEmpty()) {
+                        if (glcnZapPanel == 2) tv.own.owntv.features.shell.components.ZapPosterOverlay(
+                            channels = zapChannels,
+                            currentId = previewChannel?.id,
+                            title = zapOverlayTitle,
+                            loadNow = { liveVm.nowMany(it) },
+                            loadSchedule = { liveVm.scheduleFor(it) },
+                            onSelect = { liveVm.ensurePlaying(it); showQuickGuide = false },
+                            onListView = { scope.launch { settingsRepo.setZapPanel(tv.own.owntv.core.settings.ZapViews.next(2, glcnZapViews)) } },
+                            onDismiss = { showQuickGuide = false },
+                            modifier = Modifier.fillMaxSize(),
+                        ) else tv.own.owntv.features.shell.components.ChannelListOverlay(
+                            channels = zapChannels,
+                            currentId = previewChannel?.id,
+                            nowPlaying = overlayNowPlaying,
+                            nowProgrammes = overlayProgrammes,
+                            favoriteIds = overlayFavoriteIds,
+                            playlistMarks = overlayPlaylistMarks,
+                            title = zapOverlayTitle,
+                            showNumbers = directTuneEnabled,
+                            onSelect = { liveVm.ensurePlaying(it); showQuickGuide = false },
+                            onDismiss = { showQuickGuide = false },
+                            onOpenCategories = { liveVm.showCategories() },
+                            loadNow = { liveVm.nowFull(it) },
+                            loadSchedule = if (glcnZapPanel == 1) ({ liveVm.scheduleFor(it) }) else null,
+                            onCyclePanel = if (glcnZapViews and (glcnZapViews - 1) == 0) null else ({ scope.launch { settingsRepo.setZapPanel(tv.own.owntv.core.settings.ZapViews.next(glcnZapPanel, glcnZapViews)) } }),
                             modifier = Modifier.fillMaxSize(),
                         )
                     }

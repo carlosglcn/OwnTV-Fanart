@@ -793,7 +793,8 @@ internal fun HomeLazyRow(
     val gapPx = with(density) { horizontalArrangement.spacing.toPx() }
     val spec = androidx.compose.runtime.remember(startPx, endPx, gapPx) { tv.own.owntv.glcn.WholeCardScroll(startPx, endPx, gapPx) }
     // glcn: nothing is drawn left of the first card's place (bar its focus ring), so no sliver of the card before it.
-    val clipLeft = startPx - with(density) { 26.mpx.toPx() }
+    // Up to just short of the gap before the first card: room for its ring, none for the card before it.
+    val clipLeft = startPx - (gapPx - with(density) { 2.mpx.toPx() }).coerceIn(0f, with(density) { 14.mpx.toPx() })
     androidx.compose.runtime.CompositionLocalProvider(
         androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides spec,
     ) {

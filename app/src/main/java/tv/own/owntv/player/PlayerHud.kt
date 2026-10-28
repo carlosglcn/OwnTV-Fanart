@@ -129,6 +129,8 @@ fun PlayerHud(
     onChannelDown: (() -> Unit)? = null,
     // Live: open the channel-list overlay (Left while the controls are hidden). Null = not a live channel.
     onOpenChannelList: (() -> Unit)? = null,
+    /** glcn: held OK — the quick guide (the channel list with its picture, schedule and posters views). ◀ keeps the zap deck. */
+    onOpenQuickGuide: (() -> Unit)? = null,
     // Live: open the watch-history list (Right while the controls are hidden) — jump straight back to a
     // recent channel without leaving full-screen. Null = not a live channel.
     onOpenHistoryList: (() -> Unit)? = null,
@@ -592,7 +594,7 @@ fun PlayerHud(
                 val ok = okPress.onKey(e.type == KeyEventType.KeyDown, e.nativeKeyEvent.repeatCount, e.nativeKeyEvent.eventTime, okPlan)
                 if (ok is PlayerOkResult.Fire) when (ok.outcome) {
                     PlayerOkOutcome.SHOW_CONTROLS -> controlsVisible = true
-                    PlayerOkOutcome.CHANNEL_LIST -> onOpenChannelList?.invoke()
+                    PlayerOkOutcome.CHANNEL_LIST -> (onOpenQuickGuide ?: onOpenChannelList)?.invoke()
                     PlayerOkOutcome.GUIDE -> dispatchPlayerShortcut(RemoteShortcutAction.OPEN_GUIDE)
                     PlayerOkOutcome.PROGRAMME_INFO -> channelFlash++
                 }

@@ -51,3 +51,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏩ Live TV with "Pause and rewind live TV" on: going from the preview to full screen and back on the same channel no longer jumps back to an earlier point — it carries on live
 - 🪟 Zap panel: the column on the right (picture or schedule) is on a lighter glass, so the TV shows through beside the list; groups and channels keep the full glass so they always read
 - 🌌 Ambient glow (Night theme, glass off): the slow pulse is now Aurora — three soft fields of light from your accent drifting slowly behind the screen, as if it were lit from behind; still in light mode or with animations off
+- 🎞️ Home rows: the strip of the card before the first one no longer shows at the left edge (the clip now stops just short of the gap)
+- ✋ Player: holding OK opens the quick guide again (the channel list with its picture, schedule and posters views; ▶ switches view and it is remembered), while ◀ opens the zap panel; ▶ or Back closes the zap panel
+- 🖼️ TV guide with several guides: the guide that wins (the higher one in EPG sources) keeps the picture and synopsis another guide has for the same programme, so the fanart no longer disappears
