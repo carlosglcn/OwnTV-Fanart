@@ -213,7 +213,8 @@ fun MoreScreen(
                 MoreItem.BACKUP -> BackupScreen(entry = pageTarget, modifier = Modifier.fillMaxSize())
                 MoreItem.LOCAL_SYNC -> LocalSyncScreen(entry = pageTarget, modifier = Modifier.fillMaxSize())
                 MoreItem.ERROR_LOG -> ErrorLogPage(setEntry = setEntry, onCountChanged = { logVersion++ })
-                MoreItem.ABOUT -> AboutPage(vm = vm, entry = pageTarget, onOpenLanguage = { onOpenSettings(tv.own.owntv.features.shell.components.SettingsGroup.APP.ordinal, false) } // glcn: Language lives under App)
+                // glcn: Language lives under App, not Sound and subtitles.
+                MoreItem.ABOUT -> AboutPage(vm = vm, entry = pageTarget, onOpenLanguage = { onOpenSettings(tv.own.owntv.features.shell.components.SettingsGroup.APP.ordinal, false) })
                 MoreItem.DEVELOPER -> Box(Modifier.focusRequester(pageTarget).focusGroup()) { DeveloperScreen(onBack = backToSheet) }
             }
         }
