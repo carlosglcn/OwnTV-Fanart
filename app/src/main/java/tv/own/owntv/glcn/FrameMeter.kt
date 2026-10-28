@@ -98,11 +98,11 @@ fun FrameMeter(screen: String, modifier: Modifier = Modifier) {
             }
             val pct = if (frames > 0) slow * 100.0 / frames else 0.0
             line = slowLabel.format(screen, fps, pct, worst, stutters)
-            if (tick++ % 2 == 0) {
-                val rt = Runtime.getRuntime()
-                val heap = (rt.totalMemory() - rt.freeMemory()) / 1_048_576L
-                val native = android.os.Debug.getNativeHeapAllocatedSize() / 1_048_576L
-                memLine = memLabel.format(heap, native)
+            // glcn: the full breakdown (graphics and total PSS too: Java and native alone left most of it out), every
+            // five seconds and off the main thread — reading it takes a few milliseconds.
+            if (tick++ % 10 == 0) {
+                val m = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { tv.own.owntv.player.MemoryBreakdown.read() }
+                if (m != null) memLine = memLabel.format(m.javaMb, m.nativeMb, m.graphicsMb, m.totalPssMb)
             }
             delay(500)
         }

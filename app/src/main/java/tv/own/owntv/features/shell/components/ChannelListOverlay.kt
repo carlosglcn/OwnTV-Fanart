@@ -523,7 +523,9 @@ internal fun NeighbourArtPrefetch(
             val url = runCatching { loadNow(ch).first?.imageUrl }.getOrNull()?.takeIf { it.isNotBlank() } ?: continue
             loader.enqueue(
                 coil3.request.ImageRequest.Builder(ctx).data(url)
-                    .size(coil3.size.Size(960, 540)).build(),
+                    // glcn: the size the panels draw it at (about 620 wide), not twice that: twenty-eight neighbours at
+                    // 960 × 540 held ~60 MB of pictures in memory for one list.
+                    .size(coil3.size.Size(640, 360)).build(),
             )
             kotlinx.coroutines.delay(25)
         }

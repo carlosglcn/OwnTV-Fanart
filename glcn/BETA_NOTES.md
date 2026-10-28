@@ -89,3 +89,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 Categories over the player: every channel of the focused category gets what is on — only the first forty did, so further down it looked as if they had no guide
 - 📤 Error log › Share: the QR popup no longer closes itself on the release of the OK that opened it
 - 🎬 Live TV Cinematic with the menu on top: the "next" boxes under the cards give way so "You may like" shows whole pictures
+- 🧠 Memory: the picture cache has a ceiling per box (72 MB on a 3 GB box like the SHIELD, 40 MB on 2 GB, 24 MB in light mode) instead of only a share of the heap; Android's first memory warning halves it (the critical one still empties it); the quick lists read their neighbours' pictures at the size they are drawn (640 × 360, not 960 × 540)
+- 📊 Performance meter: memory now shows graphics and the total the system counts (PSS), not only Java and native; every memory warning writes that breakdown into the playback report

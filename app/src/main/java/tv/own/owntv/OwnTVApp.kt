@@ -186,7 +186,11 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             .components { add(OkHttpNetworkFetcherFactory(callFactory = { imageHttpClient })) }
             // glcn: the picture cache grows with the box — a 3 GB box (the SHIELD) keeps twice the fanart and backdrops in
             // memory, so going back to a row or a title shows its pictures at once instead of decoding them again.
-            .memoryCache { MemoryCache.Builder().maxSizePercent(context, tv.own.owntv.glcn.ArtPrefetch.memoryShare(context)).build() }
+            .memoryCache {
+                // glcn: the share, but never more than the cap for this box (see ArtPrefetch.memoryCapBytes).
+                val shareBytes = (Runtime.getRuntime().maxMemory() * tv.own.owntv.glcn.ArtPrefetch.memoryShare(context)).toLong()
+                MemoryCache.Builder().maxSizeBytes(minOf(shareBytes, tv.own.owntv.glcn.ArtPrefetch.memoryCapBytes(context))).build()
+            }
             // Explicit bounded disk cache: posters/logos survive across sessions instead of
             // re-downloading, capped so a 220k-item catalog can't eat the box's storage.
             .diskCache {
@@ -226,6 +230,14 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         @Suppress("DEPRECATION")
         if (level >= TRIM_MEMORY_RUNNING_LOW) {
             runCatching { SingletonImageLoader.get(this).memoryCache?.clear() }
+        } else if (level >= TRIM_MEMORY_RUNNING_MODERATE) {
+            // glcn: the first warning halves the picture cache instead of waiting for the one that empties it.
+            runCatching { SingletonImageLoader.get(this).memoryCache?.let { it.trimToSize(it.maxSize / 2) } }
+        }
+        // glcn: what was large when Android warned — into the playback report.
+        @Suppress("DEPRECATION")
+        if (level >= TRIM_MEMORY_RUNNING_MODERATE && level < TRIM_MEMORY_UI_HIDDEN) {
+            Thread { tv.own.owntv.player.MemoryBreakdown.read()?.let { tv.own.owntv.player.LiveDiagnosticsLog.event("memory warning (level $level) · " + it.line()) } }.start()
         }
         if (level >= TRIM_MEMORY_RUNNING_CRITICAL) tv.own.owntv.glcn.LowRam.onMemoryCritical(this)
         // The engines judge the level themselves: UI_HIDDEN (every Home press) is not pressure for them,

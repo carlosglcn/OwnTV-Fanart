@@ -57,4 +57,25 @@ object ArtPrefetch {
             else -> 0.10
         }
     }
+
+    /**
+     * glcn: the most the picture cache may hold, whatever its share works out to: pictures are drawn by the GPU, so
+     * a large cache is graphics memory the system counts against us (the SHIELD reached ~570 MB and a critical
+     * memory warning). Enough for a few screens of fanart and backdrops; the disk cache makes the rest quick.
+     */
+    fun memoryCapBytes(context: Context): Long {
+        if (LowRam.on) return 24L * MB
+        val total = runCatching {
+            val info = ActivityManager.MemoryInfo()
+            (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(info)
+            info.totalMem
+        }.getOrDefault(0L)
+        return when {
+            total >= 5_500_000_000L -> 128L * MB
+            total >= 2_800_000_000L -> 72L * MB
+            else -> 40L * MB
+        }
+    }
 }
+
+private const val MB = 1024L * 1024L
