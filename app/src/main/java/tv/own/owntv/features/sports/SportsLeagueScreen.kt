@@ -96,7 +96,13 @@ fun SportsLeagueScreen(vm: SportsViewModel, onOpenMatch: (Match) -> Unit, onBack
                 LeagueTab.FIXTURES -> state.matches.filter { it.state == MatchState.PRE }
                 LeagueTab.RESULTS -> state.matches.filter { it.state == MatchState.POST }
             }
-            if (tab == LeagueTab.TABLE && state.ranking != null && state.table == null) {
+            val players = state.ranking?.groups?.singleOrNull()?.takeIf { it.kind == tv.own.owntv.core.sports.model.RankingKind.PLAYERS }
+            if (tab == LeagueTab.TABLE && players != null && state.table == null) {
+                // glcn: a tennis tour — the whole ranking, a row each, with photos (lazily: 150 rows).
+                LazyColumn(Modifier.width(960.mpx).fillMaxSize(), contentPadding = PaddingValues(top = 9.mpx, bottom = 60.mpx)) {
+                    items(players.rows, key = { it.team.id }) { r -> PlayerRankLine(r) }
+                }
+            } else if (tab == LeagueTab.TABLE && state.ranking != null && state.table == null) {
                 LazyColumn(Modifier.width(960.mpx).fillMaxSize(), contentPadding = PaddingValues(bottom = 60.mpx)) {
                     item { RankingColumns(state.ranking) }
                 }

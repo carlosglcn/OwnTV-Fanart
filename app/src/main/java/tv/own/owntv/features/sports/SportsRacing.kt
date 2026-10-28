@@ -120,3 +120,33 @@ private fun RankingColumn(g: RankingGroup, modifier: Modifier) {
         }
     }
 }
+
+/**
+ * glcn: a tennis tour's ranking in full (as far as ESPN lists it, the first 150): each player with their photo,
+ * country and points, and how far they moved since last week's ranking.
+ */
+@Composable
+internal fun PlayerRankLine(r: tv.own.owntv.core.sports.model.RankingRow) {
+    var on by remember { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth().onFocusChanged { on = it.isFocused }.focusable()
+            .background(if (on) StageColors.Ink.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(10.mpx))
+            .padding(vertical = 6.mpx, horizontal = 10.mpx),
+        horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(r.rank.toString(), style = stageText(20, 800), color = StageColors.Muted, textAlign = TextAlign.End, modifier = Modifier.width(44.mpx))
+        val move = r.previous?.let { it - r.rank } ?: 0
+        Text(
+            when { move > 0 -> "▲" + move; move < 0 -> "▼" + (-move); else -> "–" },
+            style = stageText(15, 800),
+            color = when { move > 0 -> androidx.compose.ui.graphics.Color(0xFF2FB36B); move < 0 -> SportsLive; else -> StageColors.Dim },
+            modifier = Modifier.width(44.mpx),
+        )
+        Crest(r.team, 46)
+        Column(Modifier.weight(1f)) {
+            Text(r.team.name, style = stageText(20, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            r.team.country?.let { Text(it, style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        }
+        Text("%,d".format(r.points), style = stageText(20, 800), color = StageColors.Text, textAlign = TextAlign.End)
+    }
+}

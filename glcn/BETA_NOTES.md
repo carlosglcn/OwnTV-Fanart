@@ -13,3 +13,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🙈 TV guide: the option now reads "Show channels without guide · Yes / No", and with No the channels with nothing from now on are hidden too (also those whose guide ended yesterday)
 - 🕘 Home: Recent channels shows the channel you just watched as soon as you leave the player
 - 🤾 Sports: six more handball competitions with calendar, results and table — EHF Champions League and EHF European League (live score from the EHF, tables by group), German Handball-Bundesliga, French StarLigue, Danish Herreligaen and Hungarian K&H Liga. Turn them on in Settings › Sports
+- 🎾 Sports › Tennis: the ATP and WTA rankings in full (150 players) with photo, country, points and how far each moved this week; far more players now have a photo everywhere (about 8 in 10 instead of 3 in 10)
