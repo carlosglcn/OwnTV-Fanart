@@ -2328,6 +2328,7 @@ fun OwnTVShell(
                 onSelect = onSelectPlaylist,
                 onResync = { shellVm.resync(playlists.filter { it.id == activePlaylistId }.ifEmpty { playlists }) },
                 onDismiss = { showPlaylistPicker = false },
+                onRefreshGuide = { epgVm.refreshGuideNow() },
             )
         }
     }

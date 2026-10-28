@@ -47,3 +47,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📐 Home (Dock): every card opens wide when it has focus — also those with no wide picture (often the last ones of a row), which now show their poster whole in the middle of the open card
 - 🎨 About: the OwnTV Fanart Telegram QR is now drawn like Telegram's own group codes — rounded dots in the Fanart colours, the Telegram plane in the middle and @OWNTVFANART below
 - 🌐 About: the languages button opens Settings › App, where the language is (it opened Sound and subtitles)
+- 🗓️ Playlist menu (the playlist pill at the top): "Refresh guide" reads every guide again now, without re-reading the playlists — the sync pill shows it working

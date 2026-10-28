@@ -704,6 +704,15 @@ class EpgViewModel(
     }
 
 
+    /** glcn: the playlist menu's "Refresh guide" — read every guide again now (the sync pill shows it), then redraw. */
+    fun refreshGuideNow() {
+        if (epgActivity.active.value.isNotEmpty()) return
+        viewModelScope.launch {
+            runCatching { refreshAllEpgFromNetwork() }
+            load()
+        }
+    }
+
     private suspend fun refreshAllEpgFromNetwork() {
         val pid = settings.activeProfileId.first()
         if (pid >= 0) sourceRepository.observeSources(pid).first().forEach { runCatching { epgRepository.refresh(it) } }

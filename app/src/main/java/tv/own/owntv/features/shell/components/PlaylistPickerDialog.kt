@@ -45,6 +45,8 @@ fun StagePlaylistMenu(
     onSelect: (Long) -> Unit,
     onResync: () -> Unit,
     onDismiss: () -> Unit,
+    /** glcn: read the guides again without re-reading the playlists. */
+    onRefreshGuide: (() -> Unit)? = null,
 ) {
     val channelDao = org.koin.compose.koinInject<tv.own.owntv.core.database.dao.ChannelDao>()
     val counts by androidx.compose.runtime.produceState(emptyMap<Long, Int>(), playlists) {
@@ -122,6 +124,11 @@ fun StagePlaylistMenu(
                 icon = tv.own.owntv.ui.components.OwnTVIcon.REFRESH,
                 value = playlists.firstOrNull { it.id == activeId }?.name ?: stringResource(R.string.content_all_playlists),
                 onClick = { onResync(); onDismiss() },
+            )
+            if (onRefreshGuide != null) tv.own.owntv.ui.stage.StageMenuItem(
+                text = stringResource(R.string.glcn_refresh_guide),
+                icon = tv.own.owntv.ui.components.OwnTVIcon.EPG,
+                onClick = { onRefreshGuide(); onDismiss() },
             )
         }
     }
