@@ -43,6 +43,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.offset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
@@ -752,7 +753,7 @@ fun PlayerHud(
             // Hide the transport (play/seek/prev/next) and bottom bar while an error is up — the error
             // overlay owns the screen with its own Retry, so the play/rewind/forward must not show behind it.
             if (error == null) {
-                CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center))
+                CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp)) // glcn: clear of the now/next card's top edge
 
                 val reportDuration = duration.takeIf { it > 0 }?.let { formatTime(it) }
                 val reportSavedMessage = stringResource(R.string.player_report_saved)

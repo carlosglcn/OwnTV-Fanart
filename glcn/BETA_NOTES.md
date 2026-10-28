@@ -42,3 +42,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏷️ Movies and Series: quality badges read from the title — on the posters the best picture mark (DV in gold, HDR10+, HDR10, HDR, else 4K) and REMUX (also when written as [4K R] / [DV R]); on the title's page every mark (resolution, REMUX, HDR, Atmos/7.1/5.1)
 - 🧈 Home: moving from row to row no longer rebuilds every row and card on the screen — each focus move used to redraw the whole of Home (the jolts between rows); now only the backdrop picture changes
 - 🎞️ Home and Sports rows: a row always comes to rest with a whole card at its start, and nothing of the card before it peeks out on the left; the row glides by whole cards, keeping a card of room on each side of the focus
+- 🔁 Zap panel: with both the picture and the schedule views on (Settings › Zapping list views), ▶ switches the right column between them; with one only, ▶ closes the panel. The posters view is no longer part of it
+- ▶️ Player: the play/pause button sits a little higher, clear of the top edge of the programme card

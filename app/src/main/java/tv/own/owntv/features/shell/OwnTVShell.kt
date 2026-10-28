@@ -2219,7 +2219,7 @@ fun OwnTVShell(
                         // hold a single channel, so this renders for any non-empty list.
                         // glcn: the poster view of the same list (▶ in the list switches views; ▲ comes back).
                         // glcn: the zap deck — groups, channels and the focused programme in one sheet (TiviMate's idea, our
-                        // look). Its right column follows the zap view chosen in Settings (picture or schedule); ▶ closes it.
+                        // look). Its right column shows the picture or the schedule (▶ switches when both views are on).
                         val deckDetail = if (glcnZapPanel == 1 || (glcnZapPanel == 2 && tv.own.owntv.core.settings.ZapViews.has(glcnZapViews, 1))) 1 else 0
                         if (deckPosters) tv.own.owntv.features.shell.components.ZapPosterOverlay(
                             channels = zapChannels,
@@ -2243,7 +2243,11 @@ fun OwnTVShell(
                             currentId = previewChannel?.id,
                             showNumbers = directTuneEnabled,
                             detail = deckDetail,
-                            onCycleDetail = null,
+                            // glcn: ▶ switches the right column between the picture and the schedule when both
+                            // views are on in Settings; with one only, ▶ closes the panel.
+                            onCycleDetail = if (tv.own.owntv.core.settings.ZapViews.has(glcnZapViews, 0) && tv.own.owntv.core.settings.ZapViews.has(glcnZapViews, 1)) ({
+                                scope.launch { settingsRepo.setZapPanel(if (deckDetail == 1) 0 else 1) }
+                            }) else null,
                             peekChannels = { liveVm.deckChannels(it) },
                             loadNowMany = { liveVm.nowMany(it) },
                             loadNow = { liveVm.nowFull(it) },
