@@ -198,7 +198,7 @@ internal fun ArtLiveCard(
     val a = stageAccent
     val setArt = LocalHomeFocusArt.current
     val setInfo = LocalHomeFocusInfo.current
-    val rawArt = programme?.imageUrl?.takeIf { it.isNotBlank() }
+    val rawArt = tv.own.owntv.ui.components.programmeArtOrTmdb(programme)
     // A blank placeholder picture reads as a broken card: the channel's logo stands in for it.
     val art = rawArt?.takeUnless { tv.own.owntv.ui.components.rememberPlainArt(it) }
     var held by remember { mutableStateOf(false) }

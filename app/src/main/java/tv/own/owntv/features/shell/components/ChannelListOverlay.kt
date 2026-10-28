@@ -383,7 +383,7 @@ internal fun ZapPreviewPanel(
         verticalArrangement = Arrangement.spacedBy(8.mpx),
     ) {
         val logo = channel?.displayLogoUrl?.takeIf { it.isNotBlank() }
-        val art = p.imageUrl?.takeIf { it.isNotBlank() }
+        val art = tv.own.owntv.ui.components.programmeArtOrTmdb(p)
         // glcn: the programme's picture; a "picture" that is really a logo (squarish, small, or the channel's own logo),
         // and a channel with no picture at all, show the logo whole and sharp in the middle of the same frame —
         // not cropped into a blurred strip, nor floating faint in a short box.

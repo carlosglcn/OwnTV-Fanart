@@ -167,7 +167,7 @@ internal fun LiveCinematicPane(
 
     val focusedProgrammes = previewChannel?.let { programmes[it.id] }.orEmpty()
     val heroArt = nowNext?.nowDetails?.imageUrl
-        ?: focusedProgrammes.firstOrNull { now in it.startMs until it.stopMs }?.imageUrl
+        ?: tv.own.owntv.ui.components.programmeArtOrTmdb(focusedProgrammes.firstOrNull { now in it.startMs until it.stopMs })
 
     androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize()) {
         // glcn: with the menu on top the page is shorter (the bar takes its band): the hero moves up into the room
@@ -493,7 +493,7 @@ internal fun LiveChannelCard(
         contentAlignment = Alignment.TopStart,
     ) { focused ->
         Box(Modifier.fillMaxSize().clip(shape).background(Color(0xFF15191C))) {
-            val art = programme?.imageUrl
+            val art = tv.own.owntv.ui.components.programmeArtOrTmdb(programme)
             if (!art.isNullOrBlank()) {
                 tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
             } else {
