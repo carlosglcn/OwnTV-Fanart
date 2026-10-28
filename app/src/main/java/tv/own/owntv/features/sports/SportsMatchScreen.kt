@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -115,6 +116,7 @@ fun SportsMatchScreen(
     val state = page ?: return
     val m = state.match
     var tab by remember { mutableStateOf(MatchTab.TIMELINE) }
+    val liveOrder = m.sport.isRace && m.isLive && m.competitors.size > 3
     // glcn: the tournament draw, read only once its tab is opened.
     var draw by remember(m.key) { mutableStateOf<List<tv.own.owntv.core.sports.DrawRound>?>(null) }
     LaunchedEffect(m.key, tab == MatchTab.DRAW) { if (tab == MatchTab.DRAW && draw == null) draw = vm.tennisDraw(m) }
@@ -176,7 +178,7 @@ fun SportsMatchScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         val tabs = MatchTab.entries.filter {
-                            (it != MatchTab.TABLE || state.standings?.groups?.any { g -> g.rows.isNotEmpty() } == true || state.ranking?.groups?.isNotEmpty() == true) &&
+                            (it != MatchTab.TABLE || state.standings?.groups?.any { g -> g.rows.isNotEmpty() } == true || state.ranking?.groups?.isNotEmpty() == true || liveOrder) &&
                                 (it != MatchTab.DRAW || m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) &&
                                 (it != MatchTab.STATS || !state.summary?.stats.isNullOrEmpty()) &&
                                 (it != MatchTab.LINEUPS || !state.summary?.lineups.isNullOrEmpty()) && (it != MatchTab.FORM || !state.summary?.form.isNullOrEmpty())
@@ -208,7 +210,14 @@ fun SportsMatchScreen(
                                 players.title?.let { t -> item { Text(t, style = stageText(18, 700), color = StageColors.Muted, modifier = Modifier.padding(top = 18.mpx, bottom = 6.mpx)) } }
                                 items(players.rows, key = { "rk" + it.rank + it.team.id }) { r -> PlayerRankLine(r) }
                             }
-                            state.ranking != null && m.sport.isRace -> item { RankingColumns(state.ranking) }
+                            m.sport.isRace && (state.ranking != null || liveOrder) -> {
+                                // glcn: a session running — its live order first, the season's standings under it.
+                                if (liveOrder) {
+                                    item { Text(stringResource(R.string.glcn_race_live_order), style = stageText(18, 700), color = stageAccent.accent, modifier = Modifier.padding(top = 18.mpx, bottom = 6.mpx)) }
+                                    itemsIndexed(m.competitors, key = { _, c -> "lo" + c.team.id }) { i, c -> LiveOrderLine(i + 1, c) }
+                                }
+                                state.ranking?.let { r -> item { RankingColumns(r, Modifier.padding(top = if (liveOrder) 24.mpx else 0.mpx)) } }
+                            }
                             else -> item { TablePreview(state.standings, m, onOpenLeague) }
                         }
                     }

@@ -625,7 +625,7 @@ private fun FollowRemindMenu(
         Box(Modifier.fillMaxSize().background(StageColors.Scrim).longPressMenuGuard(), contentAlignment = Alignment.Center) {
             StageMenu(Modifier.width(560.mpx).trapAllFocusExit().focusGroup()) {
                 StageMenuHeader(MatchNotifications.pair(LocalContext.current, match), leagueName(match))
-                match.competitors.forEachIndexed { i, c ->
+                (if (match.sport.isRace) match.competitors.take(3) else match.competitors).forEachIndexed { i, c ->
                     val team = FollowedTeam(match.sport, c.team.id, c.team.name, c.team.abbreviation)
                     val following = config.teams.any { it.key == team.key }
                     StageMenuItem(

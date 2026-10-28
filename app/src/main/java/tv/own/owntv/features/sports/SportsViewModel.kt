@@ -84,6 +84,8 @@ data class LeaguePageState(
     val ranking: tv.own.owntv.core.sports.model.Ranking?,
     val matches: List<Match>,
     val config: SportsConfig,
+    /** glcn: the league's season around now — last month, this month and next — for Fixtures and Results. */
+    val season: List<Match> = emptyList(),
 )
 
 /**
@@ -114,6 +116,7 @@ class SportsViewModel(
     private val reminders: ReminderManager,
     private val playback: SportsPlayback,
     sourceDao: SourceDao,
+    private val calendar: tv.own.owntv.core.sports.SportsCalendar,
 ) : ViewModel() {
 
     private val config = settings.activeSportsConfig.distinctUntilChanged()
@@ -253,9 +256,17 @@ class SportsViewModel(
     /** A league's table and its matches on the board; its live matches kept fresh while shown. */
     val leaguePage: StateFlow<LeaguePageState?> = openLeague.flatMapLatest { key ->
         if (key == null) return@flatMapLatest flowOf(null)
-        combine(repository.observe(Demand.LeaguePage(key)), config) { b, c ->
+        val now = java.time.YearMonth.now()
+        val months = listOf(now.minusMonths(1), now, now.plusMonths(1)).map { m ->
+            calendar.month(setOf(key), m, anyLeague = true).map { it.days.values.flatten() }.onStart { emit(emptyList()) }
+        }
+        val season = combine(months) { parts -> parts.toList().flatten() }
+        combine(repository.observe(Demand.LeaguePage(key)), config, season) { b, c, cal ->
             val matches = (b.today[key].orEmpty() + b.tomorrow[key].orEmpty()).distinctBy { it.key }.sortedBy { it.startMs }
-            LeaguePageState(key, b.standings[key], b.rankings[key], matches, c)
+            // The board's copy of a match is the fresher one (live score); the calendar fills the rest of the season.
+            val fresh = matches.associateBy { it.key }
+            val all = (cal.map { fresh[it.key] ?: it } + matches).distinctBy { it.key }.sortedBy { it.startMs }
+            LeaguePageState(key, b.standings[key], b.rankings[key], matches, c, all)
         }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 

@@ -93,8 +93,9 @@ fun SportsLeagueScreen(vm: SportsViewModel, onOpenMatch: (Match) -> Unit, onBack
         Row(Modifier.fillMaxSize().padding(top = 21.mpx), horizontalArrangement = Arrangement.spacedBy(42.mpx)) {
             val matches = when (tab) {
                 LeagueTab.TABLE -> state.matches
-                LeagueTab.FIXTURES -> state.matches.filter { it.state == MatchState.PRE }
-                LeagueTab.RESULTS -> state.matches.filter { it.state == MatchState.POST }
+                // glcn: the season around now (the calendar), not only today's and tomorrow's board.
+                LeagueTab.FIXTURES -> state.season.ifEmpty { state.matches }.filter { it.state != MatchState.POST }
+                LeagueTab.RESULTS -> state.season.ifEmpty { state.matches }.filter { it.state == MatchState.POST }.reversed()
             }
             val players = state.ranking?.groups?.singleOrNull()?.takeIf { it.kind == tv.own.owntv.core.sports.model.RankingKind.PLAYERS }
             if (tab == LeagueTab.TABLE && players != null && state.table == null) {

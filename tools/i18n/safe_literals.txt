@@ -821,6 +821,7 @@
 1	json	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	W
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	dm
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	dr
+1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	lo
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	rk
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	– : –

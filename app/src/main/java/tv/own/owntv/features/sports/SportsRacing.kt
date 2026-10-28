@@ -74,7 +74,7 @@ internal fun RaceHeaderContent(m: Match, hidden: Boolean) {
         if (m.competitors.isNotEmpty() && (!grid || RaceSession.of(m.subtitle) == RaceSession.RACE) && !(hidden && !grid) && !(grid && m.sport == tv.own.owntv.core.sports.model.Sport.CYCLING)) {
             if (grid) Text(stringResource(R.string.glcn_race_grid), style = stageText(16, 700), color = StageColors.Dim, modifier = Modifier.padding(top = 18.mpx, bottom = 4.mpx))
             else Spacer(Modifier.height(18.mpx))
-            m.competitors.forEachIndexed { i, c ->
+            m.competitors.take(3).forEachIndexed { i, c ->
                 Row(Modifier.fillMaxWidth(0.7f).padding(vertical = 4.mpx), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
                     Text((i + 1).toString(), style = stageText(20, 800), color = StageColors.Muted, modifier = Modifier.width(30.mpx))
                     Crest(c.team, 39)
@@ -148,5 +148,22 @@ internal fun PlayerRankLine(r: tv.own.owntv.core.sports.model.RankingRow) {
             r.team.country?.let { Text(it, style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
         Text(r.note ?: "%,d".format(r.points), style = stageText(20, 800), color = StageColors.Text, textAlign = TextAlign.End)
+    }
+}
+
+/** glcn: a racing session's order while it runs — every driver, position by position. */
+@Composable
+internal fun LiveOrderLine(pos: Int, c: tv.own.owntv.core.sports.model.Competitor) {
+    var on by remember { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth().onFocusChanged { on = it.isFocused }.focusable()
+            .background(if (on) StageColors.Ink.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(10.mpx))
+            .padding(vertical = 6.mpx, horizontal = 10.mpx),
+        horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(pos.toString(), style = stageText(20, 800), color = if (pos <= 3) tv.own.owntv.ui.theme.stageAccent.accent else StageColors.Muted, textAlign = TextAlign.End, modifier = Modifier.width(44.mpx))
+        Crest(c.team, 40)
+        Text(c.team.name, style = stageText(20, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        c.team.country?.let { Text(it, style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
     }
 }
