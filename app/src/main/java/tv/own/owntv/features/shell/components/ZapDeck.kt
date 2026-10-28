@@ -371,7 +371,7 @@ fun ZapDeck(
                             modifier = Modifier.padding(bottom = 14.mpx),
                         ) {
                             ChannelLogoTile(logoUrl = ch.displayLogoUrl, modifier = Modifier.width(70.mpx).height(46.mpx), fill = Color.Transparent) { }
-                            Text(ProviderTags.parse(ch.name).name, style = stageText(22, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(ProviderTags.displayName(ch.name), style = stageText(22, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                     androidx.compose.animation.Crossfade(focusedChannel, animationSpec = tween(140), label = "deckDetail") { ch ->
@@ -467,7 +467,7 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
         }
         ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.width(72.mpx).height(48.mpx), fill = Color.Transparent) { }
         Column(Modifier.weight(1f)) {
-            Text(ProviderTags.parse(channel.name).name, style = stageText(20, if (playing) 800 else 700), color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(ProviderTags.displayName(channel.name), style = stageText(20, if (playing) 800 else 700), color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (now != null) {
                 Text(now.title, style = stageText(16, 400), color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val span = (now.stopMs - now.startMs).coerceAtLeast(1L)

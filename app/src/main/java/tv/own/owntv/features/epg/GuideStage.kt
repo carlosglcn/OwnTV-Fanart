@@ -587,7 +587,7 @@ internal fun GuideChannelMenu(
     val locale = androidx.compose.ui.text.intl.Locale.current.platformLocale
     GuideMenuHost(x = 1150f, top = 64.mpx, width = 560.mpx, onDismiss = onDismiss) {
         StageMenuHeader(
-            title = listOfNotNull(channel.number?.toString(), tv.own.owntv.core.live.ProviderTags.parse(channel.name).name).joinToString(" · "),
+            title = listOfNotNull(channel.number?.toString(), tv.own.owntv.core.live.ProviderTags.displayName(channel.name)).joinToString(" · "),
             subtitle = stringResource(R.string.content_epg_no_programme),
         )
         StageGroupLabel(stringResource(R.string.content_menu_group_watch).uppercase(locale))

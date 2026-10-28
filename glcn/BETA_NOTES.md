@@ -36,3 +36,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ✋ Player: holding OK opens what it is set to (the zap panel by default) as soon as it has been held long enough, instead of only when it is released
 - ⚡ Zap panel: the focused channel's picture appears at once when moving — the programmes and pictures of the channels around the cursor are read and decoded ahead
 - 🖼️ TV guide pictures: when a guide offers a wide picture for a programme (XMLTV <image type="backdrop">, a still or a landscape icon), it is used instead of the upright poster, whose printed title used to clash with the programme's own title. Applies from the next guide update
+- ¹² TV guide and zap panels: a channel's feed number written as a superscript (M+ Terror ¹, M+ Terror ²) is kept in its name, so two feeds of one channel no longer look like the same row

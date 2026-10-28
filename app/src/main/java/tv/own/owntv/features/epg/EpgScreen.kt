@@ -458,7 +458,7 @@ fun EpgScreen(
     val categoryLabel = categoryEntry?.label ?: stringResource(R.string.content_category_all_channels)
     val prefix = categoryLabel.takeIf { categoryKey is LiveKey.Folder || categoryKey is LiveKey.Custom }
     fun rowName(ch: ChannelEntity): String {
-        val name = ProviderTags.parse(ch.name).name
+        val name = ProviderTags.displayName(ch.name)
         val rest = prefix?.let { p -> name.takeIf { it.startsWith("$p ", ignoreCase = true) }?.substring(p.length)?.trim() }
         return rest?.takeIf { it.isNotEmpty() } ?: name
     }
@@ -544,7 +544,7 @@ fun EpgScreen(
         val videoChannel = if (effectivePreview) previewChannel ?: topChannel else topChannel
         GuideVideo(
             channel = videoChannel,
-            channelLine = videoChannel?.let { listOfNotNull(it.number?.toString(), ProviderTags.parse(it.name).name).joinToString(" · ") },
+            channelLine = videoChannel?.let { listOfNotNull(it.number?.toString(), ProviderTags.displayName(it.name)).joinToString(" · ") },
             nowTitle = videoChannel?.let { ch -> programmeAt(vm.cachedProgrammes(ch), liveNow)?.takeIf { liveNow < it.stopMs }?.title },
             previewEngine = liveVm.previewEngine,
             showVideo = effectivePreview && previewArmed,
@@ -553,7 +553,7 @@ fun EpgScreen(
         // … and the programme under the cursor, with what it can do.
         Box(Modifier.weight(1f).fillMaxHeight()) {
             if (topChannel != null) {
-                val chName = ProviderTags.parse(topChannel.name).name
+                val chName = ProviderTags.displayName(topChannel.name)
                 GuideProgrammeBlock(
                     eyebrow = shown?.let { programmeEyebrow(it, chName, liveNow) },
                     title = shown?.title ?: chName,
@@ -816,7 +816,7 @@ fun EpgScreen(
             title = p.title,
             subtitle = listOf(
                 stringResource(R.string.content_live_time_range_plain, formatTime(p.startMs), formatTime(p.stopMs)),
-                listOfNotNull(ch.number?.toString(), ProviderTags.parse(ch.name).name).joinToString(" "),
+                listOfNotNull(ch.number?.toString(), ProviderTags.displayName(ch.name)).joinToString(" "),
             ).joinToString(" · "),
             actions = actionsFor(ch, p),
             leadMinutes = leadMinutes,
