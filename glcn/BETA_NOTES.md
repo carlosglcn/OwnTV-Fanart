@@ -82,3 +82,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎯 Home live rows (Sports now, Recent and Favourite channels in "On now"): when what is on changes under the cursor and the focused card leaves the row, the card taking its place gets the focus — Home no longer jumps back to the top on the next key
 - 🎬 Movies and Series (Cinematic) with the menu on top: the header and hero move up and the hero gives up the rest, so the posters' titles are on screen again
 - 🎙️ Remotes with a microphone (air mice, Bluetooth remotes): their mic button opens Search and starts listening straight away — when the remote sends the Search key (the SHIELD's own remote keeps calling the Assistant)
+- 🖼️ "Now playing" in launchers (Projectivy, the TV's own card): the channel's logo (or the title's picture) instead of a generic icon
+- 🆕 Movies and Series open sorted by date added (newest first) unless you chose another order
