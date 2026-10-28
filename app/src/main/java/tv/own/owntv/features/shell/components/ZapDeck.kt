@@ -268,10 +268,11 @@ fun ZapDeck(
                 .graphicsLayer { translationX = (1f - enter.value) * -slidePx }
                 .align(Alignment.CenterStart)
                 .padding(horizontal = 14.mpx, vertical = 8.mpx)
-                .fillMaxHeight()
-                .stageGlass(StageRadii.Sheet, overContent = true)
-                .padding(vertical = 20.mpx),
+                .fillMaxHeight(),
         ) {
+            // glcn: the groups and the channels on the full glass, so their words always read; the column on the
+            // right on a lighter one (a share of the same glass), so the picture shows through beside the list.
+            Row(Modifier.fillMaxHeight().stageGlass(StageRadii.Sheet, overContent = true).padding(vertical = 20.mpx)) {
             // ---- Groups (and the playlists above them).
             Column(Modifier.width(330.mpx).fillMaxHeight().padding(start = 14.mpx, end = 8.mpx)) {
                 if (chips.isNotEmpty()) {
@@ -357,12 +358,15 @@ fun ZapDeck(
                     modifier = Modifier.padding(start = 14.mpx, top = 12.mpx),
                 )
             }
+            }
             // ---- The focused channel: its programme, or its schedule.
             val focusedChannel = list.getOrNull(chIdx)
+            Box(Modifier.fillMaxHeight().padding(start = 8.mpx)) {
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = 0.55f }.stageGlass(StageRadii.Sheet, overContent = true))
+            Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
             if (detail == 1) {
                 ZapSchedulePanel(channel = focusedChannel, loadSchedule = loadSchedule, loadNow = cachedNow, joined = true, peek = { nowCache[it.id] })
             } else {
-                DeckDivider()
                 Column(Modifier.width(540.mpx).fillMaxHeight().padding(horizontal = 22.mpx)) {
                     focusedChannel?.let { ch ->
                         Row(
@@ -381,6 +385,8 @@ fun ZapDeck(
                         )
                     }
                 }
+            }
+            }
             }
         }
     }
