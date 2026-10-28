@@ -76,6 +76,8 @@ data class MediaDetailsUi(
     val cast: List<tv.own.owntv.core.metadata.CastMember> = emptyList(),
     /** glcn: "Related" — other titles of the same category; filled in by the caller once loaded. */
     val related: List<RelatedUi> = emptyList(),
+    /** glcn: the title's trailer (YouTube keys as stored) — it plays silently over the backdrop after a few seconds. */
+    val trailerKey: String? = null,
 )
 
 /** glcn: one related title on the details page. */
@@ -127,6 +129,19 @@ fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Mo
                         scaleX = k; scaleY = k; alpha = 0.3f + 0.7f * settle.value
                     },
                 )
+            }
+            // glcn: the trailer, silent, over the picture after a few seconds on the page (not in light mode, not with
+            // animations off); it goes once the page is scrolled down or the trailer ends.
+            var trailerOn by remember { mutableStateOf(false) }
+            val trailerAllowed = animate && !tv.own.owntv.glcn.LowRam.on && !details.trailerKey.isNullOrBlank()
+            LaunchedEffect(trailerAllowed) {
+                if (!trailerAllowed) return@LaunchedEffect
+                kotlinx.coroutines.delay(DETAILS_TRAILER_MS)
+                if (scroll.value == 0) trailerOn = true
+            }
+            if (scroll.value > 0 && trailerOn) trailerOn = false
+            if (trailerOn) details.trailerKey?.let { key ->
+                tv.own.owntv.ui.components.AmbientTrailer(key, Modifier.fillMaxWidth().aspectRatio(16f / 9f)) { trailerOn = false }
             }
                         // A light picture still has to carry white text: a general dim, then the fade into the page.
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(page.copy(alpha = 0.35f)))
@@ -257,3 +272,6 @@ private fun CastGrid(cast: List<tv.own.owntv.core.metadata.CastMember>) {
     }
 }
 
+
+/** glcn: how long the details page rests on its picture before the trailer starts. */
+private const val DETAILS_TRAILER_MS = 3_000L

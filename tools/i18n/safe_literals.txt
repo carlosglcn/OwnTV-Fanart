@@ -928,6 +928,8 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/ArtPrefetch.kt	http
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	double_row
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	glcn_dock
+3	technical	app/src/main/java/tv/own/owntv/glcn/FanartDream.kt	·
+2	technical	app/src/main/java/tv/own/owntv/glcn/FanartDream.kt	★ %.1f
 2	empty	app/src/main/java/tv/own/owntv/glcn/FrameMeter.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameMeter.kt	frame-meter
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	glcn_hidden_categories

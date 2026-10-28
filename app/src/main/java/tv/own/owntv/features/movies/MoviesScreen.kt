@@ -1272,6 +1272,7 @@ private fun buildMovieDetails(
         title = movie.name,
         backdropUrl = backdrop,
         logoUrl = tv.own.owntv.core.metadata.MetadataImages.logo(meta?.logoPath),
+        trailerKey = meta?.trailerKey,
         posterUrl = poster,
         metaLine = metaLine(movie, meta, tmdbWins),
         genres = jsonList(meta?.genresJson),

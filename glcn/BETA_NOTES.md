@@ -110,3 +110,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ Home Cinema: after 3 calm seconds the trailer plays silently behind; OK opens it with sound (light mode off, animations on).
 - 🎯 Home: one focus box glides from card to card — along a row and between rows — slower and softer, no jumps.
 - 📱 Phone as remote: the paired phone's arrows, OK, Back, play/pause, channel and volume act on the TV; words typed on the phone open Search with them.
+- 🎞️ Details page: the trailer plays silently over the backdrop after 3 s (light mode off, animations on); scrolling down stops it.
+- 🎭 Screensaver (cartelera): films and series show their poster beside the picture and their TMDB title logo; deeper Ken Burns with a side drift; the words arrive one after another.

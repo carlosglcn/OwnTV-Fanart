@@ -1266,6 +1266,7 @@ private fun buildSeriesDetails(
         title = s.name,
         backdropUrl = backdrop,
         logoUrl = tv.own.owntv.core.metadata.MetadataImages.logo(meta?.logoPath),
+        trailerKey = meta?.trailerKey,
         posterUrl = poster,
         metaLine = metaLine,
         genres = jsonStringList(meta?.genresJson),
