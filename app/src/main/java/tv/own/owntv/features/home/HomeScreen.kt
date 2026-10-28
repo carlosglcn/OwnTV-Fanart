@@ -14,6 +14,7 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -181,7 +182,12 @@ fun HomeScreen(
     val lastInteractionMs by vm.lastHeroInteractionMs.collectAsStateWithLifecycle()
     val favoriteMovies by vm.favoriteMovieIds.collectAsStateWithLifecycle()
     val favoriteSeries by vm.favoriteSeriesIds.collectAsStateWithLifecycle()
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    // glcn: when a row is read ahead (the one about to scroll in), its first cards are composed with it, not on the
+    // frame it appears — a whole row of posters composed at once was a dropped frame at the start of each glide.
+    @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState(
+        prefetchStrategy = androidx.compose.foundation.lazy.LazyListPrefetchStrategy(nestedPrefetchItemCount = HOME_NESTED_PREFETCH),
+    )
     val homeScope = rememberCoroutineScope()
     val heroFocus = remember { FocusRequester() }
     val fallbackFocus = remember { FocusRequester() }
@@ -515,8 +521,10 @@ fun HomeScreen(
                                     if (above == renderRows.firstOrNull()) {
                                         runCatching { listState.animateScrollToItem(0) }
                                     } else {
-                                        val visible = listState.layoutInfo.visibleItemsInfo.any { it.index == at - 1 + greetingItems && it.offset >= 0 }
-                                        if (!visible) runCatching { listState.animateScrollToItem(at - 1 + greetingItems) }
+                                        // glcn: only a row not laid out at all needs bringing in first; one partly on screen is
+                                        // reached by the focus glide itself (a second scroll on top of it was the jolt).
+                                        val laidOut = listState.layoutInfo.visibleItemsInfo.any { it.index == at - 1 + greetingItems }
+                                        if (!laidOut) runCatching { listState.animateScrollToItem(at - 1 + greetingItems) }
                                     }
                                     androidx.compose.runtime.withFrameNanos { }
                                     if (!homeFocusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Up)) {
@@ -1816,11 +1824,14 @@ internal fun KeepWatchingMenu(title: String, onRemove: () -> Unit, onDismiss: ()
  * and leave the page short of the top: wait for it, then scroll, and make sure.
  */
 private suspend fun scrollHomeToTop(listState: androidx.compose.foundation.lazy.LazyListState) {
-    kotlinx.coroutines.delay(120)
-    runCatching { listState.animateScrollToItem(0) }
-    if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
-        kotlinx.coroutines.delay(60)
-        runCatching { listState.scrollToItem(0) }
+    // glcn: one glide to the top with the page's own easing. It used to wait, then start a second, quicker scroll
+    // over the focus glide already running and snap the rest — the jolt felt on reaching the first row.
+    kotlinx.coroutines.delay(16)
+    if (listState.firstVisibleItemIndex == 0) {
+        val left = listState.firstVisibleItemScrollOffset
+        if (left > 0) runCatching { listState.animateScrollBy(-left.toFloat(), tv.own.owntv.glcn.SmoothScroll.animation) }
+    } else {
+        runCatching { listState.animateScrollToItem(0) }
     }
 }
 
@@ -1887,3 +1898,6 @@ private val PANEL_WIDE_ROWS = setOf(HomeRow.FEATURED, HomeRow.LIVE_SPORTS)
 /** glcn: a recomposition scope of its own, so state read inside (the focused card's picture) redraws only this part. */
 @Composable
 private fun HomeReadScope(content: @Composable () -> Unit) { content() }
+
+/** glcn: cards of a row composed ahead with it — about a screen's width of posters. */
+private const val HOME_NESTED_PREFETCH = 7

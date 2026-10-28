@@ -66,3 +66,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎬 Live TV Cinematic with the menu on top: the hero and rows move up into the room the bar frees, so "You may like" is whole again
 - 🔤 Live TV Cinematic: title and synopsis sit on a soft wash of the page colour and the synopsis is narrower, so they read over bright pictures
 - 📝 Player picture strip: the floating card now shows the programme's synopsis from the guide (the strip reads its rows without it, so it is fetched for the focused one)
+- 🖼️ Films and series with a TMDB id typed by hand: the TMDB poster replaces the provider's on every card (rows, grid, Continue watching, runway) — a hand fix means the provider's data, cover included, was wrong. It stays after re-syncs
+- 🧈 Home rows: no more jolt between rows — reaching the first row no longer starts a second, quicker scroll over the glide (and snaps the rest), ▲ no longer adds its own scroll when the row above is already partly on screen, and the next row's first cards are composed ahead instead of on the frame it appears
