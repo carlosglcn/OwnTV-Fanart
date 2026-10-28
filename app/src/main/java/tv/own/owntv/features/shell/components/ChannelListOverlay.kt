@@ -348,12 +348,16 @@ fun ChannelListOverlay(
  * still moving so a fast scroll does not fetch every row.
  */
 @Composable
-private fun ZapPreviewPanel(
+internal fun ZapPreviewPanel(
     channel: ChannelEntity?,
     loadNow: suspend (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>,
     modifier: Modifier = Modifier,
     /** glcn: false inside the joined panel — no glass or width of its own, a wider, shorter picture. */
     framed: Boolean = true,
+    /** glcn: the picture's shape when not framed (the zap deck keeps 16:9). */
+    bareAspect: Float = 21f / 9f,
+    /** glcn: synopsis lines when not framed. */
+    bareLines: Int = 2,
 ) {
     var programme by remember { mutableStateOf<Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?>(null) }
     LaunchedEffect(channel?.id) {
@@ -377,7 +381,7 @@ private fun ZapPreviewPanel(
                 url = art,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(if (framed) 16f / 9f else 21f / 9f)
+                    .aspectRatio(if (framed) 16f / 9f else bareAspect)
                     .clip(RoundedCornerShape(StageRadii.Sheet)),
             )
         } else if (logo != null) {
@@ -408,7 +412,7 @@ private fun ZapPreviewPanel(
             Box(Modifier.fillMaxWidth(f).height(4.mpx).background(stageAccent.accent))
         }
         p.description?.takeIf { it.isNotBlank() }?.let {
-            DriftingSynopsis(it, style = stageText(16, 400), color = StageColors.Dim, lines = if (framed) 4 else 2)
+            DriftingSynopsis(it, style = stageText(16, 400), color = StageColors.Dim, lines = if (framed) 4 else bareLines)
         }
         // glcn: and what follows it.
         next?.let { n ->
@@ -426,7 +430,7 @@ private fun ZapPreviewPanel(
  * hours — so browsing reads like a small guide. Waits a moment while the D-pad is still moving.
  */
 @Composable
-private fun ZapSchedulePanel(
+internal fun ZapSchedulePanel(
     channel: ChannelEntity?,
     loadSchedule: suspend (ChannelEntity) -> List<EpgProgrammeEntity>,
     modifier: Modifier = Modifier,

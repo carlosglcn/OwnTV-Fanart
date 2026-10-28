@@ -623,6 +623,8 @@ fun PlayerHud(
                 // even while rewound (when the engine is playing a file and calls it not live), so that
                 // is what the keys scrub; only without one does a film's seek bar apply.
                 !controlsVisible && error == null && (e.key == Key.DirectionLeft || e.key == Key.DirectionRight) &&
+                    // glcn: on a live channel ◀ always opens the zap deck; rewinding is OK, then ◀ on the bar (or ⏪).
+                    !(isLive && onOpenChannelList != null && e.key == Key.DirectionLeft) &&
                     (if (onScrubLive != null) liveLeftRightRewinds else !isLive && duration > 0L) -> {
                     val back = e.key == Key.DirectionLeft
                     if (onScrubLive != null) {

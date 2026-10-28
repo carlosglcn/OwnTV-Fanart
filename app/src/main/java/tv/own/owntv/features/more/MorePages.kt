@@ -47,6 +47,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -75,6 +76,7 @@ import tv.own.owntv.features.shell.components.ClearHistoryDialog
 import tv.own.owntv.features.shell.components.GITHUB_REPO
 import tv.own.owntv.features.shell.components.GLCN_REPO
 import tv.own.owntv.features.shell.components.TELEGRAM_LINK
+import tv.own.owntv.features.shell.components.GLCN_TELEGRAM_LINK
 import tv.own.owntv.features.shell.components.playbackDisplayName
 import tv.own.owntv.features.update.UpdateDialog
 import tv.own.owntv.player.PlaybackErrorLog
@@ -814,17 +816,37 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
         // glcn: what this version is, whose work it builds on, and where its own problems go.
         Text(stringResource(R.string.glcn_about_fork), style = stageText(17, 500).copy(lineHeight = 27.mpxSp), color = StageColors.Muted,
             modifier = Modifier.padding(top = 12.mpx, bottom = 24.mpx).widthIn(max = 1000.mpx))
-        StageTile(Modifier.width(640.mpx)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(R.drawable.telegram_qr),
-                    contentDescription = stringResource(R.string.settings_telegram_qr),
-                    modifier = Modifier.size(150.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
-                )
-                Column {
-                    Text(stringResource(R.string.glcn_about_community), style = stageText(20, 800), color = StageColors.Text)
-                    Text(TELEGRAM_LINK, style = stageText(17, 500), color = accent, modifier = Modifier.padding(top = 4.mpx))
-                    Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
+        // glcn: this version's own Telegram group first, then the original project's — the same tile for both.
+        Row(horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
+            val ownQr = remember { tv.own.owntv.core.companion.CompanionLink.renderQr("https://" + GLCN_TELEGRAM_LINK) }
+            StageTile(Modifier.width(620.mpx)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
+                    ownQr?.let {
+                        Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = stringResource(R.string.settings_telegram_qr),
+                            modifier = Modifier.size(150.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White).padding(6.mpx),
+                        )
+                    }
+                    Column {
+                        Text(stringResource(R.string.glcn_about_community_fanart), style = stageText(20, 800), color = StageColors.Text)
+                        Text(GLCN_TELEGRAM_LINK, style = stageText(17, 500), color = accent, modifier = Modifier.padding(top = 4.mpx))
+                        Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
+                    }
+                }
+            }
+            StageTile(Modifier.width(620.mpx)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(R.drawable.telegram_qr),
+                        contentDescription = stringResource(R.string.settings_telegram_qr),
+                        modifier = Modifier.size(150.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
+                    )
+                    Column {
+                        Text(stringResource(R.string.glcn_about_community), style = stageText(20, 800), color = StageColors.Text)
+                        Text(TELEGRAM_LINK, style = stageText(17, 500), color = accent, modifier = Modifier.padding(top = 4.mpx))
+                        Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
+                    }
                 }
             }
         }

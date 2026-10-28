@@ -2322,6 +2322,8 @@ internal const val GITHUB_REPO = "github.com/ahXN00/OwnTV"
 /** glcn: this fork. */
 internal const val GLCN_REPO = "github.com/carlosglcn/OwnTV-Fanart"
 internal const val TELEGRAM_LINK = "t.me/owntvplayer"
+/** glcn: this version's own Telegram group. */
+internal const val GLCN_TELEGRAM_LINK = "t.me/owntvfanart"
 
 /**
  * Read-only viewer for the persisted playback error history: the last ~10 failures with their

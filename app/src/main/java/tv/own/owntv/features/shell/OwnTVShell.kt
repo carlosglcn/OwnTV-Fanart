@@ -353,6 +353,9 @@ fun OwnTVShell(
     }.collectAsStateWithLifecycle(emptyList())
     // In-player channel-list overlay (Left while controls hidden, live only).
     var showChannelList by remember { mutableStateOf(false) }
+    // glcn: the zap deck's posters view, until ▶ steps back to the deck; every opening starts on the deck.
+    var deckPosters by remember { mutableStateOf(false) }
+    LaunchedEffect(showChannelList) { if (!showChannelList) deckPosters = false }
     // In-player watch-history list (Right while controls hidden, live only).
     var showHistoryList by remember { mutableStateOf(false) }
     // Multiview: the grid, while it is up, and which tile is waiting for a channel to be picked.
@@ -2215,31 +2218,41 @@ fun OwnTVShell(
                         // First Left — the channels of the current category. A browsed-to category may
                         // hold a single channel, so this renders for any non-empty list.
                         // glcn: the poster view of the same list (▶ in the list switches views; ▲ comes back).
-                        if (glcnZapPanel == 2) tv.own.owntv.features.shell.components.ZapPosterOverlay(
+                        // glcn: the zap deck — groups, channels and the focused programme in one sheet (TiviMate's idea, our
+                        // look). ▶ steps its right column through the views on in Settings; the posters view stays one of them.
+                        val deckDetail = if (glcnZapPanel == 1 || (glcnZapPanel == 2 && tv.own.owntv.core.settings.ZapViews.has(glcnZapViews, 1))) 1 else 0
+                        val deckViews = (0..2).filter { tv.own.owntv.core.settings.ZapViews.has(glcnZapViews, it) }
+                        val deckCycle: (() -> Unit)? = if (deckViews.size < 2) null else ({
+                            val cur = if (deckPosters) 2 else deckDetail
+                            val next = deckViews[(deckViews.indexOf(cur).coerceAtLeast(0) + 1) % deckViews.size]
+                            if (next == 2) deckPosters = true else { deckPosters = false; scope.launch { settingsRepo.setZapPanel(next) } }
+                        })
+                        if (deckPosters) tv.own.owntv.features.shell.components.ZapPosterOverlay(
                             channels = zapChannels,
                             currentId = previewChannel?.id,
                             title = zapOverlayTitle,
                             loadNow = { liveVm.nowMany(it) },
                             loadSchedule = { liveVm.scheduleFor(it) },
                             onSelect = { liveVm.ensurePlaying(it); showChannelList = false },
-                            onListView = { scope.launch { settingsRepo.setZapPanel(tv.own.owntv.core.settings.ZapViews.next(2, glcnZapViews)) } },
+                            onListView = { deckPosters = false },
                             onDismiss = { showChannelList = false },
                             modifier = Modifier.fillMaxSize(),
-                        ) else tv.own.owntv.features.shell.components.ChannelListOverlay(
+                        ) else tv.own.owntv.features.shell.components.ZapDeck(
+                            railItems = browserRailItems,
+                            railCounts = browserRailCounts,
                             channels = zapChannels,
+                            currentKey = zapListKey ?: previewChannel?.categoryId?.let { tv.own.owntv.core.live.LiveKey.Folder(it) },
                             currentId = previewChannel?.id,
-                            nowPlaying = overlayNowPlaying,
-                            nowProgrammes = overlayProgrammes,
-                            favoriteIds = overlayFavoriteIds,
-                            playlistMarks = overlayPlaylistMarks,
-                            title = zapOverlayTitle,
                             showNumbers = directTuneEnabled,
-                            onSelect = { liveVm.ensurePlaying(it); showChannelList = false },
-                            onDismiss = { showChannelList = false },
-                            onOpenCategories = { liveVm.showCategories() },
+                            detail = deckDetail,
+                            onCycleDetail = deckCycle,
+                            peekChannels = { liveVm.peekCategoryChannels(it) },
+                            loadNowMany = { liveVm.nowMany(it) },
                             loadNow = { liveVm.nowFull(it) },
-                            loadSchedule = if (glcnZapPanel == 1) ({ liveVm.scheduleFor(it) }) else null,
-                            onCyclePanel = if (glcnZapViews and (glcnZapViews - 1) == 0) null else ({ scope.launch { settingsRepo.setZapPanel(tv.own.owntv.core.settings.ZapViews.next(glcnZapPanel, glcnZapViews)) } }),
+                            loadSchedule = { liveVm.scheduleFor(it) },
+                            onArmCategory = { liveVm.loadChannelsForCategory(it) },
+                            onTune = { liveVm.ensurePlaying(it); showChannelList = false },
+                            onDismiss = { showChannelList = false },
                             modifier = Modifier.fillMaxSize(),
                         )
                     }

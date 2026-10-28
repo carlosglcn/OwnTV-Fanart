@@ -30,3 +30,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
   - 🏷️ Navigation: a Menu labels choice (off, when focused, always)
   - 🏠 Home: the last card of a row stays on screen when it has focus; the update popup's What's new scrolls with the remote
   - 🗃️ Faster playlist and guide writes (fewer database indexes)
+- 🗂️ Player: ◀ on a live channel opens the new zap panel, in the style of TiviMate but with the app's look and theme — groups (and your playlists above them), the channels with logo, number, programme on air and progress, and the focused channel's picture or schedule on the right. It opens on the playing channel; one cursor glides between rows; ◀ goes to the groups (their channels show as you move), ▶ switches the right column (and the posters view), ▲ from the first group reaches the playlists, OK tunes, Back closes
+- ⏪ Player: ◀ now always opens that panel; to rewind, press OK and use ◀ on the bar, or the remote's rewind button
+- 💬 About: the OwnTV Fanart Telegram group with its QR code (t.me/owntvfanart), next to the original project's
