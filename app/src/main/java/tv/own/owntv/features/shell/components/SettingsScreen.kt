@@ -105,6 +105,7 @@ import kotlin.math.roundToInt
 import java.io.File
 import java.util.Locale
 import tv.own.owntv.ui.theme.labelRes
+import tv.own.owntv.features.settings.labelRes
 import tv.own.owntv.ui.theme.primary
 
 internal enum class TileTone { PRIMARY, SECONDARY, TERTIARY }
