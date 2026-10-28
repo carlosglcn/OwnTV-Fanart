@@ -72,3 +72,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌐 About › languages opens Settings on the Language row, not on the first row of the page
 - ⚽ Sports: Ourense CF is named as such (ESPN calls it "Auriense"), so its matches also find their channel
 - ✨ Channel options over the player (hold OK on a strip card): a see-through sheet slides in from the right, leaving the picture in view — the programme on air at its head (picture, title, times, progress), then the channel and the options
+- ⏹️ With "Back in the player: Window" on, holding Back in the full-screen player (about a second) closes it outright — back to the menu with no window; a short press still leaves it in the window

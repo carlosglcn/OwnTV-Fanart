@@ -1096,7 +1096,18 @@ fun OwnTVShell(
                 if (e.key != Key.Back) return@onPreviewKeyEvent false
                 when (e.type) {
                     KeyEventType.KeyDown -> {
-                        if (longPressBackArmed && backHoldJob == null) {
+                        // glcn: with "Back in the player: Window" on, holding Back in the full-screen player closes it
+                        // outright instead (back to the menu, no window), for when you have finished watching.
+                        val closeArmed = playerMode == PlayerMode.FULLSCREEN && backToWindow && zapSource == MainSection.LIVE_TV &&
+                            !showChannelList && !showQuickGuide && !showHistoryList && zapOptionsChannel == null
+                        if (closeArmed && backHoldJob == null) {
+                            backLongFired = false
+                            backHoldJob = scope.launch {
+                                kotlinx.coroutines.delay(BACK_HOLD_CLOSE_MS)
+                                backLongFired = true
+                                exitPlayer()
+                            }
+                        } else if (longPressBackArmed && backHoldJob == null) {
                             backLongFired = false
                             backHoldJob = scope.launch {
                                 kotlinx.coroutines.delay(600)
@@ -2499,3 +2510,6 @@ private fun railDetail(section: MainSection, d: RailDetails): String? = when (se
 
 /** How recently ◀ / ▶ or [focusRail] must have happened for a rail visit to open the rail. */
 private const val RAIL_KEY_WINDOW_MS = 400L
+
+/** glcn: how long Back is held in the full-screen player to close it rather than leave it in the window. */
+private const val BACK_HOLD_CLOSE_MS = 800L

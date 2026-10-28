@@ -1532,7 +1532,8 @@ private fun PlayerOptionsSheet(
     items: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     val enter = remember { androidx.compose.animation.core.Animatable(0f) }
-    LaunchedEffect(Unit) { enter.animateTo(1f, tv.own.owntv.ui.theme.ownTvTween(320)) }
+    val enterSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(320)
+    LaunchedEffect(Unit) { enter.animateTo(1f, enterSpec) }
     val shade = tv.own.owntv.ui.theme.stageTone(androidx.compose.ui.graphics.Color(2, 5, 6), androidx.compose.ui.graphics.Color(244, 247, 245))
     val accent = tv.own.owntv.ui.theme.stageAccent.accent
     tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onDismiss, stageLayout = true) {
