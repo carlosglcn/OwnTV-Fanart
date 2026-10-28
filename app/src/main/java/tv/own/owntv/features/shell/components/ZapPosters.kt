@@ -78,6 +78,8 @@ fun ZapPosterOverlay(
     onListView: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: hold OK on a card → the channel's options. */
+    onLongPress: ((ChannelEntity) -> Unit)? = null,
 ) {
     val start = remember(channels, currentId) { channels.indexOfFirst { it.id == currentId }.coerceAtLeast(0) }
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (start - 1).coerceAtLeast(0))
@@ -192,6 +194,7 @@ fun ZapPosterOverlay(
                         programme = programmes[ch.id],
                         now = now,
                         onClick = { onSelect(ch) },
+                        onLongClick = onLongPress?.let { lp -> { lp(ch) } },
                         width = 360.mpx,
                         modifier = Modifier.focusRequester(cardFocus.getOrPut(index) { FocusRequester() }).then(if (index == start) Modifier.focusRequester(first) else Modifier),
                     )

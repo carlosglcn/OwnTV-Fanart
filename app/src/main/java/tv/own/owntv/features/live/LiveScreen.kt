@@ -1410,6 +1410,105 @@ fun LiveScreen(
 }
 
 /**
+ * glcn: the channel options menu over the player (hold OK on a card in the picture strip): the same menu as Live TV,
+ * with its dialogs, minus what only makes sense in a list (move, categories, multi-select, Multiview). Catch-up plays
+ * in the player already on screen.
+ */
+@Composable
+fun PlayerChannelOptions(vm: LiveViewModel, channel: ChannelEntity, onDismiss: () -> Unit) {
+    val favoriteIds by vm.favoriteIds.collectAsStateWithLifecycle()
+    val recordingChannelIds by vm.recordingChannelIds.collectAsStateWithLifecycle()
+    var menu by remember { mutableStateOf(true) }
+    var synopsis by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf(false) }
+    var matching by remember { mutableStateOf(false) }
+    var offsetting by remember { mutableStateOf(false) }
+    var catchup by remember { mutableStateOf(false) }
+    var scheduling by remember { mutableStateOf(false) }
+    val toast = tv.own.owntv.ui.components.rememberInAppToast()
+    val res = androidx.compose.ui.platform.LocalContext.current.resources
+    val day = tv.own.owntv.ui.format.rememberBestDateFormatter("EEEMMMd")
+    val time = tv.own.owntv.ui.format.rememberSystemTimeFormatter()
+    val ch = channel
+    // A scheduled recording says so for a moment before the menu's host goes.
+    var confirmed by remember { mutableStateOf(false) }
+    LaunchedEffect(confirmed) { if (confirmed) { kotlinx.coroutines.delay(2_500); onDismiss() } }
+    // A dialog closing ends it all: back to the strip, not to the menu.
+    fun done() { onDismiss() }
+    if (menu) ChannelContextMenu(
+        channel = ch,
+        title = ch.name,
+        subtitle = vm.sourceNameOf(ch.sourceId),
+        isFavorite = favoriteIds.contains(ch.id),
+        canMove = false,
+        isHistory = false,
+        epgMatchManual = vm.currentEpgMatch(ch) != null,
+        epgShiftMinutes = vm.currentEpgShift(ch),
+        onSynopsis = { menu = false; synopsis = true },
+        onToggleFavorite = { vm.toggleFavorite(ch); done() },
+        onRename = { menu = false; renaming = true },
+        onHide = { vm.hideChannel(ch); done() },
+        onMatchEpg = { menu = false; matching = true },
+        onEpgOffset = { menu = false; offsetting = true },
+        onCatchup = { menu = false; catchup = true },
+        isRecording = ch.id in recordingChannelIds,
+        onRecord = { if (ch.id in recordingChannelIds) vm.stopRecordingOn(ch) else vm.recordNow(ch); done() },
+        onScheduleRecord = { menu = false; scheduling = true },
+        onPlayExternal = { vm.playExternal(ch); done() },
+        onAddToMultiview = null,
+        onMove = {},
+        onMoveToCategory = {},
+        onRemoveFromHistory = {},
+        onSelectMany = null,
+        onRemoveFromCategory = null,
+        onDismiss = { done() },
+    )
+    if (synopsis) SynopsisPopup(ch, load = { vm.nowFull(it) }, onDismiss = { done() })
+    if (renaming) TextInputDialog(
+        title = stringResource(R.string.content_rename_channel),
+        initial = ch.name,
+        hint = stringResource(R.string.content_rename_hint),
+        onConfirm = { vm.renameChannel(ch, it.takeIf { t -> t.isNotBlank() }); done() },
+        onDismiss = { done() },
+    )
+    if (matching) EpgMatchDialog(
+        channelName = ch.name,
+        currentMatch = vm.currentEpgMatch(ch),
+        loadChannels = { q -> vm.availableEpgChannels(ch.name, q) },
+        onPick = { epgId -> vm.setEpgMatch(ch, epgId); done() },
+        onClear = { vm.setEpgMatch(ch, null); done() },
+        onDismiss = { done() },
+    )
+    if (offsetting) EpgOffsetDialog(
+        channelName = ch.name,
+        currentMinutes = vm.currentEpgShift(ch),
+        globalMinutes = vm.globalEpgShift(),
+        onSet = { vm.setEpgShift(ch, it) },
+        onDismiss = { done() },
+    )
+    if (catchup) CatchupDialog(
+        channelName = ch.name,
+        loadProgrammes = { vm.catchupProgrammes(ch) },
+        onPick = { prog -> vm.playCatchupProgramme(ch, prog); done() },
+        jumpOffsetsSec = remember(ch.id) { vm.catchupJumpOptions(ch) },
+        jumpWindowSec = remember(ch.id) { vm.catchupWindowOf(ch) },
+        onJump = { offset -> vm.playCatchupAt(ch, offset); done() },
+        onDismiss = { done() },
+    )
+    if (scheduling) ScheduleRecordingDialog(
+        channelName = ch.name,
+        clashesFor = { start, stop -> vm.recordingClashes(ch, start, stop) },
+        onSchedule = { start, stop ->
+            scheduling = false
+            confirmed = true
+            vm.scheduleRecording(ch, start, stop) { at -> toast.show(res.getString(R.string.recording_scheduled_for, day(at) + " " + time(at))) }
+        },
+        onDismiss = { done() },
+    )
+    tv.own.owntv.ui.components.InAppToast(toast)
+}
+
+/**
  * ☰ Channel options: the Stage options menu, 540 wide over the stage, above the scrim. Header
  * = the logo plate, "256 · Sky Cinema Premieren" and "category · playlist"; the actions in the groups
  * WATCH · CHANNEL · GUIDE DATA · ORGANISE with their values (Catch-up "7 days", Match EPG "Auto",

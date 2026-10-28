@@ -62,3 +62,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🧈 Scrolling between rows (Home and every page that glides): a soft spring instead of a quick ease — it starts gently, takes about half a second, and pressing ▼ again mid-glide carries on from its speed instead of restarting
 - 🖼️ Quick guide (hold OK): the programme picture shows at once — what is on is kept once read, like the ◀ panel, instead of being read again on each row
 - 🧈 Zap panel (◀): only the row that gains or loses the cursor is redrawn, and the glide is a touch softer, so fast scrolling stays smooth
+- ☰ Player picture strip: hold OK on a card for the channel's options — the same menu as Live TV (synopsis, record, schedule, external player, favourite, rename, hide, EPG match and offset, catch-up)
+- 🎬 Live TV Cinematic with the menu on top: the hero and rows move up into the room the bar frees, so "You may like" is whole again
+- 🔤 Live TV Cinematic: title and synopsis sit on a soft wash of the page colour and the synopsis is narrower, so they read over bright pictures

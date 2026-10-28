@@ -355,6 +355,8 @@ fun OwnTVShell(
     var showChannelList by remember { mutableStateOf(false) }
     // glcn: held OK — the quick guide (list, picture, schedule, posters; ▶ steps the view and it is remembered).
     var showQuickGuide by remember { mutableStateOf(false) }
+    // glcn: hold OK on a card of the picture strip → that channel's options over the player.
+    var zapOptionsChannel by remember { mutableStateOf<tv.own.owntv.core.database.entity.ChannelEntity?>(null) }
     // glcn: the zap deck's posters view, until ▶ steps back to the deck; every opening starts on the deck.
     var deckPosters by remember { mutableStateOf(false) }
     LaunchedEffect(showChannelList) { if (!showChannelList) deckPosters = false }
@@ -2235,6 +2237,7 @@ fun OwnTVShell(
                             onListView = { deckPosters = false },
                             onDismiss = { showChannelList = false },
                             modifier = Modifier.fillMaxSize(),
+                            onLongPress = { zapOptionsChannel = it },
                         ) else tv.own.owntv.features.shell.components.ZapDeck(
                             railItems = browserRailItems,
                             railCounts = browserRailCounts,
@@ -2285,6 +2288,7 @@ fun OwnTVShell(
                             onListView = { scope.launch { settingsRepo.setZapPanel(tv.own.owntv.core.settings.ZapViews.next(2, glcnZapViews)) } },
                             onDismiss = { showQuickGuide = false },
                             modifier = Modifier.fillMaxSize(),
+                            onLongPress = { zapOptionsChannel = it },
                         ) else tv.own.owntv.features.shell.components.ChannelListOverlay(
                             channels = zapChannels,
                             currentId = previewChannel?.id,
@@ -2323,6 +2327,9 @@ fun OwnTVShell(
                         loadSchedule = if (glcnZapPanel == 1) ({ liveVm.scheduleFor(it) }) else null,
                         modifier = Modifier.fillMaxSize(),
                     )
+                }
+                zapOptionsChannel?.let { ch ->
+                    androidx.compose.runtime.key(ch.id) { tv.own.owntv.features.live.PlayerChannelOptions(liveVm, ch, onDismiss = { zapOptionsChannel = null }) }
                 }
             } else {
                 MiniPlayer(
