@@ -7,6 +7,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.draw.clip
+import tv.own.owntv.ui.stage.stageGlass
+import tv.own.owntv.ui.theme.stageText
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -1435,7 +1440,12 @@ fun PlayerChannelOptions(vm: LiveViewModel, channel: ChannelEntity, onDismiss: (
     LaunchedEffect(confirmed) { if (confirmed) { kotlinx.coroutines.delay(2_500); onDismiss() } }
     // A dialog closing ends it all: back to the strip, not to the menu.
     fun done() { onDismiss() }
+    val onAir by androidx.compose.runtime.produceState<tv.own.owntv.core.database.entity.EpgProgrammeEntity?>(null, ch.id) {
+        value = runCatching { vm.nowFull(ch).first }.getOrNull()
+    }
     if (menu) ChannelContextMenu(
+        overPlayer = true,
+        onAir = onAir,
         channel = ch,
         title = ch.name,
         subtitle = vm.sourceNameOf(ch.sourceId),
@@ -1509,6 +1519,98 @@ fun PlayerChannelOptions(vm: LiveViewModel, channel: ChannelEntity, onDismiss: (
 }
 
 /**
+ * glcn: the channel's options over the player. A sheet slides in from the right on a share of the stage glass, so
+ * the picture stays in view; a soft shade on that side keeps the words readable over any frame. At its head, what
+ * the channel shows now: its picture, title, times and progress, then the channel; under it the menu's groups.
+ */
+@Composable
+private fun PlayerOptionsSheet(
+    channel: ChannelEntity,
+    subtitle: String?,
+    onAir: tv.own.owntv.core.database.entity.EpgProgrammeEntity?,
+    onDismiss: () -> Unit,
+    items: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    val enter = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) { enter.animateTo(1f, tv.own.owntv.ui.theme.ownTvTween(320)) }
+    val shade = tv.own.owntv.ui.theme.stageTone(androidx.compose.ui.graphics.Color(2, 5, 6), androidx.compose.ui.graphics.Color(244, 247, 245))
+    val accent = tv.own.owntv.ui.theme.stageAccent.accent
+    tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onDismiss, stageLayout = true) {
+        Box(
+            Modifier.fillMaxSize().longPressMenuGuard()
+                .graphicsLayer { alpha = enter.value }
+                .background(
+                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                        0f to androidx.compose.ui.graphics.Color.Transparent,
+                        0.45f to androidx.compose.ui.graphics.Color.Transparent,
+                        1f to shade.copy(alpha = 0.72f),
+                    ),
+                ),
+        ) {
+            Box(
+                Modifier.align(Alignment.CenterEnd)
+                    .padding(end = 48.mpx, top = 40.mpx, bottom = 40.mpx)
+                    .width(600.mpx).fillMaxHeight()
+                    .graphicsLayer { translationX = (1f - enter.value) * 80.mpx.toPx() },
+            ) {
+                // A share of the glass: the picture shows through, the list still reads.
+                Box(Modifier.matchParentSize().graphicsLayer { alpha = 0.86f }.stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true))
+                Column(
+                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).trapAllFocusExit().focusGroup()
+                        .padding(start = 18.mpx, end = 18.mpx, top = 18.mpx, bottom = 16.mpx),
+                ) {
+                    val art = onAir?.imageUrl?.takeIf { it.isNotBlank() }
+                    if (art != null && onAir != null) Box(
+                        Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.mpx)),
+                    ) {
+                        coil3.compose.AsyncImage(model = art, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        Box(
+                            Modifier.fillMaxSize().background(
+                                androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    0.45f to androidx.compose.ui.graphics.Color.Transparent,
+                                    1f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.78f),
+                                ),
+                            ),
+                        )
+                        Column(Modifier.align(Alignment.BottomStart).padding(16.mpx)) {
+                            Text(onAir.title, style = stageText(24, 800), color = androidx.compose.ui.graphics.Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            OnAirLine(onAir, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.82f), accent)
+                        }
+                    } else if (onAir != null) Column(Modifier.padding(horizontal = 12.mpx)) {
+                        Text(onAir.title, style = stageText(24, 800), color = tv.own.owntv.ui.theme.StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        OnAirLine(onAir, tv.own.owntv.ui.theme.StageColors.Muted, accent)
+                    }
+                    Spacer(Modifier.height(16.mpx))
+                    tv.own.owntv.ui.stage.StageMenuHeader(
+                        title = listOfNotNull(channel.number?.toString(), ProviderTags.parse(channel.name).name).joinToString(" · "),
+                        subtitle = subtitle,
+                        leading = { LivePlate(channel.displayLogoUrl, 70.mpx, 50.mpx) },
+                    )
+                    items()
+                }
+            }
+        }
+    }
+}
+
+/** glcn: "20:00 – 21:00" and a thin progress line, for the programme at the sheet's head. */
+@Composable
+private fun OnAirLine(p: tv.own.owntv.core.database.entity.EpgProgrammeEntity, color: androidx.compose.ui.graphics.Color, accent: androidx.compose.ui.graphics.Color) {
+    val time = tv.own.owntv.ui.format.rememberSystemTimeFormatter()
+    Text(
+        stringResource(R.string.content_live_time_range, time(p.startMs), time(p.stopMs)),
+        style = stageText(16, 600), color = color, maxLines = 1,
+        modifier = Modifier.padding(top = 4.mpx, bottom = 8.mpx),
+    )
+    val now = System.currentTimeMillis()
+    val f = ((now - p.startMs).toFloat() / (p.stopMs - p.startMs).coerceAtLeast(1L)).coerceIn(0f, 1f)
+    Box(Modifier.width(260.mpx).height(4.mpx).clip(androidx.compose.foundation.shape.RoundedCornerShape(2.mpx)).background(color.copy(alpha = 0.25f))) {
+        Box(Modifier.fillMaxWidth(f).height(4.mpx).background(accent))
+    }
+}
+
+/**
  * ☰ Channel options: the Stage options menu, 540 wide over the stage, above the scrim. Header
  * = the logo plate, "256 · Sky Cinema Premieren" and "category · playlist"; the actions in the groups
  * WATCH · CHANNEL · GUIDE DATA · ORGANISE with their values (Catch-up "7 days", Match EPG "Auto",
@@ -1548,6 +1650,9 @@ private fun ChannelContextMenu(
     // Only inside a custom category: take the channel out of that category alone.
     onRemoveFromCategory: (() -> Unit)?,
     onDismiss: () -> Unit,
+    /** glcn: over the player — a see-through sheet on the right with the programme on air at its head, the picture left free. */
+    overPlayer: Boolean = false,
+    onAir: tv.own.owntv.core.database.entity.EpgProgrammeEntity? = null,
 ) {
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
@@ -1595,6 +1700,26 @@ private fun ChannelContextMenu(
         stringResource(R.string.content_menu_group_guide_data),
         stringResource(R.string.content_menu_group_organise),
     ).map { it.uppercase(androidx.compose.ui.text.intl.Locale.current.platformLocale) }
+    if (overPlayer) {
+        PlayerOptionsSheet(
+            channel = channel, subtitle = subtitle, onAir = onAir, onDismiss = onDismiss,
+        ) {
+            var previousGroup: Int? = null
+            arranged(ContentMenu.LIVE, actions).forEachIndexed { index, action ->
+                if (action.group != previousGroup) tv.own.owntv.ui.stage.StageGroupLabel(groupLabels[action.group])
+                previousGroup = action.group
+                tv.own.owntv.ui.stage.StageMenuItem(
+                    text = action.label,
+                    icon = action.icon,
+                    iconFilled = action.icon == OwnTVIcon.REC,
+                    value = values[action.key],
+                    onClick = action.onClick,
+                    modifier = if (index == 0) Modifier.focusRequester(focus) else Modifier,
+                )
+            }
+        }
+        return
+    }
     tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onDismiss, stageLayout = true) {
         BoxWithConstraints(
             Modifier.fillMaxSize().background(tv.own.owntv.ui.theme.StageColors.Scrim).longPressMenuGuard(),

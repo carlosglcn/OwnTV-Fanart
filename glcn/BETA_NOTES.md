@@ -71,3 +71,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🧈 Scrolling between rows: a gentle ease over about half a second (soft start and landing); ▲ no longer adds its own scroll when the row above is already partly on screen. The spring tried before is gone — with ▼ held the page stopped following the focus
 - 🌐 About › languages opens Settings on the Language row, not on the first row of the page
 - ⚽ Sports: Ourense CF is named as such (ESPN calls it "Auriense"), so its matches also find their channel
+- ✨ Channel options over the player (hold OK on a strip card): a see-through sheet slides in from the right, leaving the picture in view — the programme on air at its head (picture, title, times, progress), then the channel and the options
