@@ -24,7 +24,7 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTube
  * ([onDone]). Never in light mode: the caller does not compose it then.
  */
 @Composable
-fun AmbientTrailer(stored: String, modifier: Modifier = Modifier, onDone: () -> Unit) {
+fun AmbientTrailer(stored: String, modifier: Modifier = Modifier, onPlaying: () -> Unit = {}, onDone: () -> Unit) {
     val context = LocalContext.current
     val keys = remember(stored) { tv.own.owntv.core.metadata.TrailerKeys.split(stored).ifEmpty { listOf(stored) } }
     var playing by remember { mutableStateOf(false) }
@@ -52,7 +52,7 @@ fun AmbientTrailer(stored: String, modifier: Modifier = Modifier, onDone: () -> 
             }
             override fun onStateChange(youTubePlayer: YouTubePlayer, state: PlayerConstants.PlayerState) {
                 when (state) {
-                    PlayerConstants.PlayerState.PLAYING -> playing = true
+                    PlayerConstants.PlayerState.PLAYING -> { playing = true; onPlaying() }
                     PlayerConstants.PlayerState.ENDED -> { playing = false; onDone() }
                     else -> Unit
                 }

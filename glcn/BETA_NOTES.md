@@ -103,3 +103,8 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📊 Dock: a progress bar under the title for what you left half-way and for the programme on air
 - 🎞️ Dock at rest: after 3 s still on a film or series, its trailer plays silently in place of the picture (not in light mode); after 20 s the words and the dock fade away and the picture (or trailer) is left alone — the next key only brings them back
 - 🗂️ Dock: optional double row (Settings › Home) — the next tab's cards peek under the row, ▼ brings them up; cards a little smaller to fit.
+- 🎬 Home Cinema: slow Ken Burns on the picture (deeper push with a side drift; not in light mode).
+- ✨ Home Cinema: the words arrive one after another — title, tags, synopsis, cast — as the picture crossfades.
+- 🏷️ Home Cinema: films and series show their TMDB title logo, genres and leading cast.
+- 🎨 Home Cinema: the foot of the screen takes a touch of the picture's own colour.
+- 🎞️ Home Cinema: after 3 calm seconds the trailer plays silently behind; OK opens it with sound (light mode off, animations on).

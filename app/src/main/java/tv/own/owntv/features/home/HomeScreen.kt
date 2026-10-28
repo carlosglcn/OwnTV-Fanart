@@ -436,7 +436,8 @@ fun HomeScreen(
     )
     val homeFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
     // The Stage page itself is painted by the shell, full width, so it also runs under a docked rail.
-    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize()) {
+    // glcn (Cinema): while the trailer plays behind Home, OK opens it with sound.
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize().then(if (backdropStyle == 1) Modifier.onPreviewKeyEvent { CinemaTrailer.onKey(it) } else Modifier)) {
         // glcn (Panel): three live cards fill the width left beside the panel exactly.
         val panelCardWidth = if (backdropStyle == 2) ((maxWidth - PANEL_WIDTH - 48.mpx - contentStart - 40.mpx) / 3).coerceIn(220.mpx, 400.mpx) else null
         if (trendingItem == null && posterItem == null) HomeReadScope { val coverArt = if (homeCover != 0) null else focusArt; when (backdropStyle) {
@@ -1843,11 +1844,13 @@ private fun posterInfo(item: Any?, name: String): HomeFocusInfo = when (item) {
         title = name,
         line = listOfNotNull(item.year?.toString(), item.rating?.takeIf { it > 0 }?.let { "★ " + ratingText(it) }).joinToString("  ·  ").ifBlank { null },
         plot = item.plot,
+        movie = item,
     )
     is tv.own.owntv.core.database.entity.SeriesEntity -> HomeFocusInfo(
         title = name,
         line = listOfNotNull(item.year?.toString(), item.rating?.takeIf { it > 0 }?.let { "★ " + ratingText(it) }).joinToString("  ·  ").ifBlank { null },
         plot = item.plot,
+        series = item,
     )
     else -> HomeFocusInfo(name)
 }

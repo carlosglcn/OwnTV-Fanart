@@ -596,6 +596,9 @@ internal data class HomeFocusInfo(
     val art: String? = null,
     /** glcn: a guide programme whose synopsis was left out of the light rail query; the panel reads it. */
     val programmeId: Long? = null,
+    /** glcn (Cinema): the film or series behind the card — its TMDB logo, genres, cast and trailer. */
+    val movie: tv.own.owntv.core.database.entity.MovieEntity? = null,
+    val series: tv.own.owntv.core.database.entity.SeriesEntity? = null,
 )
 
 /** A card tells Home what it is when it takes focus (alongside [LocalHomeFocusArt]). */
@@ -613,20 +616,28 @@ private fun rememberSettled(url: String?, info: HomeFocusInfo?): Pair<String?, H
 
 /** The focused card's picture over the whole screen, drifting slowly when animations allow. */
 @Composable
-private fun FullBackdrop(url: String?, modifier: Modifier = Modifier) {
+private fun FullBackdrop(url: String?, modifier: Modifier = Modifier, kenBurns: Boolean = false) {
     val animate = tv.own.owntv.ui.theme.animationsOn
     // glcn: clipped — the slow push-in drew the picture past its own edges, out beside the menu rail.
     Crossfade(targetState = url, label = "homeFullArt", modifier = modifier.clipToBounds()) { u ->
         if (!u.isNullOrBlank()) {
             val drift = remember(u) { androidx.compose.animation.core.Animatable(1f) }
             val driftOn = animate && !tv.own.owntv.ui.stage.GlcnMotion.subtle
-            LaunchedEffect(u, driftOn) {
-                if (driftOn) drift.animateTo(1.05f, androidx.compose.animation.core.tween(12_000, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+            // glcn (Cinema): Ken Burns — a slower, deeper push with a drift to one side, the side chosen by the picture.
+            val burns = kenBurns && driftOn && !tv.own.owntv.glcn.LowRam.on
+            val side = remember(u) { if ((u.hashCode() and 1) == 0) 1f else -1f }
+            LaunchedEffect(u, driftOn, burns) {
+                if (burns) drift.animateTo(1f + KEN_BURNS_ZOOM, androidx.compose.animation.core.tween(KEN_BURNS_MS, easing = androidx.compose.animation.core.LinearEasing))
+                else if (driftOn) drift.animateTo(1.05f, androidx.compose.animation.core.tween(12_000, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
             }
             AsyncImage(
                 model = u, contentDescription = null, contentScale = ContentScale.Crop,
                 alignment = androidx.compose.ui.BiasAlignment(0f, -0.3f),
-                modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = drift.value; scaleY = drift.value },
+                modifier = Modifier.fillMaxSize().graphicsLayer {
+                    scaleX = drift.value; scaleY = drift.value
+                    // The drift stays inside the zoom's margin, so no edge ever shows.
+                    if (burns) translationX = side * (drift.value - 1f) * size.width * 0.42f
+                },
             )
             val glow = tv.own.owntv.ui.components.rememberArtColor(u)?.luminance() ?: 0.3f
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = (0.05f + glow * 0.45f).coerceAtMost(0.45f))))
@@ -641,7 +652,11 @@ private fun FullBackdrop(url: String?, modifier: Modifier = Modifier) {
  * the programme is read in full: its synopsis, how far through it is, and what comes next.
  */
 @Composable
-private fun FocusInfoBlock(info: HomeFocusInfo, titleSize: Int, plotLines: Int, modifier: Modifier = Modifier, chips: Boolean = false) {
+private fun FocusInfoBlock(
+    info: HomeFocusInfo, titleSize: Int, plotLines: Int, modifier: Modifier = Modifier, chips: Boolean = false,
+    /** glcn (Cinema): the title's TMDB lettering in place of its name, more tags (genres), the leading cast, and words that arrive one after another. */
+    logo: String? = null, onLogoFailed: () -> Unit = {}, moreChips: List<String> = emptyList(), cast: String? = null, stagger: Boolean = false,
+) {
     val nowArt: tv.own.owntv.core.live.NowArt = org.koin.compose.koinInject()
     val live by androidx.compose.runtime.produceState<Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?>(null, info.channel?.id) {
         value = info.channel?.let { ch -> runCatching { nowArt.nowAndNext(ch) }.getOrNull() }
@@ -657,30 +672,41 @@ private fun FocusInfoBlock(info: HomeFocusInfo, titleSize: Int, plotLines: Int, 
     }
     val context = androidx.compose.ui.platform.LocalContext.current
     val fmt = remember { android.text.format.DateFormat.getTimeFormat(context) }
+    val enter = if (stagger) rememberStagger() else null
+    fun Modifier.step(i: Int): Modifier = if (enter == null) this else this.graphicsLayer {
+        val t = enter.at(i)
+        alpha = t; translationY = (1f - t) * STAGGER_RISE_PX
+    }
     Column(modifier) {
         info.channel?.let { ch ->
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx), modifier = Modifier.padding(bottom = 10.mpx)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx), modifier = Modifier.padding(bottom = 10.mpx).step(0)) {
                 ChannelPlate(ch, Modifier.size(78.mpx, 50.mpx))
                 Text(ch.name, style = stageText(18, 700), color = StageColors.Text.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        Text(info.title, style = stageText(titleSize, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        if (logo != null) tv.own.owntv.ui.stage.StageTitleArt(
+            url = logo, contentDescription = info.title, onFailed = onLogoFailed,
+            modifier = Modifier.height(124.mpx).widthIn(max = 620.mpx).step(0),
+        ) else Text(info.title, style = stageText(titleSize, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.step(0))
         val rating = info.rateTitle?.let { tv.own.owntv.ui.components.rememberTmdbRating(it, info.rateCategories) }
         val line = listOfNotNull(info.line?.takeIf { it.isNotBlank() }, rating).joinToString("  ·  ")
         if (chips && line.isNotBlank()) {
             // glcn (Cine): the facts as separate tags — time, channel, year, length — the rating in the accent.
             val parts = info.line.orEmpty().split(" · ").map { it.trim() }.filter { it.isNotEmpty() }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), modifier = Modifier.padding(top = 14.mpx)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), modifier = Modifier.padding(top = 14.mpx).step(1)) {
                 parts.take(4).forEach { InfoChip(it, accent = false) }
+                moreChips.take(2).forEach { InfoChip(it, accent = false) }
                 rating?.let { InfoChip(it, accent = true) }
             }
         } else if (line.isNotBlank()) {
-            Text(line, style = stageText(19, 600), color = StageColors.Text.copy(alpha = 0.82f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 10.mpx))
+            Text(line, style = stageText(19, 600), color = StageColors.Text.copy(alpha = 0.82f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 10.mpx).step(1))
+        } else if (chips && moreChips.isNotEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), modifier = Modifier.padding(top = 14.mpx).step(1)) { moreChips.take(3).forEach { InfoChip(it, accent = false) } }
         }
         live?.first?.let { p ->
             val span = (p.stopMs - p.startMs).coerceAtLeast(1L)
             val f = ((System.currentTimeMillis() - p.startMs).toFloat() / span).coerceIn(0f, 1f)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx), modifier = Modifier.padding(top = 12.mpx)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx), modifier = Modifier.padding(top = 12.mpx).step(2)) {
                 Text(fmt.format(java.util.Date(p.startMs)), style = stageText(16, 600), color = StageColors.Text.copy(alpha = 0.7f))
                 Box(Modifier.width(260.mpx).height(5.mpx).clip(RoundedCornerShape(3.mpx)).background(StageColors.Text.copy(alpha = 0.2f))) {
                     Box(Modifier.fillMaxWidth(f).height(5.mpx).background(stageAccent.accent))
@@ -691,14 +717,17 @@ private fun FocusInfoBlock(info: HomeFocusInfo, titleSize: Int, plotLines: Int, 
         (info.plot?.takeIf { it.isNotBlank() } ?: loadedPlot?.takeIf { it.isNotBlank() } ?: live?.first?.description?.takeIf { it.isNotBlank() })?.let {
             Text(
                 it, style = stageText(19, 400).copy(lineHeight = (19 * 1.45f).mpxSp), color = StageColors.Text.copy(alpha = 0.88f),
-                maxLines = plotLines, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx),
+                maxLines = plotLines, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx).step(2),
             )
+        }
+        cast?.let {
+            Text(it, style = stageText(17, 600), color = StageColors.Text.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 10.mpx).step(3))
         }
         live?.second?.let { n ->
             Text(
                 stringResource(R.string.content_live_next) + " · " + fmt.format(java.util.Date(n.startMs)) + "  " + SportsNow.displayTitle(n.title),
                 style = stageText(17, 600), color = StageColors.Text.copy(alpha = 0.78f), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 14.mpx),
+                modifier = Modifier.padding(top = 14.mpx).step(3),
             )
         }
     }
@@ -727,10 +756,52 @@ private fun InfoChip(text: String, accent: Boolean) {
 @Composable
 internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @Composable () -> Unit, start: Dp, modifier: Modifier = Modifier) {
     val (art, shown) = rememberSettled(url, info)
-    val page = tv.own.owntv.ui.theme.stageTone(Color(0xFF070B0E), tv.own.owntv.ui.theme.LocalStagePalette.current.page)
+    val basePage = tv.own.owntv.ui.theme.stageTone(Color(0xFF070B0E), tv.own.owntv.ui.theme.LocalStagePalette.current.page)
+    // glcn: the page takes a little of the picture's own colour, so the foot of the screen belongs to it.
+    val artColor = tv.own.owntv.ui.components.rememberArtColor(art)
+    val tinted = artColor?.let { androidx.compose.ui.graphics.lerp(basePage, it, CINEMA_AMBIENT) } ?: basePage
+    val page by androidx.compose.animation.animateColorAsState(tinted, tv.own.owntv.ui.theme.ownTvTween(900), label = "cinemaAmbient")
+    // glcn: TMDB for the film or series in focus — its lettering, genres, cast and trailer.
+    val metaRepo: tv.own.owntv.core.metadata.MetadataRepository = org.koin.compose.koinInject()
+    val metaKey = shown?.movie?.let { "m" + it.id } ?: shown?.series?.let { "s" + it.id }
+    val metas = remember { androidx.compose.runtime.mutableStateMapOf<String, tv.own.owntv.core.database.entity.MetadataCacheEntity>() }
+    val logoFailed = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    LaunchedEffect(metaKey) {
+        val k = metaKey ?: return@LaunchedEffect
+        if (k in metas) return@LaunchedEffect
+        val meta = runCatching { shown?.movie?.let { metaRepo.resolveMovie(it) } ?: shown?.series?.let { metaRepo.resolveSeries(it) } }.getOrNull()
+        if (meta != null) metas[k] = meta
+    }
+    val meta = metaKey?.let { metas[it] }
+    // glcn: the trailer — silent behind the words after a few calm seconds (never in light mode or with animations off);
+    // while it plays, OK opens it whole with sound (see [CinemaTrailer]).
+    val animsOn = tv.own.owntv.ui.theme.animationsOn
+    var ambient by remember { mutableStateOf<String?>(null) }
+    val stop = CinemaTrailer.stopTick
+    LaunchedEffect(metaKey, meta?.trailerKey, stop) {
+        ambient = null
+        CinemaTrailer.playing = null
+        val t = meta?.trailerKey ?: return@LaunchedEffect
+        if (tv.own.owntv.glcn.LowRam.on || !animsOn) return@LaunchedEffect
+        delay(CINEMA_TRAILER_MS)
+        ambient = t
+    }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { CinemaTrailer.playing = null } }
+    CinemaTrailer.full?.let { (key, title) ->
+        tv.own.owntv.ui.components.TrailerPlayerScreen(videoKey = key, title = title) { CinemaTrailer.full = null }
+    }
     Box(modifier.fillMaxSize()) {
-        tv.own.owntv.ui.components.ArtTint(art, Modifier.fillMaxSize(), strength = 0.6f)
-        FullBackdrop(art, Modifier.fillMaxSize())
+        tv.own.owntv.ui.components.ArtTint(art, Modifier.fillMaxSize(), strength = 0.75f)
+        FullBackdrop(art, Modifier.fillMaxSize(), kenBurns = true)
+        ambient?.let { key ->
+            val title = shown?.title
+            androidx.compose.runtime.key(key) {
+                tv.own.owntv.ui.components.AmbientTrailer(
+                    key, Modifier.fillMaxSize(),
+                    onPlaying = { CinemaTrailer.playing = key to title.orEmpty() },
+                ) { ambient = null; CinemaTrailer.playing = null }
+            }
+        }
         // Words on the left, rows at the foot: dark only where they are.
         Box(Modifier.fillMaxSize().backdropLeftWash(0f to 0.94f, 0.32f to 0.78f, 0.58f to 0.25f, 0.85f to 0f))
         Box(
@@ -739,10 +810,74 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
             ),
         )
         Box(Modifier.padding(start = start, top = 112.mpx, end = 760.mpx).height(CINEMA_ROWS_TOP - 130.mpx).then(Modifier.clipToBounds())) {
-            if (shown != null) FocusInfoBlock(shown, titleSize = 52, plotLines = 2, chips = true) else greeting()
+            if (shown != null) androidx.compose.runtime.key(shown) {
+                val logo = metaKey?.takeIf { it !in logoFailed }?.let { meta?.logoPath }?.let { tv.own.owntv.core.metadata.MetadataImages.logo(it) }
+                val genres = remember(meta?.genresJson) { cinemaJsonList(meta?.genresJson) }
+                val castNames = remember(meta?.castJson) { tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson).take(3).map { it.name } }
+                val cast = castNames.takeIf { it.isNotEmpty() }?.let { stringResource(R.string.glcn_cinema_cast, it.joinToString(", ")) }
+                FocusInfoBlock(
+                    shown, titleSize = 52, plotLines = if (cast != null) 1 else 2, chips = true,
+                    logo = logo, onLogoFailed = { metaKey?.let { logoFailed.add(it) } },
+                    moreChips = genres, cast = cast, stagger = animsOn && !tv.own.owntv.glcn.LowRam.on,
+                )
+            } else greeting()
         }
     }
 }
+
+/**
+ * glcn (Cinema): the trailer playing silently behind Home. While it plays, OK opens it whole with sound instead of
+ * pressing the card; any other key quietens it. Home's root passes its keys through [onKey].
+ */
+internal object CinemaTrailer {
+    var playing by mutableStateOf<Pair<String, String>?>(null)
+    var full by mutableStateOf<Pair<String, String>?>(null)
+    var stopTick by mutableStateOf(0)
+    private var okTaken = false
+
+    fun onKey(e: androidx.compose.ui.input.key.KeyEvent): Boolean {
+        val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
+        if (ok) {
+            if (e.type == KeyEventType.KeyDown && playing != null) { okTaken = true; return true }
+            if (okTaken) {
+                if (e.type == KeyEventType.KeyUp) { okTaken = false; full = playing; playing = null; stopTick++ }
+                return true
+            }
+            return false
+        }
+        if (e.type == KeyEventType.KeyDown && playing != null) { playing = null; stopTick++ }
+        return false
+    }
+}
+
+/** glcn (Cinema): one word after another — each step of the words fades and rises in, a beat after the one before. */
+private class Stagger(val anim: androidx.compose.animation.core.Animatable<Float, androidx.compose.animation.core.AnimationVector1D>) {
+    fun at(i: Int): Float = ((anim.value - i * STAGGER_STEP) / STAGGER_SPAN).coerceIn(0f, 1f).let { 1f - (1f - it) * (1f - it) * (1f - it) }
+}
+
+@Composable
+private fun rememberStagger(): Stagger {
+    val anim = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) { anim.animateTo(STAGGER_STEP * 3 + STAGGER_SPAN, androidx.compose.animation.core.tween(STAGGER_TOTAL_MS, easing = androidx.compose.animation.core.LinearEasing)) }
+    return remember(anim) { Stagger(anim) }
+}
+
+private fun cinemaJsonList(json: String?): List<String> {
+    if (json.isNullOrBlank()) return emptyList()
+    return runCatching {
+        val arr = org.json.JSONArray(json)
+        (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { s -> s.isNotBlank() } }
+    }.getOrDefault(emptyList())
+}
+
+private const val KEN_BURNS_ZOOM = 0.12f
+private const val KEN_BURNS_MS = 24_000
+private const val CINEMA_AMBIENT = 0.16f
+private const val CINEMA_TRAILER_MS = 3_000L
+private const val STAGGER_STEP = 0.18f
+private const val STAGGER_SPAN = 0.46f
+private const val STAGGER_TOTAL_MS = 620
+private const val STAGGER_RISE_PX = 22f
 
 /** Where the rows start under the "Cinema" backdrop. */
 internal val CINEMA_ROWS_TOP = 470.mpx

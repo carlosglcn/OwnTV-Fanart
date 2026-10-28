@@ -93,6 +93,10 @@
 1	technical	app/src/main/java/tv/own/owntv/features/epg/GuideStage.kt	· $nowTitle
 1	technical	app/src/main/java/tv/own/owntv/features/epg/GuideStage.kt	…
 1	technical	app/src/main/java/tv/own/owntv/features/epg/GuideStage.kt	→
+2	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	,
+1	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	cinemaAmbient
+1	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	m
+1	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	s
 3	empty	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	%.1f
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	c
