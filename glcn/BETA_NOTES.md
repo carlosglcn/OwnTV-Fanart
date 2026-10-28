@@ -45,3 +45,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔁 Zap panel: with both the picture and the schedule views on (Settings › Zapping list views), ▶ switches the right column between them; with one only, ▶ closes the panel. The posters view is no longer part of it
 - ▶️ Player: the play/pause button sits a little higher, clear of the top edge of the programme card
 - 📐 Home (Dock): every card opens wide when it has focus — also those with no wide picture (often the last ones of a row), which now show their poster whole in the middle of the open card
+- 🎨 About: the OwnTV Fanart Telegram QR is now drawn like Telegram's own group codes — rounded dots in the Fanart colours, the Telegram plane in the middle and @OWNTVFANART below

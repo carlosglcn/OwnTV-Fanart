@@ -47,7 +47,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -818,16 +817,14 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
             modifier = Modifier.padding(top = 12.mpx, bottom = 24.mpx).widthIn(max = 1000.mpx))
         // glcn: this version's own Telegram group first, then the original project's — the same tile for both.
         Row(horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
-            val ownQr = remember { tv.own.owntv.core.companion.CompanionLink.renderQr("https://" + GLCN_TELEGRAM_LINK) }
             StageTile(Modifier.width(620.mpx)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
-                    ownQr?.let {
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = stringResource(R.string.settings_telegram_qr),
-                            modifier = Modifier.size(150.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White).padding(6.mpx),
-                        )
-                    }
+                    // glcn: drawn like Telegram's own group codes (rounded dots, the plane in the middle, the name below).
+                    Image(
+                        painter = painterResource(R.drawable.telegram_qr_fanart),
+                        contentDescription = stringResource(R.string.settings_telegram_qr),
+                        modifier = Modifier.size(150.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
+                    )
                     Column {
                         Text(stringResource(R.string.glcn_about_community_fanart), style = stageText(20, 800), color = StageColors.Text)
                         Text(GLCN_TELEGRAM_LINK, style = stageText(17, 500), color = accent, modifier = Modifier.padding(top = 4.mpx))
