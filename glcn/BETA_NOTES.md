@@ -54,3 +54,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ Home rows: the strip of the card before the first one no longer shows at the left edge (the clip now stops just short of the gap)
 - ✋ Player: holding OK opens the quick guide again (the channel list with its picture, schedule and posters views; ▶ switches view and it is remembered), while ◀ opens the zap panel; ▶ or Back closes the zap panel
 - 🖼️ TV guide with several guides: the guide that wins (the higher one in EPG sources) keeps the picture and synopsis another guide has for the same programme, so the fanart no longer disappears
+- 🖼️ TV guide: programme pictures (fanart) are stored again on every guide update — the faster guide writer from the original had been leaving them out. The next guide update rewrites the guide once to bring them back
