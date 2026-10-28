@@ -1417,6 +1417,8 @@
 1	technical	app/src/main/java/tv/own/owntv/ui/format/TimeFormat.kt	hm
 1	technical	app/src/main/java/tv/own/owntv/ui/format/TimeFormat.kt	yMMMd
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	+
+1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	DV
+1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	HDR
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	stageLift
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	−
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StagePopup.kt	$value ›

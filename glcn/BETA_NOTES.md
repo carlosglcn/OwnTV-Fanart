@@ -39,3 +39,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ¹² TV guide and zap panels: a channel's feed number written as a superscript (M+ Terror ¹, M+ Terror ²) is kept in its name, so two feeds of one channel no longer look like the same row
 - 🙈 TV guide: switching "Show channels without guide" to No hides them at once, without opening the guide again
 - 🔀 TV guide: turning on another playlist (from the playlist menu) links its channels to the guide by name straight away, and if it still has no guide (a playlist added after the guide was last read), the guide is read again by itself — no more "Without guide" until a manual sync
+- 🏷️ Movies and Series: quality badges read from the title — on the posters the best picture mark (DV in gold, HDR10+, HDR10, HDR, else 4K) and REMUX (also when written as [4K R] / [DV R]); on the title's page every mark (resolution, REMUX, HDR, Atmos/7.1/5.1)

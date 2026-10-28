@@ -815,6 +815,8 @@ fun StagePoster(
     fresh: Boolean = false,
     /** glcn: Runway — take the width the parent gives (it changes while the row glides) instead of [width]. */
     fillWidth: Boolean = false,
+    /** glcn: the quality marks the title advertises (DV, 4K, REMUX…), at most two, along the artwork's foot. */
+    badges: List<String> = emptyList(),
     artwork: @Composable BoxScope.() -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -855,6 +857,10 @@ fun StagePoster(
         ) {
             FocusArtFx(focused) { artwork() }
             if (rating != null) StageRatingChip(rating, Modifier.padding(8.mpx), small = compact)
+            if (badges.isNotEmpty()) PosterQualityBadges(
+                badges.take(2), compact,
+                Modifier.align(Alignment.BottomStart).padding(start = 8.mpx, bottom = if (progress != null && progress > 0f) 14.mpx else 8.mpx),
+            )
             if (watched) {
                 Box(
                     Modifier.align(Alignment.TopEnd).padding(8.mpx).size(if (compact) 26.mpx else 30.mpx)
@@ -887,6 +893,28 @@ fun StagePoster(
             overflow = TextOverflow.Ellipsis,
         )
         if (line != null) Text(line, style = stageText(15, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
+ * glcn: a poster's quality marks — small dark chips with the mark in bold: gold for the HDR formats (DV, HDR10+,
+ * HDR10, HDR), white for the rest (4K, REMUX). Technical tokens, the same in every language.
+ */
+@Composable
+private fun PosterQualityBadges(badges: List<String>, compact: Boolean, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(5.mpx)) {
+        badges.forEach { b ->
+            val hdr = b.startsWith("HDR") || b == "DV"
+            Text(
+                b,
+                style = stageText(if (compact) 11.5f else 12.5f, 800),
+                color = if (hdr) Color(0xFFF2C14E) else Color.White,
+                maxLines = 1,
+                modifier = Modifier
+                    .background(Color(8, 12, 14).copy(alpha = 0.82f), RoundedCornerShape(6.mpx))
+                    .padding(horizontal = if (compact) 6.mpx else 7.mpx, vertical = 2.mpx),
+            )
+        }
     }
 }
 

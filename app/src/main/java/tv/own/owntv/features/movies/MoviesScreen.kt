@@ -649,6 +649,7 @@ fun MoviesScreen(
                                     val done = prog?.let { vm.isMovieCompleted(it) } == true
                                     StagePoster(
                                         title = movie.name,
+                                        badges = androidx.compose.runtime.remember(movie.name) { tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(movie.name) },
                                         rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
                                         width = 196.mpx, height = 294.mpx, fillWidth = true,
                                         progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
@@ -694,6 +695,7 @@ fun MoviesScreen(
                                         val done = prog?.let { vm.isMovieCompleted(it) } == true
                                         StagePoster(
                                             title = movie.name,
+                                            badges = androidx.compose.runtime.remember(movie.name) { tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(movie.name) },
                                             rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
                                             width = 196.mpx, height = 294.mpx,
                                             progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
@@ -865,6 +867,7 @@ fun MoviesScreen(
                                     val done = prog?.let { vm.isMovieCompleted(it) } == true
                                     StagePoster(
                                         title = movie.name,
+                                        badges = androidx.compose.runtime.remember(movie.name) { tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(movie.name) },
                                         rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
                                         width = posterW, height = posterW * 1.5f,
                                         compact = true,
@@ -1306,7 +1309,7 @@ internal fun movieTitleInfo(
         runtimeSecs = movie.durationSecs?.takeIf { it > 0 },
         rating = if (tmdbWins) meta?.rating?.takeIf { it > 0 } ?: movie.rating?.takeIf { it > 0 }
             else movie.rating?.takeIf { it > 0 } ?: meta?.rating?.takeIf { it > 0 },
-        tags = cinematicQualityBadges(movie.qualityRank, movie.advertisedCapabilities),
+        tags = tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.badges(movie.name).ifEmpty { cinematicQualityBadges(movie.qualityRank, movie.advertisedCapabilities) },
         plot = if (tmdbWins) meta?.overview ?: providerPlot else providerPlot ?: meta?.overview,
         cast = tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson),
         tmdbId = meta?.tmdbId,

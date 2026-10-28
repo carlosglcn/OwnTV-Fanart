@@ -709,6 +709,7 @@ private fun SeriesGrid(
                                 if (show == null) Spacer(Modifier.fillMaxWidth().height(294.mpx)) else {
                                     StagePoster(
                                         title = show.name,
+                                        badges = androidx.compose.runtime.remember(show.name) { tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(show.name) },
                                         rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
                                         width = 196.mpx, height = 294.mpx, fillWidth = true,
                                         progress = seriesProgress[show.id],
@@ -752,6 +753,7 @@ private fun SeriesGrid(
                                         val show = series[index] ?: return@items
                                         StagePoster(
                                             title = show.name,
+                                            badges = androidx.compose.runtime.remember(show.name) { tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(show.name) },
                                             rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
                                             width = 196.mpx, height = 294.mpx,
                                             progress = seriesProgress[show.id],
@@ -919,6 +921,7 @@ private fun SeriesGrid(
                                     val show = series[index] ?: return@items
                                     StagePoster(
                                         title = show.name,
+                                        badges = androidx.compose.runtime.remember(show.name) { tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(show.name) },
                                         rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
                                         width = posterW, height = posterW * 1.5f,
                                         compact = true,
@@ -2017,7 +2020,7 @@ internal fun seriesTitleInfo(
         runtimeSecs = null,
         rating = if (tmdbWins) meta?.rating?.takeIf { it > 0 } ?: series.rating?.takeIf { it > 0 }
             else series.rating?.takeIf { it > 0 } ?: meta?.rating?.takeIf { it > 0 },
-        tags = cinematicQualityBadges(series.qualityRank, series.advertisedCapabilities),
+        tags = tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.badges(series.name).ifEmpty { cinematicQualityBadges(series.qualityRank, series.advertisedCapabilities) },
         plot = if (tmdbWins) meta?.overview ?: providerPlot else providerPlot ?: meta?.overview,
         cast = tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson),
         tmdbId = meta?.tmdbId, isTv = true,
