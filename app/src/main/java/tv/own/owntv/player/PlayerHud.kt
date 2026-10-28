@@ -462,6 +462,9 @@ fun PlayerHud(
     val okPress = remember { PlayerOkPressTracker() }
     val okHoldScope = androidx.compose.runtime.rememberCoroutineScope()
     val okHoldJob = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
+    // glcn: ▼ held for the previous channel — 0 idle, 1 down, 2 the hold fired.
+    val downHold = remember { IntArray(1) }
+    val downHoldJob = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
     val dispatchPlayerShortcut: (RemoteShortcutAction) -> Unit = { action ->
         when (action) {
             RemoteShortcutAction.OPEN_SUBTITLE_CONTROLS -> { controlsVisible = true; dialog = HudDialog.SUBS }
@@ -614,6 +617,27 @@ fun PlayerHud(
                 }
                 if (ok is PlayerOkResult.Fire) doOk(ok.outcome)
                 if (ok != PlayerOkResult.Pass) return@onPreviewKeyEvent true
+            }
+            // glcn: ▼ with the controls hidden — a tap zaps down as before (on release), holding it goes back to the
+            // previous channel (and holding again returns), the "last channel" key of a set-top box.
+            if (e.key == Key.DirectionDown && canZap && isLive && !controlsVisible && onPreviousChannel != null) {
+                when (e.type) {
+                    KeyEventType.KeyDown -> if (e.nativeKeyEvent.repeatCount == 0) {
+                        downHold[0] = 1
+                        downHoldJob[0]?.cancel()
+                        downHoldJob[0] = okHoldScope.launch {
+                            kotlinx.coroutines.delay(PLAYER_OK_HOLD_MS)
+                            if (downHold[0] == 1) { downHold[0] = 2; onPreviousChannel() }
+                        }
+                    }
+                    KeyEventType.KeyUp -> {
+                        downHoldJob[0]?.cancel(); downHoldJob[0] = null
+                        if (downHold[0] == 1) zap(zapDirection(up = false, remoteOptions))
+                        downHold[0] = 0
+                    }
+                    else -> Unit
+                }
+                return@onPreviewKeyEvent true
             }
             // ---- Existing key handling (unchanged, but skip for digit KeyUp already consumed above) ----
             if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
