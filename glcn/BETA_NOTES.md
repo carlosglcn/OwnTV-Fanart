@@ -50,3 +50,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🗓️ Playlist menu (the playlist pill at the top): "Refresh guide" reads every guide again now, without re-reading the playlists — the sync pill shows it working
 - ⏩ Live TV with "Pause and rewind live TV" on: going from the preview to full screen and back on the same channel no longer jumps back to an earlier point — it carries on live
 - 🪟 Zap panel: the column on the right (picture or schedule) is on a lighter glass, so the TV shows through beside the list; groups and channels keep the full glass so they always read
+- 🌌 Ambient glow (Night theme, glass off): the slow pulse is now Aurora — three soft fields of light from your accent drifting slowly behind the screen, as if it were lit from behind; still in light mode or with animations off
