@@ -59,7 +59,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪟 Zap panel (◀): the whole panel is now see-through (the list a little less than the detail, so it still reads) and every column is narrower, so more of the picture shows
 - 🧈 Zap panel (◀): smoother up/down scrolling — the list only lays itself out again when it passes a whole row; the rest of the glide is drawn
 - 📺 Sports › Watch live: channels showing the match are ordered by how surely their guide names it (both players or teams first), then by picture quality (4K, FHD, HD, SD)
-- 🧈 Scrolling between rows (Home and every page that glides): a soft spring instead of a quick ease — it starts gently, takes about half a second, and pressing ▼ again mid-glide carries on from its speed instead of restarting
 - 🖼️ Quick guide (hold OK): the programme picture shows at once — what is on is kept once read, like the ◀ panel, instead of being read again on each row
 - 🧈 Zap panel (◀): only the row that gains or loses the cursor is redrawn, and the glide is a touch softer, so fast scrolling stays smooth
 - ☰ Player picture strip: hold OK on a card for the channel's options — the same menu as Live TV (synopsis, record, schedule, external player, favourite, rename, hide, EPG match and offset, catch-up)
@@ -67,6 +66,8 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔤 Live TV Cinematic: title and synopsis sit on a soft wash of the page colour and the synopsis is narrower, so they read over bright pictures
 - 📝 Player picture strip: the floating card now shows the programme's synopsis from the guide (the strip reads its rows without it, so it is fetched for the focused one)
 - 🖼️ Films and series with a TMDB id typed by hand: the TMDB poster replaces the provider's on every card (rows, grid, Continue watching, runway) — a hand fix means the provider's data, cover included, was wrong. It stays after re-syncs
-- 🧈 Home rows: no more jolt between rows — reaching the first row no longer starts a second, quicker scroll over the glide (and snaps the rest), ▲ no longer adds its own scroll when the row above is already partly on screen, and the next row's first cards are composed ahead instead of on the frame it appears
 - 🃏 Dock: channel cards show the channel's logo whole in the middle over its programme's picture (dimmed); opening the card brings the picture up sharp. No picture: the logo on a tint, never a cropped giant logo. Films and series keep their vertical poster, opening onto the wide picture
 - ⚡ Seasonal decorations (leaves, bats, snow…) draw in their own layer, so their animation no longer makes the whole screen redraw on every frame
+- 🧈 Scrolling between rows: a gentle ease over about half a second (soft start and landing); ▲ no longer adds its own scroll when the row above is already partly on screen. The spring tried before is gone — with ▼ held the page stopped following the focus
+- 🌐 About › languages opens Settings on the Language row, not on the first row of the page
+- ⚽ Sports: Ourense CF is named as such (ESPN calls it "Auriense"), so its matches also find their channel

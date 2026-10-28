@@ -1175,9 +1175,10 @@ fun SettingsScreen(
     if (onBack != null) {
         LaunchedEffect(Unit) {
             if (returningRowFocus != null || start?.search == true) return@LaunchedEffect
+            val target = if (start?.language == true) rowFocus.getValue(SettingsTab.LANGUAGE) else rowsFocus
             repeat(10) {
                 withFrameNanos { }
-                if (runCatching { rowsFocus.requestFocus() }.getOrDefault(false)) return@LaunchedEffect
+                if (runCatching { target.requestFocus() }.getOrDefault(false)) return@LaunchedEffect
             }
         }
     }
@@ -2283,7 +2284,8 @@ private fun CatchupSourcesHost(
 }
 
 /** More's way into this screen: a root group to open at, or the search field. */
-data class SettingsStart(val group: Int?, val search: Boolean)
+/** [language]: land on the Language row (About's "27 languages"), not the page's first row. */
+data class SettingsStart(val group: Int?, val search: Boolean, val language: Boolean = false)
 
 /** One playlist's catch-up time zone, moved out of [SettingsScreen] unchanged (its body is at the JVM method limit). */
 @Composable

@@ -1322,6 +1322,12 @@ fun OwnTVShell(
                                 settingsStart = tv.own.owntv.features.shell.components.SettingsStart(group, search)
                                 onSelectSection(MainSection.SETTINGS)
                             },
+                            onOpenLanguage = {
+                                settingsStart = tv.own.owntv.features.shell.components.SettingsStart(
+                                    tv.own.owntv.features.shell.components.SettingsGroup.APP.ordinal, false, language = true,
+                                )
+                                onSelectSection(MainSection.SETTINGS)
+                            },
                             // The same paths Home uses, so the engine ladder, resume and Continue all apply.
                             onPlayChannel = { id -> scope.launch { if (liveVm.ensurePlayingByIdAsync(id)) openFullscreen(MainSection.LIVE_TV) } },
                             onPlayMovie = { id, pos -> scope.launch { if (movieVm.playByIdAsync(id, pos) && !movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES) } },

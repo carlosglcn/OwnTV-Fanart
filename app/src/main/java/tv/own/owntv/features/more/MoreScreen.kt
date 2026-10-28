@@ -85,6 +85,8 @@ fun MoreScreen(
     /** OK on the avatar: the avatar picker, with "Your own picture". */
     onPickAvatar: () -> Unit,
     onOpenSettings: (group: Int?, search: Boolean) -> Unit,
+    /** glcn: About's languages → Settings, on the Language row. */
+    onOpenLanguage: () -> Unit = { onOpenSettings(tv.own.owntv.features.shell.components.SettingsGroup.APP.ordinal, false) },
     onPlayChannel: (Long) -> Unit,
     onPlayMovie: (Long, Long) -> Unit,
     onPlayEpisode: (seriesId: Long, episodeId: Long, positionMs: Long) -> Unit,
@@ -214,7 +216,7 @@ fun MoreScreen(
                 MoreItem.LOCAL_SYNC -> LocalSyncScreen(entry = pageTarget, modifier = Modifier.fillMaxSize())
                 MoreItem.ERROR_LOG -> ErrorLogPage(setEntry = setEntry, onCountChanged = { logVersion++ })
                 // glcn: Language lives under App, not Sound and subtitles.
-                MoreItem.ABOUT -> AboutPage(vm = vm, entry = pageTarget, onOpenLanguage = { onOpenSettings(tv.own.owntv.features.shell.components.SettingsGroup.APP.ordinal, false) })
+                MoreItem.ABOUT -> AboutPage(vm = vm, entry = pageTarget, onOpenLanguage = onOpenLanguage)
                 MoreItem.DEVELOPER -> Box(Modifier.focusRequester(pageTarget).focusGroup()) { DeveloperScreen(onBack = backToSheet) }
             }
         }
