@@ -248,7 +248,7 @@ fun SportsHubScreen(
                 item(key = "live") {
                     Column {
                         RowHeader(contentStart, stringResource(R.string.sports_live_now), null, live = true)
-                        LazyRow(
+                        tv.own.owntv.features.home.HomeLazyRow(
                             Modifier.focusRestorer().focusGroup(),
                             contentPadding = PaddingValues(start = contentStart, end = 64.mpx, top = 6.mpx, bottom = 6.mpx),
                             horizontalArrangement = Arrangement.spacedBy(18.mpx),
@@ -294,7 +294,7 @@ fun SportsHubScreen(
                         // A new filter starts the row at its first card, not where the old list was scrolled.
                         val soonState = androidx.compose.foundation.lazy.rememberLazyListState()
                         androidx.compose.runtime.LaunchedEffect(chips, leagues) { soonState.scrollToItem(0) }
-                        LazyRow(
+                        tv.own.owntv.features.home.HomeLazyRow(
                             state = soonState,
                             modifier = Modifier.focusRestorer().focusGroup(),
                             contentPadding = PaddingValues(start = contentStart, end = 64.mpx, top = 6.mpx, bottom = 6.mpx),

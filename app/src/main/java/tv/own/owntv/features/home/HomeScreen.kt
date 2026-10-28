@@ -410,7 +410,7 @@ fun HomeScreen(
     val homeCover by seasonSettings.homeCover.collectAsStateWithLifecycle(initialValue = 0)
     val homeCoverDim by seasonSettings.homeCoverDim.collectAsStateWithLifecycle(initialValue = 0)
     val homeImage by seasonSettings.homeImage.collectAsStateWithLifecycle(initialValue = "")
-    val coverArt = if (homeCover != 0) null else focusArt
+    // glcn: read only inside the backdrop's own scope (below) — read here, every card focus rebuilt all of Home.
     // The full-screen styles take over only where Home has no hero of its own.
     val backdropStyle = if (trendingItem == null && posterItem == null && !fullBleed) backdropSetting else 0
     val reminders by vm.reminderRows.collectAsStateWithLifecycle()
@@ -428,7 +428,7 @@ fun HomeScreen(
     androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize()) {
         // glcn (Panel): three live cards fill the width left beside the panel exactly.
         val panelCardWidth = if (backdropStyle == 2) ((maxWidth - PANEL_WIDTH - 48.mpx - contentStart - 40.mpx) / 3).coerceIn(220.mpx, 400.mpx) else null
-        if (trendingItem == null && posterItem == null) when (backdropStyle) {
+        if (trendingItem == null && posterItem == null) HomeReadScope { val coverArt = if (homeCover != 0) null else focusArt; when (backdropStyle) {
             // Before anything has focus, the first featured title stands in the picture.
             1 -> HomeCinemaBackdrop(if (homeCover != 0) null else (focusArt ?: state.featured.firstOrNull()?.art?.takeIf { it.isNotBlank() }), focusInfo ?: state.featured.firstOrNull()?.let(::featuredInfo), greeting = {
                 HomeGreeting(state.profileName, 0.mpx, mark = if (seasonMode > 0) tv.own.owntv.core.theme.Seasons.mark(season) else null)
@@ -440,7 +440,7 @@ fun HomeScreen(
                 val calm by androidx.compose.animation.core.animateFloatAsState(if (billboardFocused) 0f else if (scrolledAway) 0.4f else 1f, label = "backdropCalm")
                 HomeFocusBackdrop(coverArt, Modifier.graphicsLayer { alpha = calm })
             }
-        }
+        } }
         // glcn: "My picture" — the user's own image behind Home, under a calming veil.
         if (homeCover == 2 && homeImage.isNotBlank()) {
             val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -466,7 +466,11 @@ fun HomeScreen(
         }
         trendingItem?.let { TrendingBackdrop(it, folded = inRows, modifier = Modifier.align(Alignment.TopEnd)) }
         posterItem?.let { TrendingBackdrop(it, folded = true, modifier = Modifier.align(Alignment.TopEnd)) }
-        CompositionLocalProvider(LocalBringIntoViewSpec provides homeBringIntoViewSpec, LocalHomeFocusArt provides { if (it == null) billboardFocused = true else { billboardFocused = false; focusArt = it } }, LocalHomeFocusInfo provides { focusInfo = it; if (it != null) billboardFocused = false }, LocalHomeCardWidth provides panelCardWidth) {
+        // glcn: the same two callbacks for the screen's whole life. They are static locals: a new lambda on each
+        // recomposition re-ran every row and every card under them — on every focus move, the jolt between rows.
+        val onFocusArt: (String?) -> Unit = remember { { art -> if (art == null) billboardFocused = true else { billboardFocused = false; focusArt = art } } }
+        val onFocusInfo: (HomeFocusInfo?) -> Unit = remember { { info -> focusInfo = info; if (info != null) billboardFocused = false } }
+        CompositionLocalProvider(LocalBringIntoViewSpec provides homeBringIntoViewSpec, LocalHomeFocusArt provides onFocusArt, LocalHomeFocusInfo provides onFocusInfo, LocalHomeCardWidth provides panelCardWidth) {
             val homeGate = tv.own.owntv.glcn.rememberStaggerGate()
             LazyColumn(
                 modifier = Modifier
@@ -1879,3 +1883,7 @@ private fun Modifier.topFade(height: androidx.compose.ui.unit.Dp): Modifier = th
 /** glcn (Panel): rows that keep the whole width — the billboard and the Sports scores say what they are
  * themselves; "Sports now" is channel cards, and those the panel describes. */
 private val PANEL_WIDE_ROWS = setOf(HomeRow.FEATURED, HomeRow.LIVE_SPORTS)
+
+/** glcn: a recomposition scope of its own, so state read inside (the focused card's picture) redraws only this part. */
+@Composable
+private fun HomeReadScope(content: @Composable () -> Unit) { content() }

@@ -55,6 +55,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
@@ -782,11 +784,23 @@ internal fun HomeLazyRow(
     horizontalArrangement: androidx.compose.foundation.layout.Arrangement.Horizontal = androidx.compose.foundation.layout.Arrangement.Start,
     content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit,
 ) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val layoutDir = androidx.compose.ui.platform.LocalLayoutDirection.current
+    val startPx = with(density) { contentPadding.calculateStartPadding(layoutDir).toPx() }
+    val endPx = with(density) { contentPadding.calculateEndPadding(layoutDir).toPx() }
+    val gapPx = with(density) { horizontalArrangement.spacing.toPx() }
+    val spec = androidx.compose.runtime.remember(startPx, endPx, gapPx) { tv.own.owntv.glcn.WholeCardScroll(startPx, endPx, gapPx) }
+    // glcn: nothing is drawn left of the first card's place (bar its focus ring), so no sliver of the card before it.
+    val clipLeft = startPx - with(density) { 26.mpx.toPx() }
     androidx.compose.runtime.CompositionLocalProvider(
-        androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides tv.own.owntv.features.live.edgeScrollSpec,
+        androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides spec,
     ) {
         androidx.compose.foundation.lazy.LazyRow(
-            modifier = modifier,
+            modifier = modifier.then(
+                if (clipLeft > 0f) androidx.compose.ui.Modifier.drawWithContent {
+                    clipRect(left = clipLeft, top = -size.height, right = size.width * 2, bottom = size.height * 2) { this@drawWithContent.drawContent() }
+                } else androidx.compose.ui.Modifier,
+            ),
             state = state,
             contentPadding = contentPadding,
             horizontalArrangement = horizontalArrangement,

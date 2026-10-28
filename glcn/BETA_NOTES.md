@@ -40,3 +40,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🙈 TV guide: switching "Show channels without guide" to No hides them at once, without opening the guide again
 - 🔀 TV guide: turning on another playlist (from the playlist menu) links its channels to the guide by name straight away, and if it still has no guide (a playlist added after the guide was last read), the guide is read again by itself — no more "Without guide" until a manual sync
 - 🏷️ Movies and Series: quality badges read from the title — on the posters the best picture mark (DV in gold, HDR10+, HDR10, HDR, else 4K) and REMUX (also when written as [4K R] / [DV R]); on the title's page every mark (resolution, REMUX, HDR, Atmos/7.1/5.1)
+- 🧈 Home: moving from row to row no longer rebuilds every row and card on the screen — each focus move used to redraw the whole of Home (the jolts between rows); now only the backdrop picture changes
+- 🎞️ Home and Sports rows: a row always comes to rest with a whole card at its start, and nothing of the card before it peeks out on the left; the row glides by whole cards, keeping a card of room on each side of the focus
