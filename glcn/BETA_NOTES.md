@@ -34,3 +34,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏪ Player: ◀ now always opens that panel; to rewind, press OK and use ◀ on the bar, or the remote's rewind button
 - 💬 About: the OwnTV Fanart Telegram group with its QR code (t.me/owntvfanart), next to the original project's
 - ✋ Player: holding OK opens what it is set to (the zap panel by default) as soon as it has been held long enough, instead of only when it is released
+- ⚡ Zap panel: the focused channel's picture appears at once when moving — the programmes and pictures of the channels around the cursor are read and decoded ahead

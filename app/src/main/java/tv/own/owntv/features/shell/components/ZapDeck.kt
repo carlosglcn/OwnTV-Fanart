@@ -172,6 +172,18 @@ fun ZapDeck(
         }
     }
 
+    // glcn: programmes read once and kept for the deck's life; the rows around the cursor are read (and their
+    // pictures decoded) ahead, so moving shows the next channel's picture in the same frame.
+    val nowCache = remember { java.util.concurrent.ConcurrentHashMap<Long, Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>>() }
+    val cachedNow: suspend (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?> = remember(loadNow) {
+        { ch -> nowCache[ch.id] ?: loadNow(ch).also { nowCache[ch.id] = it } }
+    }
+    NeighbourArtPrefetch(list, chIdx, cachedNow)
+    if (detail == 1) LaunchedEffect(chIdx, listVersion) {
+        delay(200)
+        for (d in buildList { for (k in 1..6) { add(k); add(-k) } }) list.getOrNull(chIdx + d)?.let { runCatching { loadSchedule(it) } }
+    }
+
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     BackHandler { onDismiss() }
@@ -348,7 +360,7 @@ fun ZapDeck(
             // ---- The focused channel: its programme, or its schedule.
             val focusedChannel = list.getOrNull(chIdx)
             if (detail == 1) {
-                ZapSchedulePanel(channel = focusedChannel, loadSchedule = loadSchedule, loadNow = loadNow, joined = true)
+                ZapSchedulePanel(channel = focusedChannel, loadSchedule = loadSchedule, loadNow = cachedNow, joined = true, peek = { nowCache[it.id] })
             } else {
                 DeckDivider()
                 Column(Modifier.width(540.mpx).fillMaxHeight().padding(horizontal = 22.mpx)) {
@@ -362,9 +374,11 @@ fun ZapDeck(
                             Text(ProviderTags.parse(ch.name).name, style = stageText(22, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
-                    androidx.compose.animation.Crossfade(focusedChannel?.id, animationSpec = tween(220), label = "deckDetail") { id ->
-                        val ch = list.firstOrNull { it.id == id }
-                        if (ch != null) ZapPreviewPanel(channel = ch, loadNow = loadNow, framed = false, bareAspect = 16f / 9f, bareLines = 5)
+                    androidx.compose.animation.Crossfade(focusedChannel, animationSpec = tween(140), label = "deckDetail") { ch ->
+                        if (ch != null) ZapPreviewPanel(
+                            channel = ch, loadNow = cachedNow, framed = false, bareAspect = 16f / 9f, bareLines = 5,
+                            peek = { nowCache[it.id] },
+                        )
                     }
                 }
             }

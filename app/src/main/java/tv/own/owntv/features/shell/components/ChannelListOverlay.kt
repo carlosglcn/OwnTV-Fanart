@@ -358,12 +358,13 @@ internal fun ZapPreviewPanel(
     bareAspect: Float = 21f / 9f,
     /** glcn: synopsis lines when not framed. */
     bareLines: Int = 2,
+    /** glcn: an already-read programme for the channel, shown in the same frame instead of after a read. */
+    peek: ((ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?)? = null,
 ) {
-    var programme by remember { mutableStateOf<Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?>(null) }
+    // glcn: the previous channel's programme goes at once — a stale poster for seconds was worse than none.
+    var programme by remember(channel?.id) { mutableStateOf(channel?.let { peek?.invoke(it) }) }
     LaunchedEffect(channel?.id) {
-        // glcn: the previous channel's programme goes at once — a stale poster for seconds was worse than none.
-        programme = null
-        if (channel == null) return@LaunchedEffect
+        if (channel == null || programme != null) return@LaunchedEffect
         programme = runCatching { loadNow(channel) }.getOrNull()
     }
     val p = programme?.first ?: return
@@ -438,6 +439,8 @@ internal fun ZapSchedulePanel(
     loadNow: (suspend (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>)? = null,
     /** glcn: part of the list's own glass, not a panel of its own: a thin line on its left, no box. */
     joined: Boolean = false,
+    /** glcn: an already-read programme for the card under the schedule (see [ZapPreviewPanel]). */
+    peek: ((ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?)? = null,
 ) {
     var rows by remember { mutableStateOf<List<EpgProgrammeEntity>>(emptyList()) }
     LaunchedEffect(channel?.id) {
@@ -505,7 +508,7 @@ internal fun ZapSchedulePanel(
             }
         }
         if (joined && loadNow != null) {
-            ZapPreviewPanel(channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 46.mpx), framed = false)
+            ZapPreviewPanel(channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 46.mpx), framed = false, peek = peek)
         }
     }
 }
@@ -515,7 +518,7 @@ internal fun ZapSchedulePanel(
  * one (programme on air), so stepping to them shows the picture at once instead of after a fetch.
  */
 @Composable
-private fun NeighbourArtPrefetch(
+internal fun NeighbourArtPrefetch(
     channels: List<ChannelEntity>,
     focusedIndex: Int,
     loadNow: suspend (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>,
