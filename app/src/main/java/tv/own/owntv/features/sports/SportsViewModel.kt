@@ -118,6 +118,9 @@ class SportsViewModel(
 
     private val config = settings.activeSportsConfig.distinctUntilChanged()
 
+    /** glcn: the draw of a tennis match's tournament, by round (empty when it is not tennis or ESPN has none). */
+    suspend fun tennisDraw(match: Match): List<tv.own.owntv.core.sports.DrawRound> = repository.tennisDraw(match)
+
     private val board = repository.observe(Demand.Hub)
 
     /** The profile's live playlists (id → name), for the filter panel's Playlist choice. */

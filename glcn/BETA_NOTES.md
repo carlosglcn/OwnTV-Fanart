@@ -55,3 +55,7 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ✋ Player: holding OK opens the quick guide again (the channel list with its picture, schedule and posters views; ▶ switches view and it is remembered), while ◀ opens the zap panel; ▶ or Back closes the zap panel
 - 🖼️ TV guide with several guides: the guide that wins (the higher one in EPG sources) keeps the picture and synopsis another guide has for the same programme, so the fanart no longer disappears
 - 🖼️ TV guide: programme pictures (fanart) are stored again on every guide update — the faster guide writer from the original had been leaving them out. The next guide update rewrites the guide once to bring them back
+- 🎾 Tennis: the Standings tab now shows the full ATP/WTA ranking (it used to come up empty), and a new Draw tab lists the tournament round by round with sets and winners.
+- 🪟 Zap panel (◀): the whole panel is now see-through (the list a little less than the detail, so it still reads) and every column is narrower, so more of the picture shows
+- 🧈 Zap panel (◀): smoother up/down scrolling — the list only lays itself out again when it passes a whole row; the rest of the glide is drawn
+- 📺 Sports › Watch live: channels showing the match are ordered by how surely their guide names it (both players or teams first), then by picture quality (4K, FHD, HD, SD)

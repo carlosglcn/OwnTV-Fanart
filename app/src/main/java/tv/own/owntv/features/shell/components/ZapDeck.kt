@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -270,11 +273,13 @@ fun ZapDeck(
                 .padding(horizontal = 14.mpx, vertical = 8.mpx)
                 .fillMaxHeight(),
         ) {
-            // glcn: the groups and the channels on the full glass, so their words always read; the column on the
-            // right on a lighter one (a share of the same glass), so the picture shows through beside the list.
-            Row(Modifier.fillMaxHeight().stageGlass(StageRadii.Sheet, overContent = true).padding(vertical = 20.mpx)) {
+            // glcn: both parts on a share of the same glass, so the picture shows through everywhere: the groups and
+            // channels on a little more of it, so their words still read; the column on the right on less.
+            Box(Modifier.fillMaxHeight()) {
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = DECK_LIST_GLASS }.stageGlass(StageRadii.Sheet, overContent = true))
+            Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
             // ---- Groups (and the playlists above them).
-            Column(Modifier.width(330.mpx).fillMaxHeight().padding(start = 14.mpx, end = 8.mpx)) {
+            Column(Modifier.width(280.mpx).fillMaxHeight().padding(start = 14.mpx, end = 8.mpx)) {
                 if (chips.isNotEmpty()) {
                     DeckChips(chips, activeChip, if (column == -1) chipIdx else -1)
                     Spacer(Modifier.height(10.mpx))
@@ -318,7 +323,7 @@ fun ZapDeck(
             }
             DeckDivider()
             // ---- Channels of the shown group.
-            Column(Modifier.width(660.mpx).fillMaxHeight().padding(horizontal = 10.mpx)) {
+            Column(Modifier.width(570.mpx).fillMaxHeight().padding(horizontal = 10.mpx)) {
                 val groupName = entries.firstOrNull { it.item.key == shownKey }?.label.orEmpty()
                 Row(
                     Modifier.padding(start = 14.mpx, end = 14.mpx, bottom = 12.mpx),
@@ -359,15 +364,16 @@ fun ZapDeck(
                 )
             }
             }
+            }
             // ---- The focused channel: its programme, or its schedule.
             val focusedChannel = list.getOrNull(chIdx)
             Box(Modifier.fillMaxHeight().padding(start = 8.mpx)) {
-            Box(Modifier.matchParentSize().graphicsLayer { alpha = 0.55f }.stageGlass(StageRadii.Sheet, overContent = true))
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = DECK_DETAIL_GLASS }.stageGlass(StageRadii.Sheet, overContent = true))
             Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
             if (detail == 1) {
-                ZapSchedulePanel(channel = focusedChannel, loadSchedule = loadSchedule, loadNow = cachedNow, joined = true, peek = { nowCache[it.id] })
+                ZapSchedulePanel(channel = focusedChannel, loadSchedule = loadSchedule, modifier = Modifier.width(480.mpx), loadNow = cachedNow, joined = true, peek = { nowCache[it.id] })
             } else {
-                Column(Modifier.width(540.mpx).fillMaxHeight().padding(horizontal = 22.mpx)) {
+                Column(Modifier.width(480.mpx).fillMaxHeight().padding(horizontal = 22.mpx)) {
                     focusedChannel?.let { ch ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -411,7 +417,7 @@ private fun GlideColumn(
     val h = with(density) { rowHeight.toPx() }
     val accent = stageAccent.accent
     val fill by animateColorAsState(if (active) accent else accent.copy(alpha = 0.20f), tween(180), label = "deckFill")
-    BoxWithConstraints(modifier) {
+    BoxWithConstraints(modifier.clipToBounds()) {
         val viewH = constraints.maxHeight.toFloat()
         val maxScroll = (count * h - viewH).coerceAtLeast(0f)
         val target = ((index + 0.5f) * h - viewH / 2f).coerceIn(0f, maxScroll)
@@ -426,12 +432,12 @@ private fun GlideColumn(
         LaunchedEffect(resetKey, index) {
             glide.animateTo(index * h, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 700f))
         }
-        LaunchedEffect(listState) {
-            snapshotFlow { scroll.value }.collect { v ->
-                val first = (v / h).toInt().coerceAtLeast(0)
-                runCatching { listState.scrollToItem(first, (v - first * h).toInt()) }
-            }
-        }
+        // glcn: the list is laid out again only when the glide passes a whole row (it is placed on that row);
+        // the part of a row in between is a translation of the drawn layer, read in drawing. Placing the list
+        // on every frame (as before) measured it again sixty times a second, and in whole pixels, which is
+        // what made the scroll judder, worst of all on slower boxes.
+        val firstRow by remember(resetKey) { derivedStateOf { (scroll.value / h).toInt().coerceAtLeast(0) } }
+        LaunchedEffect(listState, firstRow) { runCatching { listState.scrollToItem(firstRow, 0) } }
         if (count > 0) {
             Box(
                 Modifier
@@ -442,10 +448,24 @@ private fun GlideColumn(
                     .background(fill),
             )
         }
-        LazyColumn(state = listState, userScrollEnabled = false, modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            userScrollEnabled = false,
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight(Alignment.Top, unbounded = true)
+                .height(with(density) { (viewH + h).toDp() })
+                .graphicsLayer {
+                    // Where the list really is (after its last layout), so a new placement and its offset land together.
+                    val placed = listState.firstVisibleItemIndex * h + listState.firstVisibleItemScrollOffset
+                    translationY = placed - scroll.value
+                },
+        ) {
             items(count) { i ->
                 Box(Modifier.fillMaxWidth().height(rowHeight)) { row(i, i == index) }
             }
+            // Room below the last row, so the list can always be placed on the row the glide is in.
+            item { Spacer(Modifier.fillMaxWidth().height(rowHeight)) }
         }
     }
 }
@@ -538,3 +558,7 @@ private fun DeckDivider() {
             .background(line),
     )
 }
+
+/** glcn: how much of the stage glass the panel draws: the list keeps enough to read; the detail lets more picture through. */
+private const val DECK_LIST_GLASS = 0.74f
+private const val DECK_DETAIL_GLASS = 0.5f
