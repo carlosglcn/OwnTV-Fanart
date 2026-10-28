@@ -806,6 +806,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsParts.kt	⚽
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsParts.kt	⚾
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsParts.kt	⛳
+1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsParts.kt	🎱
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsParts.kt	🎾
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsParts.kt	🏀
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsParts.kt	🏈
