@@ -80,6 +80,8 @@ fun ZapPosterOverlay(
     modifier: Modifier = Modifier,
     /** glcn: hold OK on a card → the channel's options. */
     onLongPress: ((ChannelEntity) -> Unit)? = null,
+    /** glcn: a programme's synopsis (the strip's rows are read without it, to stay light). */
+    loadDescription: (suspend (Long) -> String?)? = null,
 ) {
     val start = remember(channels, currentId) { channels.indexOfFirst { it.id == currentId }.coerceAtLeast(0) }
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (start - 1).coerceAtLeast(0))
@@ -214,6 +216,7 @@ fun ZapPosterOverlay(
             programmes = programmes,
             loadSchedule = loadSchedule,
             cache = scheduleCache,
+            loadDescription = loadDescription,
             modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.mpx, bottom = if (showNext) 530.mpx else 392.mpx).staggerIn(260, fromRight = true),
         )
     }
@@ -239,6 +242,7 @@ private fun ZapPosterInfo(
     programmes: Map<Long, EpgProgrammeEntity?>,
     loadSchedule: suspend (ChannelEntity) -> List<EpgProgrammeEntity>,
     cache: MutableMap<Long, List<EpgProgrammeEntity>>,
+    loadDescription: (suspend (Long) -> String?)? = null,
     modifier: Modifier = Modifier,
 ) {
     // From the cache at once; a channel not read yet is read now, with nothing waited for.
@@ -264,6 +268,11 @@ private fun ZapPosterInfo(
         if (!cur.description.isNullOrBlank() && cur.year != null) return@produceState
         kotlinx.coroutines.delay(120)
         value = runCatching { resolver.detailsFor(cur.title, cur.categories) }.getOrNull()
+    }
+    // glcn: the guide's own synopsis, read for the programme in the card (the rows above carry none).
+    val synopsis by androidx.compose.runtime.produceState<String?>(null, cur.id) {
+        value = cur.description?.takeIf { it.isNotBlank() } ?: card?.description?.takeIf { it.isNotBlank() }
+        if (value == null && loadDescription != null && cur.id > 0) value = runCatching { loadDescription(cur.id) }.getOrNull()?.takeIf { it.isNotBlank() }
     }
     val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
     val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
@@ -304,10 +313,7 @@ private fun ZapPosterInfo(
                 )
             ).filter { it.isNotBlank() }.joinToString(" · ")
         if (facts.isNotEmpty()) Text(facts, style = stageText(15, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        (cur.description ?: card?.description)?.takeIf { it.isNotBlank() }
-            ?.let { it }
-            .let { it ?: lent?.overview }
-            ?.let { DriftingSynopsis(it) }
+        (synopsis ?: lent?.overview)?.let { DriftingSynopsis(it) }
         if (next.isNotEmpty()) {
             Text(
                 stringResource(R.string.content_live_next), style = stageText(15, 700), color = accent,

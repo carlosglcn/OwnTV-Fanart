@@ -65,3 +65,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ☰ Player picture strip: hold OK on a card for the channel's options — the same menu as Live TV (synopsis, record, schedule, external player, favourite, rename, hide, EPG match and offset, catch-up)
 - 🎬 Live TV Cinematic with the menu on top: the hero and rows move up into the room the bar frees, so "You may like" is whole again
 - 🔤 Live TV Cinematic: title and synopsis sit on a soft wash of the page colour and the synopsis is narrower, so they read over bright pictures
+- 📝 Player picture strip: the floating card now shows the programme's synopsis from the guide (the strip reads its rows without it, so it is fetched for the focused one)

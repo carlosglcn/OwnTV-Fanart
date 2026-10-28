@@ -2238,6 +2238,7 @@ fun OwnTVShell(
                             onDismiss = { showChannelList = false },
                             modifier = Modifier.fillMaxSize(),
                             onLongPress = { zapOptionsChannel = it },
+                            loadDescription = { liveVm.programmeDescription(it) },
                         ) else tv.own.owntv.features.shell.components.ZapDeck(
                             railItems = browserRailItems,
                             railCounts = browserRailCounts,
@@ -2289,6 +2290,7 @@ fun OwnTVShell(
                             onDismiss = { showQuickGuide = false },
                             modifier = Modifier.fillMaxSize(),
                             onLongPress = { zapOptionsChannel = it },
+                            loadDescription = { liveVm.programmeDescription(it) },
                         ) else tv.own.owntv.features.shell.components.ChannelListOverlay(
                             channels = zapChannels,
                             currentId = previewChannel?.id,
