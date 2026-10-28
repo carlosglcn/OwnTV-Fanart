@@ -183,7 +183,6 @@
 1	technical	app/src/main/java/tv/own/owntv/features/more/MorePages.kt	%d:%02d
 1	technical	app/src/main/java/tv/own/owntv/features/more/MorePages.kt	.fileprovider
 1	technical	app/src/main/java/tv/own/owntv/features/more/MorePages.kt	dMMM
-1	url	app/src/main/java/tv/own/owntv/features/more/MorePages.kt	https://
 1	technical	app/src/main/java/tv/own/owntv/features/more/MoreScreen.kt	DEV
 1	technical	app/src/main/java/tv/own/owntv/features/more/MoreScreen.kt	Developer
 1	technical	app/src/main/java/tv/own/owntv/features/more/MoreScreen.kt	▶
