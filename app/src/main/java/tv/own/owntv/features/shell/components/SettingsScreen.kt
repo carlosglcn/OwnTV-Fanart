@@ -329,6 +329,7 @@ fun SettingsScreen(
     val safeArea by settingsVm.safeArea.collectAsStateWithLifecycle()
     val autoSkipIntro by settingsVm.autoSkipIntro.collectAsStateWithLifecycle()
     val habitLearning by settingsVm.habitLearning.collectAsStateWithLifecycle()
+    val frameMeter by settingsVm.frameMeter.collectAsStateWithLifecycle()
     val osdSeconds by settingsVm.osdSeconds.collectAsStateWithLifecycle()
     val homeCover by settingsVm.homeCover.collectAsStateWithLifecycle()
     val homeImagePath by settingsVm.homeImage.collectAsStateWithLifecycle()
@@ -633,6 +634,14 @@ fun SettingsScreen(
             chip = stringResource(if (habitLearning) R.string.common_on else R.string.common_off),
             chipTone = if (habitLearning) TileTone.PRIMARY else TileTone.SECONDARY,
             onClick = { settingsVm.toggleHabitLearning() },
+        ),
+        RootRow(
+            "glcn_fps", TileTone.SECONDARY, OwnTVIcon.INFO,
+            title = stringResource(R.string.glcn_fps_title),
+            desc = stringResource(R.string.glcn_fps_desc),
+            chip = stringResource(if (frameMeter) R.string.common_on else R.string.common_off),
+            chipTone = if (frameMeter) TileTone.PRIMARY else TileTone.SECONDARY,
+            onClick = { settingsVm.toggleFrameMeter() },
         ),
         RootRow(
             "glcn_dialogue", TileTone.SECONDARY, OwnTVIcon.VOLUME_HIGH,

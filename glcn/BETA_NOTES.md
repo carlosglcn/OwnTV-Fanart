@@ -14,3 +14,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🕘 Home: Recent channels shows the channel you just watched as soon as you leave the player
 - 🤾 Sports: six more handball competitions with calendar, results and table — EHF Champions League and EHF European League (live score from the EHF, tables by group), German Handball-Bundesliga, French StarLigue, Danish Herreligaen and Hungarian K&H Liga. Turn them on in Settings › Sports
 - 🎾 Sports › Tennis: the ATP and WTA rankings in full (150 players) with photo, country, points and how far each moved this week; far more players now have a photo everywhere (about 8 in 10 instead of 3 in 10)
+- 📈 Settings › Fluency meter: a small box in the corner shows, for each screen, the frames per second, the share of slow frames, the worst frame and the memory in use — to measure smoothness before and after each change
+- ⚡ Movies and Series: when focus rests on a title, the backdrops of the titles around it are fetched and decoded ahead, so the next step shows its picture at once
+- 🧠 Pictures: the in-memory picture cache grows with the box (twice as large on 3 GB boxes such as the SHIELD; unchanged in light mode), so going back to a row shows its pictures without decoding them again

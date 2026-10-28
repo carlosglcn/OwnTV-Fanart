@@ -438,6 +438,19 @@ fun MoviesScreen(
     val cinematicSheetPct by settingsVm.cinematicSheetWidth(PanelSection.MOVIES).collectAsStateWithLifecycle()
     val selectedMeta = selectedMovieMeta?.takeIf { it.movieId == selectedMovie?.id }?.cache
     val titleInfo = selectedMovie?.let { movieTitleInfo(it, selectedMeta, metadataMode.tmdbWins || it.id in overridden) }
+    // glcn: once focus rests on a title, the backdrops of the titles around it are fetched and decoded ahead, so
+    // the next step shows its picture at once (details from the local cache only; TMDB is never asked here).
+    val prefetchContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(selectedMovie?.id) {
+        val id = selectedMovie?.id ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(180)
+        val items = movies.itemSnapshotList.items
+        val at = items.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: return@LaunchedEffect
+        val reach = tv.own.owntv.glcn.ArtPrefetch.reach
+        val around = ((1..reach).flatMap { listOf(at + it, at - it) }).mapNotNull { items.getOrNull(it) }
+        val metas = vm.cachedMetaFor(around)
+        tv.own.owntv.glcn.ArtPrefetch.backdrops(prefetchContext, around.map { movieTitleInfo(it, metas[it.id], metadataMode.tmdbWins || it.id in overridden).backdropUrl })
+    }
     LaunchedEffect(selectedMovie?.id, titleInfo?.backdropUrl) {
         val id = selectedMovie?.id ?: return@LaunchedEffect
         titleInfo?.backdropUrl?.takeIf { it.isNotBlank() }?.let { runwayBackdrops[id] = it }

@@ -743,6 +743,17 @@ class SeriesViewModel(
     fun setSearchQuery(query: String) { _search.value = query }
     fun onSeriesFocused(s: SeriesEntity) { _selectedSeries.value = s }
 
+    /** glcn: as [tv.own.owntv.features.movies.MovieViewModel.cachedMetaFor], for shows. */
+    suspend fun cachedMetaFor(shows: List<SeriesEntity>): Map<Long, tv.own.owntv.core.database.entity.MetadataCacheEntity> =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            shows.mapNotNull { s ->
+                (resolvedMeta[s.id] ?: runCatching { metadata.cachedSeries(s) }.getOrNull()?.also {
+                    if (resolvedMeta.size > 500) resolvedMeta.clear()
+                    resolvedMeta[s.id] = it
+                })?.let { s.id to it }
+            }.toMap()
+        }
+
     /**
      * Manual "Refetch TMDB details": clear this series' cached match/details (incl. a 7-day
      * negative cache) and re-trigger [metadata.resolveSeries] for the focused series via the series meta tick.

@@ -571,6 +571,20 @@ class MovieViewModel(
     fun setSearchQuery(query: String) { _search.value = query }
     fun onMovieFocused(movie: MovieEntity) { _selectedMovie.value = movie }
 
+    /**
+     * glcn: the TMDB details already in the local cache for [movies] (the titles around the focused one), kept so
+     * moving to one of them shows its details at once. Never asks TMDB: a database read only.
+     */
+    suspend fun cachedMetaFor(movies: List<MovieEntity>): Map<Long, tv.own.owntv.core.database.entity.MetadataCacheEntity> =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            movies.mapNotNull { m ->
+                (resolvedMeta[m.id] ?: runCatching { metadata.cachedMovie(m) }.getOrNull()?.also {
+                    if (resolvedMeta.size > 500) resolvedMeta.clear()
+                    resolvedMeta[m.id] = it
+                })?.let { m.id to it }
+            }.toMap()
+        }
+
     /** Search's "Go to movie": the titles scroll to [reveal] and focus it, then call [revealDone]. */
     private val _reveal = MutableStateFlow<tv.own.owntv.features.search.Reveal?>(null)
     val reveal: StateFlow<tv.own.owntv.features.search.Reveal?> = _reveal.asStateFlow()

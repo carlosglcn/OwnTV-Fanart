@@ -1027,6 +1027,8 @@ class SettingsViewModel(
     fun cycleOsdSeconds() { viewModelScope.launch { settings.setOsdSeconds(tv.own.owntv.core.settings.OsdRules.next(osdSeconds.value)) } }
     val habitLearning: StateFlow<Boolean> = settings.habitLearning.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
     fun toggleHabitLearning() { viewModelScope.launch { settings.setHabitLearning(!habitLearning.value) } }
+    val frameMeter: StateFlow<Boolean> = settings.frameMeter.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    fun toggleFrameMeter() { viewModelScope.launch { settings.setFrameMeter(!frameMeter.value) } }
 
     // glcn: Kodi-style extras.
     val dialogueBoost: StateFlow<Boolean> = settings.dialogueBoost.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)

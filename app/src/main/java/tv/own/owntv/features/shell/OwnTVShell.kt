@@ -27,6 +27,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -185,6 +186,7 @@ fun OwnTVShell(
     // Docked mini-player size (% of screen width) + position, configurable in Settings and from the
     // mini-player's own controls. Read straight from settings so both entry points stay in sync.
     val settingsRepo = koinInject<tv.own.owntv.core.settings.SettingsRepository>()
+    val frameMeterOn by settingsRepo.frameMeter.collectAsStateWithLifecycle(initialValue = false)
     val remoteShortcutsEnabled by settingsRepo.chNavEnabled.collectAsStateWithLifecycle(initialValue = true)
     val clockColors by settingsRepo.clockColors.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.ClockColors())
     val remoteShortcutBindings by settingsRepo.remoteShortcutBindings.collectAsStateWithLifecycle(
@@ -1153,6 +1155,12 @@ fun OwnTVShell(
                 }
             },
     ) {
+      // glcn: the fluency meter (Settings), above everything, in the top-right corner.
+      if (frameMeterOn) {
+          val meterScreen = stringResource(selectedSection.labelRes) +
+              if (playerMode == PlayerMode.FULLSCREEN) " · " + stringResource(R.string.glcn_fps_player) else ""
+          tv.own.owntv.glcn.FrameMeter(meterScreen, Modifier.align(Alignment.TopEnd).padding(top = 12.mpx, end = 24.mpx).then(Modifier.zIndex(1000f)))
+      }
       // Browse UI — hidden while the player is fullscreen (stays visible behind the docked mini-player).
       if (playerMode != PlayerMode.FULLSCREEN) {
         Column(

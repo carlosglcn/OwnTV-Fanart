@@ -183,7 +183,9 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             .build()
         return ImageLoader.Builder(context)
             .components { add(OkHttpNetworkFetcherFactory(callFactory = { imageHttpClient })) }
-            .memoryCache { MemoryCache.Builder().maxSizePercent(context, if (tv.own.owntv.glcn.LowRam.on) 0.06 else 0.10).build() }
+            // glcn: the picture cache grows with the box — a 3 GB box (the SHIELD) keeps twice the fanart and backdrops in
+            // memory, so going back to a row or a title shows its pictures at once instead of decoding them again.
+            .memoryCache { MemoryCache.Builder().maxSizePercent(context, tv.own.owntv.glcn.ArtPrefetch.memoryShare(context)).build() }
             // Explicit bounded disk cache: posters/logos survive across sessions instead of
             // re-downloading, capped so a 220k-item catalog can't eat the box's storage.
             .diskCache {
