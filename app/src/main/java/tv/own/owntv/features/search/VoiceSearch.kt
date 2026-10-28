@@ -59,4 +59,8 @@ object VoiceTrigger {
     val pending = androidx.compose.runtime.mutableIntStateOf(0)
     fun request() { pending.intValue++ }
     fun consume(): Boolean = (pending.intValue > 0).also { if (it) pending.intValue = 0 }
+
+    /** glcn: words typed on the paired phone — Search opens with them as the query, without listening. */
+    val typed = androidx.compose.runtime.mutableStateOf<String?>(null)
+    fun type(text: String) { typed.value = text }
 }

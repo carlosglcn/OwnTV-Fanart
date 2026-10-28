@@ -1100,7 +1100,7 @@ fun OwnTVShell(
                 // glcn: a remote's microphone button (the Search key on most remotes but the SHIELD's): Search, listening.
                 if (e.key == Key.Search || e.key == Key.VoiceAssist) {
                     if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) {
-                        tv.own.owntv.features.search.VoiceTrigger.request()
+                        if (tv.own.owntv.features.search.VoiceTrigger.typed.value == null) tv.own.owntv.features.search.VoiceTrigger.request()
                         if (playerMode == PlayerMode.FULLSCREEN) dockPlayer()
                         onSelectSection(MainSection.SEARCH)
                     }

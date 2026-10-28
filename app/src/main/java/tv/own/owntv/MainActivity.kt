@@ -226,7 +226,13 @@ open class MainActivity : ComponentActivity() {
         // glcn: what a paired phone asks this TV to play arrives as a link, like a launcher tile's.
         lifecycleScope.launch {
             get<tv.own.owntv.core.sync.local.LocalSyncManager>().commands.collect { raw ->
-                LauncherDeepLink.parse(android.net.Uri.parse(raw))?.let { pendingDeepLink = it }
+                // glcn: the phone as a remote — its keys and typed words act at once; anything else is something to play.
+                when (val link = LauncherDeepLink.parse(android.net.Uri.parse(raw))) {
+                    is LauncherDeepLink.RemoteKey -> tv.own.owntv.glcn.RemoteInput.key(this@MainActivity, link.name)
+                    is LauncherDeepLink.RemoteText -> tv.own.owntv.glcn.RemoteInput.text(this@MainActivity, link.text)
+                    null -> Unit
+                    else -> pendingDeepLink = link
+                }
             }
         }
         val dbError = probeDatabase()

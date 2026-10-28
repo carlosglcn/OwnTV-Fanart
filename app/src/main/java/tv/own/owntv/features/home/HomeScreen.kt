@@ -484,6 +484,8 @@ fun HomeScreen(
         val onFocusInfo: (HomeFocusInfo?) -> Unit = remember { { info -> focusInfo = info; if (info != null) billboardFocused = false } }
         CompositionLocalProvider(LocalBringIntoViewSpec provides homeBringIntoViewSpec, LocalHomeFocusArt provides onFocusArt, LocalHomeFocusInfo provides onFocusInfo, LocalHomeCardWidth provides panelCardWidth) {
             val homeGate = tv.own.owntv.glcn.rememberStaggerGate()
+            // glcn: one focus box for the whole page — it glides from card to card, along a row and between rows.
+            tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxSize(), stiffness = HOME_GLIDE_STIFFNESS) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -863,6 +865,7 @@ fun HomeScreen(
                     }
                     }
                 }
+            }
             }
         }
         if (backdropStyle == 2) androidx.compose.animation.AnimatedVisibility(
@@ -1903,3 +1906,6 @@ private val PANEL_WIDE_ROWS = setOf(HomeRow.FEATURED, HomeRow.LIVE_SPORTS)
 /** glcn: a recomposition scope of its own, so state read inside (the focused card's picture) redraws only this part. */
 @Composable
 private fun HomeReadScope(content: @Composable () -> Unit) { content() }
+
+/** glcn: Home's one focus box glides slower than a menu's — soft, never a jump. */
+private const val HOME_GLIDE_STIFFNESS = 300f

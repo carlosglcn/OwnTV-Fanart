@@ -108,3 +108,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏷️ Home Cinema: films and series show their TMDB title logo, genres and leading cast.
 - 🎨 Home Cinema: the foot of the screen takes a touch of the picture's own colour.
 - 🎞️ Home Cinema: after 3 calm seconds the trailer plays silently behind; OK opens it with sound (light mode off, animations on).
+- 🎯 Home: one focus box glides from card to card — along a row and between rows — slower and softer, no jumps.
+- 📱 Phone as remote: the paired phone's arrows, OK, Back, play/pause, channel and volume act on the TV; words typed on the phone open Search with them.

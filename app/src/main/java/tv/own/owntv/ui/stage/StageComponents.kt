@@ -945,17 +945,26 @@ fun StageStill(
     val focused by interaction.collectIsFocusedAsState()
     val accent = stageAccent
     val r = StageRadii.Poster
+    // glcn: under a sliding focus box (Home's rows) the still does not lift: the box glides to it and wraps its art.
+    val slide = tv.own.owntv.glcn.LocalSlideFocus.current
+    val region = remember { tv.own.owntv.glcn.SlideRegion() }
     Column(
         modifier
             .width(width)
-            .then(if (lift) Modifier.stageLift(focused, StageFocus.POSTER).stageTilt(focused) else Modifier)
+            .then(
+                if (slide != null) Modifier.slideFocusReport(slide, StageFocus.POSTER, r, accent, region)
+                else if (lift) Modifier.stageLift(focused, StageFocus.POSTER).stageTilt(focused) else Modifier,
+            )
             .stageClickable(interaction, true, onClick, onLongClick),
     ) {
         Box(
             Modifier
                 .size(width, height)
+                .then(if (slide != null) Modifier.slideRegion(region) else Modifier)
                 .then(
-                    if (focused) {
+                    if (focused && slide != null) {
+                        Modifier
+                    } else if (focused) {
                         Modifier.stageFocusDecor(StageFocus.POSTER, r, accent, LocalStagePalette.current)
                     } else {
                         // `.mine.light .pc .img`: a soft green-grey shadow instead of black.

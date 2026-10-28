@@ -40,6 +40,11 @@ internal fun SearchFieldRow(
     focusDown: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
+    // glcn: words typed on the paired phone become the query.
+    val typed = VoiceTrigger.typed.value
+    androidx.compose.runtime.LaunchedEffect(typed) {
+        if (typed != null) { onQueryChange(typed); VoiceTrigger.typed.value = null }
+    }
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
         StageSearchField(
             query = query,
