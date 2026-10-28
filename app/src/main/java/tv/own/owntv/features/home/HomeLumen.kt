@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
@@ -81,6 +83,8 @@ private class LumenItem(
     val crests: List<tv.own.owntv.core.sports.model.Team?>? = null,
     /** A channel's programme on air: its synopsis is not in the guide slice, so it is read when the card is focused. */
     val programmeId: Long? = null,
+    /** glcn: a channel's logo — whole and centred on the closed card (over its programme's picture, dimmed and softened). */
+    val logo: String? = null,
     val onClick: () -> Unit,
 )
 
@@ -129,8 +133,9 @@ fun LumenHome(
                 line = if (p != null) listOf(timeFmt.format(java.util.Date(p.startMs)) + " – " + timeFmt.format(java.util.Date(p.stopMs)), ch.name).joinToString("  ·  ") else ch.name,
                 plot = p?.description,
                 programmeId = p?.id,
-                art = p?.imageUrl?.takeIf { it.isNotBlank() } ?: ch.displayLogoUrl, backdrop = p?.imageUrl?.takeIf { it.isNotBlank() },
+                art = p?.imageUrl?.takeIf { it.isNotBlank() }, backdrop = p?.imageUrl?.takeIf { it.isNotBlank() },
                 progress = p?.let { (now - it.startMs).toFloat() / total!! }, landscape = true,
+                logo = ch.displayLogoUrl?.takeIf { it.isNotBlank() } ?: "",
                 onClick = { onPlayChannel(ch.id, all) },
             )
         }
@@ -337,6 +342,28 @@ fun LumenHome(
                                     horizontalArrangement = Arrangement.spacedBy(20.mpx, Alignment.CenterHorizontally),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) { item.crests.forEach { tv.own.owntv.features.sports.Crest(it, 84) } }
+                                else if (item.logo != null) {
+                                    // glcn: a channel. Closed: its programme's picture softened and dimmed, the channel's logo whole in
+                                    // the middle (no picture: the logo on a tint). Opening: the picture comes up sharp as the logo fades.
+                                    val pic = item.art
+                                    if (pic != null) AsyncImage(
+                                        model = pic, contentDescription = null, contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize().then(if (tv.own.owntv.glcn.LowRam.on) Modifier else Modifier.blur(10.mpx)),
+                                    ) else Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.16f)))
+                                    if (pic != null) Box(Modifier.fillMaxSize().graphicsLayer { alpha = 1f - wideness(i, pos.value) }.background(Color.Black.copy(alpha = 0.45f)))
+                                    if (near && pic != null) AsyncImage(
+                                        model = pic, contentDescription = null, contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = wideness(i, pos.value) },
+                                    )
+                                    if (item.logo.isNotEmpty()) AsyncImage(
+                                        model = item.logo, contentDescription = null, contentScale = ContentScale.Fit,
+                                        modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.62f).fillMaxHeight(0.42f)
+                                            .graphicsLayer { alpha = if (pic == null) 1f else 1f - wideness(i, pos.value) },
+                                    ) else if (pic == null) Text(
+                                        item.title.take(2).uppercase(), style = stageText(40, 800), color = StageColors.Text,
+                                        modifier = Modifier.align(Alignment.Center),
+                                    )
+                                }
                                 else {
                                     if (item.art != null && wideArt == null && !item.landscape) {
                                         Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.14f)))
