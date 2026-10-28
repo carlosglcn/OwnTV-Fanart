@@ -240,6 +240,8 @@
 2	empty	app/src/main/java/tv/own/owntv/features/search/SearchViewModel.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/search/SearchViewModel.kt	m${item.id}
 1	technical	app/src/main/java/tv/own/owntv/features/search/SearchViewModel.kt	s${item.id}
+1	technical	app/src/main/java/tv/own/owntv/features/search/VoiceSearch.kt	\0
+1	regex	app/src/main/java/tv/own/owntv/features/search/VoiceSearch.kt	\\s+
 1	empty	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	,
 2	preference-key	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	delete_subtitles
@@ -300,8 +302,10 @@
 1	technical	app/src/main/java/tv/own/owntv/features/settings/DeveloperScreen.kt	Developer
 1	technical	app/src/main/java/tv/own/owntv/features/settings/DeveloperScreen.kt	Forces a fresh TMDB trending download for every playlist, ignoring the multi-day fetch timer.
 1	technical	app/src/main/java/tv/own/owntv/features/settings/DeveloperScreen.kt	Rebuild Now Trending
-6	empty	app/src/main/java/tv/own/owntv/features/settings/EpgSourcesScreen.kt	\0
-2	technical	app/src/main/java/tv/own/owntv/features/settings/EpgSourcesScreen.kt	▶
+5	empty	app/src/main/java/tv/own/owntv/features/settings/EpgSourceForm.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/features/settings/EpgSourceForm.kt	▶
+1	technical	app/src/main/java/tv/own/owntv/features/settings/EpgSourceRow.kt	▶
+1	empty	app/src/main/java/tv/own/owntv/features/settings/EpgSourcesScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/settings/EpgSourcesViewModel.kt	add
 1	technical	app/src/main/java/tv/own/owntv/features/settings/EpgSourcesViewModel.kt	manual_resync
 1	technical	app/src/main/java/tv/own/owntv/features/settings/EpgSourcesViewModel.kt	update
@@ -406,6 +410,10 @@
 1	locale	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	zh-tw
 2	log	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesViewModel.kt	OpenSubtitles
 1	log	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesViewModel.kt	user-info refresh failed: ${it.message}
+1	technical	app/src/main/java/tv/own/owntv/features/settings/PlayerButtonsSettingsScreen.kt	pb_hold_ok
+1	technical	app/src/main/java/tv/own/owntv/features/settings/PlayerButtonsSettingsScreen.kt	pb_number_keys
+1	technical	app/src/main/java/tv/own/owntv/features/settings/PlayerButtonsSettingsScreen.kt	pb_short_ok
+1	technical	app/src/main/java/tv/own/owntv/features/settings/PlayerButtonsSettingsScreen.kt	pb_swap_ch
 1	technical	app/src/main/java/tv/own/owntv/features/settings/RecordingSettingsScreen.kt	rec_post_roll
 1	technical	app/src/main/java/tv/own/owntv/features/settings/RecordingSettingsScreen.kt	rec_pre_roll
 1	technical	app/src/main/java/tv/own/owntv/features/settings/RecordingSettingsScreen.kt	rec_reserve
@@ -426,6 +434,10 @@
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	live_layout
 2	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	live_opens_in
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	navigation
+1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	pb_hold_ok
+1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	pb_number_keys
+1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	pb_short_ok
+1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	pb_swap_ch
 2	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	popup_size
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	quick_autoplay
 2	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	quick_channel_numbers
@@ -610,6 +622,7 @@
 1	performance	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	shell-composed
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	srt
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	ssa
+1	log	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	startup-settled
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	vtt
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	webvtt
 2	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	·
@@ -617,6 +630,8 @@
 8	technical	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	\0
 1	log	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	OwnTVHome
 1	log	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	activeProfileChanged profile=$pid androidTvHomeEnabled=${settings.androidTvHomeEnabled.first()}
+1	technical	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	manual_resync
+1	log	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	resync enqueue sourceId=${source.id} from=playlist_menu
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/AvatarPickerDialog.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ChannelListOverlay.kt	CH±
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/ChannelListOverlay.kt	·
@@ -923,6 +938,8 @@
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR: video ${fps}fps matches no mode -> display default
 1	compiler	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	DEPRECATION
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	FrameRate
+1	protocol	app/src/main/java/tv/own/owntv/player/MediaSpecDisplayText.kt	exoplayer
+1	protocol	app/src/main/java/tv/own/owntv/player/MediaSpecDisplayText.kt	mpv
 1	empty	app/src/main/java/tv/own/owntv/player/MiniPlayer.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/MiniPlayer.kt	miniControls
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	EEEdMMM
@@ -930,8 +947,6 @@
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	$k: $v
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	/ $it
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	?
-1	protocol	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	exoplayer
-1	protocol	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	mpv
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	position: $reportPosition${reportDuration?.let { " / $it" }.orEmpty()}
 3	empty	app/src/main/java/tv/own/owntv/player/PlayerHudChrome.kt	\0
 2	technical	app/src/main/java/tv/own/owntv/player/PlayerHudChrome.kt	?
@@ -1374,8 +1389,6 @@
 1	technical	app/src/main/java/tv/own/owntv/ui/components/OwnTVAvatar.kt	\0
 1	empty	app/src/main/java/tv/own/owntv/ui/components/SetTmdbNameDialog.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/ui/components/SetTmdbNameDialog.kt	TMDB
-1	performance	app/src/main/java/tv/own/owntv/ui/components/StateViews.kt	spinner
-1	performance	app/src/main/java/tv/own/owntv/ui/components/StateViews.kt	spinnerAngle
 1	empty	app/src/main/java/tv/own/owntv/ui/components/StorageBrowser.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/ui/components/TimeWheel.kt	▲
 1	technical	app/src/main/java/tv/own/owntv/ui/components/TimeWheel.kt	▼

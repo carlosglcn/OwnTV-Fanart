@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
@@ -1032,6 +1033,15 @@ class LiveViewModel(
                 _selected.value = saved
             }
         }
+        // Another playlist or profile can leave the selection on a folder the new playlists do not have:
+        // its channels stayed listed under a wrong name. Such a folder falls back to All channels.
+        viewModelScope.launch {
+            ctx.filter { it.profileId >= 0 }.map { it.sourceIds }.distinctUntilChanged().drop(1).collect { ids ->
+                suspend fun gone(key: LiveKey?) = key is LiveKey.Folder && categoryDao.getById(key.id)?.sourceId !in ids
+                if (gone(previousKey)) previousKey = LiveKey.All
+                if (lockedKey == null && gone(_selected.value)) _selected.value = LiveKey.All
+            }
+        }
         // Persist the last focused/interacted channel (debounced), and restore it once at startup so opening
         // Live TV lands focus back on it. Restore leaves the preview disarmed (no auto-preview on launch).
         // The restore is gated by the "Remember last item — Live TV" setting so users who want each category
@@ -1093,6 +1103,13 @@ class LiveViewModel(
     }
 
     fun revealDone() { _reveal.value = null }
+
+    /** The rail entry [channel] lives in: its own category, or All channels when that category is not in the rail. */
+    suspend fun railKeyOf(channel: ChannelEntity): LiveKey {
+        val folder = channel.categoryId?.let { LiveKey.Folder(it) } ?: return LiveKey.All
+        val inRail = kotlinx.coroutines.withTimeoutOrNull(2_000) { railItems.first { list -> list.any { it.key == folder } } } != null
+        return if (inRail) folder else LiveKey.All
+    }
 
     // The in-pane preview only plays once the user has actually focused a channel — so restoring the last
     // focused channel on startup positions focus & the details pane WITHOUT auto-previewing on launch (#6).

@@ -128,6 +128,7 @@ Problems with **this version** go to the Fanart group; the original group is for
 ### 🧭 Browse
 - **Home** with Continue Watching and **Now Trending** (TMDB rankings matched to what your provider can actually play)
 - Live TV · Movies · Series · Downloads · Guide, with per-profile row order, Favorites, History and search
+  (voice search where the TV has a speech recogniser)
 - **Multiple playlists** at once, with provider labels everywhere they could be confused
 - Rename, hide, reorder and combine categories; bulk rename rules
 - **TMDB** posters, plots, cast and trailers in 40 languages — scales to ~50k channels / ~168k movies
@@ -149,7 +150,8 @@ Problems with **this version** go to the Fanart group; the original group is for
 
 ### 👥 Profiles & Downloads
 - Multiple profiles with their own favourites, history and resume points, PIN locks and a Kids mode
-- Per-profile startup: Home, last channel, Favorites, or one chosen channel
+- Per-profile startup: Home, last channel, the last channel in the TV Guide or Live TV, Favorites, or one
+  chosen channel
 - Offline movies and episodes with pause, resume, retry and a storage bar
 
 ### 🎨 Look & robustness
@@ -157,7 +159,9 @@ Problems with **this version** go to the Fanart group; the original group is for
   Picture or Plain background
 - **Dark and Light themes** (or follow the TV) across the whole app, the player included
 - Font sizing for the interface and for popups, independently
-- **Remote Shortcuts** — map spare colour, number, channel and media keys to 26 actions
+- **Remote Shortcuts** — map spare colour, number, channel and media keys to 26 actions; **Player buttons**
+  choose what OK and a held OK do in the player, swap channel up/down, and turn number keys off
+- **Menu labels** — the section names beside the menu icons: off, when focused, or always
 - **26 interface languages**, RTL-aware, chosen before anything else on a fresh install
 - **Backup & Restore** to a single `.own` file, optionally encrypted, locally or over Wi-Fi
 - **Set up from another device** — a new box copies everything from the OwnTV device you already

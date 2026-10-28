@@ -7,6 +7,30 @@
 > Issue numbers that are part of a title are fine; explanatory parentheticals are not. The detail —
 > what, why, files and verification — belongs in the commit message, never here.
 
+## Unreleased
+
+### ✨ New features
+- **⚡ Search: the poster backdrop is blurred once, and blurred on Android 11 and older too** (community PR #268 by @sarmadsoomro)
+- **🖼️ More posters kept in memory, so Home scrolls cleaner** (community PR #267 by @sarmadsoomro)
+- **📺 Smoother TV Guide scrolling** (community PR #266 by @sarmadsoomro)
+- **✨ Clean channel names: a Names option on each playlist** (community PR #283 by @Kevsosmooth)
+- **📋 EPG Sources: Move up / Move down set the guide priority** (community PR #277 by @Kevsosmooth)
+- **🎯 Guide offers Auto-match when an added guide matches no channel** (community PR #316 by @arch-fan)
+- **⏪ Rewind mark in the TV Guide; Resync now in the playlist menu** (community PR #305 by @sarmadsoomro)
+- **🎛️ Player buttons: choose what OK does, swap channel up/down, number keys on or off** (community PR #287 by @Kevsosmooth)
+- **🚀 Start on the last channel in the TV Guide or Live TV** (community PR #294 by @Kevsosmooth)
+- **🏷️ Menu labels: off, when focused or always** (community PR #280 by @Kevsosmooth)
+- **🎤 Voice search on the Search screen** (community PR #281 by @Kevsosmooth)
+
+### 🐛 Fixes
+- **Home: the last card of a row stays on screen when it has focus** (community PR #314 by @arch-fan)
+- **Setup: the choice cards line up when one has a shorter line** (community PR #315 by @arch-fan)
+- **The update popup's What's new scrolls with Up and Down** (community PR #291 by @camchis)
+- **Loading spinners use far less of the TV's processor; imports finish sooner**
+- **TV Guide: the now-line reaches the bottom** (community PR #303 by @spotandjake)
+- **Settings no longer shows "0 playlists" while loading**
+- **Live TV no longer keeps showing a category from the playlist you just switched away from**
+
 ## v5.2.1 — 2026-10-21
 
 ### ✨ New features

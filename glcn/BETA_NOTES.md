@@ -21,3 +21,12 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌍 Sports: follow the usual competitions of a country with one press — from the empty Sports page ("Follow the usual for Spain", or another country) or in Settings › Sports › Leagues of a country. It only adds; nothing you follow is removed
 - 🚴 Sports › Cycling: the UCI WorldTour — every one-day race and every stage of the stage races, with route, distance, profile, start time and the podium once it is over; the general classification (with time gaps) of the stage race on now or the last one run. Spanish names for the big races so the guide finds their broadcasts (La Vuelta, Tour de Francia, Giro de Italia…)
 - 🎱 Sports › Snooker: the World Snooker Tour — the matches of the events on now and coming up (round, best of, time), results, and the world ranking. Country presets now include cycling and snooker where they are followed
+- 🔄 Merged the latest from the original OwnTV (thanks, ahXN00 and its contributors):
+  - 🗓️ TV guide: smoother scrolling, the now-line runs to the bottom, the Rewind mark on catch-up channels, Auto-match when a new guide matches no channel, and guide priority with Move up / Move down in EPG sources
+  - 🧹 Playlists: a Names option to clean channel names, Resync now in the playlist menu, and more retries when a list download fails
+  - 🎙️ Search: voice search through the remote's microphone (the original's button; saying "pon" or "busca" still works)
+  - ▶️ Player buttons in Remote shortcuts: what a short and a held OK do with the controls hidden, and flipping CH±/▲▼. A held OK still opens the channel list by default
+  - 🚀 Startup: open the guide or Live TV on the last channel
+  - 🏷️ Navigation: a Menu labels choice (off, when focused, always)
+  - 🏠 Home: the last card of a row stays on screen when it has focus; the update popup's What's new scrolls with the remote
+  - 🗃️ Faster playlist and guide writes (fewer database indexes)

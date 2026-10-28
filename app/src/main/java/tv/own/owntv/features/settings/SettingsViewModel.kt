@@ -177,8 +177,13 @@ class SettingsViewModel(
         data class Failed(val failure: FriendlySyncFailure) : ImportState
     }
 
-    val sources: StateFlow<List<SourceEntity>> = settings.activeProfileId
+    /** The profile's playlists; null until the first read, so a count never shows 0 while loading. */
+    val loadedSources: StateFlow<List<SourceEntity>?> = settings.activeProfileId
         .flatMapLatest { pid -> if (pid < 0) flowOf(emptyList()) else sourceRepository.observeSources(pid) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val sources: StateFlow<List<SourceEntity>> = loadedSources
+        .map { it.orEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**

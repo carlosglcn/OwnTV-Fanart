@@ -126,7 +126,7 @@ and shows its page beside the list; **Right** enters that page; **Back** returns
 | **CH+ / CH−** | the channel, history or all-categories list over the player, Multiview's channel picker | Page by 10 items, like any browse list. **Long-press** jumps to first/last |
 | **Last channel** key | full-screen live | Back to the channel you watched before (press again to flip back). Also the clock button on the player bar |
 | **Up / Down** | full-screen live, controls hidden | Same as CH+/CH− |
-| **0–9** | full-screen live | Type a channel number to tune. OK submits, Back cancels |
+| **0–9** | full-screen live | Type a channel number to tune. OK submits, Back cancels. A playlist that carries no channel numbers (no `tvg-chno`) is numbered 1, 2, 3… in its file order |
 | **CH+ / CH−** | any browse list | Page by 10 items. **Long-press** jumps to first/last. In a category list it only moves the highlight — **OK** opens the category |
 | **Back** | category list with a search typed | Clears the search and jumps to the search box. The search stays while you watch a channel |
 | **Left** | anywhere in a screen, nothing further left | Back to the rail |
@@ -135,6 +135,15 @@ and shows its page beside the list; **Right** enters that page; **Back** returns
 
 **Want different keys?** **Settings → Layout → Remote shortcuts** maps spare colour, number, channel
 and media keys to 26 actions — **Previous channel** among them. D-pad, Back, OK, volume, Home and power stay protected.
+
+**Player buttons**, on the same page, change four player keys. Every default is the behaviour above:
+
+| Option | Choices | Default |
+|---|---|---|
+| **Hold OK in the player** | Off, Channel list, Guide, Programme info (live channels only) | Off |
+| **OK when the controls are hidden** | Show controls, Channel list, Guide (live channels only; films keep Show controls) | Show controls |
+| **Swap channel up/down** | CH+ and Up go to the previous channel, CH− and Down to the next | Off |
+| **Number keys tune channels** | Off stops 0–9 from typing a channel number in the player | On |
 
 ---
 
@@ -173,12 +182,22 @@ defaults to Live now, Movies/Series later, because Stalker VOD has no bulk endpo
 **Resync now** adds and updates. **Resync and remove missing titles** also drops what the provider
 has stopped listing. Neither touches your favourites, history, resume points or manual order.
 
+### ✨ Clean channel names
+**Where:** Settings → Sources & guide → Playlists → the playlist → **Names**
+Turn on **Clean channel names** and that playlist's channels lose a country prefix (`UK|`, `[US]`,
+`DE:`) and a quality tag at the end (`HD`, `FHD`, `4K`, `HEVC`) everywhere they appear: "UK| News
+One HD" shows as "News One". **Also remove** takes your own words, separated by `;`, removed from
+the start or end of every name. Saving refreshes the playlist. Guide matching still uses the
+provider's names, channels you renamed in Customize keep your name, and favourites and history stay
+put. Switch it off and the next refresh brings the original names back.
+
 ### 🗂️ Several playlists at once
 **Where:** the playlist pill in the top-right
 Pick **All playlists** or just one — it applies everywhere at once and survives a restart. A
 **DEFAULT** badge in Settings marks your default. When two are active, a small provider label appears
 beside categories and items so you always know which is which, and each row carries the playlist's
-short mark (for example **GOLD**).
+short mark (for example **GOLD**). With two or more playlists the pill's menu also has **Resync now**,
+for the playlist chosen (or all of them).
 
 ### 📶 Prefer HLS (Xtream only)
 **Where:** Add/Edit playlist
@@ -280,6 +299,7 @@ then the grid, opened at now with the now-line about a third of the way across.
 - **Order:** Provider, A–Z, Catch-up first or Favourites first. **Category** uses Live TV's own list.
   Its **Show** group: **Channels without guide**, and **Video preview** — off, the top shows the
   channel's logo instead of playing it (also off whenever Live TV's preview is off).
+- **Rewind mark:** a channel with catch-up shows the rewind icon after its name, as in the channel lists.
 - **The preview stays put while you browse:** moving through the rows does not change it. The first
   **OK** on a row brings that channel into the preview; **OK** again on it watches it full screen.
 
@@ -295,6 +315,13 @@ The guide is opt-in. After importing a playlist you are offered a one-tap sync. 
 feeds here — **Fill from playlist** takes the URL your playlist already carries — and set each feed's
 User-Agent and refresh interval. The refresh interval can also be **every N days**, the same choice a
 playlist offers.
+
+When two feeds list the same channel, the one higher on the list is used. Open a feed and choose
+**Move up** or **Move down** to set the order; a lower feed still fills any hours the higher one
+leaves empty.
+
+If a feed syncs but none of its channels match your playlist's, the feed says so; open the TV
+Guide, which then offers **Auto-match EPG** to pair them by name.
 
 > **Playlist has no channel logos?** Turn on **Use this guide's channel logos** on the feed. Logos
 > then come from the XMLTV guide instead; channels the feed has no logo for keep the playlist's one.
@@ -558,6 +585,10 @@ switch channel rows between **Cards** and **On now** (an inline mini-guide).
 - **Floating** — rests as a small capsule over the content, opens when you move Left, and hides
   itself after **Hide after** (2, 4 or 8 s); Left at the edge calls it back. **Docked** — always on
   screen; the content makes room (recommended).
+- **Menu labels** — the one switch for names beside the icons: **Off**, **When focused** (the names
+  slide out over the content while the rail has focus) or **Always** (Docked only; the content makes
+  room). It sets Size and Widen on focus for you, and shows what they already say. Floating offers
+  Off and When focused, because a floating rail hides while you browse.
 - **Size** — **Compact** (icons), **Normal** (names), **Wide** (names and counts, profile line),
   **Extra wide** (also a detail line: last channel, the film to resume, downloads in progress…).
 - **Length** — **Fit to items**, or **Full height** with the profile at the bottom.
@@ -582,6 +613,9 @@ results; a film or show shows its poster panel.
 **TV Shows** lists programmes from the stored guide whose title matches, on now or within the next 12
 hours, with the channel and time; **OK** goes to that channel. With
 the box empty: **Jump to**, your recent searches, and Continue watching.
+**Voice search:** the 🎤 button right of the box listens through your TV's speech recogniser and
+searches what you say. It only appears where the device has one (most Google TV and Android TV
+devices do; many Fire TV and generic boxes don't).
 
 ### ⭐ Favourites
 **Where:** ⋯ More → Favourites
@@ -630,7 +664,9 @@ creates a profile, and in Settings → **Profile** when you edit one.
 
 ### 🚀 Where a profile opens
 **Where:** Settings → App → **App startup**
-**Home**, **Last channel**, **Live Favorites**, or one chosen channel picked from a searchable list.
+**Home**, **Last channel** (full screen), **Last channel · TV Guide** or **Last channel · Live TV**
+(that screen opens on the channel's category with the channel focused and in the preview),
+**Live Favorites**, or one chosen channel picked from a searchable list.
 
 ---
 

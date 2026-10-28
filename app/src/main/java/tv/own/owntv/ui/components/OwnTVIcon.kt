@@ -53,7 +53,7 @@ enum class OwnTVIcon {
     // glcn: "Sports now" — a football.
     // The Sports Hub's trophy (rail, Settings → Sports).
     SPORTS,
-    // glcn: the search field's voice button.
+    // Voice search, beside the search field.
     MIC,
 }
 

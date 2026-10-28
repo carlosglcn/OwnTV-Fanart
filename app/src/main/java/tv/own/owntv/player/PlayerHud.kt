@@ -52,6 +52,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import tv.own.owntv.R
 import tv.own.owntv.core.i18n.HorizontalDirection
 import tv.own.owntv.core.i18n.horizontalDirection
+import tv.own.owntv.core.settings.PlayerRemoteOptions
 import tv.own.owntv.core.settings.RemoteShortcutAction
 import tv.own.owntv.core.settings.RemoteShortcutPress
 import tv.own.owntv.ui.components.LocalRemoteShortcuts
@@ -66,35 +67,6 @@ import tv.own.owntv.ui.theme.gradientWash
  * sibling files: [PlayerHudChrome] (top bar, OSD cards, transport, bottom bar), [PlayerHudControls]
  * (buttons, seek bars, shared formatters) and [PlayerHudDialogs] (every dialog the HUD opens).
  */
-
-@Composable
-internal fun MediaSpec.displayText(): String {
-    val decoderText = decoder?.let {
-        when (it) {
-            is DecoderSpec.Hardware -> buildList {
-                add(stringResource(R.string.player_decoder_hardware))
-                if (it.direct) add(stringResource(R.string.player_decoder_direct))
-            }.joinToString(stringResource(R.string.player_metadata_separator))
-            is DecoderSpec.Software -> buildList {
-                add(stringResource(R.string.player_decoder_software))
-                if (it.gpu) add(stringResource(R.string.player_decoder_gpu))
-            }.joinToString(stringResource(R.string.player_metadata_separator))
-            is DecoderSpec.Named -> buildList {
-                add(
-                    when (it.value.lowercase()) {
-                        "exoplayer" -> stringResource(R.string.settings_player_exoplayer)
-                        "mpv" -> stringResource(R.string.settings_player_mpv)
-                        else -> it.value
-                    },
-                )
-                if (it.hardware) add(stringResource(R.string.player_decoder_hardware))
-                if (it.direct) add(stringResource(R.string.player_decoder_direct))
-            }.joinToString(stringResource(R.string.player_metadata_separator))
-        }
-    }
-    return listOfNotNull(codec, resolution, decoderText)
-        .joinToString(stringResource(R.string.player_metadata_separator))
-}
 
 @Composable
 private fun PlaybackFailure.displayText(): String {
@@ -188,6 +160,7 @@ fun PlayerHud(
     onTuneToNumber: (suspend (Int) -> DirectTuneResult)? = null,
     // Channel identity key for direct tune: changing this cancels any in-flight submission.
     directTuneContextKey: Long = 0L,
+    remoteOptions: PlayerRemoteOptions = PlayerRemoteOptions(), // Settings › Remote shortcuts › Player buttons
     // Live "compatibility mode": pin this channel to the mpv engine (fixes UHD artifacts / undecodable
     // streams ExoPlayer can't handle). null = not a live channel; true = currently pinned to mpv.
     compatMode: Boolean? = null,
@@ -483,7 +456,7 @@ fun PlayerHud(
     var shortcutPressedAt by remember { mutableStateOf(0L) }
     // glcn: a held shortcut acts once it has been held long enough, not only on release.
     var shortcutLongFired by remember { mutableStateOf(false) }
-    var okHeldOpened by remember { mutableStateOf(false) }
+    val okPress = remember { PlayerOkPressTracker() }
     val dispatchPlayerShortcut: (RemoteShortcutAction) -> Unit = { action ->
         when (action) {
             RemoteShortcutAction.OPEN_SUBTITLE_CONTROLS -> { controlsVisible = true; dialog = HudDialog.SUBS }
@@ -559,8 +532,9 @@ fun PlayerHud(
             // before configurable browse shortcuts so an OSD button, an engine handoff, or a paging binding
             // cannot temporarily claim it. KeyUp is swallowed too, keeping the complete press inside the HUD.
             if (canZap && (e.key == Key.ChannelUp || e.key == Key.ChannelDown)) {
+                // glcn: one channel per press — a held key used to run through the list.
                 if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) {
-                    zap(if (e.key == Key.ChannelUp) 1 else -1)
+                    zap(zapDirection(up = e.key == Key.ChannelUp, remoteOptions))
                 }
                 return@onPreviewKeyEvent true
             }
@@ -610,26 +584,18 @@ fun PlayerHud(
                     }
                 }
             }
-            // ---- glcn: hold OK on a live channel (controls hidden) → the channel list over the video.
-            // A short press still brings the controls up, on release. Only OK, Back and the arrows reach
-            // the box from a TV's own remote over HDMI-CEC, so this is the one gesture always available.
-            if (isLive && onOpenChannelList != null && !controlsVisible && dialog == HudDialog.NONE &&
-                (e.key == Key.DirectionCenter || e.key == Key.Enter)
-            ) {
-                val native = e.nativeKeyEvent
-                if (e.type == KeyEventType.KeyDown) {
-                    if (native.repeatCount == 0) { okHeldOpened = false; return@onPreviewKeyEvent true }
-                    if (!okHeldOpened && (native.isLongPress || native.repeatCount >= 3)) {
-                        okHeldOpened = true
-                        onOpenChannelList()
-                    }
-                    return@onPreviewKeyEvent true
+            // Player buttons: OK with the controls hidden. No plan (the default) leaves OK to the code below.
+            if (isPlayerOkKey(e.key) && e.type != KeyEventType.Unknown) {
+                val okPlan = if (controlsVisible || showNextCard || inert || dialog != HudDialog.NONE || digitsActive || onToastOk != null) null
+                    else playerOkPlan(remoteOptions, PlayerOkTargets(channelList = onOpenChannelList != null, guide = isLive, programmeInfo = isLive))
+                val ok = okPress.onKey(e.type == KeyEventType.KeyDown, e.nativeKeyEvent.repeatCount, e.nativeKeyEvent.eventTime, okPlan)
+                if (ok is PlayerOkResult.Fire) when (ok.outcome) {
+                    PlayerOkOutcome.SHOW_CONTROLS -> controlsVisible = true
+                    PlayerOkOutcome.CHANNEL_LIST -> onOpenChannelList?.invoke()
+                    PlayerOkOutcome.GUIDE -> dispatchPlayerShortcut(RemoteShortcutAction.OPEN_GUIDE)
+                    PlayerOkOutcome.PROGRAMME_INFO -> channelFlash++
                 }
-                if (e.type == KeyEventType.KeyUp) {
-                    if (!okHeldOpened) controlsVisible = true
-                    okHeldOpened = false
-                    return@onPreviewKeyEvent true
-                }
+                if (ok != PlayerOkResult.Pass) return@onPreviewKeyEvent true
             }
             // ---- Existing key handling (unchanged, but skip for digit KeyUp already consumed above) ----
             if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -640,16 +606,16 @@ fun PlayerHud(
                 // this is the only way to change channels on remotes without CH keys (e.g. Fire TV).
                 //
                 // Direction is channel-number order, not list-position order: "up" (CH+, D-pad Up) is
-                // always the NEXT channel — further down an ascending list, delta +1 — matching the
-                // de facto TV convention (Live Channels, YouTube TV, Pluto TV). All of these keys move
-                // the same way; there is deliberately no split between CH+ and D-pad Up. Wrapping is
+                // the NEXT channel — further down an ascending list, delta +1 — matching the
+                // de facto TV convention (Live Channels, YouTube TV, Pluto TV). CH and D-pad keys move together:
+                // Swap channel up/down flips both (see zapDirection), never the media keys. Wrapping is
                 // intended: CH-/Down from the first channel lands on the last, and vice versa.
                 // glcn: a held key changes one channel, not one per key repeat (it ran through the list).
                 canZap && e.key == Key.MediaNext -> { if (e.nativeKeyEvent.repeatCount == 0) zap(1); true }
                 canZap && e.key == Key.MediaPrevious -> { if (e.nativeKeyEvent.repeatCount == 0) zap(-1); true }
-                canZap && isLive && !controlsVisible && e.key == Key.DirectionUp -> { if (e.nativeKeyEvent.repeatCount == 0) zap(1); true }
-                canZap && isLive && !controlsVisible && e.key == Key.DirectionDown -> { if (e.nativeKeyEvent.repeatCount == 0) zap(-1); true }
-                // N6 — Left/Right with the controls hidden: reveal them on the timeline and take the first
+                canZap && isLive && !controlsVisible && e.key == Key.DirectionUp -> { if (e.nativeKeyEvent.repeatCount == 0) zap(zapDirection(up = true, remoteOptions)); true }
+                canZap && isLive && !controlsVisible && e.key == Key.DirectionDown -> { if (e.nativeKeyEvent.repeatCount == 0) zap(zapDirection(up = false, remoteOptions)); true }
+                // Left/Right with the controls hidden: reveal them on the timeline and take the first
                 // step, so the jump is seen and holding the key goes on scrubbing the bar itself. Physical
                 // keys, like the bars: left is back in time in every locale. A film always does this; a
                 // live channel only with its archive and the setting on — otherwise the lists below.

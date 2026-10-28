@@ -160,11 +160,12 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
     /**
      * App-wide Coil loader that fetches images through the app's OkHttpClient — so posters/logos get
      * the same player-style User-Agent and connection pooling our IPTV requests use (some panels reject
-     * default UAs). Crossfade smooths the grid as images stream in. The memory cache is capped well
-     * below Coil's default ~25% — on a 4K TV every megabyte belongs to the video pipeline, not to
-     * channel-logo bitmaps.
+     * default UAs). Crossfade (120 ms, off on low-RAM) smooths the grid as images stream in. The memory
+     * cache stays well below Coil's default ~25% — on a 4K TV every megabyte belongs to the video
+     * pipeline, not to channel-logo bitmaps: 15% of the heap up to 64 MB, and 10% on low-RAM devices.
      */
     override fun newImageLoader(context: PlatformContext): ImageLoader {
+        val lowRam = context.getSystemService(android.app.ActivityManager::class.java)?.isLowRamDevice == true
         // The shared client deliberately disables connection retries so catalog/EPG sync owns its retry
         // policy. That setting is harmful for CDN images, though: hosts such as image.tmdb.org publish
         // both IPv6 and IPv4, and some Android TV boxes resolve IPv6 first even when their IPv6 route is
@@ -197,7 +198,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             // Opaque poster art doesn't need an alpha channel; RGB_565 halves bitmap memory
             // under the deliberately small memory cap.
             .allowRgb565(true)
-            .crossfade(!tv.own.owntv.glcn.LowRam.on)
+            .crossfade(if (tv.own.owntv.glcn.LowRam.on || lowRam) 0 else 120)
             .build()
     }
 
@@ -231,4 +232,10 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // and used to leave mpv on a trimmed cache for the rest of the session.
         runCatching { GlobalContext.getOrNull()?.getOrNull<tv.own.owntv.player.PlaybackEngines>()?.onTrimMemory(level) }
     }
+}
+
+/** 15% of the heap, capped at 64 MB; low-RAM devices keep 10%. */
+internal fun imageMemoryCacheBytes(heapBytes: Long, lowRam: Boolean): Long {
+    if (lowRam) return (heapBytes * 0.10).toLong()
+    return minOf((heapBytes * 0.15).toLong(), 64L * 1024 * 1024)
 }

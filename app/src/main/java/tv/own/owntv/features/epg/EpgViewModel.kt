@@ -1041,8 +1041,14 @@ class EpgViewModel(
         }
 
         val hasEpg = epgIds.isNotEmpty()
+        // A guide that synced its channels but no programmes: none of its channel ids are the playlist's,
+        // so the sync kept nothing. That is a mismatch Auto-match can fix (its candidates are these same
+        // guide channels), not an empty guide; a first sync still running has nothing stored yet either,
+        // and the sync pill already says so.
+        val unmatchedGuide = stored == 0 && hasEpg && epgActivity.active.value.isEmpty() &&
+            epgDao.guideChannelNames(1).isNotEmpty()
         val message = when {
-            stored == 0 -> null // handled by the "No EPG added" prompt (hasEpgSources=false)
+            stored == 0 && !unmatchedGuide -> null // handled by the "No EPG added" prompt (hasEpgSources=false)
             channels.isEmpty() && q.isNotBlank() -> EpgMessage.NoChannelsForQuery(q)
             channels.isEmpty() -> EpgMessage.MismatchedIds
             else -> null

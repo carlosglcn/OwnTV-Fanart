@@ -1,6 +1,5 @@
 package tv.own.owntv.features.shell
 
-import tv.own.owntv.ui.stage.stageGlass
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -139,6 +138,8 @@ fun OwnTVShell(
     onExitApp: () -> Unit,
     onSwitchProfile: () -> Unit,
     modifier: Modifier = Modifier,
+    // Called once the profile's start-up choice has been applied; the splash waits for it.
+    onStartupSettled: () -> Unit = {},
 ) {
     val noSourceLabel = stringResource(R.string.shell_no_source)
     val subtitleLoadFailed = stringResource(R.string.content_subtitle_load_failed)
@@ -321,6 +322,7 @@ fun OwnTVShell(
     val afrPrompted by settingsRepo.autoFrameRatePrompted.collectAsStateWithLifecycle(initialValue = true)
     // Direct tune (type a channel number on the remote). Settings › Live TV › Channel numbers; default on.
     val directTuneEnabled by settingsRepo.directTune.collectAsStateWithLifecycle(initialValue = true)
+    val playerRemoteOptions by settingsRepo.playerRemoteOptions.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.PlayerRemoteOptions())
     // "Prefer EPG logos": start following the setting once, here rather than in Application.onCreate —
     // the store queries nothing at all while the toggle is off, so cold start stays free of EPG reads.
     val epgDaoForLogos = koinInject<tv.own.owntv.core.database.dao.EpgDao>()
@@ -491,9 +493,9 @@ fun OwnTVShell(
     val resumeSettings = koinInject<tv.own.owntv.core.settings.SettingsRepository>()
     val startupChannelUnavailable = androidx.compose.ui.res.stringResource(tv.own.owntv.R.string.settings_startup_channel_unavailable)
     LaunchedEffect(Unit) {
-        if (playerMode != PlayerMode.NONE) return@LaunchedEffect
+        if (playerMode != PlayerMode.NONE) { onStartupSettled(); return@LaunchedEffect }
         val pid = resumeSettings.activeProfileId.first()
-        when (resumeSettings.startupMode(pid).first()) {
+        when (val startupMode = resumeSettings.startupMode(pid).first()) {
             tv.own.owntv.core.settings.StartupMode.LAST_CHANNEL -> {
                 val ch = liveVm.lastWatchedLiveChannel()
                 if (ch != null && playerMode == PlayerMode.NONE) {
@@ -502,6 +504,25 @@ fun OwnTVShell(
                     // provider context instead of permanently arming a one-item list that disables CH+/CH-.
                     liveVm.watchFullscreen(ch, emptyList())
                     playerMode = PlayerMode.FULLSCREEN
+                }
+            }
+            // The TV Guide or Live TV on the last channel's category, the channel focused and in the preview,
+            // as TiviMate opens. Live TV's list scrolls to it (revealChannel); a guide focuses its row on load.
+            tv.own.owntv.core.settings.StartupMode.LAST_CHANNEL_GUIDE,
+            tv.own.owntv.core.settings.StartupMode.LAST_CHANNEL_LIVE -> {
+                val ch = liveVm.lastWatchedLiveChannel()?.takeIf { liveVm.isVisibleToActiveProfile(it) }
+                val toGuide = startupMode == tv.own.owntv.core.settings.StartupMode.LAST_CHANNEL_GUIDE
+                if (ch != null && playerMode == PlayerMode.NONE) {
+                    if (!toGuide && resumeSettings.liveView.first() == tv.own.owntv.core.settings.SettingsRepository.LiveView.LIST) {
+                        liveVm.revealChannel(ch)
+                    } else {
+                        val key = liveVm.railKeyOf(ch)
+                        if (toGuide) epgVm.setCategoryFilter(key) else liveVm.select(key)
+                        epgVm.noteChannelTuned(ch)
+                        liveVm.onChannelFocused(ch)
+                        restoreFocus = true
+                    }
+                    onSelectSection(if (toGuide) MainSection.EPG else MainSection.LIVE_TV)
                 }
             }
             // Open straight to Live TV on the Favorites folder, with focus landing inside the channel list
@@ -546,6 +567,8 @@ fun OwnTVShell(
             }
             tv.own.owntv.core.settings.StartupMode.HOME -> Unit
         }
+        tv.own.owntv.core.util.Perf.stamp("startup-settled")
+        onStartupSettled()
     }
 
     // Movies/Series/Live load on first open via their reactive Paging flows — their indexed first page is
@@ -1149,8 +1172,8 @@ fun OwnTVShell(
                 if (e.type != KeyEventType.KeyDown || playerMode != PlayerMode.MINI) return@onKeyEvent false
                 when (e.key) {
                     Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> { dockedEngine.togglePlayPause(); true }
-                    Key.ChannelUp -> dockedZap?.let { it(1); true } ?: false
-                    Key.ChannelDown -> dockedZap?.let { it(-1); true } ?: false
+                    Key.ChannelUp -> dockedZap?.let { it(tv.own.owntv.player.zapDirection(up = true, playerRemoteOptions)); true } ?: false
+                    Key.ChannelDown -> dockedZap?.let { it(tv.own.owntv.player.zapDirection(up = false, playerRemoteOptions)); true } ?: false
                     else -> false
                 }
             },
@@ -1931,8 +1954,9 @@ fun OwnTVShell(
                     liveLeftRightRewinds = liveLeftRightRewinds,
                     onControlsVisible = { hudControlsVisible = it },
                     timeshiftOffsetSec = if (isTunedLive) { { timeshiftOffsetState.value } } else null,
-                    onTuneToNumber = if (directTuneEnabled && isTunedLive && isLiveStream && !timeshifted && previewChannel != null) liveVm::tuneByNumber else null,
+                    onTuneToNumber = if (tv.own.owntv.player.numberKeysTune(directTuneEnabled, playerRemoteOptions) && isTunedLive && isLiveStream && !timeshifted && previewChannel != null) liveVm::tuneByNumber else null,
                     directTuneContextKey = previewChannel?.id ?: 0L,
+                    remoteOptions = playerRemoteOptions,
                     // Show the ACTUAL running engine (mpv when pinned OR auto-fallen-back), not just the pin —
                     // otherwise an auto-fallback to mpv still read "EXO". true = on mpv (pill shows MPV, teal).
                     compatMode = if (isTunedLive) !liveOnExo else null,
@@ -2287,6 +2311,7 @@ fun OwnTVShell(
                 pillLabel = playlistLabel,
                 pillBounds = playlistPillBounds,
                 onSelect = onSelectPlaylist,
+                onResync = { shellVm.resync(playlists.filter { it.id == activePlaylistId }.ifEmpty { playlists }) },
                 onDismiss = { showPlaylistPicker = false },
             )
         }
@@ -2375,24 +2400,6 @@ private const val GOAL_TOAST_MS = 8_000L
 
 /** Long enough to read "Auto-matched 12 channels. 40 channels need review." from the sofa. */
 private const val EPG_MATCH_TOAST_MS = 6_000L
-
-/** A thin bar shown above the browse UI when the device loses internet. */
-@Composable
-private fun OfflineBanner() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .stageGlass(0.dp, overContent = true)
-            .padding(horizontal = 24.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            stringResource(R.string.content_offline_banner),
-            style = tv.own.owntv.ui.theme.stageText(25, 600),
-            color = tv.own.owntv.ui.theme.StageColors.Text,
-        ) }
-    }
 
 /** The line under a rail item at Size = Extra wide; real data only, so most items can have none. */
 @Composable

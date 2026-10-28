@@ -81,6 +81,9 @@ open class MainActivity : ComponentActivity() {
          * strictly less work than before.
          */
         private const val SPLASH_TIMEOUT_MS = 2_000L
+
+        /** How much longer, once the profile is known, the splash waits for the start-up screen. */
+        private const val STARTUP_SETTLE_TIMEOUT_MS = 1_500L
     }
 
     /**
@@ -92,6 +95,15 @@ open class MainActivity : ComponentActivity() {
      */
     @Volatile
     private var contentReady = false
+
+    /**
+     * Whether the shell has opened where the profile's start-up choice says (the TV Guide, Live TV, the
+     * player...). The shell first composes on Home and applies that choice a moment later, so the splash
+     * stays up until then and Home never flashes on the way. Owned by this activity, so a relaunch in a
+     * process that is still alive waits again.
+     */
+    @Volatile
+    private var startupSettled = false
 
     private val player: tv.own.owntv.player.OwnTVPlayer by inject()
     private val previewEngine: tv.own.owntv.player.LivePreviewEngine by inject()
@@ -201,7 +213,14 @@ open class MainActivity : ComponentActivity() {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         val splashDeadline = SystemClock.uptimeMillis() + SPLASH_TIMEOUT_MS
-        splash.setKeepOnScreenCondition { !contentReady && SystemClock.uptimeMillis() < splashDeadline }
+        var readyAt = 0L
+        splash.setKeepOnScreenCondition {
+            val now = SystemClock.uptimeMillis()
+            if (!contentReady) return@setKeepOnScreenCondition now < splashDeadline
+            if (readyAt == 0L) readyAt = now
+            // Then until the shell is on the start-up screen, so Home does not flash first.
+            !startupSettled && now < readyAt + STARTUP_SETTLE_TIMEOUT_MS
+        }
         pendingDeepLink = LauncherDeepLink.parse(intent.data)
         Log.d(TAG, "onCreate deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}")
         // glcn: what a paired phone asks this TV to play arrives as a link, like a launcher tile's.
@@ -213,6 +232,7 @@ open class MainActivity : ComponentActivity() {
         val dbError = probeDatabase()
         if (dbError != null) {
             contentReady = true // the recovery screen IS the destination — don't hold the splash over it
+            startupSettled = true
             setContent {
                 tv.own.owntv.features.recovery.DatabaseRecoveryScreen(
                     message = dbError,
@@ -376,6 +396,10 @@ open class MainActivity : ComponentActivity() {
                 if (profilesLoaded) Perf.stamp("profiles-loaded")
             }
             val destinationReady = loadedProfileId != null && profilesLoaded
+            // A profile or PIN gate is the destination itself; the shell's start-up choice comes after it.
+            LaunchedEffect(destinationReady, shellReady) {
+                if (destinationReady && !shellReady) startupSettled = true
+            }
             LaunchedEffect(destinationReady) {
                 if (destinationReady && !contentReady) {
                     contentReady = true
@@ -528,6 +552,7 @@ open class MainActivity : ComponentActivity() {
                                 onDeepLinkConsumed = { pendingDeepLink = null },
                                 isOffline = !isOnline,
                                 onExitApp = { finish() },
+                                onStartupSettled = { startupSettled = true },
                                 onSwitchProfile = {
                                     // Stop playback and return to the "Who's watching?" gate — no app restart.
                                     player.onAppBackgrounded(); player.discardBackgroundRestore(); previewEngine.stop(); previewEngine.discardBackgroundRestore(); heroPreviewEngine.stop()
