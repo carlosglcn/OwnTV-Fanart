@@ -401,6 +401,8 @@ fun OwnTVShell(
     val browserRailItems by liveVm.railItems.collectAsStateWithLifecycle()
     val browserRailCounts by liveVm.railCounts.collectAsStateWithLifecycle()
     val previewChannel by liveVm.previewChannel.collectAsStateWithLifecycle()
+    // glcn: kept in step with every way the player opens, docks or closes (see LiveViewModel.onChannelFocused).
+    LaunchedEffect(playerMode) { liveVm.playerFullscreen = playerMode == PlayerMode.FULLSCREEN }
     val playerRecording by liveVm.playerRecording.collectAsStateWithLifecycle()
     // glcn: the playing programme's picture is fetched and loaded as soon as the channel opens — the
     // player's card then has it on screen the first time it is shown, with no late pop-in.
@@ -574,6 +576,7 @@ fun OwnTVShell(
         // `vid=no` and the new item would play with no picture.
         player.exitAudioOnly(); runCatching { liveVm.previewEngine.exitAudioOnly() }
         if (playerMode != PlayerMode.MINI) playerMode = PlayerMode.FULLSCREEN
+        liveVm.playerFullscreen = playerMode == PlayerMode.FULLSCREEN
     }
     // Restore video output on both engines (no-op unless we were in Audio Mode). mpv `vid=auto` /
     // ExoPlayer surface is re-attached by the surface remount right after.
@@ -591,6 +594,7 @@ fun OwnTVShell(
         seriesVm.saveEpisodeProgressNow()
         resumeVideo() // restore mpv `vid=auto` before stop so the next played item isn't left video-less
         playerMode = PlayerMode.NONE
+        liveVm.playerFullscreen = false
         showChannelList = false
         showHistoryList = false
         liveVm.hideCategoryBrowser()
@@ -929,6 +933,16 @@ fun OwnTVShell(
     // glcn: Home rebuilds its whole feed only when something may have changed — after playback, another
     // profile or playlist, or a minute away; moving between sections just shows what it already has.
     val homeRefresh = remember { object { var at = 0L; var ctx: List<Any?>? = null; var stale = true } }
+    // glcn: a channel just written to the watch history shows in Home's Recent channels straight away (the
+    // write can land after Home has already re-read on the way back from the player).
+    val sectionNow by androidx.compose.runtime.rememberUpdatedState(selectedSection)
+    val profileNow by androidx.compose.runtime.rememberUpdatedState(activeProfileId)
+    LaunchedEffect(Unit) {
+        liveVm.liveHistoryChanged.collect {
+            if (sectionNow == MainSection.HOME && playerMode == PlayerMode.NONE) homeVm.refresh(profileNow)
+            else homeRefresh.stale = true
+        }
+    }
     LaunchedEffect(selectedSection, playerMode, activeProfileId, activePlaylistId, activePlaylistSet) {
         if (playerMode != PlayerMode.NONE) homeRefresh.stale = true
         if (selectedSection == MainSection.HOME && playerMode == PlayerMode.NONE && (activeProfileId?.let { it >= 0 } == true)) {

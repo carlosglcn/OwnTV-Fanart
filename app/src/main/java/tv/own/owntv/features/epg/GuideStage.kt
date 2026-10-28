@@ -551,8 +551,8 @@ internal fun GuideOrderMenu(
         // SHOW, as the Series page's order menu has it: a filter, not an order.
         StageGroupLabel(stringResource(R.string.content_menu_group_show).uppercase(androidx.compose.ui.text.intl.Locale.current.platformLocale))
         StageMenuItem(
-            text = stringResource(R.string.content_epg_show_empty), icon = OwnTVIcon.EYE_OFF,
-            value = stringResource(if (showEmpty) R.string.common_on else R.string.common_off),
+            text = stringResource(R.string.glcn_epg_show_empty), icon = OwnTVIcon.EYE_OFF,
+            value = stringResource(if (showEmpty) R.string.glcn_yes else R.string.settings_no),
             onClick = { onShowEmpty(!showEmpty); onDismiss() },
         )
         StageMenuItem(

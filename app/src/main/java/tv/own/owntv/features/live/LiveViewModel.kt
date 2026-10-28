@@ -1056,9 +1056,16 @@ class LiveViewModel(
     }
 
     fun onChannelFocused(channel: ChannelEntity) {
+        // glcn: under the full-screen player the Live list can still restore its focus (its remembered row,
+        // say) — that is not the viewer moving, and it must not turn the playing channel into another one
+        // for the info card, the channel list and CH±.
+        if (playerFullscreen) return
         _previewArmed.value = true // a real user focus — the in-pane preview may now play
         _previewChannel.value = channel
     }
+
+    /** glcn: the shell says when the player is full screen (see [onChannelFocused]). */
+    @Volatile var playerFullscreen: Boolean = false
 
     /** Search's "Go to channel": the list scrolls to [reveal] and focuses it, then calls [revealDone]. */
     private val _reveal = MutableStateFlow<tv.own.owntv.features.search.Reveal?>(null)
@@ -1334,6 +1341,7 @@ class LiveViewModel(
      *  pane may re-take the engine (and re-apply the preview mute) on the next focus. Keeps the stream
      *  playing (no stop) — just clears the flag so [playPreview] works again. */
     fun onFullscreenExited() {
+        flushPendingHistory()
         live.detach() // the stream stays; its watchers and the give-up alarm stand down
         // Leaving full-screen ends the rewind: the archive stream is torn down with the player, and the
         // 1 Hz "behind live" ticker would otherwise keep running against nothing for the rest of the session.
@@ -1753,16 +1761,11 @@ class LiveViewModel(
      */
     private fun recordLiveHistory(channel: ChannelEntity, immediate: Boolean = false) {
         historyJob?.cancel()
+        pendingHistory = channel.takeIf { !immediate }
         historyJob = viewModelScope.launch {
             if (!immediate) delay(HISTORY_DEBOUNCE_MS)
-            val pid = currentProfileId() ?: return@launch
-            Log.d(TAG, "ensurePlaying history profile=$pid channelId=${channel.id}")
-            runCatching {
-                historyDao.record(WatchHistoryEntity(profileId = pid, mediaType = MediaType.LIVE, itemId = channel.id))
-            }.onFailure { t ->
-                Log.w(TAG, "ensurePlaying history record failed channelId=${channel.id} profile=$pid", t)
-            }
-            runCatching { launcherIntegrationRepository.refreshRecentLive(pid) }
+            pendingHistory = null
+            writeLiveHistory(channel)
         }
         // glcn: learn what is usually watched — logged only after the viewer stays a few minutes.
         viewModelScope.launch {
@@ -1774,6 +1777,33 @@ class LiveViewModel(
                 }
             }
         }
+    }
+
+    /** glcn: the channel whose history write is still waiting out [HISTORY_DEBOUNCE_MS]. */
+    @Volatile private var pendingHistory: ChannelEntity? = null
+
+    /** glcn: a live channel was written to the watch history — Home's Recent channels re-reads it at once. */
+    private val _liveHistoryChanged = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val liveHistoryChanged: kotlinx.coroutines.flow.SharedFlow<Unit> = _liveHistoryChanged
+
+    private suspend fun writeLiveHistory(channel: ChannelEntity) {
+        val pid = currentProfileId() ?: return
+        Log.d(TAG, "ensurePlaying history profile=$pid channelId=${channel.id}")
+        runCatching {
+            historyDao.record(WatchHistoryEntity(profileId = pid, mediaType = MediaType.LIVE, itemId = channel.id))
+        }.onFailure { t ->
+            Log.w(TAG, "ensurePlaying history record failed channelId=${channel.id} profile=$pid", t)
+        }
+        _liveHistoryChanged.tryEmit(Unit)
+        runCatching { launcherIntegrationRepository.refreshRecentLive(pid) }
+    }
+
+    /** glcn: leaving the player — the channel being watched counts now, not after the zapping wait. */
+    private fun flushPendingHistory() {
+        val ch = pendingHistory ?: return
+        pendingHistory = null
+        historyJob?.cancel()
+        historyJob = viewModelScope.launch { writeLiveHistory(ch) }
     }
 
     /** glcn: habit learning (see [tv.own.owntv.core.reminder.HabitTracker]). */

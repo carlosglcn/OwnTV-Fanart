@@ -215,6 +215,12 @@ fun LiveScreen(
     // the category changes (fixes the cross-category scroll-leak bug).
     val perCategoryStates = remember { mutableStateMapOf<LiveKey, androidx.compose.foundation.lazy.LazyListState>() }
     val perCategoryChannelIds = remember { mutableStateMapOf<LiveKey, Long>() }
+    // glcn: a channel tuned from elsewhere (Home, the Guide, CH±) becomes the remembered row, so the list
+    // comes back on what is playing — not on the last row walked to in it.
+    LaunchedEffect(previewChannel?.id) {
+        val id = previewChannel?.id ?: return@LaunchedEffect
+        if (rememberLive) perCategoryChannelIds[selectedKey] = id
+    }
     val effectiveListState =
         if (rememberLive) perCategoryStates.getOrPut(selectedKey) { androidx.compose.foundation.lazy.LazyListState() }
         else listState

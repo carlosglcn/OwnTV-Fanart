@@ -9,3 +9,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏱️ Programme info: the time line now reads "Ends at 23:00 · 23 min left", so the end time is no longer mistaken for the start
 - 🖼️ Live TV (list): the programme picture now sits whole in the space under the preview, instead of a large crop running up behind it
 - ✂️ Home: the backdrop's slow zoom no longer spills out beside the menu rail
+- 📺 Player: a channel opened from Home no longer shows the previous channel's programme in its info card and channel list (the Live list behind the player could restore its old row and take over)
+- 🙈 TV guide: the option now reads "Show channels without guide · Yes / No", and with No the channels with nothing from now on are hidden too (also those whose guide ended yesterday)
+- 🕘 Home: Recent channels shows the channel you just watched as soon as you leave the player

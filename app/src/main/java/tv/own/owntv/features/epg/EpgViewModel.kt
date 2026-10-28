@@ -991,6 +991,18 @@ class EpgViewModel(
             }
         }
         var channels = buildChannels(rawChannels)
+        // glcn: "Show channels without guide: No" hides every channel with nothing from now on — not only those
+        // that never had a guide: one whose data ended yesterday stays in the table for catch-up, and showed as a
+        // row of "No programme at this time".
+        if (!showEmpty && channels.isNotEmpty()) {
+            val keyOf = { ch: ChannelEntity -> ch.epgChannelId?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } }
+            val keys = channels.mapNotNull(keyOf).distinct()
+            val nowMs = System.currentTimeMillis()
+            val live = runCatching {
+                keys.chunked(QUERY_CHUNK).flatMap { epgDao.keysWithGuideFrom(it, nowMs - DAY_MS, nowMs) }.toHashSet()
+            }.getOrNull()
+            if (live != null) channels = channels.filter { ch -> keyOf(ch)?.let { it in live } == true }
+        }
         // glcn: a category the person picked is never shown empty just because none of its channels has guide
         // data (a list with someone else's guide, say): its channels show, with empty rows, as with "Channels
         // without guide" on. Only for a picked category — "All" stays as the setting says.
