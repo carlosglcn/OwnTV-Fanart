@@ -415,6 +415,7 @@ private fun GlideColumn(
 ) {
     val density = LocalDensity.current
     val h = with(density) { rowHeight.toPx() }
+    val cursor = androidx.compose.runtime.rememberUpdatedState(index)
     val accent = stageAccent.accent
     val fill by animateColorAsState(if (active) accent else accent.copy(alpha = 0.20f), tween(180), label = "deckFill")
     BoxWithConstraints(modifier.clipToBounds()) {
@@ -427,10 +428,10 @@ private fun GlideColumn(
             androidx.compose.foundation.lazy.LazyListState((target / h).toInt(), (target - (target / h).toInt() * h).toInt())
         }
         LaunchedEffect(resetKey, target) {
-            scroll.animateTo(target, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 420f))
+            scroll.animateTo(target, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 260f))
         }
         LaunchedEffect(resetKey, index) {
-            glide.animateTo(index * h, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 700f))
+            glide.animateTo(index * h, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 520f))
         }
         // glcn: the list is laid out again only when the glide passes a whole row (it is placed on that row);
         // the part of a row in between is a translation of the drawn layer, read in drawing. Placing the list
@@ -462,7 +463,9 @@ private fun GlideColumn(
                 },
         ) {
             items(count) { i ->
-                Box(Modifier.fillMaxWidth().height(rowHeight)) { row(i, i == index) }
+                // Only the row that gains or loses the cursor is composed again, not every row on screen.
+                val lit by remember(i) { derivedStateOf { cursor.value == i } }
+                Box(Modifier.fillMaxWidth().height(rowHeight)) { row(i, lit) }
             }
             // Room below the last row, so the list can always be placed on the row the glide is in.
             item { Spacer(Modifier.fillMaxWidth().height(rowHeight)) }

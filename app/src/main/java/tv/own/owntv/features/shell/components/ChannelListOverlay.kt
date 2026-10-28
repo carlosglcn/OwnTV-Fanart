@@ -105,6 +105,12 @@ fun ChannelListOverlay(
     /** glcn: ▶ steps the view — picture, schedule, posters — remembered for next time. */
     onCyclePanel: (() -> Unit)? = null,
 ) {
+    // glcn: what is on each channel, kept once read (the prefetch reads the rows around the cursor), so the panel
+    // beside the list shows the picture at once instead of reading it again when the row is reached.
+    val nowCache = remember { java.util.concurrent.ConcurrentHashMap<Long, Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>>() }
+    val cachedNow: (suspend (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>)? = remember(loadNow) {
+        loadNow?.let { raw -> { ch: ChannelEntity -> nowCache[ch.id] ?: raw(ch).also { nowCache[ch.id] = it } } }
+    }
     val layoutDirection = LocalLayoutDirection.current
     val dismissDirection = if (alignEnd) HorizontalDirection.END else HorizontalDirection.START
     val history = watchedAt != null
@@ -297,7 +303,7 @@ fun ChannelListOverlay(
                 modifier = Modifier.padding(start = 14.mpx, top = 14.mpx),
             )
         }
-        if (loadNow != null) NeighbourArtPrefetch(channels, focusedIndex, loadNow)
+        if (loadNow != null) NeighbourArtPrefetch(channels, focusedIndex, cachedNow!!)
         // glcn: the schedules of the channels around the cursor are read ahead, so the column beside the list is not late.
         if (loadSchedule != null) {
             LaunchedEffect(focusedIndex, channels.size) {
@@ -311,7 +317,7 @@ fun ChannelListOverlay(
             ZapSchedulePanel(
                 channel = channels.getOrNull(focusedIndex),
                 loadSchedule = loadSchedule,
-                loadNow = loadNow,
+                loadNow = cachedNow, peek = { nowCache[it.id] },
                 joined = true,
                 modifier = Modifier,
             )
@@ -333,7 +339,7 @@ fun ChannelListOverlay(
             // The joined schedule view carries its own programme card; a second one would double it.
             ZapPreviewPanel(
                 channel = channels.getOrNull(focusedIndex),
-                loadNow = loadNow,
+                loadNow = cachedNow!!, peek = { nowCache[it.id] },
                 modifier = Modifier
                     .align(if (alignEnd) Alignment.CenterStart else Alignment.CenterEnd)
                     .padding(horizontal = 40.mpx),

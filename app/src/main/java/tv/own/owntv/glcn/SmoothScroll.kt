@@ -1,9 +1,7 @@
 package tv.own.owntv.glcn
 
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.scrollBy
@@ -17,7 +15,13 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 object SmoothScroll {
     val animation: AnimationSpec<Float>
-        get() = if (LowRam.on) snap<Float>() else tween<Float>(420, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))
+        // glcn: a soft spring rather than a tween: it starts gently (no jolt on the first frame), takes a little longer
+        // to settle (about half a second), and when ▼ is pressed again mid-glide it carries on from its speed instead
+        // of starting over, so holding or tapping fast through the rows stays one continuous movement.
+        get() = if (LowRam.on) snap<Float>() else androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+            stiffness = GLIDE_STIFFNESS,
+        )
 
     /** The app-wide default: scroll only as far as the focused item needs, eased. */
     val spec = object : BringIntoViewSpec {
@@ -94,3 +98,6 @@ class GlideScroller(private val state: androidx.compose.foundation.lazy.grid.Laz
 val NoBringIntoViewSpec = object : BringIntoViewSpec {
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
 }
+
+/** Between Compose's "very low" (50) and "low" (200): slow enough to be seen gliding, quick enough not to lag. */
+private const val GLIDE_STIFFNESS = 100f

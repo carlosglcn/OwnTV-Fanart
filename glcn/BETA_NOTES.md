@@ -59,3 +59,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪟 Zap panel (◀): the whole panel is now see-through (the list a little less than the detail, so it still reads) and every column is narrower, so more of the picture shows
 - 🧈 Zap panel (◀): smoother up/down scrolling — the list only lays itself out again when it passes a whole row; the rest of the glide is drawn
 - 📺 Sports › Watch live: channels showing the match are ordered by how surely their guide names it (both players or teams first), then by picture quality (4K, FHD, HD, SD)
+- 🧈 Scrolling between rows (Home and every page that glides): a soft spring instead of a quick ease — it starts gently, takes about half a second, and pressing ▼ again mid-glide carries on from its speed instead of restarting
+- 🖼️ Quick guide (hold OK): the programme picture shows at once — what is on is kept once read, like the ◀ panel, instead of being read again on each row
+- 🧈 Zap panel (◀): only the row that gains or loses the cursor is redrawn, and the glide is a touch softer, so fast scrolling stays smooth
