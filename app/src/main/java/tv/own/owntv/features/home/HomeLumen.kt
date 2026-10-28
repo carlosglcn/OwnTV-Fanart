@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.key.key
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -212,6 +215,15 @@ fun LumenHome(
         if (!text.isNullOrBlank()) synopses[id] = text
     }
     val selectedTab = remember { FocusRequester() }
+    // glcn: after ▼ moved to the next tab, its first card takes the focus once it is laid out.
+    var pendingEntry by remember { mutableStateOf(false) }
+    LaunchedEffect(pendingEntry, selected) {
+        if (!pendingEntry) return@LaunchedEffect
+        androidx.compose.runtime.withFrameNanos { }
+        androidx.compose.runtime.withFrameNanos { }
+        runCatching { entry.requestFocus() }
+        pendingEntry = false
+    }
     var menuRow by remember { mutableStateOf<HomeRow?>(null) }
     // glcn: TMDB for the film or series the focus rests on — its title logo and trailer.
     val metaRepo: tv.own.owntv.core.metadata.MetadataRepository = org.koin.compose.koinInject()
@@ -323,7 +335,7 @@ fun LumenHome(
                     it0?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
                     // glcn: how far along — a film or episode left half-way, or the programme on air.
                     it0?.progress?.takeIf { it > 0f }?.let { tv.own.owntv.ui.stage.StageProgress(it.coerceIn(0f, 1f), Modifier.padding(top = 14.mpx).width(440.mpx)) }
-                    (it0?.plot ?: it0?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(1040.mpx), style = stageText(20, 400), color = StageColors.Body, lines = 3, fade = true) }
+                    (it0?.plot ?: it0?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(1040.mpx), style = stageText(20, 400), color = StageColors.Body, lines = if (tv.own.owntv.glcn.DockPrefs.doubleRow) 2 else 3, fade = true) }
                 }
             }
             // glcn: what to do with it without opening it — ▲ from the tabs reaches these.
@@ -353,7 +365,7 @@ fun LumenHome(
                 .graphicsLayer { alpha = chrome }
                 .padding(start = contentStart, end = 56.mpx, bottom = 28.mpx)
                 .fillMaxWidth()
-                .height(452.mpx)
+                .height(if (tv.own.owntv.glcn.DockPrefs.doubleRow) 548.mpx else 452.mpx)
                 .padding(top = 20.mpx),
         ) {
             LazyRow(Modifier.padding(horizontal = 24.mpx).focusGroup(), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
@@ -389,7 +401,9 @@ fun LumenHome(
                     pos.animateTo(focusedAt.toFloat(), androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 140f))
                 }
             }
-            val narrow = remember(items) { items.map { x -> if (x.landscape) 250 else 187 } }
+            // glcn: a little smaller with the double row, so the next tab's cards fit under it.
+            val ks = if (tv.own.owntv.glcn.DockPrefs.doubleRow) DOCK_DOUBLE_SCALE else 1f
+            val narrow = remember(items, ks) { items.map { x -> ((if (x.landscape) 250 else 187) * ks).toInt() } }
             // glcn: every card opens when it has focus, also one with no wide picture (the last ones of a row were often
             // such, and stayed narrow): its poster then stands whole in the middle of the open card, on a tint.
             val openable = remember(items) { items.map { x -> x.crests == null } }
@@ -407,12 +421,18 @@ fun LumenHome(
                             val m = Modifier
                                 .then(if (i == 0) Modifier.focusRequester(entry) else Modifier)
                                 .focusProperties { up = selectedTab }
+                                // glcn: ▼ with the double row: the tab underneath becomes the row.
+                                .onPreviewKeyEvent { e ->
+                                    if (tv.own.owntv.glcn.DockPrefs.doubleRow && e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown &&
+                                        androidx.compose.ui.input.key.Key.DirectionDown == e.key && selected < tabs.lastIndex
+                                    ) { selected += 1; focusedKey = null; pendingEntry = true; true } else false
+                                }
                                 .onFocusChanged { if (it.hasFocus) { focusedKey = item.key; onChildFocused() } }
                             val wideArt = item.backdrop ?: item.art.takeIf { item.landscape }
                             val near = kotlin.math.abs(i - focusedAt) <= 1 || kotlin.math.abs(i - k) <= 1
                             // The width is set by the row's layout; the numbers here are only the widest it can be.
                             StageStill(
-                                title = item.title, line = item.line, onClick = item.onClick, width = 500.mpx, height = 281.mpx,
+                                title = item.title, line = item.line, onClick = item.onClick, width = 500.mpx * ks, height = 281.mpx * ks,
                                 titleSize = 19, lineSize = 15, modifier = m, progress = item.progress,
                                 onLongClick = { menuRow = tab.row }, lift = false,
                             ) {
@@ -464,7 +484,7 @@ fun LumenHome(
                 val kk = kotlin.math.floor(t).toInt()
                 val frac = t - kk
                 val gap = 12.mpx.roundToPx()
-                val wide = 500.mpx.roundToPx()
+                val wide = (500.mpx * ks).roundToPx()
                 val ws = IntArray(measurables.size) { j ->
                     val i = from + j
                     val n = narrow[i].mpx.roundToPx()
@@ -495,9 +515,31 @@ fun LumenHome(
                 }
             }
             }
+            // glcn: the next tab, peeking under the row — its name and its first cards, small; ▼ makes it the row.
+            if (tv.own.owntv.glcn.DockPrefs.doubleRow) tabs.getOrNull(selected + 1)?.let { next ->
+                Row(
+                    Modifier.padding(start = 30.mpx, top = 6.mpx).graphicsLayer { alpha = 0.72f },
+                    horizontalArrangement = Arrangement.spacedBy(10.mpx),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(next.row.displayTitle(), style = stageText(17, 700), color = StageColors.Muted, maxLines = 1, modifier = Modifier.width(220.mpx))
+                    next.items.take(DOCK_PEEK_CARDS).forEach { n ->
+                        val pic = n.backdrop ?: n.art
+                        val w = if (n.landscape || n.backdrop != null) 160.mpx else 66.mpx
+                        Box(Modifier.size(w, 92.mpx).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.mpx)).background(accent.accent.copy(alpha = 0.12f))) {
+                            if (pic != null) AsyncImage(model = pic, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                            else n.logo?.takeIf { l -> l.isNotEmpty() }?.let { l -> AsyncImage(model = l, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding(14.mpx)) }
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
+/** glcn: the double row's cards are this much of their usual size, and this many of the next tab peek under them. */
+private const val DOCK_DOUBLE_SCALE = 0.84f
+private const val DOCK_PEEK_CARDS = 8
 
 private val NoBringIntoView = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f

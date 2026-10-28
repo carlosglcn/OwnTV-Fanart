@@ -102,3 +102,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ▶️ Dock: buttons under the synopsis — Play / Resume / Watch, Details, Trailer (when TMDB has one) — reached with ▲ from the tabs, so a title can be played or its trailer seen without opening it
 - 📊 Dock: a progress bar under the title for what you left half-way and for the programme on air
 - 🎞️ Dock at rest: after 3 s still on a film or series, its trailer plays silently in place of the picture (not in light mode); after 20 s the words and the dock fade away and the picture (or trailer) is left alone — the next key only brings them back
+- 🗂️ Dock: optional double row (Settings › Home) — the next tab's cards peek under the row, ▼ brings them up; cards a little smaller to fit.
