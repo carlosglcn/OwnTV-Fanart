@@ -306,7 +306,9 @@ fun LumenHome(
                 }
             }
             val narrow = remember(items) { items.map { x -> if (x.landscape) 250 else 187 } }
-            val openable = remember(items) { items.map { x -> x.crests == null && (x.backdrop ?: x.art.takeIf { x.landscape }) != null } }
+            // glcn: every card opens when it has focus, also one with no wide picture (the last ones of a row were often
+            // such, and stayed narrow): its poster then stands whole in the middle of the open card, on a tint.
+            val openable = remember(items) { items.map { x -> x.crests == null } }
             fun wideness(i: Int, t: Float): Float = if (openable.getOrElse(i) { false }) (1f - kotlin.math.abs(i - t)).coerceIn(0f, 1f) else 0f
             val k by remember { androidx.compose.runtime.derivedStateOf { kotlin.math.floor(pos.value).toInt() } }
             val from = (minOf(k, focusedAt) - 1).coerceAtLeast(0)
@@ -336,7 +338,10 @@ fun LumenHome(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) { item.crests.forEach { tv.own.owntv.features.sports.Crest(it, 84) } }
                                 else {
-                                    if (item.art != null) AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                    if (item.art != null && wideArt == null && !item.landscape) {
+                                        Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.14f)))
+                                        AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                                    } else if (item.art != null) AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                     else Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.18f)))
                                     // The wide picture dissolves in over the closed one as the card opens (drawn, never recomposed).
                                     if (near && wideArt != null && wideArt != item.art) AsyncImage(
