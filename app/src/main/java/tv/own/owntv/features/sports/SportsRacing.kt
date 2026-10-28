@@ -71,7 +71,7 @@ internal fun RaceHeaderContent(m: Match, hidden: Boolean) {
         )
         m.venue?.let { Text(it, style = stageText(17, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.mpx)) }
         val grid = m.state == MatchState.PRE
-        if (m.competitors.isNotEmpty() && (!grid || RaceSession.of(m.subtitle) == RaceSession.RACE) && !(hidden && !grid)) {
+        if (m.competitors.isNotEmpty() && (!grid || RaceSession.of(m.subtitle) == RaceSession.RACE) && !(hidden && !grid) && !(grid && m.sport == tv.own.owntv.core.sports.model.Sport.CYCLING)) {
             if (grid) Text(stringResource(R.string.glcn_race_grid), style = stageText(16, 700), color = StageColors.Dim, modifier = Modifier.padding(top = 18.mpx, bottom = 4.mpx))
             else Spacer(Modifier.height(18.mpx))
             m.competitors.forEachIndexed { i, c ->
@@ -106,7 +106,7 @@ internal fun RankingColumns(ranking: Ranking, modifier: Modifier = Modifier) {
 @Composable
 private fun RankingColumn(g: RankingGroup, modifier: Modifier) {
     Column(modifier) {
-        Text(rankLabel(g.kind), style = stageText(19, 800), color = StageColors.Muted, modifier = Modifier.padding(bottom = 8.mpx))
+        Text(g.title ?: rankLabel(g.kind), style = stageText(19, 800), color = StageColors.Muted, modifier = Modifier.padding(bottom = 8.mpx))
         g.rows.take(10).forEach { r ->
             // Focusable so Down scrolls the page and the last rows come into view (plain text never took focus).
             var on by remember { mutableStateOf(false) }
@@ -115,7 +115,7 @@ private fun RankingColumn(g: RankingGroup, modifier: Modifier) {
                 .padding(vertical = 5.mpx, horizontal = 6.mpx), horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = Alignment.CenterVertically) {
                 Text(r.rank.toString(), style = stageText(19, 700), color = StageColors.Muted, modifier = Modifier.width(33.mpx))
                 Text(if (r.team.isAthlete) r.team.name else r.team.shortName, style = stageText(20, 600), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                Text(r.points.toString(), style = stageText(20, 800), color = StageColors.Text, textAlign = TextAlign.End)
+                Text(r.note ?: r.points.toString(), style = stageText(20, 800), color = StageColors.Text, textAlign = TextAlign.End)
             }
         }
     }
@@ -136,7 +136,7 @@ internal fun PlayerRankLine(r: tv.own.owntv.core.sports.model.RankingRow) {
     ) {
         Text(r.rank.toString(), style = stageText(20, 800), color = StageColors.Muted, textAlign = TextAlign.End, modifier = Modifier.width(44.mpx))
         val move = r.previous?.let { it - r.rank } ?: 0
-        Text(
+        if (r.note == null) Text(
             when { move > 0 -> "▲" + move; move < 0 -> "▼" + (-move); else -> "–" },
             style = stageText(15, 800),
             color = when { move > 0 -> androidx.compose.ui.graphics.Color(0xFF2FB36B); move < 0 -> SportsLive; else -> StageColors.Dim },
@@ -147,6 +147,6 @@ internal fun PlayerRankLine(r: tv.own.owntv.core.sports.model.RankingRow) {
             Text(r.team.name, style = stageText(20, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             r.team.country?.let { Text(it, style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
-        Text("%,d".format(r.points), style = stageText(20, 800), color = StageColors.Text, textAlign = TextAlign.End)
+        Text(r.note ?: "%,d".format(r.points), style = stageText(20, 800), color = StageColors.Text, textAlign = TextAlign.End)
     }
 }

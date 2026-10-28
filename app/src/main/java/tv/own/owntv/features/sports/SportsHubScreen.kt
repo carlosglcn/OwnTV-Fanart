@@ -64,6 +64,7 @@ import tv.own.owntv.core.sports.WatchOption
 import tv.own.owntv.core.sports.model.Match
 import tv.own.owntv.core.sports.model.MatchState
 import tv.own.owntv.core.sports.model.Sport
+import tv.own.owntv.core.sports.model.isRace
 import tv.own.owntv.ui.components.ChannelLogoTile
 import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.components.OwnTVPopup
@@ -93,7 +94,7 @@ internal sealed interface HubChip {
 }
 
 /** Sports whose score is a line (sets, innings), not one number a side. */
-private val LINE_SCORE_SPORTS = setOf(Sport.TENNIS, Sport.CRICKET, Sport.GOLF, Sport.RACING)
+private val LINE_SCORE_SPORTS = setOf(Sport.TENNIS, Sport.CRICKET, Sport.GOLF, Sport.RACING, Sport.CYCLING)
 
 /** Chips shown before "+N": eight sports. */
 private const val SPORT_CHIPS = 8
@@ -505,7 +506,7 @@ internal fun MatchCard(
             // League line · minute (red while live) or kick-off.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val day = if (m.isLive) null else dayOf(m.startMs, locale)
-                val league = listOfNotNull(leagueName(m), m.subtitle?.takeIf { featured && m.sport != tv.own.owntv.core.sports.model.Sport.RACING }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
+                val league = listOfNotNull(leagueName(m), m.subtitle?.takeIf { featured && !m.sport.isRace }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
                 Text(league, style = stageText(16.5f, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 val right = when {
                     m.off -> m.statusText
@@ -529,7 +530,7 @@ internal fun MatchCard(
 /** Two sides, each a 42 px crest, the name and the score; the losing side in muted grey. */
 @Composable
 private fun Sides(m: Match, spoiler: Boolean) {
-    if (m.competitors.size < 2 || m.sport == tv.own.owntv.core.sports.model.Sport.RACING) {
+    if (m.competitors.size < 2 || m.sport.isRace) {
         // Racing, a card: the session by its kind, the Grand Prix under it.
         Spacer(Modifier.height(12.mpx))
         val session = if (m.sport == tv.own.owntv.core.sports.model.Sport.RACING) raceSessionLabel(m) else null

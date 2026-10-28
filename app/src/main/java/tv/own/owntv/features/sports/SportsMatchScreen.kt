@@ -1,5 +1,6 @@
 package tv.own.owntv.features.sports
 
+import tv.own.owntv.core.sports.model.isRace
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -193,7 +194,7 @@ fun SportsMatchScreen(
                     MatchTab.TIMELINE -> items((state.summary?.timeline ?: m.events).asReversed()) { e -> TimelineRow(e, m) }
                     MatchTab.STATS -> items(state.summary?.stats.orEmpty()) { s -> StatRow(s.label, s.home, s.away) }
                     MatchTab.LINEUPS -> item { Lineups(m, state.summary) }
-                    MatchTab.TABLE -> if (state.ranking != null && m.sport == tv.own.owntv.core.sports.model.Sport.RACING) item { RankingColumns(state.ranking) } else item { TablePreview(state.standings, m, onOpenLeague) }
+                    MatchTab.TABLE -> if (state.ranking != null && m.sport.isRace) item { RankingColumns(state.ranking) } else item { TablePreview(state.standings, m, onOpenLeague) }
                     MatchTab.FORM -> item { Form(m, state.summary) }
                     MatchTab.BROADCASTS -> item { Broadcasts(m, (state.search as? ChannelSearch.Found)?.options) }
                 }
@@ -386,7 +387,7 @@ private fun ScoreHeader(m: Match, summary: MatchSummary?, hidden: Boolean, onRev
             .drawBehind { drawInnerRing(Color.White.copy(alpha = 0.06f), 1.mpx.toPx(), r.toPx()) },
     ) { _ ->
         Column(Modifier.fillMaxWidth().padding(horizontal = 33.mpx, vertical = 27.mpx)) {
-            if (m.sport == tv.own.owntv.core.sports.model.Sport.RACING) { RaceHeaderContent(m, hidden); return@Column }
+            if (m.sport.isRace) { RaceHeaderContent(m, hidden); return@Column }
             val home = m.home
             val away = m.away
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

@@ -100,6 +100,7 @@ fun SportsLeagueScreen(vm: SportsViewModel, onOpenMatch: (Match) -> Unit, onBack
             if (tab == LeagueTab.TABLE && players != null && state.table == null) {
                 // glcn: a tennis tour — the whole ranking, a row each, with photos (lazily: 150 rows).
                 LazyColumn(Modifier.width(960.mpx).fillMaxSize(), contentPadding = PaddingValues(top = 9.mpx, bottom = 60.mpx)) {
+                    players.title?.let { t -> item { Text(t, style = stageText(19, 800), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(12.mpx)) } }
                     items(players.rows, key = { it.team.id }) { r -> PlayerRankLine(r) }
                 }
             } else if (tab == LeagueTab.TABLE && state.ranking != null && state.table == null) {

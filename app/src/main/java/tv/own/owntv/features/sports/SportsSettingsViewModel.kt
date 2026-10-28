@@ -110,7 +110,7 @@ class SportsSettingsViewModel(
 
     private suspend fun indexOf(keys: Collection<String>): List<Pair<FollowedTeam, String>> {
         val sports = tv.own.owntv.core.sports.model.Sport.values().filter {
-            it != tv.own.owntv.core.sports.model.Sport.TENNIS && it != tv.own.owntv.core.sports.model.Sport.RACING &&
+            it != tv.own.owntv.core.sports.model.Sport.TENNIS && it != tv.own.owntv.core.sports.model.Sport.RACING && it != tv.own.owntv.core.sports.model.Sport.CYCLING &&
                 it != tv.own.owntv.core.sports.model.Sport.MMA && it != tv.own.owntv.core.sports.model.Sport.CRICKET
         }.toSet()
         val leagues = keys.mapNotNull { SportsCatalog.league(it) }.filter { it.sport in sports }
