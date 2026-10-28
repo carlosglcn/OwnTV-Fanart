@@ -99,3 +99,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏎️ Racing: while a session runs, the match page's Standings tab opens with the live order — every driver, position by position — above the season standings (F1, IndyCar and the other ESPN series; MotoGP's feed gives no live order)
 - 🖼️ Quick lists' preview: a programme "picture" that is really a channel logo on a transparent background (some guides send one) is now shown whole in the middle, not cropped
 - 🧈 Row-to-row glide a little longer (0.56 s) and softer: eases in with no jolt and lands long and gentle
+- 🎬 Dock: films and series show their own title lettering (TMDB logo) instead of the name in words, when TMDB has one
+- ▶️ Dock: buttons under the synopsis — Play / Resume / Watch, Details, Trailer (when TMDB has one) — reached with ▲ from the tabs, so a title can be played or its trailer seen without opening it
+- 📊 Dock: a progress bar under the title for what you left half-way and for the programme on air

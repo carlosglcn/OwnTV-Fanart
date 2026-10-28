@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -49,6 +50,7 @@ import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.database.entity.MovieEntity
+import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.core.database.entity.SeriesEntity
 import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.core.home.TrendingHomeItem
@@ -84,6 +86,12 @@ private class LumenItem(
     val programmeId: Long? = null,
     /** glcn: a channel's logo — whole and centred on the closed card (over its programme's picture, dimmed and softened). */
     val logo: String? = null,
+    /** glcn: the film or series behind the card — its TMDB logo and trailer for the title above, "Details" opens it. */
+    val movie: MovieEntity? = null,
+    val series: SeriesEntity? = null,
+    /** glcn: the main button above the dock ("Play", "Resume", "Watch") and what it does. */
+    val playLabel: Int? = null,
+    val onPlay: (() -> Unit)? = null,
     val onClick: () -> Unit,
 )
 
@@ -135,22 +143,27 @@ fun LumenHome(
                 art = p?.imageUrl?.takeIf { it.isNotBlank() }, backdrop = p?.imageUrl?.takeIf { it.isNotBlank() },
                 progress = p?.let { (now - it.startMs).toFloat() / total!! }, landscape = true,
                 logo = ch.displayLogoUrl?.takeIf { it.isNotBlank() } ?: "",
+                playLabel = R.string.glcn_dock_watch, onPlay = { onPlayChannel(ch.id, all) },
                 onClick = { onPlayChannel(ch.id, all) },
             )
         }
         fun movieItem(m: MovieEntity) = LumenItem(
             key = "m" + m.id, title = m.name, line = listOfNotNull(m.year?.toString(), m.rating?.takeIf { it > 0 }?.let(::ratingOf)).joinToString("  ").ifBlank { null },
-            plot = m.plot, art = m.posterUrl, backdrop = m.backdropUrl, progress = null, landscape = false, onClick = { onOpenMovie(m) },
+            plot = m.plot, art = m.posterUrl, backdrop = m.backdropUrl, progress = null, landscape = false,
+            movie = m, playLabel = R.string.content_play, onPlay = { onPlayMovie(m.id, 0L) }, onClick = { onOpenMovie(m) },
         )
         fun seriesItem(s: SeriesEntity) = LumenItem(
             key = "s" + s.id, title = s.name, line = listOfNotNull(s.year?.toString(), s.rating?.takeIf { it > 0 }?.let(::ratingOf)).joinToString("  ").ifBlank { null },
-            plot = s.plot, art = s.posterUrl, backdrop = s.backdropUrl, progress = null, landscape = false, onClick = { onOpenSeries(s) },
+            plot = s.plot, art = s.posterUrl, backdrop = s.backdropUrl, progress = null, landscape = false,
+            series = s, onClick = { onOpenSeries(s) },
         )
         buildList {
             val keep = state.continueMovies.map { c ->
-                LumenItem("p" + c.stableKey, c.title, c.subtitle, c.plot, c.posterUrl, c.backdropUrl, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false) { onPlayMovie(c.sourceItemId, c.positionMs) }
+                LumenItem("p" + c.stableKey, c.title, c.subtitle, c.plot, c.posterUrl, c.backdropUrl, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false,
+                    playLabel = R.string.glcn_dock_resume, onPlay = { onPlayMovie(c.sourceItemId, c.positionMs) }) { onPlayMovie(c.sourceItemId, c.positionMs) }
             } + state.continueSeries.map { c ->
-                LumenItem("p" + c.stableKey, c.title, c.subtitle, c.plot, c.posterUrl, c.backdropUrl, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false) { onPlayEpisode(0L, c.targetItemId, c.positionMs) }
+                LumenItem("p" + c.stableKey, c.title, c.subtitle, c.plot, c.posterUrl, c.backdropUrl, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false,
+                    playLabel = R.string.glcn_dock_resume, onPlay = { onPlayEpisode(0L, c.targetItemId, c.positionMs) }) { onPlayEpisode(0L, c.targetItemId, c.positionMs) }
             }
             if (keep.isNotEmpty() && order.any { it == HomeRow.HERO || it == HomeRow.CONTINUE_MOVIES || it == HomeRow.CONTINUE_SERIES }) add(LumenTab(HomeRow.HERO, keep))
             if (state.recentLive.isNotEmpty() && HomeRow.RECENT_CHANNELS in order) add(LumenTab(HomeRow.RECENT_CHANNELS, state.recentLive.map { channelItem(it, state.recentGuide, state.recentLive) }))
@@ -169,7 +182,8 @@ fun LumenHome(
                             is TrendingHomeItem.Movie -> TrendingFacts(t.movie.name, t.movie.posterUrl, t.movie.backdropUrl, t.movie.plot, t.movie.year)
                             is TrendingHomeItem.Series -> TrendingFacts(t.series.name, t.series.posterUrl, t.series.backdropUrl, t.series.plot, t.series.year)
                         }
-                        LumenItem("t" + t.stableKey, name, year?.toString(), plot, poster, back, null, false) { onActivateTrending(t) {} }
+                        LumenItem("t" + t.stableKey, name, year?.toString(), plot, poster, back, null, false,
+                            movie = (t as? TrendingHomeItem.Movie)?.movie, series = (t as? TrendingHomeItem.Series)?.series) { onActivateTrending(t) {} }
                     },
                 ),
             )
@@ -197,6 +211,19 @@ fun LumenHome(
     }
     val selectedTab = remember { FocusRequester() }
     var menuRow by remember { mutableStateOf<HomeRow?>(null) }
+    // glcn: TMDB for the film or series the focus rests on — its title logo and trailer.
+    val metaRepo: tv.own.owntv.core.metadata.MetadataRepository = org.koin.compose.koinInject()
+    val metas = remember { androidx.compose.runtime.mutableStateMapOf<String, tv.own.owntv.core.database.entity.MetadataCacheEntity>() }
+    val logoFailed = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    LaunchedEffect(shown?.key) {
+        val it0 = shown ?: return@LaunchedEffect
+        if (it0.key in metas || (it0.movie == null && it0.series == null)) return@LaunchedEffect
+        delay(220)
+        val meta = runCatching { it0.movie?.let { metaRepo.resolveMovie(it) } ?: it0.series?.let { metaRepo.resolveSeries(it) } }.getOrNull()
+        if (meta != null) metas[it0.key] = meta
+    }
+    var trailer by remember { mutableStateOf<Pair<String, String>?>(null) }
+    trailer?.let { (key, title) -> tv.own.owntv.ui.components.TrailerPlayerScreen(videoKey = key, title = title) { trailer = null } }
 
     DisposableEffect(onEntryHook, entry) {
         onEntryHook?.invoke { runCatching { entry.requestFocus() }.isSuccess }
@@ -256,9 +283,31 @@ fun LumenHome(
             ) { k ->
                 val it0 = tab.items.firstOrNull { x -> x.key == k }
                 Column {
-                    Text(it0?.title.orEmpty(), style = stageText(64f, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    // glcn: the title's own lettering (TMDB logo) when it has one; the name in words otherwise.
+                    val logoUrl = k?.takeIf { it !in logoFailed }?.let { metas[it]?.logoPath }?.let { tv.own.owntv.core.metadata.MetadataImages.logo(it) }
+                    if (logoUrl != null) tv.own.owntv.ui.stage.StageTitleArt(
+                        url = logoUrl, contentDescription = it0?.title,
+                        modifier = Modifier.height(150.mpx).widthIn(max = 760.mpx),
+                        onFailed = { k?.let { logoFailed.add(it) } },
+                    ) else Text(it0?.title.orEmpty(), style = stageText(64f, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     it0?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
-                    (it0?.plot ?: it0?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(1040.mpx), style = stageText(20, 400), color = StageColors.Body, lines = 5, fade = true) }
+                    // glcn: how far along — a film or episode left half-way, or the programme on air.
+                    it0?.progress?.takeIf { it > 0f }?.let { tv.own.owntv.ui.stage.StageProgress(it.coerceIn(0f, 1f), Modifier.padding(top = 14.mpx).width(440.mpx)) }
+                    (it0?.plot ?: it0?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(1040.mpx), style = stageText(20, 400), color = StageColors.Body, lines = 3, fade = true) }
+                }
+            }
+            // glcn: what to do with it without opening it — ▲ from the tabs reaches these.
+            shown?.let { it0 ->
+                val trailerKey = metas[it0.key]?.trailerKey?.let { tv.own.owntv.core.metadata.TrailerKeys.split(it).firstOrNull() }
+                val details = it0.movie != null || it0.series != null
+                if (it0.onPlay != null || details || trailerKey != null) Row(Modifier.padding(top = 18.mpx).focusGroup(), horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                    it0.onPlay?.let { play ->
+                        tv.own.owntv.ui.stage.StageButton(stringResource(it0.playLabel ?: R.string.content_play), onClick = play, icon = OwnTVIcon.PLAY, iconFilled = true, height = 52.mpx, textSize = 19)
+                    }
+                    if (details) tv.own.owntv.ui.stage.StageButton(stringResource(R.string.glcn_dock_details), onClick = it0.onClick, icon = OwnTVIcon.INFO, height = 52.mpx, textSize = 19)
+                    trailerKey?.let { key ->
+                        tv.own.owntv.ui.stage.StageButton(stringResource(R.string.glcn_dock_trailer), onClick = { trailer = key to it0.title }, icon = OwnTVIcon.VIDEO, height = 52.mpx, textSize = 19)
+                    }
                 }
             }
         }
