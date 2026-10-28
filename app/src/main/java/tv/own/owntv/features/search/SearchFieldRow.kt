@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -67,6 +68,13 @@ private fun VoiceSearchButton(onQuery: (String) -> Unit, modifier: Modifier = Mo
     val label = stringResource(R.string.search_voice)
     val prompt = stringResource(R.string.search_voice_prompt)
     val language = LocalConfiguration.current.locales[0].toLanguageTag()
+    // glcn: the remote's microphone button asked for it (see [VoiceTrigger]).
+    val asked = VoiceTrigger.pending.intValue
+    LaunchedEffect(asked) {
+        if (VoiceTrigger.consume()) {
+            try { launcher.launch(VoiceSearch.intent(prompt, language)) } catch (_: ActivityNotFoundException) { available = false }
+        }
+    }
     StageTool(
         text = null,
         icon = OwnTVIcon.MIC,

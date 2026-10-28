@@ -653,16 +653,21 @@ private fun SeriesGrid(
         val screenW = maxWidth
         fun fx(px: Int) = screenW * (px / 1920f)
         if (cinematic) {
-            val heroH = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 464.mpx
-            val toolTop = 122.mpx + heroH
+            // glcn: with the menu on top the page is shorter by the bar's band: the header and hero move up into the room
+            // the clock no longer needs and the hero gives up the rest, so the posters' titles stay on screen.
+            val short = (1080.mpx - maxHeight).coerceAtLeast(0.mpx)
+            val lift = minOf(short, 56.mpx)
+            val heroTop = 122.mpx - lift
+            val heroH = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 464.mpx - (short - lift)
+            val toolTop = heroTop + heroH
             Box(Modifier.fillMaxSize().then(if (categoriesOpen) Modifier.graphicsLayer { alpha = 0.36f } else Modifier)) {
                 tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl, Modifier.matchParentSize())
                 VodCinematicBackdrop(titleInfo?.backdropUrl, series = true, Modifier.align(Alignment.TopEnd))
                 VodHeader(
                     section = stringResource(R.string.common_nav_series), category = headerLabel, count = vodCount(true, count),
-                    showChevron = true, modifier = Modifier.padding(start = fx(84), top = 52.mpx).width(fx(900)),
+                    showChevron = true, modifier = Modifier.padding(start = fx(84), top = 52.mpx - lift * 0.7f).width(fx(900)),
                 )
-                titleInfo?.let { VodHero(it, Modifier.padding(start = fx(84), top = 122.mpx).width(fx(1000)).height(heroH)) }
+                titleInfo?.let { VodHero(it, Modifier.padding(start = fx(84), top = heroTop).width(fx(1000)).height(heroH)) }
                 Column(Modifier.padding(top = toolTop).fillMaxSize().then(paneModifier)) {
                     Row(
                         Modifier.padding(start = fx(68), end = fx(64)).fillMaxWidth()

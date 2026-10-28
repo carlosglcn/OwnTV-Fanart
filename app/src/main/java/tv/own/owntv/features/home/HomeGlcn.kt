@@ -355,12 +355,32 @@ internal fun ArtLiveRow(
         // glcn: a channel that moves to the front (the one just watched) shows as the first card, whole,
         // instead of the row holding its old place and leaving it half off the left edge.
         val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
-        LaunchedEffect(channels.firstOrNull()?.id) { rowState.requestScrollToItem(0) }
+        // glcn: what is on changes under the cursor (a programme ends, the guide refreshes) and the focused card can
+        // leave the row. Its focus then went nowhere and the next key sent Home back to the top; now the card that
+        // takes its place (or the last one) gets it, and the page stays on this row.
+        val cardFocus = remember { HashMap<Long, FocusRequester>() }
+        val focusedAt = remember { intArrayOf(-1) }
+        val focusedId = remember { longArrayOf(Long.MIN_VALUE) }
+        // When the row last lost focus: the loss caused by the card going happens in the same frame as the change.
+        val lostAtMs = remember { longArrayOf(0L) }
+        LaunchedEffect(channels) {
+            val justLost = android.os.SystemClock.uptimeMillis() - lostAtMs[0] < FOCUS_LOSS_WINDOW_MS
+            val lost = justLost && focusedAt[0] >= 0 && channels.none { it.id == focusedId[0] }
+            if (lost && channels.isNotEmpty()) {
+                val c = channels[focusedAt[0].coerceAtMost(channels.lastIndex)]
+                androidx.compose.runtime.withFrameNanos { }
+                runCatching { cardFocus[c.id]?.requestFocus() }
+            }
+            cardFocus.keys.retainAll(channels.map { it.id }.toSet())
+        }
+        val rowHasFocus = remember { booleanArrayOf(false) }
+        // Back to the start for a new first card — not while the cursor is in the row, which would leave it off screen.
+        LaunchedEffect(channels.firstOrNull()?.id) { if (!rowHasFocus[0]) rowState.requestScrollToItem(0) }
         HomeLazyRow(
             state = rowState,
             horizontalArrangement = Arrangement.spacedBy(20.mpx),
             contentPadding = PaddingValues(start = start, end = 64.mpx),
-            modifier = Modifier.focusRestorer().focusGroup(),
+            modifier = Modifier.focusRestorer().focusGroup().onFocusChanged { rowHasFocus[0] = it.hasFocus; if (!it.hasFocus) lostAtMs[0] = android.os.SystemClock.uptimeMillis() },
         ) {
             itemsIndexed(channels, key = { _, c -> c.id }) { index, channel ->
                 ArtLiveCard(
@@ -371,8 +391,9 @@ internal fun ArtLiveRow(
                     onLongClick = onLongPress?.let { lp -> { lp(channel) } },
                     modifier = Modifier
                         .then(if (index == 0 && firstItemFocusRequester != null) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
+                        .focusRequester(cardFocus.getOrPut(channel.id) { FocusRequester() })
                         .tracked(track = track)
-                        .onFocusChanged { if (it.hasFocus) onFocus() },
+                        .onFocusChanged { if (it.hasFocus) { focusedAt[0] = index; focusedId[0] = channel.id; onFocus() } },
                 )
             }
         }
@@ -811,3 +832,6 @@ internal fun HomeLazyRow(
         )
     }
 }
+
+/** glcn: a row that lost focus this recently, as its cards changed, lost it because the focused card went. */
+private const val FOCUS_LOSS_WINDOW_MS = 400L

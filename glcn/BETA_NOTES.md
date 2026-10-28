@@ -79,3 +79,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⚽ "Other channels for this match": a see-through sheet from the right, readable in light and dark, with both crests and the competition at its head; its player button now has the sports mark instead of the list one
 - 🖼️ Quick lists' preview: a logo (no programme picture, or a "picture" that is really a logo) stands whole and sharp in the middle of the frame instead of being cropped and blurred
 - 🌫️ Live TV Cinematic: the shade behind the title and synopsis is a soft oval with no edges
+- 🎯 Home live rows (Sports now, Recent and Favourite channels in "On now"): when what is on changes under the cursor and the focused card leaves the row, the card taking its place gets the focus — Home no longer jumps back to the top on the next key
+- 🎬 Movies and Series (Cinematic) with the menu on top: the header and hero move up and the hero gives up the rest, so the posters' titles are on screen again
+- 🎙️ Remotes with a microphone (air mice, Bluetooth remotes): their mic button opens Search and starts listening straight away — when the remote sends the Search key (the SHIELD's own remote keeps calling the Assistant)

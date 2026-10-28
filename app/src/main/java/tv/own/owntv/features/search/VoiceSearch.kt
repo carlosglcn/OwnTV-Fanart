@@ -49,3 +49,14 @@ internal object VoiceSearch {
     private const val MAX_RESULTS = 5
     private val Whitespace = Regex("\\s+")
 }
+
+/**
+ * glcn: a remote's microphone button. Remotes other than the SHIELD's own (air mice, Bluetooth remotes with a mic)
+ * send the Search key for it; the app takes that key, opens Search and starts listening at once — the remote's
+ * microphone is the system's, so the recogniser hears it. [pending] counts presses not yet answered.
+ */
+object VoiceTrigger {
+    val pending = androidx.compose.runtime.mutableIntStateOf(0)
+    fun request() { pending.intValue++ }
+    fun consume(): Boolean = (pending.intValue > 0).also { if (it) pending.intValue = 0 }
+}
