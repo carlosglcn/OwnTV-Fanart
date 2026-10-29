@@ -531,7 +531,9 @@ fun OwnTVShell(
     LaunchedEffect(Unit) {
         if (playerMode != PlayerMode.NONE) { onStartupSettled(); return@LaunchedEffect }
         val pid = resumeSettings.activeProfileId.first()
-        when (val startupMode = resumeSettings.startupMode(pid).first()) {
+        // glcn: a TV profile always opens on its last channel, full screen, whatever its saved start-up says.
+        val tvStart = tv.own.owntv.glcn.TvProfiles.isTv(pid)
+        when (val startupMode = if (tvStart) tv.own.owntv.core.settings.StartupMode.LAST_CHANNEL else resumeSettings.startupMode(pid).first()) {
             tv.own.owntv.core.settings.StartupMode.LAST_CHANNEL -> {
                 val ch = liveVm.lastWatchedLiveChannel()
                 if (ch != null && playerMode == PlayerMode.NONE) {

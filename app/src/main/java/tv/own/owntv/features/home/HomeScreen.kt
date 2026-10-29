@@ -1953,7 +1953,7 @@ private fun HomeReadScope(content: @Composable () -> Unit) { content() }
 private const val HOME_GLIDE_STIFFNESS = 240f
 
 /** glcn: the rows a TV profile's Home keeps. */
-private val TV_PROFILE_ROWS = setOf(
+internal val TV_PROFILE_ROWS = setOf(
     HomeRow.FEATURED, HomeRow.RECENT_CHANNELS, HomeRow.FAVORITE_CHANNELS, HomeRow.STARTING_SOON,
     HomeRow.SPORTS_NOW, HomeRow.LIVE_SPORTS, HomeRow.TONIGHT,
 )

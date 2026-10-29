@@ -135,7 +135,9 @@ fun LumenHome(
     val palette = LocalStagePalette.current
     val accent = stageAccent
 
-    val tabs = remember(state, matches) {
+    // glcn (TV profile): the Dock keeps to TV too — channels, sports, what is on tonight.
+    val tvOnly = tv.own.owntv.glcn.TvProfiles.activeIsTv
+    val tabs = remember(state, matches, tvOnly) {
         val now = System.currentTimeMillis()
         val timeFmt = android.text.format.DateFormat.getTimeFormat(context)
         fun channelItem(ch: ChannelEntity, guide: tv.own.owntv.core.home.GuideSliceState, all: List<ChannelEntity>): LumenItem {
@@ -197,7 +199,7 @@ fun LumenHome(
             if (state.favoriteSeries.isNotEmpty() && HomeRow.FAVORITE_SERIES in order) add(LumenTab(HomeRow.FAVORITE_SERIES, state.favoriteSeries.map(::seriesItem)))
             if (state.recentMovies.isNotEmpty() && HomeRow.RECENT_MOVIES in order) add(LumenTab(HomeRow.RECENT_MOVIES, state.recentMovies.map(::movieItem)))
             if (state.recentSeries.isNotEmpty() && HomeRow.RECENT_SERIES in order) add(LumenTab(HomeRow.RECENT_SERIES, state.recentSeries.map(::seriesItem)))
-        }
+        }.filter { !tvOnly || it.row in TV_PROFILE_ROWS }
     }
 
     var selected by remember { mutableIntStateOf(0) }
