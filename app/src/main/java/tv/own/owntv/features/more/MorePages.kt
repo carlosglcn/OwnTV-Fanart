@@ -687,11 +687,16 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
             // nothing on a SHIELD), so the TV serves it on the home Wi-Fi — scan the QR, type the PIN, read or save it.
             StageTool(stringResource(R.string.glcn_share_log), icon = OwnTVIcon.SHARE, onClick = {
                 scope.launch {
-                    val path = withContext(Dispatchers.IO) { PlaybackErrorLog.export(context) }
-                    exportPath = path
-                    exportFailed = path == null
-                    if (path != null) {
-                        companion.startForLogDownload(tv.own.owntv.core.companion.CompanionLink.DEFAULT_PORT, java.io.File(path))
+                    // glcn: the phone reads the report from the app's own cache — the exported copy sits in the public
+                    // Download folder, which the app could not always read back, and the phone got an empty page.
+                    val file = withContext(Dispatchers.IO) {
+                        runCatching {
+                            java.io.File(context.cacheDir, "owntv-playback-report.txt").apply { writeText(PlaybackErrorLog.reportText(context)) }
+                        }.getOrNull()
+                    }
+                    exportFailed = file == null
+                    if (file != null) {
+                        companion.startForLogDownload(tv.own.owntv.core.companion.CompanionLink.DEFAULT_PORT, file)
                         sharing = true
                     }
                 }
