@@ -980,6 +980,7 @@
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/PlatformLogoStyle.kt	square
 2	empty	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	EEE d
+1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	w1280
 2	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	·
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	★
 1	technical	app/src/main/java/tv/own/owntv/glcn/RecentPins.kt	glcn_recent_pins

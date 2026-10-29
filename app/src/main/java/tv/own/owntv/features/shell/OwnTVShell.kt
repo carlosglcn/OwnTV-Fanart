@@ -1058,6 +1058,16 @@ fun OwnTVShell(
         }
     }
     LaunchedEffect(selectedSection) { if (selectedSection != MainSection.SERIES) seriesFromHome = false }
+    // glcn: a film airing on the channel being watched has its full details read a moment after tuning, so its
+    // info screen opens with them at once.
+    val filmResolver = koinInject<tv.own.owntv.core.metadata.ProgrammeArtResolver>()
+    LaunchedEffect(previewChannel?.id, playerMode == PlayerMode.FULLSCREEN) {
+        val ch = previewChannel ?: return@LaunchedEffect
+        if (playerMode != PlayerMode.FULLSCREEN || zapSource != MainSection.LIVE_TV) return@LaunchedEffect
+        kotlinx.coroutines.delay(FILM_WARM_MS)
+        val p = runCatching { liveVm.nowFull(ch).first }.getOrNull() ?: return@LaunchedEffect
+        runCatching { filmResolver.filmFor(p.title, p.categories) }
+    }
     // glcn: a film chosen on Home — its page over Home, played from there; Back returns to Home.
     homeFilm?.let { film ->
         val metaRepo = koinInject<tv.own.owntv.core.metadata.MetadataRepository>()
@@ -2666,3 +2676,6 @@ private const val RAIL_KEY_WINDOW_MS = 400L
 
 /** glcn: a second stop after a held Back, once the closing has settled. */
 private const val HOLD_SETTLE_MS = 600L
+
+/** glcn: how long after tuning a film's details are read ahead for its info screen. */
+private const val FILM_WARM_MS = 1_500L
