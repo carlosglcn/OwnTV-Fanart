@@ -213,6 +213,8 @@ open class MainActivity : ComponentActivity() {
         // postSplashScreenTheme (Theme.OwnTV), so the activity ends up in the same theme as before.
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        // glcn: a long Back that did not close the player leaves a line in the playback report (see BackHold).
+        tv.own.owntv.glcn.BackHold.note = { line -> tv.own.owntv.player.PlaybackErrorLog.report(applicationContext, "back-hold", true, null, line) }
         val splashDeadline = SystemClock.uptimeMillis() + SPLASH_TIMEOUT_MS
         var readyAt = 0L
         splash.setKeepOnScreenCondition {

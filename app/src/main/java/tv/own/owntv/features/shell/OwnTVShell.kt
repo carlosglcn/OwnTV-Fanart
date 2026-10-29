@@ -1472,6 +1472,15 @@ fun OwnTVShell(
                             modifier = Modifier.fillMaxSize(),
                         )
 
+                        // glcn (TV profile): a Home of its own, only TV — the programme's picture filling the screen.
+                        selectedSection == MainSection.HOME && tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId) -> tv.own.owntv.features.home.TvHome(
+                            load = { liveVm.tvStripGroups() },
+                            loadNow = { liveVm.nowFull(it) },
+                            onTune = { ch, list -> scope.launch { if (liveVm.ensurePlayingByIdAsync(ch.id, list)) openFullscreen(MainSection.LIVE_TV) } },
+                            onChildFocused = { focusedLayer = ShellLayer.CONTENT },
+                            contentStart = if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.FLOATING) 150.mpx else 64.mpx,
+                            modifier = Modifier.fillMaxSize(),
+                        )
                         selectedSection == MainSection.HOME -> HomeScreen(
                             vm = homeVm,
                             seasonActive = playerMode != PlayerMode.FULLSCREEN,

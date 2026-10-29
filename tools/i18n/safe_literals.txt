@@ -22,6 +22,7 @@
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	BgImage
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	OwnTVHome
 1	compiler	app/src/main/java/tv/own/owntv/MainActivity.kt	RememberReturnType
+1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	back-hold
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	blur: bounds decode failed for $path
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	blur: crop/scale/blur threw ${t.javaClass.simpleName}: ${t.message}
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	blur: decodeFile returned null for $path
@@ -127,6 +128,9 @@
 1	locale	app/src/main/java/tv/own/owntv/features/home/HomeViewModel.kt	EN
 1	performance	app/src/main/java/tv/own/owntv/features/home/HomeViewModel.kt	home-data
 3	technical	app/src/main/java/tv/own/owntv/features/home/HomeViewModel.kt	w1280
+2	empty	app/src/main/java/tv/own/owntv/features/home/TvHome.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/features/home/TvHome.kt	tvHomeArt
+1	technical	app/src/main/java/tv/own/owntv/features/home/TvHome.kt	–
 1	technical	app/src/main/java/tv/own/owntv/features/live/CatchupJumpDialog.kt	EEEHm
 1	technical	app/src/main/java/tv/own/owntv/features/live/CatchupJumpDialog.kt	Hm
 1	technical	app/src/main/java/tv/own/owntv/features/live/CatchupJumpDialog.kt	exact
@@ -945,6 +949,11 @@
 2	technical	app/src/main/java/tv/own/owntv/features/update/UpdateDialog.kt	-
 2	technical	app/src/main/java/tv/own/owntv/features/update/UpdateDialog.kt	•
 1	technical	app/src/main/java/tv/own/owntv/glcn/ArtPrefetch.kt	http
+1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	Back held $held ms; armed at press=$armedAtDown, now=${armed()}; repeats=$repeats
+1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	Back hold closed the player ($how)
+1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	release
+1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	repeats
+1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	timer
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	auto_trailers
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	double_row
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	glcn_dock
