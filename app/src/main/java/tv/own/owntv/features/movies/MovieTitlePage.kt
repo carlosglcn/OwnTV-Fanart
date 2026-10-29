@@ -190,6 +190,11 @@ internal fun MovieTitlePage(
                     )
                     if (resume) roundButton(stringResource(R.string.glcn_title_start_over), OwnTVIcon.REWIND) { onPlay(0L) }
                     meta?.trailerKey?.let { stored -> roundButton(stringResource(R.string.glcn_dock_trailer), OwnTVIcon.VIDEO) { fullTrailer = trailerKeysFirst(stored) } }
+                    // glcn: the trailer's sound, for remotes whose volume never reaches the box (a TV's own, by HDMI).
+                    if (meta?.trailerKey != null) roundButton(
+                        stringResource(if (tv.own.owntv.features.home.CinemaTrailer.sound) R.string.glcn_trailer_sound_off else R.string.glcn_trailer_sound_on),
+                        if (tv.own.owntv.features.home.CinemaTrailer.sound) OwnTVIcon.VOLUME_MUTE else OwnTVIcon.VOLUME_HIGH,
+                    ) { tv.own.owntv.features.home.CinemaTrailer.sound = !tv.own.owntv.features.home.CinemaTrailer.sound }
                     roundButton(
                         stringResource(if (favorite) R.string.content_remove_favourite else R.string.content_add_favourite),
                         OwnTVIcon.FAVORITE, filled = favorite, onClick = onToggleFavorite,

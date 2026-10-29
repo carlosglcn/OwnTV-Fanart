@@ -15,12 +15,24 @@ object DockPrefs {
     /** "Page before watching": choosing a film opens its page (trailer, audio, subtitles) instead of playing at once. */
     var titlePage by mutableStateOf(true)
         private set
+    /** glcn: trailers with sound — asked for once (Vol +, Play/Pause, a page's sound button) and kept from then on. */
+    var trailerSound by mutableStateOf(false)
+        private set
+    private var app: Context? = null
 
     fun load(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         doubleRow = prefs.getBoolean(DOUBLE_ROW, true)
         autoTrailers = prefs.getBoolean(AUTO_TRAILERS, true)
         titlePage = prefs.getBoolean(TITLE_PAGE, true)
+        trailerSound = prefs.getBoolean(TRAILER_SOUND, false)
+        app = context.applicationContext
+    }
+
+    fun setTrailerSound(on: Boolean) {
+        if (trailerSound == on) return
+        trailerSound = on
+        app?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.edit()?.putBoolean(TRAILER_SOUND, on)?.apply()
     }
 
     fun setDoubleRow(context: Context, on: Boolean) {
@@ -42,4 +54,5 @@ object DockPrefs {
     private const val DOUBLE_ROW = "double_row"
     private const val AUTO_TRAILERS = "auto_trailers"
     private const val TITLE_PAGE = "title_page"
+    private const val TRAILER_SOUND = "trailer_sound"
 }

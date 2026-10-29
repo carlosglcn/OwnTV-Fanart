@@ -121,6 +121,11 @@ internal fun SeriesTitleCover(
                 )
                 roundButton(stringResource(R.string.content_episodes), OwnTVIcon.LIST, Modifier.focusRequester(episodesFocus), onClick = onEpisodes)
                 onTrailer?.let { roundButton(stringResource(R.string.glcn_dock_trailer), OwnTVIcon.VIDEO, onClick = it) }
+                // glcn: the trailer's sound, for remotes whose volume never reaches the box (a TV's own, by HDMI).
+                if (trailerKey != null) roundButton(
+                    stringResource(if (tv.own.owntv.features.home.CinemaTrailer.sound) R.string.glcn_trailer_sound_off else R.string.glcn_trailer_sound_on),
+                    if (tv.own.owntv.features.home.CinemaTrailer.sound) OwnTVIcon.VOLUME_MUTE else OwnTVIcon.VOLUME_HIGH,
+                ) { tv.own.owntv.features.home.CinemaTrailer.sound = !tv.own.owntv.features.home.CinemaTrailer.sound }
                 roundButton(
                     stringResource(if (favourite) R.string.content_favorited else R.string.content_favorite),
                     OwnTVIcon.FAVORITE, filled = favourite, onClick = onToggleFavourite,

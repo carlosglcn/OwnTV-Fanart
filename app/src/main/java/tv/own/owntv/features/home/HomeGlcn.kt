@@ -954,8 +954,10 @@ internal object CinemaTrailer {
     var playing by mutableStateOf<Pair<String, String>?>(null)
     var full by mutableStateOf<Pair<String, String>?>(null)
     var stopTick by mutableStateOf(0)
-    /** Sound on — asked for with Play/Pause; kept for the next trailers until the app closes, as Netflix keeps it. */
-    var sound by mutableStateOf(false)
+    /** Sound on — kept on the device once asked for (Vol +, Play/Pause, a page's sound button); see DockPrefs. */
+    var sound: Boolean
+        get() = tv.own.owntv.glcn.DockPrefs.trailerSound
+        set(value) = tv.own.owntv.glcn.DockPrefs.setTrailerSound(value)
     /** How far the playing trailer has got, for the carry-over to the title's page. */
     var second = 0f
     /** A trailer that was playing when OK opened its title: the page it lands on goes on with it (key, second, when). */
