@@ -561,10 +561,12 @@ private fun PreviewPicture(url: String, logoLike: Boolean, aspect: Float) {
                 val img = st.result.image
                 if (!asLogo && img.height > 0) {
                     val r = img.width.toFloat() / img.height
-                    // glcn: a logo is squarish, small, or drawn on a transparent background (the guides that give a
+                    // glcn: a logo is squarish or drawn on a transparent background (the guides that give a
                     // channel's logo as the programme's picture send a wide transparent PNG — cropped, it lost the logo).
                     val transparent = (img as? coil3.BitmapImage)?.bitmap?.hasAlpha() == true
-                    if (r < 1.25f || img.width < 480 || transparent) { asLogo = true; PreviewShapes.logoLike[url] = true }
+                    // The size is NOT a sign: the picture is read at the size it is drawn at, so a wide photo of a news set
+                    // came back under 480 wide and stood as a small logo in the middle of an empty frame.
+                    if (r < 1.25f || transparent) { asLogo = true; PreviewShapes.logoLike[url] = true }
                 }
             },
             modifier = if (asLogo) Modifier.align(Alignment.Center).fillMaxWidth(0.56f).fillMaxHeight(0.56f) else Modifier.fillMaxSize(),
