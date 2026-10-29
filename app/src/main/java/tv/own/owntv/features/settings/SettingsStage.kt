@@ -302,7 +302,9 @@ fun StageSettingsPage(
                 )
             }
             if (list != null) list(Modifier.padding(start = w * 50, top = rowsTop).width(w * 1060).fillMaxHeight())
-            else CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
+            else CompositionLocalProvider(LocalBringIntoViewSpec provides settingsScrollSpec) {
+                // glcn: one highlight that slides from row to row, at the list's own pace.
+                tv.own.owntv.glcn.SlideFocusHost(stiffness = tv.own.owntv.glcn.SETTINGS_FOCUS_STIFFNESS) {
                 Column(
                     Modifier
                         .padding(start = w * 50, top = rowsTop)
@@ -315,6 +317,7 @@ fun StageSettingsPage(
                     verticalArrangement = Arrangement.spacedBy(6.mpx),
                     content = rows,
                 )
+                }
             }
             val help = panel.help
             val editor = panel.editor
@@ -1085,3 +1088,10 @@ fun SpanHelpBlock() {
 /** " · " between two parts of a line (the eyebrow format with both parts empty, so it is localised). */
 @Composable
 fun dotSeparator(): String = stringResource(R.string.settings_breadcrumb_eyebrow, "", "")
+
+/** glcn: Settings' rows — the list's edge rule (a row of room ahead), with the brisker list glide. */
+private val settingsScrollSpec = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
+    override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float> get() = tv.own.owntv.glcn.SmoothScroll.listAnimation
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float =
+        edgeScrollSpec.calculateScrollDistance(offset, size, containerSize)
+}

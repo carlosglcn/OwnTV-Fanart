@@ -125,3 +125,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏳ Classic Home: the backdrop waits a little longer (≈1.8 s) on a card before changing.
 - ➡️ Recently watched / channel lists: glide in from their side with the shade fading up (not in light mode).
 - 🖼️ Movies & Series: one backdrop per title — the playlist's own wide picture first (TMDB's only when it has none, or when TMDB wins), so the hero no longer swaps pictures a moment after landing.
+- ⚙️ Settings: the list glides faster (0.3 s) and one highlight slides from row to row at the same pace, so a quick run of ▼ never leaves it off the screen.
