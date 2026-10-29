@@ -886,6 +886,9 @@ internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, m
     var start by remember { mutableStateOf(false) }
     val stop = CinemaTrailer.stopTick
     var startAt by remember { mutableStateOf(0f) }
+    // glcn: the trailer player is got ready as soon as a page that can show one is up (see TrailerPool).
+    val warmContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(allowed) { if (allowed) tv.own.owntv.ui.components.TrailerPool.warm(warmContext) }
     LaunchedEffect(focusKey, trailerKey, stop, allowed) {
         ready = null; start = false; startAt = 0f
         CinemaTrailer.playing = null
@@ -1025,8 +1028,8 @@ private fun cinemaJsonList(json: String?): List<String> {
 private const val KEN_BURNS_ZOOM = 0.12f
 private const val KEN_BURNS_MS = 24_000
 private const val CINEMA_AMBIENT = 0.16f
-private const val CINEMA_TRAILER_MS = 3_000L
-private const val TRAILER_WARM_MS = 1_200L
+private const val CINEMA_TRAILER_MS = 2_200L
+private const val TRAILER_WARM_MS = 900L
 private const val LIGHTS_DOWN_MS = 2_500L
 /** glcn: the trailer window's share of the screen's width, up on the right. */
 internal const val TRAILER_WINDOW_WIDTH = 0.62f

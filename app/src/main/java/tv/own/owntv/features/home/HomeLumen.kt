@@ -263,6 +263,8 @@ fun LumenHome(
     var ambientStart by remember { mutableStateOf(false) }
     val shownTrailer by androidx.compose.runtime.rememberUpdatedState(shown?.let { metas[it.key]?.trailerKey })
     val animsOn by androidx.compose.runtime.rememberUpdatedState(tv.own.owntv.ui.theme.animationsOn)
+    val warmContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) { if (tv.own.owntv.glcn.DockPrefs.autoTrailers && !CinemaTrailer.blocked) tv.own.owntv.ui.components.TrailerPool.warm(warmContext) }
     LaunchedEffect(Unit) {
         while (true) {
             delay(500)
@@ -621,6 +623,6 @@ private fun dockJsonList(json: String?): List<String> {
 }
 
 /** glcn: quiet this long and the title's trailer replaces its picture; this long and the words and dock fade away. */
-private const val DOCK_TRAILER_MS = 3_000L
-private const val DOCK_TRAILER_WARM_MS = 1_200L
+private const val DOCK_TRAILER_MS = 2_200L
+private const val DOCK_TRAILER_WARM_MS = 900L
 private const val DOCK_REST_MS = 20_000L

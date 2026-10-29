@@ -228,6 +228,11 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
      */
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
+        // glcn: the app left the screen, or Android wants memory — the trailer player goes first (it is the largest
+        // thing kept only for comfort), and in the background the picture cache keeps half.
+        @Suppress("DEPRECATION")
+        if (level >= TRIM_MEMORY_RUNNING_MODERATE) android.os.Handler(mainLooper).post { tv.own.owntv.ui.components.TrailerPool.free() }
+        if (level == TRIM_MEMORY_UI_HIDDEN) runCatching { SingletonImageLoader.get(this).memoryCache?.let { it.trimToSize(it.maxSize / 2) } }
         // TRIM_MEMORY_RUNNING_LOW is deprecated on API 34+ but still the only signal on TV devices
         // running older Android, so keep honouring it.
         @Suppress("DEPRECATION")

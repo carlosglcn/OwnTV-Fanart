@@ -36,7 +36,7 @@
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	onNewIntent deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	profile-id-loaded
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	profiles-loaded
-2	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	DEPRECATION
+3	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	DEPRECATION
 1	file-path	app/src/main/java/tv/own/owntv/OwnTVApp.kt	image_cache
 1	performance	app/src/main/java/tv/own/owntv/OwnTVApp.kt	koin-started
 1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	memory warning (level $level) ·
