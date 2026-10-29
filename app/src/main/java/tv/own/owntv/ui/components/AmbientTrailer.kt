@@ -101,6 +101,10 @@ object TrailerPool {
     private var view: YouTubePlayerView? = null
     private var player: YouTubePlayer? = null
     private var request: Request? = null
+    /** The video the player holds now (cued or playing), and whether it is playing — a page taking over the same
+     *  trailer keeps it going rather than loading it again (that reload was the slow step on opening a title). */
+    private var loadedKey: String? = null
+    private var isPlaying = false
     private val idleFree = Runnable { if (request == null) free() }
 
     /** Get the player ready ahead of the first trailer (a page that may show one calls this). */
@@ -130,9 +134,18 @@ object TrailerPool {
 
     fun claim(r: Request) {
         main.removeCallbacks(idleFree)
+        val p = player
+        val key = r.keys.getOrNull(r.index)
+        if (p != null && key != null && key == loadedKey) {
+            // The same trailer, handed on: it goes on from where it is, no new load.
+            request = r
+            applyMute(p, r.muted)
+            if (r.start) { r.started = true; if (isPlaying) r.onPlaying() else p.play() }
+            return
+        }
         request?.let { old -> if (old.owner !== r.owner) runCatching { player?.pause() } }
         request = r
-        player?.let { load(it, r) }
+        p?.let { load(it, r) }
     }
 
     fun play(owner: Any) {
@@ -151,10 +164,15 @@ object TrailerPool {
     fun release(owner: Any) {
         if (request?.owner !== owner) return
         request = null
-        runCatching { player?.pause() }
+        // Paused a moment later, not at once: a page taking the same trailer over claims it within a frame or two,
+        // and a pause then a play in between was a visible hitch.
+        main.removeCallbacks(pauseIdle)
+        main.postDelayed(pauseIdle, HANDOVER_MS)
         main.removeCallbacks(idleFree)
         main.postDelayed(idleFree, IDLE_FREE_MS)
     }
+
+    private val pauseIdle = Runnable { if (request == null) runCatching { player?.pause() } }
 
     /** Let the player go now, its memory with it; the next trailer makes a new one. */
     fun free() {
@@ -164,6 +182,8 @@ object TrailerPool {
         request = null
         view = null
         player = null
+        loadedKey = null
+        isPlaying = false
         (v.parent as? ViewGroup)?.removeView(v)
         runCatching { v.release() }
         r?.onDone?.invoke()
@@ -178,6 +198,8 @@ object TrailerPool {
     private fun load(p: YouTubePlayer, r: Request) {
         applyMute(p, r.muted)
         val key = r.keys.getOrNull(r.index) ?: return
+        loadedKey = key
+        isPlaying = false
         if (r.start) { r.started = true; p.loadVideo(key, r.startAt) } else p.cueVideo(key, r.startAt)
     }
 
@@ -188,6 +210,8 @@ object TrailerPool {
         }
         override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) { request?.onSecond?.invoke(second) }
         override fun onStateChange(youTubePlayer: YouTubePlayer, state: PlayerConstants.PlayerState) {
+            isPlaying = state == PlayerConstants.PlayerState.PLAYING
+            if (state == PlayerConstants.PlayerState.ENDED) loadedKey = null
             val r = request ?: return
             when (state) {
                 PlayerConstants.PlayerState.PLAYING -> if (r.started) r.onPlaying()
@@ -200,12 +224,14 @@ object TrailerPool {
             if (r.index < r.keys.lastIndex) {
                 r.index++
                 val key = r.keys[r.index]
+                loadedKey = key
                 if (r.started) youTubePlayer.loadVideo(key, 0f) else youTubePlayer.cueVideo(key, 0f)
             } else { request = null; r.onDone() }
         }
     }
 
     private const val IDLE_FREE_MS = 60_000L
+    private const val HANDOVER_MS = 250L
 }
 
 /** glcn: how fast a trailer comes in over the picture once it plays. */

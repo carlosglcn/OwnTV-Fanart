@@ -146,7 +146,7 @@ internal fun MovieTitlePage(
                 // The picture — or its trailer — edge to edge.
                 tv.own.owntv.features.shell.components.VodCinematicBackdrop(
                     info.backdropUrl, series = false, Modifier.align(Alignment.TopEnd),
-                    trailer = meta?.trailerKey, trailerTitle = movie.name, focusKey = movie.id, expand = 1f,
+                    trailer = meta?.trailerKey, trailerTitle = movie.name, focusKey = movie.id,
                 )
             }
             // The lower half darkens for the words; the whole page darkens further for the second part.
