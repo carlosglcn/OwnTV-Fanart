@@ -141,3 +141,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔙 Holding Back now stops the channel completely (it used to close the player but leave the channel playing in the window).
 - 🔤 Movies & Series: the hero trailer sits under the page's washes, so the search, tools and key hints read over it again.
 - 🔊 Trailer sound hint (⏯ Sound / Mute) moved up to the top right, under the clock, so the cards at the foot no longer hide it.
+- 🔊 Trailer sound without Play/Pause: Volume + while a trailer plays silently turns its sound on (the volume works as always); on Movies/Series, hold OK › "Trailer sound on/off" (first in the menu while a trailer plays). OK no longer stops the trailer. The hint (now "Vol + for sound") sits at the top right, under the clock.
+- 🔤 Picture strip's floating card (player): readable in the light theme — more glass and darker secondary text.

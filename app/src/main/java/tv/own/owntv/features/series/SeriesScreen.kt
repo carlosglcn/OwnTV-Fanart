@@ -1010,6 +1010,13 @@ private fun SeriesGrid(
         val inHistory by androidx.compose.runtime.produceState(selectedKey == LiveKey.History, s.id) { value = vm.isInHistory(s) }
         val canMove = selectedKey is LiveKey.Folder || selectedKey is LiveKey.Custom || selectedKey == LiveKey.Favorites
         val actions = buildList {
+            // glcn: the trailer playing behind the page — its sound, for remotes without Play/Pause.
+            if (tv.own.owntv.features.home.CinemaTrailer.playing != null) add(MenuAction(
+                "trailer_sound",
+                stringResource(if (tv.own.owntv.features.home.CinemaTrailer.sound) R.string.glcn_trailer_sound_off else R.string.glcn_trailer_sound_on),
+                if (tv.own.owntv.features.home.CinemaTrailer.sound) OwnTVIcon.VOLUME_MUTE else OwnTVIcon.VOLUME_HIGH,
+                group = 0,
+            ) { tv.own.owntv.features.home.CinemaTrailer.sound = !tv.own.owntv.features.home.CinemaTrailer.sound; contextSeries = null })
             add(MenuAction("play_trailer", stringResource(R.string.content_play_trailer), OwnTVIcon.PLAY_CIRCLE, group = VodGroupWatch) {
                 trailerKey?.let { contextSeries = null; trailerTitle = s.name; trailerVideoKey = it }
             })
@@ -1070,6 +1077,7 @@ private fun SeriesGrid(
                 "remove_history".takeIf { !inHistory },
                 "tmdb_details".takeIf { !(metadataMode.enrich && cacheForS != null) },
             ),
+            firstFocusKey = if (tv.own.owntv.features.home.CinemaTrailer.playing != null) "trailer_sound" else "favourite",
             onDismiss = { contextSeries = null },
         )
     }

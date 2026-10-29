@@ -973,6 +973,13 @@ fun MoviesScreen(
         val inHistory by androidx.compose.runtime.produceState(selectedKey == LiveKey.History, m.id) { value = vm.isInHistory(m) }
         val canMove = selectedKey is LiveKey.Folder || selectedKey is LiveKey.Custom || selectedKey == LiveKey.Favorites
         val actions = buildList {
+            // glcn: the trailer playing behind the page — its sound, for remotes without Play/Pause.
+            if (tv.own.owntv.features.home.CinemaTrailer.playing != null) add(MenuAction(
+                "trailer_sound",
+                stringResource(if (tv.own.owntv.features.home.CinemaTrailer.sound) R.string.glcn_trailer_sound_off else R.string.glcn_trailer_sound_on),
+                if (tv.own.owntv.features.home.CinemaTrailer.sound) OwnTVIcon.VOLUME_MUTE else OwnTVIcon.VOLUME_HIGH,
+                group = 0,
+            ) { tv.own.owntv.features.home.CinemaTrailer.sound = !tv.own.owntv.features.home.CinemaTrailer.sound; contextMovie = null })
             add(MenuAction("play_trailer", stringResource(R.string.content_play_trailer), OwnTVIcon.PLAY_CIRCLE, group = VodGroupWatch) {
                 trailerKey?.let { contextMovie = null; trailerTitle = m.name; trailerVideoKey = it }
             })
@@ -1047,6 +1054,7 @@ fun MoviesScreen(
                 "tmdb_details".takeIf { !(metadataMode.enrich && cacheForM != null) },
                 "delete_subtitles".takeIf { contextMovieSubs.isEmpty() },
             ),
+            firstFocusKey = if (tv.own.owntv.features.home.CinemaTrailer.playing != null) "trailer_sound" else "favourite",
             onDismiss = { contextMovie = null },
         )
     }

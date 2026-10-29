@@ -923,7 +923,7 @@ internal fun TrailerSoundHint(modifier: Modifier = Modifier) {
     ) {
         tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.PLAY, Color.White, Modifier.size(16.mpx))
         tv.own.owntv.ui.components.OwnTVIcon(if (on) OwnTVIcon.VOLUME_HIGH else OwnTVIcon.VOLUME_MUTE, Color.White, Modifier.size(18.mpx))
-        Text(stringResource(if (on) R.string.glcn_trailer_mute else R.string.glcn_trailer_sound), style = stageText(15, 700), color = Color.White, maxLines = 1)
+        Text(stringResource(if (on) R.string.glcn_trailer_mute else R.string.glcn_trailer_sound_hint), style = stageText(15, 700), color = Color.White, maxLines = 1)
     }
 }
 
@@ -977,10 +977,18 @@ internal object CinemaTrailer {
             if (playTaken) { if (e.type == KeyEventType.KeyUp) playTaken = false; return true }
             return false
         }
+        // Volume up while it plays silently: the viewer wants to hear it (as Netflix does). The volume itself still
+        // changes as always — the key is only looked at, never taken.
+        if (e.type == KeyEventType.KeyDown && playing != null) {
+            if (e.key == Key.VolumeUp) { if (!sound) sound = true; return false }
+            if (e.key == Key.VolumeMute) { sound = !sound; return false }
+            if (e.key == Key.VolumeDown) return false
+        }
         val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
         if (e.type == KeyEventType.KeyDown && playing != null) {
-            // OK does what it always does; the trailer is handed to the page it opens.
-            if (ok) playing?.let { handoff = Triple(it.first, second, android.os.SystemClock.uptimeMillis()) }
+            // OK does what it always does, and the trailer goes on meanwhile (a held OK's menu can turn its sound on);
+            // it is handed to the page OK opens.
+            if (ok) { playing?.let { handoff = Triple(it.first, second, android.os.SystemClock.uptimeMillis()) }; return false }
             playing = null; stopTick++
         }
         return false
@@ -1134,6 +1142,9 @@ internal fun watchedAgoText(now: Long, at: Long): String {
         else -> stringResource(R.string.glcn_watched_days_ago, mins / (24 * 60))
     }
 }
+
+/** glcn: the trailer's sound hint sits up on the right, under the clock — never behind the cards at the foot. */
+internal val TRAILER_HINT_TOP = 150.mpx
 
 /** glcn: the trailer's sound hint sits up on the right, under the clock — never behind the cards at the foot. */
 internal val TRAILER_HINT_TOP = 150.mpx

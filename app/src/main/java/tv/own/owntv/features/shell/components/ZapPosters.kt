@@ -278,8 +278,12 @@ private fun ZapPosterInfo(
     val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
     val logo = ch.displayLogoUrl?.takeIf { it.isNotBlank() }
     val accent = stageAccent.accent
+    // glcn: in the light theme the card's white glass over a bright picture left grey words unreadable — more glass
+    // there, and the secondary words a step darker.
+    val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    val quiet = if (light) StageColors.Body else StageColors.Muted
     Column(
-        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS).padding(18.mpx),
+        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = if (light) LIGHT_CARD_GLASS else tv.own.owntv.features.live.PLAYER_SHEET_GLASS).padding(18.mpx),
         verticalArrangement = Arrangement.spacedBy(8.mpx),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
@@ -295,7 +299,7 @@ private fun ZapPosterInfo(
                     tv.own.owntv.core.live.ProviderTags.parse(ch.name).name + " · " +
                         if (remaining in 1..600) stringResource(R.string.content_live_time_remaining, fmt.format(java.util.Date(cur.stopMs)), remaining)
                         else stringResource(R.string.content_live_time_range, fmt.format(java.util.Date(cur.startMs)), fmt.format(java.util.Date(cur.stopMs))),
-                    style = stageText(16, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = stageText(16, 500), color = quiet, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -312,8 +316,8 @@ private fun ZapPosterInfo(
                     cur.rating ?: lent?.rating?.let { "★ " + tv.own.owntv.core.metadata.ProgrammeArtResolver.format(it) },
                 )
             ).filter { it.isNotBlank() }.joinToString(" · ")
-        if (facts.isNotEmpty()) Text(facts, style = stageText(15, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        (synopsis ?: lent?.overview)?.let { DriftingSynopsis(it) }
+        if (facts.isNotEmpty()) Text(facts, style = stageText(15, 600), color = quiet, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        (synopsis ?: lent?.overview)?.let { DriftingSynopsis(it, color = if (light) StageColors.Body else StageColors.Dim) }
         if (next.isNotEmpty()) {
             Text(
                 stringResource(R.string.content_live_next), style = stageText(15, 700), color = accent,
@@ -321,7 +325,7 @@ private fun ZapPosterInfo(
             )
             next.forEach { n ->
                 Row(horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
-                    Text(fmt.format(java.util.Date(n.startMs)), style = stageText(16, 700), color = StageColors.Muted, maxLines = 1, modifier = Modifier.width(76.mpx))
+                    Text(fmt.format(java.util.Date(n.startMs)), style = stageText(16, 700), color = quiet, maxLines = 1, modifier = Modifier.width(76.mpx))
                     Text(n.title, style = stageText(16, 500), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 }
             }
@@ -383,3 +387,6 @@ internal fun DriftingSynopsis(
         )
     }
 }
+
+/** glcn: the floating card's glass in the light theme — enough that its words read over a bright picture. */
+private const val LIGHT_CARD_GLASS = 0.94f
