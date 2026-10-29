@@ -128,3 +128,7 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⚙️ Settings: the list glides faster (0.3 s) and one highlight slides from row to row at the same pace, so a quick run of ▼ never leaves it off the screen.
 - 📐 Live TV (Cinema): more room above "You may like", so the focused card no longer touches its heading.
 - 🖼️ Classic Home: when Featured is the first row it runs edge to edge, taller, with a slow push-in and its foot melting into the page.
+- 🎞️ Trailers, the Netflix way: OK always does what it says (play / open), and the trailer goes on, from where it was, on the title's page; Play/Pause turns its sound on or off (a small hint shows while it plays; the choice is kept).
+- 🎬 Trailers now also play in the Movies and Series heroes and on the details page.
+- ⚙️ Settings › Home: "Trailers by themselves" switch (on by default).
+- 🌑 Home Cinema exclusive — lights down: a moment into the trailer the room darkens round it and the words and rows step back; any key brings the lights back.

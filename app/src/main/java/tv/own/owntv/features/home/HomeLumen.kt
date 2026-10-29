@@ -267,7 +267,7 @@ fun LumenHome(
             val quiet = android.os.SystemClock.uptimeMillis() - lastKeyAt[0]
             if (!resting && quiet >= DOCK_REST_MS) resting = true
             // glcn: got ready unseen a little before, so it is already playing when its moment comes.
-            if (ambientKey == null && quiet >= DOCK_TRAILER_WARM_MS && !tv.own.owntv.glcn.LowRam.on && animsOn) {
+            if (ambientKey == null && quiet >= DOCK_TRAILER_WARM_MS && !tv.own.owntv.glcn.LowRam.on && animsOn && tv.own.owntv.glcn.DockPrefs.autoTrailers) {
                 ambientKey = shownTrailer
             }
             if (ambientKey != null && !ambientStart && quiet >= DOCK_TRAILER_MS) ambientStart = true
@@ -300,9 +300,17 @@ fun LumenHome(
         // melting into the picture around it.
         ambientKey?.let { key ->
             Box(Modifier.align(Alignment.TopEnd).fillMaxWidth(TRAILER_WINDOW_WIDTH).height(560.mpx).dissolveEdges(start = 0.35f, bottom = 0.35f)) {
-                androidx.compose.runtime.key(key) { tv.own.owntv.ui.components.AmbientTrailer(key, Modifier.fillMaxSize(), start = ambientStart) { ambientKey = null } }
+                androidx.compose.runtime.key(key) {
+                    tv.own.owntv.ui.components.AmbientTrailer(
+                        key, Modifier.fillMaxSize(), start = ambientStart, muted = !CinemaTrailer.sound,
+                        onSecond = { CinemaTrailer.second = it },
+                        onPlaying = { CinemaTrailer.playing = key to shown?.title.orEmpty() },
+                    ) { ambientKey = null }
+                }
+                if (CinemaTrailer.playing?.first == key) TrailerSoundHint(Modifier.align(Alignment.BottomEnd).padding(end = 40.mpx, bottom = 40.mpx))
             }
         }
+        LaunchedEffect(ambientKey) { if (ambientKey == null) CinemaTrailer.playing = null }
 
         shown?.crests?.let { pair ->
             Row(Modifier.align(Alignment.TopEnd).padding(end = 140.mpx, top = 170.mpx), horizontalArrangement = Arrangement.spacedBy(48.mpx)) {

@@ -29,6 +29,12 @@ fun AmbientTrailer(
     modifier: Modifier = Modifier,
     /** glcn: false while it is only being got ready (the player loads and cues the video unseen); true plays it. */
     start: Boolean = true,
+    /** glcn: silent unless the viewer asked for sound (Play/Pause while it plays). */
+    muted: Boolean = true,
+    /** glcn: where to begin — a trailer carried over from Home to the title's page goes on from where it was. */
+    startAt: Float = 0f,
+    /** glcn: how far it has played, for that carry-over. */
+    onSecond: (Float) -> Unit = {},
     onPlaying: () -> Unit = {},
     onDone: () -> Unit,
 ) {
@@ -57,14 +63,20 @@ fun AmbientTrailer(
     androidx.compose.runtime.LaunchedEffect(start) {
         if (start && !started[0]) ready[0]?.let { started[0] = true; it.play() }
     }
+    val mutedNow by androidx.compose.runtime.rememberUpdatedState(muted)
+    val secondNow by androidx.compose.runtime.rememberUpdatedState(onSecond)
+    androidx.compose.runtime.LaunchedEffect(muted) {
+        ready[0]?.let { if (muted) it.mute() else { it.unMute(); it.setVolume(100) } }
+    }
     DisposableEffect(stored) {
         var index = 0
         val listener = object : AbstractYouTubePlayerListener() {
             override fun onReady(youTubePlayer: YouTubePlayer) {
-                youTubePlayer.mute()
+                if (mutedNow) youTubePlayer.mute() else { youTubePlayer.unMute(); youTubePlayer.setVolume(100) }
                 ready[0] = youTubePlayer
-                if (startNow) { started[0] = true; youTubePlayer.loadVideo(keys[index], 0f) } else youTubePlayer.cueVideo(keys[index], 0f)
+                if (startNow) { started[0] = true; youTubePlayer.loadVideo(keys[index], startAt) } else youTubePlayer.cueVideo(keys[index], startAt)
             }
+            override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) { secondNow(second) }
             override fun onStateChange(youTubePlayer: YouTubePlayer, state: PlayerConstants.PlayerState) {
                 when (state) {
                     PlayerConstants.PlayerState.PLAYING -> { playing = true; onPlaying() }

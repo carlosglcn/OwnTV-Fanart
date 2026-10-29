@@ -189,7 +189,11 @@ private const val BACKDROP_SETTLE_MS = 260L
  * the page on its left (34%) and bottom (38%), under the left and bottom washes so the hero always reads.
  */
 @Composable
-internal fun VodCinematicBackdrop(url: String?, series: Boolean, modifier: Modifier = Modifier) {
+internal fun VodCinematicBackdrop(
+    url: String?, series: Boolean, modifier: Modifier = Modifier,
+    /** glcn: the title's trailer — silent in the picture after a few calm seconds, or at once when carried over from Home. */
+    trailer: String? = null, trailerTitle: String? = null, focusKey: Any? = null,
+) {
     var settled by remember { mutableStateOf(url) }
     // Art already shown once is in the image cache: it swaps at once; only new art waits the settle.
     val seen = remember { HashSet<String>() }
@@ -228,6 +232,8 @@ internal fun VodCinematicBackdrop(url: String?, series: Boolean, modifier: Modif
                 1f to wash.copy(alpha = 0.9f),
             ),
         )
+        // glcn: the trailer over the picture, inside the same melting edges.
+        tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize(), dissolve = false)
     }
 }
 

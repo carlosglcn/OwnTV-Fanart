@@ -799,13 +799,27 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
                 Brush.verticalGradient(0f to Color.Transparent, 0.32f to Color.Transparent, 0.5f to page.copy(alpha = 0.72f), 0.66f to page.copy(alpha = 0.94f), 1f to page),
             ),
         )
+        // glcn (Cinema only): lights down — a moment into the trailer the room darkens round it, and the words and the
+        // rows step back, so the trailer is the one thing lit, as in a cinema. Any key brings the lights back.
+        val playingHere = CinemaTrailer.playing != null
+        LaunchedEffect(playingHere) {
+            if (!playingHere) { CinemaTrailer.lightsDown = false; return@LaunchedEffect }
+            delay(LIGHTS_DOWN_MS)
+            CinemaTrailer.lightsDown = true
+        }
+        androidx.compose.runtime.DisposableEffect(Unit) { onDispose { CinemaTrailer.lightsDown = false } }
+        val sala by androidx.compose.animation.core.animateFloatAsState(
+            if (CinemaTrailer.lightsDown) 1f else 0f,
+            androidx.compose.animation.core.tween(if (CinemaTrailer.lightsDown) 1_600 else 350), label = "cinemaLights",
+        )
+        Box(Modifier.fillMaxSize().graphicsLayer { alpha = sala }.background(Color.Black.copy(alpha = 0.62f)))
         // glcn: the trailer in its own window up on the right, clear of the words and the washes, its edges melting
         // into the page — the picture there stays sharp instead of being washed out under the page's veil.
         FocusTrailer(
             meta?.trailerKey, shown?.title, metaKey,
             Modifier.align(Alignment.TopEnd).fillMaxWidth(TRAILER_WINDOW_WIDTH).height(CINEMA_ROWS_TOP + 40.mpx),
         )
-        Box(Modifier.padding(start = start, top = 112.mpx, end = 760.mpx).height(CINEMA_ROWS_TOP - 130.mpx).then(Modifier.clipToBounds())) {
+        Box(Modifier.padding(start = start, top = 112.mpx, end = 760.mpx).height(CINEMA_ROWS_TOP - 130.mpx).then(Modifier.clipToBounds()).graphicsLayer { alpha = 1f - 0.7f * sala }) {
             if (shown != null) androidx.compose.runtime.key(shown) {
                 val logo = metaKey?.takeIf { it !in logoFailed }?.let { meta?.logoPath }?.let { tv.own.owntv.core.metadata.MetadataImages.logo(it) }
                 val genres = remember(meta?.genresJson) { cinemaJsonList(meta?.genresJson) }
@@ -828,15 +842,18 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
  */
 @Composable
 internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, modifier: Modifier = Modifier, dissolve: Boolean = true) {
-    val allowed = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
+    val allowed = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on && tv.own.owntv.glcn.DockPrefs.autoTrailers
     var ready by remember { mutableStateOf<String?>(null) }
     var start by remember { mutableStateOf(false) }
     val stop = CinemaTrailer.stopTick
+    var startAt by remember { mutableStateOf(0f) }
     LaunchedEffect(focusKey, trailerKey, stop, allowed) {
-        ready = null; start = false
+        ready = null; start = false; startAt = 0f
         CinemaTrailer.playing = null
         val t = trailerKey ?: return@LaunchedEffect
         if (!allowed) return@LaunchedEffect
+        // glcn: the trailer that was playing on Home when this title was opened goes on, at once, from where it was.
+        CinemaTrailer.takeHandoff(t)?.let { at -> startAt = at; ready = t; start = true; return@LaunchedEffect }
         delay(TRAILER_WARM_MS)
         ready = t
         delay(CINEMA_TRAILER_MS - TRAILER_WARM_MS)
@@ -847,10 +864,27 @@ internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, m
     Box(if (dissolve) modifier.dissolveEdges(start = 0.35f, bottom = 0.35f) else modifier) {
         androidx.compose.runtime.key(key) {
             tv.own.owntv.ui.components.AmbientTrailer(
-                key, Modifier.fillMaxSize(), start = start,
+                key, Modifier.fillMaxSize(), start = start, muted = !CinemaTrailer.sound, startAt = startAt,
+                onSecond = { CinemaTrailer.second = it },
                 onPlaying = { CinemaTrailer.playing = key to title.orEmpty() },
             ) { ready = null; CinemaTrailer.playing = null }
         }
+        // The one hint while it plays: Play/Pause for its sound.
+        if (CinemaTrailer.playing?.first == key) TrailerSoundHint(Modifier.align(Alignment.BottomEnd).padding(end = 40.mpx, bottom = 40.mpx))
+    }
+}
+
+/** glcn: "⏯ Sound" / "⏯ Mute" — what Play/Pause does to the trailer behind the page. */
+@Composable
+internal fun TrailerSoundHint(modifier: Modifier = Modifier) {
+    val on = CinemaTrailer.sound
+    Row(
+        modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.55f)).padding(horizontal = 16.mpx, vertical = 8.mpx),
+        horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically,
+    ) {
+        tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.PLAY, Color.White, Modifier.size(16.mpx))
+        tv.own.owntv.ui.components.OwnTVIcon(if (on) OwnTVIcon.VOLUME_HIGH else OwnTVIcon.VOLUME_MUTE, Color.White, Modifier.size(18.mpx))
+        Text(stringResource(if (on) R.string.glcn_trailer_mute else R.string.glcn_trailer_sound), style = stageText(15, 700), color = Color.White, maxLines = 1)
     }
 }
 
@@ -874,24 +908,46 @@ internal fun rememberFocusMeta(info: HomeFocusInfo?): tv.own.owntv.core.database
  * pressing the card; any other key quietens it. Home's root passes its keys through [onKey].
  */
 internal object CinemaTrailer {
+    /** The trailer playing silently behind the page (key, title), or null. */
     var playing by mutableStateOf<Pair<String, String>?>(null)
     var full by mutableStateOf<Pair<String, String>?>(null)
     var stopTick by mutableStateOf(0)
-    private var okTaken = false
+    /** Sound on — asked for with Play/Pause; kept for the next trailers until the app closes, as Netflix keeps it. */
+    var sound by mutableStateOf(false)
+    /** How far the playing trailer has got, for the carry-over to the title's page. */
+    var second = 0f
+    /** A trailer that was playing when OK opened its title: the page it lands on goes on with it (key, second, when). */
+    var handoff: Triple<String, Float, Long>? = null
+    /** Cinema's lights down: the trailer has played a moment, everything round it steps back. */
+    var lightsDown by mutableStateOf(false)
+    private var playTaken = false
+
+    /** A carried-over trailer for [key], if it is fresh; taking it clears it. */
+    fun takeHandoff(key: String): Float? {
+        val h = handoff ?: return null
+        if (h.first != key || android.os.SystemClock.uptimeMillis() - h.third > HANDOFF_MS) return null
+        handoff = null
+        return h.second
+    }
 
     fun onKey(e: androidx.compose.ui.input.key.KeyEvent): Boolean {
-        val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
-        if (ok) {
-            if (e.type == KeyEventType.KeyDown && playing != null) { okTaken = true; return true }
-            if (okTaken) {
-                if (e.type == KeyEventType.KeyUp) { okTaken = false; full = playing; playing = null; stopTick++ }
-                return true
-            }
+        val play = e.key == Key.MediaPlayPause || e.key == Key.MediaPlay || e.key == Key.MediaPause
+        if (play) {
+            // Play/Pause while a trailer plays: its sound on or off.
+            if (e.type == KeyEventType.KeyDown && playing != null) { playTaken = true; sound = !sound; return true }
+            if (playTaken) { if (e.type == KeyEventType.KeyUp) playTaken = false; return true }
             return false
         }
-        if (e.type == KeyEventType.KeyDown && playing != null) { playing = null; stopTick++ }
+        val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
+        if (e.type == KeyEventType.KeyDown && playing != null) {
+            // OK does what it always does; the trailer is handed to the page it opens.
+            if (ok) playing?.let { handoff = Triple(it.first, second, android.os.SystemClock.uptimeMillis()) }
+            playing = null; stopTick++
+        }
         return false
     }
+
+    private const val HANDOFF_MS = 6_000L
 }
 
 /** glcn (Cinema): one word after another — each step of the words fades and rises in, a beat after the one before. */
@@ -919,6 +975,7 @@ private const val KEN_BURNS_MS = 24_000
 private const val CINEMA_AMBIENT = 0.16f
 private const val CINEMA_TRAILER_MS = 3_000L
 private const val TRAILER_WARM_MS = 1_200L
+private const val LIGHTS_DOWN_MS = 2_500L
 /** glcn: the trailer window's share of the screen's width, up on the right. */
 internal const val TRAILER_WINDOW_WIDTH = 0.62f
 private const val STAGGER_STEP = 0.18f

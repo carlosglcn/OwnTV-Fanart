@@ -181,7 +181,7 @@ fun HomeSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             }
         }
 
-        StageSettingsHeading(stringResource(R.string.settings_keep_watching), 5)
+        StageSettingsHeading(stringResource(R.string.settings_keep_watching), 6)
         HomeSwitchRow(OwnTVIcon.LIVE_TV, R.string.settings_live_keep_watching, R.string.settings_live_keep_watching_description, config.heroIncludeLive) {
             vm.setHeroInclude(HeroKind.LIVE, !config.heroIncludeLive)
         }
@@ -198,6 +198,10 @@ fun HomeSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         val dockContext = androidx.compose.ui.platform.LocalContext.current
         HomeSwitchRow(OwnTVIcon.LIST_GRID, R.string.glcn_dock_double_row, R.string.glcn_dock_double_row_description, tv.own.owntv.glcn.DockPrefs.doubleRow) {
             tv.own.owntv.glcn.DockPrefs.setDoubleRow(dockContext, !tv.own.owntv.glcn.DockPrefs.doubleRow)
+        }
+        // glcn: trailers by themselves behind Home and the title pages.
+        HomeSwitchRow(OwnTVIcon.VIDEO, R.string.glcn_auto_trailers, R.string.glcn_auto_trailers_description, tv.own.owntv.glcn.DockPrefs.autoTrailers) {
+            tv.own.owntv.glcn.DockPrefs.setAutoTrailers(dockContext, !tv.own.owntv.glcn.DockPrefs.autoTrailers)
         }
 
         StageSettingsHeading(stringResource(R.string.settings_android_tv_home), if (androidTvHomeEnabled) 2 else 1)

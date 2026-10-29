@@ -1095,6 +1095,8 @@ fun OwnTVShell(
     Box(
         modifier = modifier.fillMaxSize().background(shellBase)
             .onPreviewKeyEvent { e ->
+                // glcn: a trailer playing behind a page — Play/Pause turns its sound on or off; OK hands it to the page it opens.
+                if (tv.own.owntv.features.home.CinemaTrailer.onKey(e)) return@onPreviewKeyEvent true
                 // glcn: Play/Pause accepts the reminder card; OK does too while the player is full screen (there it only
                 // opens the controls). Anywhere else OK keeps working the screen underneath.
                 reminderAccept?.let { accept ->

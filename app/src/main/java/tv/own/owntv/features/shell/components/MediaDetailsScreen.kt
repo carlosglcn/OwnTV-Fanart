@@ -132,17 +132,11 @@ fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Mo
             }
             // glcn: the trailer, silent, over the picture after a few seconds on the page (not in light mode, not with
             // animations off); it goes once the page is scrolled down or the trailer ends.
-            var trailerOn by remember { mutableStateOf(false) }
-            val trailerAllowed = animate && !tv.own.owntv.glcn.LowRam.on && !details.trailerKey.isNullOrBlank()
-            LaunchedEffect(trailerAllowed) {
-                if (!trailerAllowed) return@LaunchedEffect
-                kotlinx.coroutines.delay(DETAILS_TRAILER_MS)
-                if (scroll.value == 0) trailerOn = true
-            }
-            if (scroll.value > 0 && trailerOn) trailerOn = false
-            if (trailerOn) details.trailerKey?.let { key ->
-                tv.own.owntv.ui.components.AmbientTrailer(key, Modifier.fillMaxWidth().aspectRatio(16f / 9f)) { trailerOn = false }
-            }
+            // glcn: the shared trailer (sound with Play/Pause, carried on from Home when it was playing there); it goes
+            // once the page is scrolled down.
+            if (scroll.value == 0) tv.own.owntv.features.home.FocusTrailer(
+                details.trailerKey, details.title, details.title, Modifier.fillMaxWidth().aspectRatio(16f / 9f), dissolve = false,
+            )
                         // A light picture still has to carry white text: a general dim, then the fade into the page.
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(page.copy(alpha = 0.35f)))
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).gradientWash(vertical = true, 0.2f to Color.Transparent, 0.8f to page))
@@ -273,5 +267,3 @@ private fun CastGrid(cast: List<tv.own.owntv.core.metadata.CastMember>) {
 }
 
 
-/** glcn: how long the details page rests on its picture before the trailer starts. */
-private const val DETAILS_TRAILER_MS = 3_000L

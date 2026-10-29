@@ -437,7 +437,7 @@ fun HomeScreen(
     val homeFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
     // The Stage page itself is painted by the shell, full width, so it also runs under a docked rail.
     // glcn (Cinema): while the trailer plays behind Home, OK opens it with sound.
-    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize().onPreviewKeyEvent { CinemaTrailer.onKey(it) }) {
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize()) {
         // glcn (Panel): three live cards fill the width left beside the panel exactly.
         val panelCardWidth = if (backdropStyle == 2) ((maxWidth - PANEL_WIDTH - 48.mpx - contentStart - 40.mpx) / 3).coerceIn(220.mpx, 400.mpx) else null
         if (trendingItem == null && posterItem == null) HomeReadScope { val coverArt = if (homeCover != 0) null else focusArt; when (backdropStyle) {
@@ -489,6 +489,10 @@ fun HomeScreen(
         val onFocusInfo: (HomeFocusInfo?) -> Unit = remember { { info -> focusInfo = info; if (info != null) billboardFocused = false } }
         CompositionLocalProvider(LocalBringIntoViewSpec provides homeBringIntoViewSpec, LocalHomeFocusArt provides onFocusArt, LocalHomeFocusInfo provides onFocusInfo, LocalHomeCardWidth provides panelCardWidth) {
             val homeGate = tv.own.owntv.glcn.rememberStaggerGate()
+            val cinemaLights = androidx.compose.animation.core.animateFloatAsState(
+                if (CinemaTrailer.lightsDown) 1f else 0f,
+                androidx.compose.animation.core.tween(if (CinemaTrailer.lightsDown) 1_600 else 350), label = "cinemaRowsLights",
+            )
             // glcn: one focus box for the whole page — it glides from card to card, along a row and between rows.
             tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxSize(), stiffness = HOME_GLIDE_STIFFNESS) {
             LazyColumn(
@@ -506,6 +510,8 @@ fun HomeScreen(
                     // sliding beneath them in full colour. Not under Cinema, whose rows start lower anyway.
                     .then(if (backdropStyle == 1) Modifier.topFadeWhenScrolled(90.mpx) { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } else Modifier.topFade(NoHeroTop))
                     .onFocusChanged { if (it.hasFocus) onChildFocused() }
+                    // glcn (Cinema): the rows step back while the lights are down for the trailer.
+                    .then(if (backdropStyle == 1) Modifier.graphicsLayer { alpha = 1f - 0.65f * cinemaLights.value } else Modifier)
                     // ▶ out of the rail comes back to the card it left from (rail carry-over): every level
                     // of the list remembers its focused child.
                     .focusGroup(),

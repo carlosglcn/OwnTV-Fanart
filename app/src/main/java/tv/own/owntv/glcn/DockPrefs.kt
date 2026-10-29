@@ -9,9 +9,14 @@ import androidx.compose.runtime.setValue
 object DockPrefs {
     var doubleRow by mutableStateOf(true)
         private set
+    /** Trailers that play by themselves behind Home and the title pages (light mode and animations off stop them anyway). */
+    var autoTrailers by mutableStateOf(true)
+        private set
 
     fun load(context: Context) {
-        doubleRow = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(DOUBLE_ROW, true)
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        doubleRow = prefs.getBoolean(DOUBLE_ROW, true)
+        autoTrailers = prefs.getBoolean(AUTO_TRAILERS, true)
     }
 
     fun setDoubleRow(context: Context, on: Boolean) {
@@ -19,6 +24,12 @@ object DockPrefs {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(DOUBLE_ROW, on).apply()
     }
 
+    fun setAutoTrailers(context: Context, on: Boolean) {
+        autoTrailers = on
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(AUTO_TRAILERS, on).apply()
+    }
+
     private const val PREFS = "glcn_dock"
     private const val DOUBLE_ROW = "double_row"
+    private const val AUTO_TRAILERS = "auto_trailers"
 }

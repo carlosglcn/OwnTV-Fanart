@@ -600,7 +600,7 @@ fun MoviesScreen(
             val toolTop = heroTop + heroH
             Box(Modifier.fillMaxSize().then(if (categoriesOpen) Modifier.graphicsLayer { alpha = 0.36f } else Modifier)) {
                 tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl, Modifier.matchParentSize())
-                VodCinematicBackdrop(titleInfo?.backdropUrl, series = false, Modifier.align(Alignment.TopEnd))
+                VodCinematicBackdrop(titleInfo?.backdropUrl, series = false, Modifier.align(Alignment.TopEnd), trailer = selectedMeta?.trailerKey.takeIf { metadataMode.enrich }, trailerTitle = selectedMovie?.name, focusKey = selectedMovie?.id)
                 VodHeader(
                     section = stringResource(R.string.common_nav_movies), category = headerLabel, count = vodCount(false, count),
                     showChevron = true, modifier = Modifier.padding(start = fx(84), top = 52.mpx - lift * 0.7f).width(fx(900)),
