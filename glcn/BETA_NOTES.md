@@ -139,3 +139,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌫️ Classic Home: the full-width Featured billboard fades away as you scroll down to the rows, instead of leaving its foot cut off at the top over the backdrop.
 - 📺 TV profile: now visible at once — the menu drops Movies, Series and Downloads, Home keeps only the live rows, and switching into a TV profile goes straight to its last channel full screen.
 - 🔙 Holding Back now stops the channel completely (it used to close the player but leave the channel playing in the window).
+- 🔤 Movies & Series: the hero trailer sits under the page's washes, so the search, tools and key hints read over it again.

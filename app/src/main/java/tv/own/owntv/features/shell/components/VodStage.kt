@@ -220,6 +220,9 @@ internal fun VodCinematicBackdrop(
                 }
             }
         }
+        // glcn: the trailer over the picture but under the page's washes, so the words, the tools and the hints below
+        // stay as readable over it as over the picture.
+        tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize(), dissolve = false)
         Box(
             Modifier.fillMaxSize().backdropLeftWash(0f to 0.85f, 0.34f to 0.35f, 0.64f to 0f, 1f to 0f),
         )
@@ -232,8 +235,6 @@ internal fun VodCinematicBackdrop(
                 1f to wash.copy(alpha = 0.9f),
             ),
         )
-        // glcn: the trailer over the picture, inside the same melting edges.
-        tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize(), dissolve = false)
     }
 }
 
