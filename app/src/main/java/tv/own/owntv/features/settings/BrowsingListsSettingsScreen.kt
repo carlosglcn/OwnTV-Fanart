@@ -32,7 +32,7 @@ fun BrowsingListsSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifie
     StageFullPage(
         parents = listOf(stringResource(R.string.settings_group_layout)),
         title = stringResource(R.string.settings_browsing_lists),
-        count = pluralStringResource(R.plurals.settings_setting_count, 6, 6),
+        count = pluralStringResource(R.plurals.settings_setting_count, 7, 7),
         onBack = onBack,
         modifier = modifier,
     ) {
@@ -51,6 +51,13 @@ fun BrowsingListsSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifie
         BrowsingSwitch(OwnTVIcon.LIVE_TV, live, item, itemHelp, itemLive) { vm.setRememberLastLive(!itemLive) }
         BrowsingSwitch(OwnTVIcon.MOVIES, movies, item, itemHelp, itemMovies) { vm.setRememberLastMovies(!itemMovies) }
         BrowsingSwitch(OwnTVIcon.SERIES, series, item, itemHelp, itemSeries) { vm.setRememberLastSeries(!itemSeries) }
+        // glcn: choosing a film opens its page first (trailer, audio, subtitles) — or plays at once.
+        val pageTitle = stringResource(R.string.glcn_title_page)
+        val pageCtx = androidx.compose.ui.platform.LocalContext.current
+        StageSettingsHeading(pageTitle, 1)
+        BrowsingSwitch(OwnTVIcon.INFO, pageTitle, pageTitle, stringResource(R.string.glcn_title_page_description), tv.own.owntv.glcn.DockPrefs.titlePage) {
+            tv.own.owntv.glcn.DockPrefs.setTitlePage(pageCtx, !tv.own.owntv.glcn.DockPrefs.titlePage)
+        }
     }
 }
 

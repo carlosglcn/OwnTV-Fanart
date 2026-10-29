@@ -218,7 +218,9 @@ fun MoviesScreen(
     // Resume flow: AUTO continues silently, ASK prompts (≥10s saved), NEVER starts from zero.
     val scope = rememberCoroutineScope()
     var resumePrompt by remember { mutableStateOf<Pair<MovieEntity, Long>?>(null) }
-    val startMovie: (MovieEntity) -> Unit = { m ->
+    // glcn: "Page before watching" — choosing a film opens its page; Play there starts it as before.
+    var titleMovie by remember { mutableStateOf<MovieEntity?>(null) }
+    val playMovieNow: (MovieEntity) -> Unit = { m ->
         scope.launch {
             val pos = vm.savedPositionMs(m)
             when {
@@ -228,6 +230,7 @@ fun MoviesScreen(
             }
         }
     }
+    val startMovie: (MovieEntity) -> Unit = { m -> if (tv.own.owntv.glcn.DockPrefs.titlePage) titleMovie = m else playMovieNow(m) }
 
     val gridState = rememberLazyGridState()
     val listState = rememberLazyListState()
@@ -1116,6 +1119,21 @@ fun MoviesScreen(
             withFrameNanos { }
             runCatching { contextFocus.requestFocus() }
         }
+    }
+
+    titleMovie?.let { m ->
+        val metaHere = selectedMovieMeta?.takeIf { it.movieId == m.id }?.cache
+        val favs by vm.favoriteIds.collectAsStateWithLifecycle()
+        MovieTitlePage(
+            movie = m,
+            meta = metaHere,
+            info = movieTitleInfo(m, metaHere, metadataMode.tmdbWins || m.id in overridden),
+            favorite = m.id in favs,
+            resumeMs = { vm.savedPositionMs(m) },
+            onPlay = { pos -> titleMovie = null; vm.play(m, pos); goFullscreen() },
+            onToggleFavorite = { vm.toggleFavorite(m) },
+            onDismiss = { titleMovie = null },
+        )
     }
 
     // Windowed TMDB details popup — read-only, Back exits.

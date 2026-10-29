@@ -195,6 +195,14 @@
 1	technical	app/src/main/java/tv/own/owntv/features/more/MoreScreen.kt	DEV
 1	technical	app/src/main/java/tv/own/owntv/features/more/MoreScreen.kt	Developer
 1	technical	app/src/main/java/tv/own/owntv/features/more/MoreScreen.kt	▶
+1	technical	app/src/main/java/tv/own/owntv/features/movies/MovieTitlePage.kt	MOVIE
+1	technical	app/src/main/java/tv/own/owntv/features/movies/MovieTitlePage.kt	cat
+1	technical	app/src/main/java/tv/own/owntv/features/movies/MovieTitlePage.kt	deu
+1	technical	app/src/main/java/tv/own/owntv/features/movies/MovieTitlePage.kt	eng
+1	technical	app/src/main/java/tv/own/owntv/features/movies/MovieTitlePage.kt	fra
+1	technical	app/src/main/java/tv/own/owntv/features/movies/MovieTitlePage.kt	ita
+1	technical	app/src/main/java/tv/own/owntv/features/movies/MovieTitlePage.kt	por
+1	technical	app/src/main/java/tv/own/owntv/features/movies/MovieTitlePage.kt	spa
 5	empty	app/src/main/java/tv/own/owntv/features/movies/MovieViewModel.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/movies/MovieViewModel.kt	${StorageAccess.sanitize(movie.name)}.${movie.containerExt ?: StorageAccess.extOf(movie.streamUrl)}
 1	technical	app/src/main/java/tv/own/owntv/features/movies/MovieViewModel.kt	MOVIE
@@ -935,6 +943,7 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	auto_trailers
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	double_row
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	glcn_dock
+1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	title_page
 3	technical	app/src/main/java/tv/own/owntv/glcn/FanartDream.kt	·
 2	technical	app/src/main/java/tv/own/owntv/glcn/FanartDream.kt	★ %.1f
 2	empty	app/src/main/java/tv/own/owntv/glcn/FrameMeter.kt	\0

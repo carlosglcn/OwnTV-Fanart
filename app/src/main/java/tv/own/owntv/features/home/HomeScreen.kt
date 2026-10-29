@@ -348,7 +348,11 @@ fun HomeScreen(
     // glcn: a row brought up from below stops this far above the bottom edge, not flush with it — the last
     // row ("Tonight") sat on the very edge, and on a TV that crops its edges it was cut.
     val bottomRoomPx = with(androidx.compose.ui.platform.LocalDensity.current) { 72.dp.toPx() }
-    val homeBringIntoViewSpec = remember(bottomRoomPx) {
+    // glcn: a row brought down from above stops below the top bar, not under it — going ▲ left the focused card
+    // half behind the menu, with the sliding focus box drawn over the bar.
+    // (Not under Cinema, whose rows start well below the bar anyway.)
+    val topRoomPx = if (cinemaEarly == 1) 0f else with(androidx.compose.ui.platform.LocalDensity.current) { (NoHeroTop + 12.mpx).toPx() }
+    val homeBringIntoViewSpec = remember(bottomRoomPx, topRoomPx) {
         object : BringIntoViewSpec {
             // glcn: the page glides from row to row — a longer, eased slide instead of the quick snap the
             // default gave, which read as a bump on every ▼ / ▲. Light mode keeps it instant.
@@ -357,9 +361,10 @@ fun HomeScreen(
             override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
                 if (heroFocused.value) return 0f
                 val trailing = offset + size + bottomRoomPx - containerSize
+                val lead = offset - topRoomPx
                 return when {
-                    offset >= 0f && trailing <= 0f -> 0f
-                    offset < 0f || size > containerSize -> offset
+                    lead >= 0f && trailing <= 0f -> 0f
+                    lead < 0f || size > containerSize - topRoomPx -> lead
                     else -> trailing
                 }
             }

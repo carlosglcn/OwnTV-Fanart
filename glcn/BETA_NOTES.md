@@ -143,3 +143,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔊 Trailer sound hint (⏯ Sound / Mute) moved up to the top right, under the clock, so the cards at the foot no longer hide it.
 - 🔊 Trailer sound without Play/Pause: Volume + while a trailer plays silently turns its sound on (the volume works as always); on Movies/Series, hold OK › "Trailer sound on/off" (first in the menu while a trailer plays). OK no longer stops the trailer. The hint (now "Vol + for sound") sits at the top right, under the clock.
 - 🔤 Picture strip's floating card (player): readable in the light theme — more glass and darker secondary text.
+- 🎬 Film page before watching (Settings › Layout › Browsing & lists, on by default): choosing a film opens its page — the trailer goes on from where it was, lettering, facts, synopsis and cast, and Play/Resume (focused, so OK twice still plays), Start over, Trailer full screen, Audio and Subtitles chosen before it starts, and Favourite.
+- ⬆️ Classic Home: going ▲ the row stops below the top bar, so the focused card (and its sliding box) is no longer half behind the menu.

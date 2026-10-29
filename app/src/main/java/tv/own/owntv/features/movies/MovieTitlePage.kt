@@ -1,0 +1,185 @@
+package tv.own.owntv.features.movies
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.tv.material3.Text
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+import tv.own.owntv.R
+import tv.own.owntv.core.database.entity.MetadataCacheEntity
+import tv.own.owntv.core.database.entity.MovieEntity
+import tv.own.owntv.core.player.PlaybackPrefsStore
+import tv.own.owntv.core.player.TrackLanguages
+import tv.own.owntv.ui.components.OwnTVIcon
+import tv.own.owntv.ui.stage.StageButton
+import tv.own.owntv.ui.theme.StageColors
+import tv.own.owntv.ui.theme.mpx
+import tv.own.owntv.ui.theme.stageAccent
+import tv.own.owntv.ui.theme.stageText
+
+/**
+ * glcn: a film's own page before it plays ("Page before watching", Settings › Browsing & lists). The picture — or its
+ * trailer, carried on from the list without starting over — fills the screen; over it the title's lettering, the facts,
+ * the synopsis and the cast, and one row of buttons: Play (or Resume, focused, so OK twice still starts the film),
+ * Trailer full screen with sound, Audio and Subtitles chosen before it starts, and Favourite.
+ */
+@Composable
+internal fun MovieTitlePage(
+    movie: MovieEntity,
+    meta: MetadataCacheEntity?,
+    info: tv.own.owntv.features.shell.components.VodTitleInfo,
+    favorite: Boolean,
+    resumeMs: suspend () -> Long,
+    onPlay: (startMs: Long) -> Unit,
+    onToggleFavorite: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val prefs: PlaybackPrefsStore = koinInject()
+    val scope = rememberCoroutineScope()
+    val trackKey = remember(movie.id) { tv.own.owntv.core.player.enginePinKey(movie.sourceId, "MOVIE", movie.remoteId) }
+    val saved by produceState(0L, movie.id) { value = runCatching { resumeMs() }.getOrDefault(0L) }
+    var tracks by remember { mutableStateOf<Pair<String?, String?>?>(null) }
+    LaunchedEffect(trackKey) { tracks = trackKey?.let { prefs.tracksFor(it) } }
+    var picking by remember { mutableStateOf<Picker?>(null) }
+    var fullTrailer by remember { mutableStateOf<String?>(null) }
+    val playFocus = remember { FocusRequester() }
+    val enter = remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
+    val enterSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(PAGE_ENTER_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
+    LaunchedEffect(Unit) { enter.animateTo(1f, enterSpec) }
+    LaunchedEffect(Unit) { androidx.compose.runtime.withFrameNanos { }; runCatching { playFocus.requestFocus() } }
+    androidx.activity.compose.BackHandler { onDismiss() }
+    fullTrailer?.let { key -> tv.own.owntv.ui.components.TrailerPlayerScreen(videoKey = key, title = movie.name) { fullTrailer = null } }
+    val locale = androidx.compose.ui.text.intl.Locale.current.platformLocale
+    val page = tv.own.owntv.ui.theme.stageTone(Color(0xFF070B0E), tv.own.owntv.ui.theme.LocalStagePalette.current.page)
+
+    tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onDismiss, stageLayout = true, stageScaled = false) {
+        Box(Modifier.fillMaxSize().background(page)) {
+            tv.own.owntv.ui.components.ArtTint(info.backdropUrl, Modifier.fillMaxSize(), strength = 0.7f)
+            // The picture, wide, and the trailer over it — the same window as the list's, so a trailer that was
+            // playing there goes on here from the same second.
+            tv.own.owntv.features.shell.components.VodCinematicBackdrop(
+                info.backdropUrl, series = false, Modifier.align(Alignment.TopEnd),
+                trailer = meta?.trailerKey, trailerTitle = movie.name, focusKey = movie.id,
+            )
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to page.copy(alpha = 0.92f))))
+            Column(
+                Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 80.mpx, end = 96.mpx).widthIn(max = 1100.mpx)
+                    .graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 40.mpx.toPx() },
+                verticalArrangement = Arrangement.spacedBy(14.mpx),
+            ) {
+                // The list's hero, in full: lettering, facts, synopsis and cast.
+                tv.own.owntv.features.shell.components.VodHero(info, Modifier.width(1100.mpx))
+                Row(Modifier.padding(top = 8.mpx).focusGroup(), horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = Alignment.CenterVertically) {
+                    val resume = saved >= RESUME_MIN_MS
+                    StageButton(
+                        if (resume) stringResource(R.string.glcn_title_resume, tv.own.owntv.features.shell.components.vodRuntime((saved / 1000).toInt()))
+                        else stringResource(R.string.content_play),
+                        onClick = { onPlay(if (resume) saved else 0L) },
+                        icon = OwnTVIcon.PLAY, iconFilled = true, height = 56.mpx, textSize = 20,
+                        modifier = Modifier.focusRequester(playFocus),
+                    )
+                    if (resume) StageButton(stringResource(R.string.glcn_title_start_over), onClick = { onPlay(0L) }, icon = OwnTVIcon.REWIND, height = 56.mpx, textSize = 19)
+                    meta?.trailerKey?.let { stored ->
+                        StageButton(stringResource(R.string.glcn_dock_trailer), onClick = {
+                            fullTrailer = trailerKeysFirst(stored)
+                        }, icon = OwnTVIcon.VIDEO, height = 56.mpx, textSize = 19)
+                    }
+                    if (trackKey != null) {
+                        StageButton(
+                            stringResource(R.string.glcn_title_audio, tracks?.first?.let { TrackLanguages.displayName(it, locale) } ?: stringResource(R.string.settings_auto)),
+                            onClick = { picking = Picker.AUDIO }, icon = OwnTVIcon.AUDIO, height = 56.mpx, textSize = 19,
+                        )
+                        StageButton(
+                            stringResource(
+                                R.string.glcn_title_subtitles,
+                                when (val s = tracks?.second) {
+                                    null -> stringResource(R.string.settings_auto)
+                                    PlaybackPrefsStore.SUBTITLES_OFF -> stringResource(R.string.common_off)
+                                    else -> TrackLanguages.displayName(s, locale)
+                                },
+                            ),
+                            onClick = { picking = Picker.SUBTITLES }, icon = OwnTVIcon.SUBTITLE, height = 56.mpx, textSize = 19,
+                        )
+                    }
+                    StageButton(
+                        stringResource(if (favorite) R.string.content_remove_favourite else R.string.content_add_favourite),
+                        onClick = onToggleFavorite, icon = OwnTVIcon.FAVORITE, iconFilled = favorite, height = 56.mpx, textSize = 19,
+                    )
+                }
+            }
+        }
+    }
+
+    picking?.let { which ->
+        val codes = remember { PICK_FIRST + TrackLanguages.sortedFor(locale).filterNot { it in PICK_FIRST } }
+        tv.own.owntv.ui.stage.StagePopup(
+            onDismiss = { picking = null },
+            title = stringResource(if (which == Picker.AUDIO) R.string.glcn_title_pick_audio else R.string.glcn_title_pick_subtitles),
+            width = 620.mpx,
+        ) {
+            if (which == Picker.SUBTITLES) tv.own.owntv.ui.stage.StagePopupOption(
+                title = stringResource(R.string.common_off),
+                chosen = tracks?.second == PlaybackPrefsStore.SUBTITLES_OFF,
+                onClick = {
+                    scope.launch { trackKey?.let { prefs.rememberSubtitleLang(it, PlaybackPrefsStore.SUBTITLES_OFF); tracks = prefs.tracksFor(it) } }
+                    picking = null
+                },
+            )
+            codes.forEach { code ->
+                val current = if (which == Picker.AUDIO) tracks?.first else tracks?.second
+                tv.own.owntv.ui.stage.StagePopupOption(
+                    title = TrackLanguages.displayName(code, locale),
+                    chosen = current == code,
+                    onClick = {
+                        scope.launch {
+                            trackKey?.let {
+                                if (which == Picker.AUDIO) prefs.rememberAudioLang(it, code) else prefs.rememberSubtitleLang(it, code)
+                                tracks = prefs.tracksFor(it)
+                            }
+                        }
+                        picking = null
+                    },
+                )
+            }
+        }
+    }
+}
+
+private enum class Picker { AUDIO, SUBTITLES }
+
+private fun trailerKeysFirst(stored: String): String = tv.own.owntv.core.metadata.TrailerKeys.split(stored).firstOrNull() ?: stored
+
+/** The languages most wanted here, first in the pickers; the rest follow A–Z. */
+private val PICK_FIRST = listOf("spa", "eng", "cat", "fra", "por", "ita", "deu")
+
+private const val PAGE_ENTER_MS = 420
+private const val RESUME_MIN_MS = 10_000L
