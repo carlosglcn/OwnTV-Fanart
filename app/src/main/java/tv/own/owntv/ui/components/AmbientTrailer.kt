@@ -24,7 +24,14 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTube
  * ([onDone]). Never in light mode: the caller does not compose it then.
  */
 @Composable
-fun AmbientTrailer(stored: String, modifier: Modifier = Modifier, onPlaying: () -> Unit = {}, onDone: () -> Unit) {
+fun AmbientTrailer(
+    stored: String,
+    modifier: Modifier = Modifier,
+    /** glcn: false while it is only being got ready (the player loads and cues the video unseen); true plays it. */
+    start: Boolean = true,
+    onPlaying: () -> Unit = {},
+    onDone: () -> Unit,
+) {
     val context = LocalContext.current
     val keys = remember(stored) { tv.own.owntv.core.metadata.TrailerKeys.split(stored).ifEmpty { listOf(stored) } }
     var playing by remember { mutableStateOf(false) }
@@ -43,12 +50,20 @@ fun AmbientTrailer(stored: String, modifier: Modifier = Modifier, onPlaying: () 
     val options = remember(context) {
         IFramePlayerOptions.Builder(context).controls(0).fullscreen(0).rel(0).ivLoadPolicy(3).ccLoadPolicy(0).build()
     }
+    // glcn: the player once ready, and whether it has been told to play — so a trailer got ready early starts at once.
+    val ready = remember { arrayOfNulls<YouTubePlayer>(1) }
+    val started = remember { booleanArrayOf(false) }
+    val startNow by androidx.compose.runtime.rememberUpdatedState(start)
+    androidx.compose.runtime.LaunchedEffect(start) {
+        if (start && !started[0]) ready[0]?.let { started[0] = true; it.play() }
+    }
     DisposableEffect(stored) {
         var index = 0
         val listener = object : AbstractYouTubePlayerListener() {
             override fun onReady(youTubePlayer: YouTubePlayer) {
                 youTubePlayer.mute()
-                youTubePlayer.loadVideo(keys[index], 0f)
+                ready[0] = youTubePlayer
+                if (startNow) { started[0] = true; youTubePlayer.loadVideo(keys[index], 0f) } else youTubePlayer.cueVideo(keys[index], 0f)
             }
             override fun onStateChange(youTubePlayer: YouTubePlayer, state: PlayerConstants.PlayerState) {
                 when (state) {
@@ -58,7 +73,10 @@ fun AmbientTrailer(stored: String, modifier: Modifier = Modifier, onPlaying: () 
                 }
             }
             override fun onError(youTubePlayer: YouTubePlayer, error: PlayerConstants.PlayerError) {
-                if (index < keys.lastIndex) { index++; youTubePlayer.loadVideo(keys[index], 0f) } else { playing = false; onDone() }
+                if (index < keys.lastIndex) {
+                    index++
+                    if (started[0]) youTubePlayer.loadVideo(keys[index], 0f) else youTubePlayer.cueVideo(keys[index], 0f)
+                } else { playing = false; onDone() }
             }
         }
         runCatching { view.initialize(listener, options) }.onFailure { onDone() }

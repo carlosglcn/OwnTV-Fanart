@@ -92,7 +92,7 @@ internal val LocalHomeFocusArt = staticCompositionLocalOf<(String?) -> Unit> { {
 
 /** The focused card's picture, top right, dissolving into the page, with the page tinted to match. */
 @Composable
-internal fun HomeFocusBackdrop(url: String?, modifier: Modifier = Modifier) {
+internal fun HomeFocusBackdrop(url: String?, modifier: Modifier = Modifier, trailer: String? = null, trailerTitle: String? = null, focusKey: Any? = null) {
     var settled by remember { mutableStateOf(url) }
     // glcn: long enough that holding ◀ ▶ across a row does not load a picture per card.
     LaunchedEffect(url) { if (url != settled) { delay(350); settled = url } }
@@ -125,6 +125,8 @@ internal fun HomeFocusBackdrop(url: String?, modifier: Modifier = Modifier) {
                 }
             }
             Box(Modifier.fillMaxSize().backdropLeftWash(0f to 0.85f, 0.35f to 0.45f, 0.7f to 0.15f, 1f to 0f))
+            // glcn: the focused film's trailer in the same window, silent, after a few calm seconds.
+            FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize(), dissolve = false)
         }
     }
 }
@@ -773,41 +775,25 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
         if (meta != null) metas[k] = meta
     }
     val meta = metaKey?.let { metas[it] }
-    // glcn: the trailer — silent behind the words after a few calm seconds (never in light mode or with animations off);
-    // while it plays, OK opens it whole with sound (see [CinemaTrailer]).
     val animsOn = tv.own.owntv.ui.theme.animationsOn
-    var ambient by remember { mutableStateOf<String?>(null) }
-    val stop = CinemaTrailer.stopTick
-    LaunchedEffect(metaKey, meta?.trailerKey, stop) {
-        ambient = null
-        CinemaTrailer.playing = null
-        val t = meta?.trailerKey ?: return@LaunchedEffect
-        if (tv.own.owntv.glcn.LowRam.on || !animsOn) return@LaunchedEffect
-        delay(CINEMA_TRAILER_MS)
-        ambient = t
-    }
-    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { CinemaTrailer.playing = null } }
     CinemaTrailer.full?.let { (key, title) ->
         tv.own.owntv.ui.components.TrailerPlayerScreen(videoKey = key, title = title) { CinemaTrailer.full = null }
     }
     Box(modifier.fillMaxSize()) {
         tv.own.owntv.ui.components.ArtTint(art, Modifier.fillMaxSize(), strength = 0.75f)
         FullBackdrop(art, Modifier.fillMaxSize(), kenBurns = true)
-        ambient?.let { key ->
-            val title = shown?.title
-            androidx.compose.runtime.key(key) {
-                tv.own.owntv.ui.components.AmbientTrailer(
-                    key, Modifier.fillMaxSize(),
-                    onPlaying = { CinemaTrailer.playing = key to title.orEmpty() },
-                ) { ambient = null; CinemaTrailer.playing = null }
-            }
-        }
         // Words on the left, rows at the foot: dark only where they are.
         Box(Modifier.fillMaxSize().backdropLeftWash(0f to 0.94f, 0.32f to 0.78f, 0.58f to 0.25f, 0.85f to 0f))
         Box(
             Modifier.fillMaxSize().background(
                 Brush.verticalGradient(0f to Color.Transparent, 0.32f to Color.Transparent, 0.5f to page.copy(alpha = 0.72f), 0.66f to page.copy(alpha = 0.94f), 1f to page),
             ),
+        )
+        // glcn: the trailer in its own window up on the right, clear of the words and the washes, its edges melting
+        // into the page — the picture there stays sharp instead of being washed out under the page's veil.
+        FocusTrailer(
+            meta?.trailerKey, shown?.title, metaKey,
+            Modifier.align(Alignment.TopEnd).fillMaxWidth(TRAILER_WINDOW_WIDTH).height(CINEMA_ROWS_TOP + 40.mpx),
         )
         Box(Modifier.padding(start = start, top = 112.mpx, end = 760.mpx).height(CINEMA_ROWS_TOP - 130.mpx).then(Modifier.clipToBounds())) {
             if (shown != null) androidx.compose.runtime.key(shown) {
@@ -823,6 +809,54 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
             } else greeting()
         }
     }
+}
+
+/**
+ * glcn: the focused title's trailer in a window on Home (Cinema, classic): got ready unseen after a moment on the card,
+ * shown once the focus has rested [CINEMA_TRAILER_MS], silent; never in light mode or with animations off. While it
+ * plays, OK opens it whole with sound ([CinemaTrailer]).
+ */
+@Composable
+internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, modifier: Modifier = Modifier, dissolve: Boolean = true) {
+    val allowed = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
+    var ready by remember { mutableStateOf<String?>(null) }
+    var start by remember { mutableStateOf(false) }
+    val stop = CinemaTrailer.stopTick
+    LaunchedEffect(focusKey, trailerKey, stop, allowed) {
+        ready = null; start = false
+        CinemaTrailer.playing = null
+        val t = trailerKey ?: return@LaunchedEffect
+        if (!allowed) return@LaunchedEffect
+        delay(TRAILER_WARM_MS)
+        ready = t
+        delay(CINEMA_TRAILER_MS - TRAILER_WARM_MS)
+        start = true
+    }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { CinemaTrailer.playing = null } }
+    val key = ready ?: return
+    Box(if (dissolve) modifier.dissolveEdges(start = 0.35f, bottom = 0.35f) else modifier) {
+        androidx.compose.runtime.key(key) {
+            tv.own.owntv.ui.components.AmbientTrailer(
+                key, Modifier.fillMaxSize(), start = start,
+                onPlaying = { CinemaTrailer.playing = key to title.orEmpty() },
+            ) { ready = null; CinemaTrailer.playing = null }
+        }
+    }
+}
+
+/** glcn: TMDB for the film or series behind a Home card — its trailer — read once the focus rests on it. */
+@Composable
+internal fun rememberFocusMeta(info: HomeFocusInfo?): tv.own.owntv.core.database.entity.MetadataCacheEntity? {
+    val repo: tv.own.owntv.core.metadata.MetadataRepository = org.koin.compose.koinInject()
+    val key = info?.movie?.let { "m" + it.id } ?: info?.series?.let { "s" + it.id }
+    val cache = remember { androidx.compose.runtime.mutableStateMapOf<String, tv.own.owntv.core.database.entity.MetadataCacheEntity>() }
+    LaunchedEffect(key) {
+        val k = key ?: return@LaunchedEffect
+        if (k in cache) return@LaunchedEffect
+        delay(250)
+        runCatching { info?.movie?.let { repo.resolveMovie(it) } ?: info?.series?.let { repo.resolveSeries(it) } }.getOrNull()?.let { cache[k] = it }
+    }
+    return key?.let { cache[it] }
 }
 
 /**
@@ -874,6 +908,9 @@ private const val KEN_BURNS_ZOOM = 0.12f
 private const val KEN_BURNS_MS = 24_000
 private const val CINEMA_AMBIENT = 0.16f
 private const val CINEMA_TRAILER_MS = 3_000L
+private const val TRAILER_WARM_MS = 1_200L
+/** glcn: the trailer window's share of the screen's width, up on the right. */
+internal const val TRAILER_WINDOW_WIDTH = 0.62f
 private const val STAGGER_STEP = 0.18f
 private const val STAGGER_SPAN = 0.46f
 private const val STAGGER_TOTAL_MS = 620

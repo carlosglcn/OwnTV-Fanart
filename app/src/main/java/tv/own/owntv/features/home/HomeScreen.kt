@@ -348,7 +348,7 @@ fun HomeScreen(
             // glcn: the page glides from row to row — a longer, eased slide instead of the quick snap the
             // default gave, which read as a bump on every ▼ / ▲. Light mode keeps it instant.
             override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float>
-                get() = tv.own.owntv.glcn.SmoothScroll.animation
+                get() = tv.own.owntv.glcn.SmoothScroll.homeAnimation
             override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
                 if (heroFocused.value) return 0f
                 val trailing = offset + size + bottomRoomPx - containerSize
@@ -437,7 +437,7 @@ fun HomeScreen(
     val homeFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
     // The Stage page itself is painted by the shell, full width, so it also runs under a docked rail.
     // glcn (Cinema): while the trailer plays behind Home, OK opens it with sound.
-    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize().then(if (backdropStyle == 1) Modifier.onPreviewKeyEvent { CinemaTrailer.onKey(it) } else Modifier)) {
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize().onPreviewKeyEvent { CinemaTrailer.onKey(it) }) {
         // glcn (Panel): three live cards fill the width left beside the panel exactly.
         val panelCardWidth = if (backdropStyle == 2) ((maxWidth - PANEL_WIDTH - 48.mpx - contentStart - 40.mpx) / 3).coerceIn(220.mpx, 400.mpx) else null
         if (trendingItem == null && posterItem == null) HomeReadScope { val coverArt = if (homeCover != 0) null else focusArt; when (backdropStyle) {
@@ -450,7 +450,12 @@ fun HomeScreen(
             else -> {
                 val scrolledAway by remember { androidx.compose.runtime.derivedStateOf { listState.firstVisibleItemIndex > 1 } }
                 val calm by androidx.compose.animation.core.animateFloatAsState(if (billboardFocused) 0f else if (scrolledAway) 0.4f else 1f, label = "backdropCalm")
-                HomeFocusBackdrop(coverArt, Modifier.graphicsLayer { alpha = calm })
+                val focusMeta = rememberFocusMeta(focusInfo)
+                HomeFocusBackdrop(
+                    coverArt, Modifier.graphicsLayer { alpha = calm },
+                    trailer = focusMeta?.trailerKey.takeIf { !billboardFocused }, trailerTitle = focusInfo?.title,
+                    focusKey = focusInfo?.movie?.id ?: focusInfo?.series?.id,
+                )
             }
         } }
         // glcn: "My picture" — the user's own image behind Home, under a calming veil.
@@ -1909,4 +1914,4 @@ private val PANEL_WIDE_ROWS = setOf(HomeRow.FEATURED, HomeRow.LIVE_SPORTS)
 private fun HomeReadScope(content: @Composable () -> Unit) { content() }
 
 /** glcn: Home's one focus box glides slower than a menu's — soft, never a jump. */
-private const val HOME_GLIDE_STIFFNESS = 300f
+private const val HOME_GLIDE_STIFFNESS = 240f

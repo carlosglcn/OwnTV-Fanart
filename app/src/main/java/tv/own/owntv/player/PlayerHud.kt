@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -742,6 +743,11 @@ fun PlayerHud(
         RecordingBadge(modifier = Modifier.align(Alignment.TopEnd))
 
         if (controlsVisible) {
+            // glcn: the bar rises gently from the foot of the screen each time it is called (not in light mode).
+            val rise = remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
+            val riseSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(HUD_RISE_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
+            LaunchedEffect(Unit) { rise.animateTo(1f, riseSpec) }
+            val risen = Modifier.graphicsLayer { translationY = (1f - rise.value) * HUD_RISE_DP.dp.toPx(); alpha = 0.25f + 0.75f * rise.value }
             // Scrims: a FLAT semi-transparent panel behind the controls, feathered to transparent only at
             // the inner edge. A pure gradient faded out exactly where the chips and the Now/Next text sit,
             // so those washed out on bright scenes; a hard-edged band would instead draw a visible seam
@@ -753,7 +759,7 @@ fun PlayerHud(
                     0.5f to hudShade(0.72f),
                     1.0f to Color.Transparent,
                 ))
-            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(260.dp)
+            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(260.dp).graphicsLayer { alpha = rise.value }
                 .gradientWash(
                     vertical = true,
                     0.0f to Color.Transparent,
@@ -841,7 +847,7 @@ fun PlayerHud(
                     favorite = favorite, onToggleFavorite = onToggleFavorite,
                     onOpenDialog = { dialog = it }, onPip = onPip, onAudioMode = onAudioMode,
                     onMultiview = onMultiview, onRecordThis = onRecordThis, recordingThis = recordingThis, onBack = onBack,
-                    modifier = Modifier.align(Alignment.BottomStart),
+                    modifier = Modifier.align(Alignment.BottomStart).then(risen),
                     side = if (isLive) liveEpgCard else null,
                     header = if (isLive) {
                         { LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack) }
@@ -1071,3 +1077,7 @@ fun PlayerHud(
         HudDialog.NONE -> Unit
     }
 }
+
+/** glcn: the player bar's rise when it is called — how long, and from how far below. */
+private const val HUD_RISE_MS = 420
+private const val HUD_RISE_DP = 90

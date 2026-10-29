@@ -1619,7 +1619,7 @@ private fun PlayerOptionsSheet(
                     androidx.compose.ui.graphics.Brush.horizontalGradient(
                         0f to androidx.compose.ui.graphics.Color.Transparent,
                         0.45f to androidx.compose.ui.graphics.Color.Transparent,
-                        1f to shade.copy(alpha = 0.72f),
+                        1f to shade.copy(alpha = 0.45f),
                     ),
                 ),
         ) {
@@ -1629,8 +1629,9 @@ private fun PlayerOptionsSheet(
                     .width(600.mpx).fillMaxHeight()
                     .graphicsLayer { translationX = (1f - enter.value) * 80.mpx.toPx() },
             ) {
-                // A share of the glass: the picture shows through, the list still reads.
-                Box(Modifier.matchParentSize().graphicsLayer { alpha = 0.86f }.stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true))
+                // A share of the glass: the picture shows through, the list still reads — as see-through as the quick
+                // view's panels (ZapDeck), so the two read as one family.
+                Box(Modifier.matchParentSize().graphicsLayer { alpha = PLAYER_MENU_GLASS }.stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true))
                 Column(
                     Modifier.fillMaxSize().verticalScroll(rememberScrollState()).trapAllFocusExit().focusGroup()
                         .padding(start = 18.mpx, end = 18.mpx, top = 18.mpx, bottom = 16.mpx),
@@ -2085,3 +2086,6 @@ internal fun liveEpgShiftLabel(minutes: Int): String {
         )
     }
 }
+
+/** glcn: how much glass the channel menu over the player has — the quick view's list panel's share. */
+private const val PLAYER_MENU_GLASS = 0.66f

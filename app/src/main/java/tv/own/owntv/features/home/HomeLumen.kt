@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import tv.own.owntv.ui.theme.dissolveEdges
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -257,6 +258,7 @@ fun LumenHome(
     val lastKeyAt = remember { longArrayOf(android.os.SystemClock.uptimeMillis()) }
     var resting by remember { mutableStateOf(false) }
     var ambientKey by remember { mutableStateOf<String?>(null) }
+    var ambientStart by remember { mutableStateOf(false) }
     val shownTrailer by androidx.compose.runtime.rememberUpdatedState(shown?.let { metas[it.key]?.trailerKey })
     val animsOn by androidx.compose.runtime.rememberUpdatedState(tv.own.owntv.ui.theme.animationsOn)
     LaunchedEffect(Unit) {
@@ -264,18 +266,20 @@ fun LumenHome(
             delay(500)
             val quiet = android.os.SystemClock.uptimeMillis() - lastKeyAt[0]
             if (!resting && quiet >= DOCK_REST_MS) resting = true
-            if (ambientKey == null && quiet >= DOCK_TRAILER_MS && !tv.own.owntv.glcn.LowRam.on && animsOn) {
+            // glcn: got ready unseen a little before, so it is already playing when its moment comes.
+            if (ambientKey == null && quiet >= DOCK_TRAILER_WARM_MS && !tv.own.owntv.glcn.LowRam.on && animsOn) {
                 ambientKey = shownTrailer
             }
+            if (ambientKey != null && !ambientStart && quiet >= DOCK_TRAILER_MS) ambientStart = true
         }
     }
-    LaunchedEffect(shown?.key) { ambientKey = null }
+    LaunchedEffect(shown?.key) { ambientKey = null; ambientStart = false }
     val chrome by androidx.compose.animation.core.animateFloatAsState(if (resting) 0f else 1f, androidx.compose.animation.core.tween(if (resting) 1200 else 250), label = "dockRest")
 
     Box(
         modifier.fillMaxSize().onPreviewKeyEvent { e ->
             lastKeyAt[0] = android.os.SystemClock.uptimeMillis()
-            if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) ambientKey = null
+            if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) { ambientKey = null; ambientStart = false }
             // The first key after resting only wakes the page.
             if (resting) { if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyUp) resting = false; true } else false
         },
@@ -290,9 +294,15 @@ fun LumenHome(
         Crossfade(settled, modifier = Modifier.fillMaxSize(), label = "lumen-backdrop") { url ->
             if (url != null) AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(1f))
         }
-        ambientKey?.let { key -> androidx.compose.runtime.key(key) { tv.own.owntv.ui.components.AmbientTrailer(key, Modifier.fillMaxSize()) { ambientKey = null } } }
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(palette.page.copy(alpha = 0.78f), palette.page.copy(alpha = 0.34f), palette.page.copy(alpha = 0f)))))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to palette.page.copy(alpha = 0.95f))))
+        // glcn: the trailer in a window up on the right — above the dock, clear of the words and the page's veil, its edges
+        // melting into the picture around it.
+        ambientKey?.let { key ->
+            Box(Modifier.align(Alignment.TopEnd).fillMaxWidth(TRAILER_WINDOW_WIDTH).height(560.mpx).dissolveEdges(start = 0.35f, bottom = 0.35f)) {
+                androidx.compose.runtime.key(key) { tv.own.owntv.ui.components.AmbientTrailer(key, Modifier.fillMaxSize(), start = ambientStart) { ambientKey = null } }
+            }
+        }
 
         shown?.crests?.let { pair ->
             Row(Modifier.align(Alignment.TopEnd).padding(end = 140.mpx, top = 170.mpx), horizontalArrangement = Arrangement.spacedBy(48.mpx)) {
@@ -586,4 +596,5 @@ private fun dockJsonList(json: String?): List<String> {
 
 /** glcn: quiet this long and the title's trailer replaces its picture; this long and the words and dock fade away. */
 private const val DOCK_TRAILER_MS = 3_000L
+private const val DOCK_TRAILER_WARM_MS = 1_200L
 private const val DOCK_REST_MS = 20_000L

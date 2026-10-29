@@ -115,3 +115,8 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📁 Favourites groups (Live TV): hold OK on a favourite › Move to group (or New group…); the groups appear as folders under Favourites; hold OK on a group to rename or delete it (its channels stay in Favourites). Synced with the phone.
 - 🏷️ Dock: films and series show their facts as tags — ★ rating in the accent, year and genres.
 - 📜 Drifting synopsis: the line leaving at the top fades out instead of being cut, and it glides back to the start.
+- 🎬 Trailers on Home (Dock, Cinema and now classic Home): they play in a window up on the right with soft edges, sharp instead of washed out; got ready unseen after ~1 s so they appear right on 3 s.
+- 🌊 Classic Home: slower, softer page glide between rows (soft S-curve), the focus box in step.
+- 🪟 Channel menu over the player: as see-through as the quick view's panels.
+- ⬆️ Player bar: rises gently from the bottom when called (not in light mode).
+- 🖼️ Picons: logos drawn on a big transparent canvas are trimmed, so they fill their tile instead of showing as a speck.

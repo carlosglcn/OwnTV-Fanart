@@ -22,6 +22,15 @@ object SmoothScroll {
             GLIDE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.33f, 0f, 0.12f, 1f),
         )
 
+    /**
+     * glcn: Home's page, row to row — slower and with a soft S-curve: it starts barely moving and settles long, so the
+     * page never sets off with a jolt. Instant in light mode.
+     */
+    val homeAnimation: AnimationSpec<Float>
+        get() = if (LowRam.on) snap<Float>() else androidx.compose.animation.core.tween<Float>(
+            HOME_GLIDE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.45f, 0.05f, 0.2f, 1f),
+        )
+
     /** The app-wide default: scroll only as far as the focused item needs, eased. */
     val spec = object : BringIntoViewSpec {
         override val scrollAnimationSpec: AnimationSpec<Float> get() = animation
@@ -100,3 +109,4 @@ val NoBringIntoViewSpec = object : BringIntoViewSpec {
 
 /** Long enough to be seen gliding, short enough that a held ▼ never outruns it. */
 private const val GLIDE_MS = 560
+private const val HOME_GLIDE_MS = 700
