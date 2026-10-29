@@ -2376,6 +2376,29 @@ class LiveViewModel(
         }
     }
 
+    /** glcn (TV profile): the TV strip's groups — favourites, each favourites group, the recent ones, then every channel. */
+    data class StripGroup(val title: String?, val kind: StripKind, val channels: List<ChannelEntity>)
+    enum class StripKind { FAVORITES, GROUP, RECENT, ALL }
+
+    suspend fun tvStripGroups(): List<StripGroup> {
+        val pid = currentProfileId() ?: return emptyList()
+        val ids = ctx.value.sourceIds.ifEmpty { listOf(-1L) }
+        val cust = custom.value
+        fun visible(list: List<ChannelEntity>) = list.filter { CustomizeKeys.channel(it) !in cust.hiddenItems }
+        val out = ArrayList<StripGroup>()
+        runCatching { visible(channelDao.snapshotFavoritesManual(pid, ContentOrderEntity.FAV_CONTEXT, ids, STRIP_LIMIT)) }.getOrNull()
+            ?.takeIf { it.isNotEmpty() }?.let { out += StripGroup(null, StripKind.FAVORITES, it) }
+        runCatching { favoriteGroups.observeNames(pid).first() }.getOrDefault(emptyList()).forEach { g ->
+            runCatching { visible(customCategoryDao.snapshotChannels(pid, tv.own.owntv.core.live.FavoriteGroups.keyOf(g), ids, STRIP_LIMIT)) }.getOrNull()
+                ?.takeIf { it.isNotEmpty() }?.let { out += StripGroup(g, StripKind.GROUP, it) }
+        }
+        runCatching { historyChannels(STRIP_LIMIT).map { it.channel } }.getOrNull()
+            ?.takeIf { it.isNotEmpty() }?.let { out += StripGroup(null, StripKind.RECENT, it) }
+        runCatching { visible(channelDao.allForSources(ids, STRIP_ALL_LIMIT)) }.getOrNull()
+            ?.takeIf { it.isNotEmpty() }?.let { out += StripGroup(null, StripKind.ALL, it) }
+        return out
+    }
+
     private suspend fun currentProfileId(): Long? {
         val preferred = settings.activeProfileId.first()
         return if (preferred >= 0) profileDao.resolveExistingProfileId(preferred) else null
@@ -2495,6 +2518,8 @@ class LiveViewModel(
 
         // The CH+/- timing constants (ZAP_TUNE_DELAY_MS, ZAP_ISOLATED_PRESS_MS) live in ZapTuneDelay.kt.
         const val HISTORY_LIST_LIMIT = 30
+        const val STRIP_LIMIT = 200
+        const val STRIP_ALL_LIMIT = 600
         val defaultRail = listOf(
             LiveRailItem(LiveKey.Favorites, icon = OwnTVIcon.FAVORITE),
             LiveRailItem(LiveKey.History, icon = OwnTVIcon.HISTORY),

@@ -364,6 +364,8 @@ fun OwnTVShell(
     var showHistoryList by remember { mutableStateOf(false) }
     // glcn: ▼ on the "Last channel" pill — the recent channels drop-down.
     var showRecentDrop by remember { mutableStateOf(false) }
+    // glcn (TV profile): the TV strip over the full-screen player.
+    var showTvStrip by remember { mutableStateOf(false) }
     // Multiview: the grid, while it is up, and which tile is waiting for a channel to be picked.
     val multiviewEnabled by settingsRepo.multiviewEnabled.collectAsStateWithLifecycle(false)
     val recordWatchingEnabled by settingsRepo.recordWhatImWatching.collectAsStateWithLifecycle(false)
@@ -1024,7 +1026,7 @@ fun OwnTVShell(
     // glcn: with "Back in the player: Window" on, holding Back in the full-screen player closes it outright (back to the
     // menu, no window) — for when you have finished watching. Watched at the window ([tv.own.owntv.glcn.BackHold]).
     val holdArmed = playerMode == PlayerMode.FULLSCREEN && backToWindow && zapSource == MainSection.LIVE_TV &&
-        !showChannelList && !showQuickGuide && !showHistoryList && zapOptionsChannel == null
+        !showChannelList && !showQuickGuide && !showHistoryList && zapOptionsChannel == null && !showTvStrip
     val holdArmedNow by androidx.compose.runtime.rememberUpdatedState(holdArmed)
     val exitNow by androidx.compose.runtime.rememberUpdatedState(exitPlayer)
     DisposableEffect(Unit) {
@@ -1956,8 +1958,16 @@ fun OwnTVShell(
                         }
                     }
                 }
+                if (showTvStrip && isTunedLive) tv.own.owntv.features.shell.components.TvStrip(
+                    load = { liveVm.tvStripGroups() },
+                    loadNow = { liveVm.nowFull(it) },
+                    currentId = previewChannel?.id,
+                    onTune = { ch, _ -> liveVm.ensurePlaying(ch); showTvStrip = false },
+                    onDismiss = { showTvStrip = false },
+                )
                 PlayerHud(
                     player = if (liveOnExo) liveVm.previewEngine else mpvEngine, // HUD drives the active engine
+                    onOpenStrip = if (isTunedLive && tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId)) ({ showTvStrip = true }) else null,
                     // glcn: Settings → Back in the player = Window keeps a live channel playing small.
                     onBack = if (isTunedLive && backToWindow) dockPlayer else exitPlayer,
                     onPip = dockPlayer, // PiP/dock works for live on either engine now

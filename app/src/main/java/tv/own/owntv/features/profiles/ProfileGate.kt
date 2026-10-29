@@ -110,6 +110,11 @@ private fun ProfileTile(profile: ProfileEntity, modifier: Modifier = Modifier, o
         ) { _ ->
             Box(contentAlignment = Alignment.TopEnd) {
                 OwnTVAvatar(avatarId = profile.avatarId, imagePath = profile.avatarPath.orEmpty(), modifier = Modifier.size(104.dp))
+                // glcn: a TV profile wears a little TV at its foot.
+                if (tv.own.owntv.glcn.TvProfiles.isTv(profile.id)) Box(
+                    Modifier.align(Alignment.BottomEnd).size(34.dp).clip(CircleShape).background(tv.own.owntv.ui.theme.stageAccent.accent),
+                    contentAlignment = Alignment.Center,
+                ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = tv.own.owntv.ui.theme.stageAccent.onAccent, modifier = Modifier.size(20.dp)) }
                 if (profile.pinHash != null) {
                     Box(Modifier.size(26.dp).clip(CircleShape).background(tv.own.owntv.ui.theme.StageColors.Ink.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
                         OwnTVIcon(OwnTVIcon.SETTINGS, tint = tv.own.owntv.ui.theme.StageColors.Text, modifier = Modifier.size(14.dp))

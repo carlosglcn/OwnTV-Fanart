@@ -154,6 +154,8 @@ fun PlayerHud(
     onJumpBack: ((Int) -> Unit)? = null,
     // Back to the channel watched before this one. Null hides the button (no previous channel yet).
     onPreviousChannel: (() -> Unit)? = null,
+    /** glcn (TV profile): ▼ with the controls hidden raises the TV strip instead of zapping. */
+    onOpenStrip: (() -> Unit)? = null,
     // Archive depth of the current channel, for the exact-time picker's day/HH:MM bounds.
     jumpBackWindowSec: (() -> Int)? = null,
     // Read as a lambda, not a value: the offset ticks once a second, and taking it as a plain Int?
@@ -633,7 +635,8 @@ fun PlayerHud(
                     }
                     KeyEventType.KeyUp -> {
                         downHoldJob[0]?.cancel(); downHoldJob[0] = null
-                        if (downHold[0] == 1) zap(zapDirection(up = false, remoteOptions))
+                        // glcn (TV profile): a tap raises the TV strip instead of zapping (CH± still zap).
+                        if (downHold[0] == 1) { if (onOpenStrip != null) onOpenStrip() else zap(zapDirection(up = false, remoteOptions)) }
                         downHold[0] = 0
                     }
                     else -> Unit
@@ -657,7 +660,7 @@ fun PlayerHud(
                 canZap && e.key == Key.MediaNext -> { if (e.nativeKeyEvent.repeatCount == 0) zap(1); true }
                 canZap && e.key == Key.MediaPrevious -> { if (e.nativeKeyEvent.repeatCount == 0) zap(-1); true }
                 canZap && isLive && !controlsVisible && e.key == Key.DirectionUp -> { if (e.nativeKeyEvent.repeatCount == 0) zap(zapDirection(up = true, remoteOptions)); true }
-                canZap && isLive && !controlsVisible && e.key == Key.DirectionDown -> { if (e.nativeKeyEvent.repeatCount == 0) zap(zapDirection(up = false, remoteOptions)); true }
+                canZap && isLive && !controlsVisible && e.key == Key.DirectionDown -> { if (e.nativeKeyEvent.repeatCount == 0) { if (onOpenStrip != null) onOpenStrip() else zap(zapDirection(up = false, remoteOptions)) }; true }
                 // Left/Right with the controls hidden: reveal them on the timeline and take the first
                 // step, so the jump is seen and holding the key goes on scrubbing the bar itself. Physical
                 // keys, like the bars: left is back in time in every locale. A film always does this; a
