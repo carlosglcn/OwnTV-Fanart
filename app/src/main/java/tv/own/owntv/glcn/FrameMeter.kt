@@ -65,15 +65,24 @@ fun FrameMeter(screen: String, modifier: Modifier = Modifier) {
         val refresh = view.display?.refreshRate?.takeIf { it > 1f } ?: 60f
         val budgetNs = (1_000_000_000L / refresh).toLong()
         val thread = HandlerThread("frame-meter").apply { start() }
+        val lastVsync = longArrayOf(0L)
         val listener = Window.OnFrameMetricsAvailableListener { _, metrics, _ ->
-            val total = metrics.getMetric(FrameMetrics.TOTAL_DURATION)
             if (metrics.getMetric(FrameMetrics.FIRST_DRAW_FRAME) == 1L) return@OnFrameMetricsAvailableListener
+            // glcn: a frame is slow when it reaches the screen late — the gap since the one before, vsync to vsync.
+            // A frame's own total time overlaps the next one's while the GPU is busy (video), which read "100 % slow"
+            // at 52 fps. A pause in drawing (nothing moving) is not counted.
+            val vsync = metrics.getMetric(FrameMetrics.INTENDED_VSYNC_TIMESTAMP)
+            val gap = if (lastVsync[0] > 0L) vsync - lastVsync[0] else -1L
+            lastVsync[0] = vsync
+            val continuous = gap in 0L..(budgetNs * IDLE_GAP_FRAMES)
             synchronized(lock) {
                 counts.frames++
                 counts.recentFrames++
-                if (total > budgetNs) counts.slow++
-                if (total > budgetNs * 3) counts.stutters++
-                if (total > counts.worstNs) counts.worstNs = total
+                if (continuous) {
+                    if (gap > budgetNs * 3 / 2) counts.slow++
+                    if (gap > budgetNs * 3) counts.stutters++
+                    if (gap > counts.worstNs) counts.worstNs = gap
+                }
                 val now = System.nanoTime()
                 if (now - counts.windowStart >= 1_000_000_000L) {
                     counts.fps = (counts.recentFrames * 1_000_000_000L / (now - counts.windowStart)).toInt()
@@ -122,3 +131,6 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is ContextWrapper -> baseContext.findActivity()
     else -> null
 }
+
+/** glcn: a gap longer than this many frames is a pause in drawing, not a slow frame. */
+private const val IDLE_GAP_FRAMES = 7L

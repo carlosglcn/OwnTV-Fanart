@@ -267,7 +267,7 @@ fun LumenHome(
             val quiet = android.os.SystemClock.uptimeMillis() - lastKeyAt[0]
             if (!resting && quiet >= DOCK_REST_MS) resting = true
             // glcn: got ready unseen a little before, so it is already playing when its moment comes.
-            if (ambientKey == null && quiet >= DOCK_TRAILER_WARM_MS && !tv.own.owntv.glcn.LowRam.on && animsOn && tv.own.owntv.glcn.DockPrefs.autoTrailers) {
+            if (ambientKey == null && quiet >= DOCK_TRAILER_WARM_MS && !tv.own.owntv.glcn.LowRam.on && animsOn && tv.own.owntv.glcn.DockPrefs.autoTrailers && !CinemaTrailer.blocked) {
                 ambientKey = shownTrailer
             }
             if (ambientKey != null && !ambientStart && quiet >= DOCK_TRAILER_MS) ambientStart = true

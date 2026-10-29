@@ -107,6 +107,7 @@ object JankWatch {
     private var frames = 0
     private var slow = 0
     private val strikes = ArrayDeque<Long>()
+    private val lastVsync = longArrayOf(0L)
 
     fun install(activity: android.app.Activity) {
         if (installed) return
@@ -116,7 +117,14 @@ object JankWatch {
         val main = android.os.Handler(android.os.Looper.getMainLooper())
         runCatching {
             activity.window.addOnFrameMetricsAvailableListener({ _, metrics, _ ->
-                val ms = metrics.getMetric(android.view.FrameMetrics.TOTAL_DURATION) / 1_000_000L
+                // glcn: what the eye sees — the gap between one frame's vsync and the next. A frame's total time
+                // overlaps the next one's when the GPU is busy (video, a trailer), so it read "100 % slow" at 52 fps.
+                val vsync = metrics.getMetric(android.view.FrameMetrics.INTENDED_VSYNC_TIMESTAMP)
+                val gap = if (lastVsync[0] > 0L) (vsync - lastVsync[0]) / 1_000_000L else -1L
+                lastVsync[0] = vsync
+                // A pause between bursts of drawing (nothing moving) is not a slow frame.
+                if (gap !in 0L..CONTINUOUS_GAP_MS) return@addOnFrameMetricsAvailableListener
+                val ms = gap
                 val now = android.os.SystemClock.uptimeMillis()
                 if (now - started < WARMUP_MS || LowRam.on) return@addOnFrameMetricsAvailableListener
                 if (now - windowStart > WINDOW_MS) {
@@ -141,6 +149,7 @@ object JankWatch {
     private const val MIN_FRAMES = 240
     private const val SLOW_SHARE = 0.5
     private const val SLOW_FRAME_MS = 34L
+    private const val CONTINUOUS_GAP_MS = 120L
     private const val STRIKES = 3
     private const val STRIKE_SPAN_MS = 15 * 60_000L
 }

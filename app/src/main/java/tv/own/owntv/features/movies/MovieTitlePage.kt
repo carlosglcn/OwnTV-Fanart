@@ -60,6 +60,9 @@ internal fun MovieTitlePage(
     favorite: Boolean,
     resumeMs: suspend () -> Long,
     onPlay: (startMs: Long) -> Unit,
+    /** glcn: the other copies of this film (another playlist, another quality); a pick plays that one. */
+    loadVersions: suspend () -> List<Pair<MovieEntity, String?>> = { emptyList() },
+    onPlayVersion: (MovieEntity) -> Unit = {},
     onToggleFavorite: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -70,6 +73,8 @@ internal fun MovieTitlePage(
     var tracks by remember { mutableStateOf<Pair<String?, String?>?>(null) }
     LaunchedEffect(trackKey) { tracks = trackKey?.let { prefs.tracksFor(it) } }
     var picking by remember { mutableStateOf<Picker?>(null) }
+    val versions by produceState<List<Pair<MovieEntity, String?>>>(emptyList(), movie.id) { value = runCatching { loadVersions() }.getOrDefault(emptyList()) }
+    var choosingVersion by remember { mutableStateOf(false) }
     var fullTrailer by remember { mutableStateOf<String?>(null) }
     val playFocus = remember { FocusRequester() }
     val enter = remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
@@ -130,12 +135,32 @@ internal fun MovieTitlePage(
                             onClick = { picking = Picker.SUBTITLES }, icon = OwnTVIcon.SUBTITLE, height = 56.mpx, textSize = 19,
                         )
                     }
+                    if (versions.size > 1) StageButton(
+                        stringResource(R.string.glcn_title_versions, versions.size),
+                        onClick = { choosingVersion = true }, icon = OwnTVIcon.LAYERS, height = 56.mpx, textSize = 19,
+                    )
                     StageButton(
                         stringResource(if (favorite) R.string.content_remove_favourite else R.string.content_add_favourite),
                         onClick = onToggleFavorite, icon = OwnTVIcon.FAVORITE, iconFilled = favorite, height = 56.mpx, textSize = 19,
                     )
                 }
             }
+        }
+    }
+
+    if (choosingVersion) tv.own.owntv.ui.stage.StagePopup(
+        onDismiss = { choosingVersion = false },
+        title = stringResource(R.string.glcn_title_versions, versions.size),
+        width = 760.mpx,
+    ) {
+        versions.forEach { (v, playlist) ->
+            val tags = tv.own.owntv.core.live.ProviderTags.parse(v.name)
+            tv.own.owntv.ui.stage.StagePopupOption(
+                title = tags.name.ifBlank { v.name },
+                subtitle = listOfNotNull(tags.tags.joinToString(" ").ifBlank { null }, v.year?.toString(), playlist).joinToString(" · ").ifBlank { null },
+                chosen = v.id == movie.id,
+                onClick = { choosingVersion = false; onPlayVersion(v) },
+            )
         }
     }
 

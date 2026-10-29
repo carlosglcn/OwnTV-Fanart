@@ -832,6 +832,21 @@ class MovieViewModel(
         viewModelScope.launch { subtitleController.deleteCached(cacheId) }
     }
 
+    /**
+     * glcn: the film's versions — the same title (signature, the year within one where both have one) across the active
+     * playlists, best quality first; the film itself among them. The film page's "Versions".
+     */
+    suspend fun versionsOf(movie: MovieEntity): List<Pair<MovieEntity, String?>> {
+        val sig = movie.titleSignature.takeIf { it.isNotBlank() } ?: return emptyList()
+        val c = ctx.value
+        val rows = c.sourceIds.flatMap { sid -> runCatching { movieDao.trendingExact(sid, listOf(sig)) }.getOrDefault(emptyList()) }
+            .filter { r -> movie.parsedYear == null || r.parsedYear == null || kotlin.math.abs(r.parsedYear!! - movie.parsedYear!!) <= 1 }
+            .sortedByDescending { it.qualityRank }
+        if (rows.size < 2) return emptyList()
+        val byId = movieDao.getByIds(rows.map { it.id }).associateBy { it.id }
+        return rows.mapNotNull { r -> byId[r.id]?.let { it to c.sourceNames[it.sourceId].takeIf { c.sourceNames.size > 1 } } }
+    }
+
     fun toggleFavorite(movie: MovieEntity) {
         viewModelScope.launch {
             val pid = currentProfileId() ?: return@launch

@@ -256,6 +256,9 @@ fun OwnTVShell(
     // glcn: when a bigger bar would reach the playlist pill and the clock, it drops to Compact by itself.
     // glcn (TV profile): the menu keeps to TV — no Movies, Series or Downloads.
     androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.TvProfiles.active = activeProfileId }
+    // glcn: a channel or film already playing (full screen or in its window) keeps the trailers off — two videos at
+    // once is heavy on a TV box, and two soundtracks clash.
+    androidx.compose.runtime.SideEffect { tv.own.owntv.features.home.CinemaTrailer.blocked = playerMode != PlayerMode.NONE }
     val navSections = if (tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId)) visibleSections - setOf(MainSection.MOVIES, MainSection.SERIES, MainSection.DOWNLOADS) else visibleSections
     var topCompactForced by remember(topSize, visibleSections) { mutableStateOf(false) }
     val topGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 16.mpx.toPx() }

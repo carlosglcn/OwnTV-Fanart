@@ -145,3 +145,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔤 Picture strip's floating card (player): readable in the light theme — more glass and darker secondary text.
 - 🎬 Film page before watching (Settings › Layout › Browsing & lists, on by default): choosing a film opens its page — the trailer goes on from where it was, lettering, facts, synopsis and cast, and Play/Resume (focused, so OK twice still plays), Start over, Trailer full screen, Audio and Subtitles chosen before it starts, and Favourite.
 - ⬆️ Classic Home: going ▲ the row stops below the top bar, so the focused card (and its sliding box) is no longer half behind the menu.
+- 🎞️ Film page: "Versions (n)" when the film is in more than one playlist or quality — best first, with its tags and playlist; a pick plays that copy.
+- 🧯 The "it stutters" light-mode prompt and the meter's "slow" now count frames that reach the screen late (vsync to vsync): a busy GPU with video read "100 % slow" at 52 fps and asked for light mode wrongly.
+- 🔇 No trailers while a channel or film is already playing (full screen or in its window): two videos at once is heavy and their sound clashes.

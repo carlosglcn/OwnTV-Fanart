@@ -881,7 +881,7 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
  */
 @Composable
 internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, modifier: Modifier = Modifier, dissolve: Boolean = true) {
-    val allowed = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on && tv.own.owntv.glcn.DockPrefs.autoTrailers
+    val allowed = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on && tv.own.owntv.glcn.DockPrefs.autoTrailers && !CinemaTrailer.blocked
     var ready by remember { mutableStateOf<String?>(null) }
     var start by remember { mutableStateOf(false) }
     val stop = CinemaTrailer.stopTick
@@ -957,6 +957,8 @@ internal object CinemaTrailer {
     var second = 0f
     /** A trailer that was playing when OK opened its title: the page it lands on goes on with it (key, second, when). */
     var handoff: Triple<String, Float, Long>? = null
+    /** Something else is already playing (the player, its window, Multiview): no trailer on top of it. */
+    var blocked by mutableStateOf(false)
     /** Cinema's lights down: the trailer has played a moment, everything round it steps back. */
     var lightsDown by mutableStateOf(false)
     private var playTaken = false

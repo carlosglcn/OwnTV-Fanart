@@ -1131,6 +1131,8 @@ fun MoviesScreen(
             favorite = m.id in favs,
             resumeMs = { vm.savedPositionMs(m) },
             onPlay = { pos -> titleMovie = null; vm.play(m, pos); goFullscreen() },
+            loadVersions = { vm.versionsOf(m) },
+            onPlayVersion = { v -> titleMovie = null; playMovieNow(v) },
             onToggleFavorite = { vm.toggleFavorite(m) },
             onDismiss = { titleMovie = null },
         )
