@@ -136,3 +136,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏰ New Home row "Starting soon": what starts within the half hour on your favourite and recent channels ("In 5 min"); OK sets a reminder, or tunes in when it is about to begin.
 - 📌 Recent channels: "watched 10 min ago" on each card; hold OK › Pin to the front (pinned channels lead the row) or Remove.
 - 📺 TV profile (phase 1): a profile type for watching TV (Settings › Profiles › edit › "TV profile"). It starts on the last channel full screen, its avatar wears a little TV, and in the player ▼ raises the TV strip over the picture: your channels, your favourites' groups, recent and all channels as picture cards with what is on (CH± still zaps, holding ▼ still goes to the previous channel).
+- 🌫️ Classic Home: the full-width Featured billboard fades away as you scroll down to the rows, instead of leaving its foot cut off at the top over the backdrop.

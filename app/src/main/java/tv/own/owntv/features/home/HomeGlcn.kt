@@ -38,6 +38,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -505,11 +507,29 @@ internal fun FeaturedBillboard(
     val fmt = remember { android.text.format.DateFormat.getTimeFormat(context) }
     val page = tv.own.owntv.ui.theme.stageTone(Color(0xFF070B0E), tv.own.owntv.ui.theme.LocalStagePalette.current.page)
     val animate = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
+    // glcn (full width): as the page scrolls down past it the billboard fades away whole, instead of leaving its foot
+    // cut off at the top of the screen over the backdrop behind the rows. Read in the draw phase: no recomposition.
+    val topPx = remember { floatArrayOf(0f, Float.NEGATIVE_INFINITY) }
+    val fadeTick = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     Box(
         modifier
             .fillMaxWidth()
             .height(if (fullWidth) BILLBOARD_FULL_HEIGHT else 560.mpx)
-            .then(if (fullWidth) Modifier else Modifier.padding(start = start, end = 64.mpx)),
+            .then(
+                if (fullWidth) Modifier
+                    // Measured from where it rests (the top of the page), so its resting place reads as fully shown.
+                    .onGloballyPositioned { c ->
+                        val y = c.positionInRoot().y
+                        if (y > topPx[1]) topPx[1] = y
+                        if (y != topPx[0]) { topPx[0] = y; fadeTick.floatValue = y - topPx[1] }
+                    }
+                    .graphicsLayer {
+                        val h = size.height.coerceAtLeast(1f)
+                        // Fully gone by the time half of it has left the screen.
+                        alpha = (1f + fadeTick.floatValue / (h * 0.5f)).coerceIn(0f, 1f)
+                    }
+                else Modifier.padding(start = start, end = 64.mpx),
+            ),
     ) {
         Box(Modifier.fillMaxSize().clip(RoundedCornerShape(if (fullWidth) 0.mpx else 28.mpx))) {
             Crossfade(targetState = artUrl, label = "billboard") { url ->
