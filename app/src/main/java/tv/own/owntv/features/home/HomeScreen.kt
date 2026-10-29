@@ -463,7 +463,8 @@ fun HomeScreen(
                 val focusMeta = rememberFocusMeta(focusInfo)
                 HomeFocusBackdrop(
                     coverArt, Modifier.graphicsLayer { alpha = calm },
-                    trailer = focusMeta?.trailerKey.takeIf { !billboardFocused }, trailerTitle = focusInfo?.title,
+                    // glcn: once the rows have scrolled up over the picture, a trailer there would play unseen — none then.
+                    trailer = focusMeta?.trailerKey.takeIf { !billboardFocused && !scrolledAway }, trailerTitle = focusInfo?.title,
                     focusKey = focusInfo?.movie?.id ?: focusInfo?.series?.id,
                 )
             }
