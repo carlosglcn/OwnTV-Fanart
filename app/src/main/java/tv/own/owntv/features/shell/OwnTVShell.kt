@@ -1127,6 +1127,12 @@ fun OwnTVShell(
             selectedSection == MainSection.SETTINGS -> { restoreFocus = true; onSelectSection(MainSection.MORE) }
             // Reached from a Search result: Back returns to Search once, its query, tab and row kept.
             searchReturn == selectedSection && focusedLayer != ShellLayer.SIDEBAR -> returnToSearch()
+            // glcn: a live channel still playing in its little window: Back on the menu closes it first (before any
+            // "exit the app?"). Back from the player docks it and puts the focus on the menu, so Back, Back closes a
+            // channel for good with any remote — a TV's own over HDMI cannot hold Back.
+            focusedLayer == ShellLayer.SIDEBAR && playerMode == PlayerMode.MINI && zapSource == MainSection.LIVE_TV -> {
+                exitPlayer(); liveVm.stopForGood()
+            }
             focusedLayer == ShellLayer.SIDEBAR -> showExit = true
             else -> focusRail()
         }
