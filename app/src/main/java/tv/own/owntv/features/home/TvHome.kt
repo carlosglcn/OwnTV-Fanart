@@ -55,6 +55,7 @@ import kotlinx.coroutines.delay
 import tv.own.owntv.R
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.database.entity.EpgProgrammeEntity
+import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.core.live.SportsNow
 import tv.own.owntv.features.live.LiveViewModel
 import tv.own.owntv.ui.stage.StagePill
