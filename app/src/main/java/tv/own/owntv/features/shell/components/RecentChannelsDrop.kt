@@ -1,5 +1,15 @@
 package tv.own.owntv.features.shell.components
 
+import androidx.compose.runtime.setValue
+
+import androidx.compose.ui.focus.onFocusChanged
+
+import androidx.compose.ui.input.key.type
+
+import androidx.compose.ui.input.key.key
+
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +63,7 @@ fun RecentChannelsDrop(
 ) {
     val entries by produceState<List<ChannelWithWatchedAt>?>(null) { value = runCatching { load() }.getOrDefault(emptyList()).take(RECENT_DROP_MAX) }
     val first = remember { FocusRequester() }
+    var focusedIdx by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     val enter = remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
     val enterSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(300, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
     LaunchedEffect(Unit) { enter.animateTo(1f, enterSpec) }
@@ -63,14 +74,32 @@ fun RecentChannelsDrop(
                 Modifier.align(Alignment.TopEnd).padding(top = 100.mpx, end = 64.mpx).width(620.mpx)
                     .graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * -24.mpx.toPx() }
                     .stageGlass(StageRadii.Sheet, overContent = true)
-                    .padding(14.mpx).focusGroup(),
+                    .padding(14.mpx)
+                    // glcn: it closes the way you leave it — ◀ ▶, ▼ past the last channel, ▲ above the first — not only with Back.
+                    .onPreviewKeyEvent { e ->
+                        if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                        val last = (entries?.size ?: 0) - 1
+                        when (e.key) {
+                            androidx.compose.ui.input.key.Key.DirectionLeft, androidx.compose.ui.input.key.Key.DirectionRight -> { onDismiss(); true }
+                            androidx.compose.ui.input.key.Key.DirectionDown -> if (focusedIdx >= last) { onDismiss(); true } else false
+                            androidx.compose.ui.input.key.Key.DirectionUp -> if (focusedIdx <= 0) { onDismiss(); true } else false
+                            else -> false
+                        }
+                    }
+                    .focusGroup(),
                 verticalArrangement = Arrangement.spacedBy(4.mpx),
             ) {
                 Text(
                     stringResource(R.string.content_category_recently_watched), style = stageText(18, 800), color = StageColors.Muted,
                     modifier = Modifier.padding(start = 10.mpx, top = 4.mpx, bottom = 6.mpx),
                 )
-                entries?.forEachIndexed { i, e -> RecentRow(e.channel, loadNow, Modifier.then(if (i == 0) Modifier.focusRequester(first) else Modifier)) { onPlay(e.channel) } }
+                entries?.forEachIndexed { i, e ->
+                    RecentRow(
+                        e.channel, loadNow,
+                        Modifier.then(if (i == 0) Modifier.focusRequester(first) else Modifier)
+                            .onFocusChanged { if (it.hasFocus) focusedIdx = i },
+                    ) { onPlay(e.channel) }
+                }
                 if (entries?.isEmpty() == true) Text(stringResource(R.string.glcn_recent_none), style = stageText(17, 500), color = StageColors.Muted, modifier = Modifier.padding(10.mpx))
             }
         }

@@ -179,3 +179,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🕘 Recently watched (in the player) opens with the focus on the channel playing, at the top, instead of the one before it.
 - 📖 Synopses in the panels move a line at a time and rest on each, so the lines you read are always whole (a steady drift always cut one at the top and the bottom); in the channel list they are brighter too.
 - 🏠 The film page from Home now opens from the classic Home too (it was wired to the Dock only), and the TV profile's own Home also shows when the Dock is the chosen Home.
+- 🔽 The "Last channel" drop-down closes the way you leave it: ◀ or ▶, ▼ past the last channel or ▲ above the first — not only with Back.
