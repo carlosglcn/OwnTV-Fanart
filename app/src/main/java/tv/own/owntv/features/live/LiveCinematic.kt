@@ -248,7 +248,8 @@ internal fun LiveCinematicPane(
                 if (similar.isNotEmpty()) {
                     Text(
                         stringResource(R.string.glcn_similar_title), style = stageText(20, 700), color = StageColors.Text,
-                        modifier = Modifier.padding(start = 64.mpx, top = 2.mpx),
+                        // glcn: clear of the focused card above, which grows when it takes focus.
+                        modifier = Modifier.padding(start = 64.mpx, top = 26.mpx),
                     )
                     LazyRow(
                         state = similarState,
