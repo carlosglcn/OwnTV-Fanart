@@ -281,9 +281,11 @@ private fun ZapPosterInfo(
     // glcn: in the light theme the card's white glass over a bright picture left grey words unreadable — more glass
     // there, and the secondary words a step darker.
     val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
-    val quiet = if (light) StageColors.Body else StageColors.Muted
+    // glcn: over a dark picture the dark glass vanished and grey words sank into it — the same denser glass and
+    // brighter secondary words in the dark theme too.
+    val quiet = StageColors.Body
     Column(
-        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = if (light) LIGHT_CARD_GLASS else tv.own.owntv.features.live.PLAYER_SHEET_GLASS).padding(18.mpx),
+        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = if (light) LIGHT_CARD_GLASS else DARK_CARD_GLASS).padding(18.mpx),
         verticalArrangement = Arrangement.spacedBy(8.mpx),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
@@ -317,7 +319,7 @@ private fun ZapPosterInfo(
                 )
             ).filter { it.isNotBlank() }.joinToString(" · ")
         if (facts.isNotEmpty()) Text(facts, style = stageText(15, 600), color = quiet, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        (synopsis ?: lent?.overview)?.let { DriftingSynopsis(it, color = if (light) StageColors.Body else StageColors.Dim) }
+        (synopsis ?: lent?.overview)?.let { DriftingSynopsis(it, color = StageColors.Body) }
         if (next.isNotEmpty()) {
             Text(
                 stringResource(R.string.content_live_next), style = stageText(15, 700), color = accent,
@@ -390,3 +392,4 @@ internal fun DriftingSynopsis(
 
 /** glcn: the floating card's glass in the light theme — enough that its words read over a bright picture. */
 private const val LIGHT_CARD_GLASS = 0.94f
+private const val DARK_CARD_GLASS = 0.92f
