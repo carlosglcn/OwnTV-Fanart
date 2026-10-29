@@ -1145,6 +1145,3 @@ internal fun watchedAgoText(now: Long, at: Long): String {
 
 /** glcn: the trailer's sound hint sits up on the right, under the clock — never behind the cards at the foot. */
 internal val TRAILER_HINT_TOP = 150.mpx
-
-/** glcn: the trailer's sound hint sits up on the right, under the clock — never behind the cards at the foot. */
-internal val TRAILER_HINT_TOP = 150.mpx
