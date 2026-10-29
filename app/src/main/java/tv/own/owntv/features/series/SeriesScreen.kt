@@ -1379,6 +1379,9 @@ private fun EpisodeView(
     val toast = rememberInAppToast()
 
     BackHandler { vm.closeSeries() }
+    // glcn: the series' first page (Apple TV style) over the episodes; ▼ goes on to them, Back there comes back.
+    var cover by remember(series.id) { mutableStateOf(tv.own.owntv.glcn.DockPrefs.titlePage && !restoreFocus) }
+    BackHandler(enabled = !cover && tv.own.owntv.glcn.DockPrefs.titlePage) { cover = true }
     // The show's own details (backdrop, genres, synopsis) are resolved for the focused show; opening one
     // from Home or a Continue pill never focused it in the grid.
     LaunchedEffect(series.id) { vm.onSeriesFocused(series) }
@@ -1415,9 +1418,10 @@ private fun EpisodeView(
     // Opening a show: focus the LAST-WATCHED episode if there is one, else the first. Waits for
     // !loading so the seeded last-watched id/season from the VM is settled. When entering via
     // player-return, mark done WITHOUT focusing — the restore below owns focus.
-    LaunchedEffect(loading, seasonEpisodes.isNotEmpty(), restoreFocus) {
+    LaunchedEffect(loading, seasonEpisodes.isNotEmpty(), restoreFocus, cover) {
         if (initialFocused) return@LaunchedEffect
         if (restoreFocus) { initialFocused = true; return@LaunchedEffect }
+        if (cover) return@LaunchedEffect
         if (!loading && visibleEpisodes.isNotEmpty()) {
             initialFocused = true
             val idx = lastPlayedId?.let { id -> visibleEpisodes.indexOfFirst { it.id == id } } ?: -1
@@ -1430,6 +1434,15 @@ private fun EpisodeView(
                 runCatching { firstEpFocus.requestFocus() }
             }
         }
+    }
+
+    // glcn: back from the cover a second time — the episodes take the focus again.
+    LaunchedEffect(cover) {
+        if (cover || !initialFocused) return@LaunchedEffect
+        delay(60)
+        val idx = lastPlayedId?.let { id -> visibleEpisodes.indexOfFirst { it.id == id } } ?: -1
+        if (idx >= 0) { runCatching { scrollEpisodes(idx) }; delay(40); runCatching { selFocus.requestFocus() } }
+        else runCatching { firstEpFocus.requestFocus() }
     }
 
     // Resume flow: AUTO continues silently, ASK prompts (≥10s saved), NEVER starts from zero.
@@ -1771,6 +1784,24 @@ private fun EpisodeView(
                     }
                 }
             }
+        }
+        if (cover) {
+            val coverTrailer = if (metadataMode.enrich) seriesMeta?.trailerKey else null
+            SeriesTitleCover(
+                info = info,
+                seriesId = series.id,
+                trailerKey = coverTrailer,
+                playLabel = target?.let { t ->
+                    val code = stringResource(R.string.content_season_episode, t.seasonNumber, t.episodeNumber)
+                    stringResource(if (targetProgress != null) R.string.content_resume_episode else R.string.content_play_episode, code)
+                },
+                onPlay = { target?.let { startEpisode(it) } },
+                favourite = favoriteIds.contains(series.id),
+                onToggleFavourite = { vm.toggleFavorite(series) },
+                onTrailer = coverTrailer?.let { k -> { trailerVideoKey = tv.own.owntv.core.metadata.TrailerKeys.split(k).firstOrNull() ?: k } },
+                onMore = { seriesMenuOpen = true },
+                onEpisodes = { cover = false },
+            )
         }
     }
 
