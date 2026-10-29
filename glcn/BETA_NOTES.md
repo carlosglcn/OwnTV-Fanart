@@ -176,3 +176,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏹️ Back, Back closes a channel for good with any remote, no timing needed: Back from the player sends it to its window with the focus on the menu, and Back there now closes the window (before the "exit the app?" question). If the player's bar is showing, the first Back hides it as always.
 - 🎬 Smoother trailers: their edges now fade into the page by paint instead of a mask redrawn on every video frame (the stutter), and the player is made on the app's screen itself.
 - ▶️ A trailer no longer stops now and then on entering a title's page: moved to the page, the player paused itself; a trailer still wanted now plays on.
+- 🕘 Recently watched (in the player) opens with the focus on the channel playing, at the top, instead of the one before it.

@@ -116,12 +116,8 @@ fun ChannelListOverlay(
     val dismissDirection = if (alignEnd) HorizontalDirection.END else HorizontalDirection.START
     val history = watchedAt != null
     val playingIndex = remember(channels, currentId) { channels.indexOfFirst { it.id == currentId } }
-    val currentIndex = remember(channels, playingIndex, history) {
-        when {
-            history && playingIndex == 0 && channels.size > 1 -> 1
-            else -> playingIndex.coerceAtLeast(0)
-        }
-    }
+    // glcn: Recent opens on the channel playing (the top one), as every list does — it used to jump to the one before.
+    val currentIndex = remember(channels, playingIndex) { playingIndex.coerceAtLeast(0) }
     // glcn: opens already on the current channel — scrolling there after the first frame showed the top for a blink.
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = currentIndex)
     val focusTarget = remember { FocusRequester() }
