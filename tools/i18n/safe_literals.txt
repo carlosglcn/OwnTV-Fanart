@@ -31,6 +31,8 @@
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	db-probed
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	destination-ready
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	first-composition
+1	technical	app/src/main/java/tv/own/owntv/MainActivity.kt	glcn_sounds
+2	technical	app/src/main/java/tv/own/owntv/MainActivity.kt	natural_once
 2	technical	app/src/main/java/tv/own/owntv/MainActivity.kt	none
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	onCreate deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	onNewIntent deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}
@@ -986,6 +988,7 @@
 1	regex	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	[^\\p{L}\\p{N}]+
 1	technical	app/src/main/java/tv/own/owntv/glcn/TvProfiles.kt	glcn_tv_profiles
 1	technical	app/src/main/java/tv/own/owntv/glcn/TvProfiles.kt	ids
+1	technical	app/src/main/java/tv/own/owntv/glcn/UiSounds.kt	data
 2	empty	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	eq
 1	technical	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	eqBar$i

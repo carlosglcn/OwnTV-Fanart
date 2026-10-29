@@ -29,9 +29,11 @@ import tv.own.owntv.ui.theme.stageText
  */
 @Composable
 fun SoundStylePicker(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
+    // glcn: (style, name) — Natural (6, recorded sounds) first, then the synthesised ones in their own order.
     val names = listOf(
-        R.string.glcn_ui_sound_style_classic, R.string.glcn_ui_sound_style_crystal, R.string.glcn_ui_sound_style_wood,
-        R.string.glcn_ui_sound_style_bubble, R.string.glcn_ui_sound_style_soft, R.string.glcn_ui_sound_style_air,
+        6 to R.string.glcn_ui_sound_style_natural,
+        0 to R.string.glcn_ui_sound_style_classic, 1 to R.string.glcn_ui_sound_style_crystal, 2 to R.string.glcn_ui_sound_style_wood,
+        3 to R.string.glcn_ui_sound_style_bubble, 4 to R.string.glcn_ui_sound_style_soft, 5 to R.string.glcn_ui_sound_style_air,
     )
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) { delay(80); runCatching { first.requestFocus() } }
@@ -39,12 +41,12 @@ fun SoundStylePicker(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit)
     DisposableEffect(Unit) { onDispose { UiSounds.style = current } }
     StagePopup(onDismiss = onDismiss, title = stringResource(R.string.glcn_ui_sound_style_title), width = 700.mpx) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
-            names.forEachIndexed { style, name ->
+            names.forEach { (style, name) ->
                 StageSurface(
                     onClick = { onPick(style); onDismiss() },
                     radius = 14.mpx,
                     modifier = Modifier.fillMaxWidth()
-                        .then(if (style == current.coerceIn(0, names.lastIndex)) Modifier.focusRequester(first) else Modifier)
+                        .then(if (style == current || (names.none { it.first == current } && style == 6)) Modifier.focusRequester(first) else Modifier)
                         .onFocusChanged { if (it.hasFocus) { UiSounds.style = style; UiSounds.preview() } },
                 ) { _ ->
                     Text(

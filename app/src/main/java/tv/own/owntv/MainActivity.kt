@@ -213,6 +213,7 @@ open class MainActivity : ComponentActivity() {
         // postSplashScreenTheme (Theme.OwnTV), so the activity ends up in the same theme as before.
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        tv.own.owntv.glcn.UiSounds.init(this)
         // glcn: a long Back that did not close the player leaves a line in the playback report (see BackHold).
         tv.own.owntv.glcn.BackHold.note = { line -> tv.own.owntv.player.PlaybackErrorLog.report(applicationContext, "back-hold", true, null, line) }
         val splashDeadline = SystemClock.uptimeMillis() + SPLASH_TIMEOUT_MS
@@ -290,6 +291,14 @@ open class MainActivity : ComponentActivity() {
             }
         }
         if (savedInstanceState == null) lifecycleScope.launch {
+            // glcn: the Natural sounds become the menu sounds once (they replace the synthesised default); a style
+            // chosen later stays. The style is read before the opening chime, which depends on it.
+            val soundPrefs = getSharedPreferences("glcn_sounds", MODE_PRIVATE)
+            if (!soundPrefs.getBoolean("natural_once", false)) {
+                runCatching { glcnSettings.setUiSoundStyle(6) }
+                soundPrefs.edit().putBoolean("natural_once", true).apply()
+            }
+            tv.own.owntv.glcn.UiSounds.style = glcnSettings.uiSoundStyle.first()
             if (glcnSettings.startupSound.first()) {
                 val season = if (glcnSettings.seasonMode.first() > 0) tv.own.owntv.core.theme.Seasons.current()
                 else tv.own.owntv.core.theme.Season.NONE
