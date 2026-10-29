@@ -79,6 +79,7 @@ import tv.own.owntv.ui.stage.backdropLeftWash
 import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.StageRadii
 import tv.own.owntv.ui.theme.dissolveEdges
+import tv.own.owntv.ui.theme.fadeEdgesInto
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.mpxSp
 import tv.own.owntv.ui.theme.stageAccent
@@ -127,9 +128,15 @@ internal fun HomeFocusBackdrop(url: String?, modifier: Modifier = Modifier, trai
                 }
             }
             Box(Modifier.fillMaxSize().backdropLeftWash(0f to 0.85f, 0.35f to 0.45f, 0.7f to 0.15f, 1f to 0f))
-            // glcn: the focused film's trailer in the same window, silent, after a few calm seconds.
-            FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize(), dissolve = false)
         }
+        // glcn: the focused film's trailer in the same window, silent, after a few calm seconds — outside the masked
+        // picture, its edges fading into the page by paint (a mask redrawn every video frame made it stutter).
+        FocusTrailer(
+            trailer, trailerTitle, focusKey,
+            Modifier.align(Alignment.TopEnd).fillMaxWidth(0.6f).height(560.mpx)
+                .fadeEdgesInto(tv.own.owntv.ui.theme.LocalStagePalette.current.page, 0.45f, 0.45f),
+            dissolve = false,
+        )
     }
 }
 
@@ -903,7 +910,8 @@ internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, m
     }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { CinemaTrailer.playing = null } }
     val key = ready ?: return
-    Box(if (dissolve) modifier.dissolveEdges(start = 0.35f, bottom = 0.35f) else modifier) {
+    val pageColor = tv.own.owntv.ui.theme.LocalStagePalette.current.page
+    Box(if (dissolve) modifier.fadeEdgesInto(pageColor, 0.35f, 0.35f) else modifier) {
         androidx.compose.runtime.key(key) {
             tv.own.owntv.ui.components.AmbientTrailer(
                 key, Modifier.fillMaxSize(), start = start, muted = !CinemaTrailer.sound, startAt = startAt,

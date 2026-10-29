@@ -174,3 +174,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📲 Report on the phone was empty: the page read the exported copy in the public Download folder, which the app could not read back. It now writes the report into its own cache for the phone, and the text box shows the text in a light colour (it was dark on dark).
 - 🎹 A warmer opening sound: a soft chord that blooms with one piano note on top (no metallic ring).
 - ⏹️ Back, Back closes a channel for good with any remote, no timing needed: Back from the player sends it to its window with the focus on the menu, and Back there now closes the window (before the "exit the app?" question). If the player's bar is showing, the first Back hides it as always.
+- 🎬 Smoother trailers: their edges now fade into the page by paint instead of a mask redrawn on every video frame (the stutter), and the player is made on the app's screen itself.
+- ▶️ A trailer no longer stops now and then on entering a title's page: moved to the page, the player paused itself; a trailer still wanted now plays on.

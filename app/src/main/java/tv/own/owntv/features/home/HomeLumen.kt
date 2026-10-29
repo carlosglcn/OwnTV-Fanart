@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import tv.own.owntv.ui.theme.dissolveEdges
+import tv.own.owntv.ui.theme.fadeEdgesInto
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -303,7 +304,7 @@ fun LumenHome(
         // glcn: the trailer in a window up on the right — above the dock, clear of the words and the page's veil, its edges
         // melting into the picture around it.
         ambientKey?.let { key ->
-            Box(Modifier.align(Alignment.TopEnd).fillMaxWidth(TRAILER_WINDOW_WIDTH).height(560.mpx).dissolveEdges(start = 0.35f, bottom = 0.35f)) {
+            Box(Modifier.align(Alignment.TopEnd).fillMaxWidth(TRAILER_WINDOW_WIDTH).height(560.mpx).fadeEdgesInto(palette.page, 0.35f, 0.35f)) {
                 androidx.compose.runtime.key(key) {
                     tv.own.owntv.ui.components.AmbientTrailer(
                         key, Modifier.fillMaxSize(), start = ambientStart, muted = !CinemaTrailer.sound,

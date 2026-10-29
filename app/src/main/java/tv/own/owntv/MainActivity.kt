@@ -201,6 +201,11 @@ open class MainActivity : ComponentActivity() {
         if (hasFocus) quietSystemClicks()
     }
 
+    override fun onDestroy() {
+        tv.own.owntv.ui.components.TrailerPool.free() // glcn: the trailer player was made on this activity
+        super.onDestroy()
+    }
+
     // glcn: menu sounds hear every key first; they never consume one.
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         tv.own.owntv.glcn.UiSounds.onKey(event)

@@ -95,6 +95,7 @@ import tv.own.owntv.ui.stage.drawInnerRing
 import tv.own.owntv.ui.stage.stageGlass
 import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.dissolveEdges
+import tv.own.owntv.ui.theme.fadeEdgesInto
 import tv.own.owntv.ui.theme.gradientWash
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.mpxSp
@@ -217,8 +218,12 @@ internal fun VodCinematicBackdrop(
     val focus = BiasAlignment(if (series) 1f else -0.4f, -0.2f)
     val sized = if (expand <= 0f) modifier.fillMaxWidth(1400f / 1920f).aspectRatio(1400f / 720f)
         else modifier.fillMaxWidth(1400f / 1920f + (1f - 1400f / 1920f) * expand).fillMaxHeight(720f / 1080f + (1f - 720f / 1080f) * expand)
-    Box(sized.dissolveEdges(start = (0.34f * (1f - expand)).coerceAtLeast(0.02f), bottom = (0.38f * (1f - expand)).coerceAtLeast(0.02f))) {
-        Box(Modifier.fillMaxSize().graphicsLayer { alpha = hold }) {
+    val edgeStart = (0.34f * (1f - expand)).coerceAtLeast(0.02f)
+    val edgeBottom = (0.38f * (1f - expand)).coerceAtLeast(0.02f)
+    // glcn: the still picture and the washes melt at their edges through a mask (cached: they do not move); the trailer
+    // between them fades into the page by paint instead (see fadeEdgesInto), so a video frame never redraws a mask.
+    Box(sized) {
+        Box(Modifier.fillMaxSize().dissolveEdges(start = edgeStart, bottom = edgeBottom).graphicsLayer { alpha = hold }) {
             Crossfade(targetState = settled, animationSpec = ownTvTween(420), label = "vodBackdrop") { u ->
                 if (!u.isNullOrBlank()) {
                     AsyncImage(model = u, contentDescription = null, contentScale = ContentScale.Crop, alignment = focus, modifier = Modifier.fillMaxSize())
@@ -227,7 +232,8 @@ internal fun VodCinematicBackdrop(
         }
         // glcn: the trailer over the picture but under the page's washes, so the words, the tools and the hints below
         // stay as readable over it as over the picture.
-        tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize(), dissolve = false)
+        tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize().fadeEdgesInto(wash, edgeStart, edgeBottom), dissolve = false)
+        Box(Modifier.fillMaxSize().dissolveEdges(start = edgeStart, bottom = edgeBottom)) {
         Box(
             Modifier.fillMaxSize().backdropLeftWash(0f to 0.85f, 0.34f to 0.35f, 0.64f to 0f, 1f to 0f),
         )
@@ -240,6 +246,7 @@ internal fun VodCinematicBackdrop(
                 1f to wash.copy(alpha = 0.9f),
             ),
         )
+        }
     }
 }
 

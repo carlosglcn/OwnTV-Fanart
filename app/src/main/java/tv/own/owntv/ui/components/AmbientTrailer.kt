@@ -117,7 +117,9 @@ object TrailerPool {
     fun view(context: Context): YouTubePlayerView? {
         if (!allowed()) return null
         view?.let { return it }
-        val app = context.applicationContext
+        // glcn: made on the activity (not a dialog's context, not the application's): a web view on the application's
+        // context does not know the screen it draws on, and video played less smoothly. Let go when the activity goes.
+        val app = activityOf(context) ?: context.applicationContext
         val created = runCatching {
             YouTubePlayerView(app).apply {
                 enableAutomaticInitialization = false
@@ -191,6 +193,15 @@ object TrailerPool {
 
     private fun allowed(): Boolean = !tv.own.owntv.glcn.LowRam.on
 
+    private fun activityOf(context: Context): android.app.Activity? {
+        var c: Context? = context
+        while (c is android.content.ContextWrapper) {
+            if (c is android.app.Activity) return c
+            c = c.baseContext
+        }
+        return null
+    }
+
     private fun applyMute(p: YouTubePlayer, muted: Boolean) {
         if (muted) p.mute() else { p.unMute(); p.setVolume(100) }
     }
@@ -213,6 +224,11 @@ object TrailerPool {
             isPlaying = state == PlayerConstants.PlayerState.PLAYING
             if (state == PlayerConstants.PlayerState.ENDED) loadedKey = null
             val r = request ?: return
+            // glcn: moved to another page (another window), the web view pauses the video by itself — a trailer that is
+            // still wanted plays on, so entering a title's page never stops it.
+            if (state == PlayerConstants.PlayerState.PAUSED && r.started) {
+                main.postDelayed({ if (request === r && !isPlaying) runCatching { player?.play() } }, RESUME_AFTER_MOVE_MS)
+            }
             when (state) {
                 PlayerConstants.PlayerState.PLAYING -> if (r.started) r.onPlaying()
                 PlayerConstants.PlayerState.ENDED -> { request = null; r.onDone() }
@@ -232,6 +248,7 @@ object TrailerPool {
 
     private const val IDLE_FREE_MS = 60_000L
     private const val HANDOVER_MS = 250L
+    private const val RESUME_AFTER_MOVE_MS = 120L
 }
 
 /** glcn: how fast a trailer comes in over the picture once it plays. */
