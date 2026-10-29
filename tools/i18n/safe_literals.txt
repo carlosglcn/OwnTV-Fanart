@@ -98,6 +98,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	cinemaLights
 2	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	m
 2	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	s
+9	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	·
 3	empty	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	%.1f
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	c
@@ -951,6 +952,8 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	EEE d
 2	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	·
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	★
+1	technical	app/src/main/java/tv/own/owntv/glcn/RecentPins.kt	glcn_recent_pins
+1	technical	app/src/main/java/tv/own/owntv/glcn/RecentPins.kt	pinned
 2	technical	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	\0
 1	regex	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	(?i)\\b(?:8K|4K|UHD|2160P|FHD|1080P|HD|720P|SD|HEVC|H265)\\b
 1	regex	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	[^\\p{L}\\p{N}]+

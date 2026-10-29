@@ -81,6 +81,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
     override fun onCreate() {
         tv.own.owntv.glcn.LowRam.detect(this)
         tv.own.owntv.glcn.DockPrefs.load(this)
+        tv.own.owntv.glcn.RecentPins.load(this)
         Perf.begin() // zero-point for the OwnTVPerf startup timeline (adb logcat -s OwnTVPerf)
         super.onCreate()
         // "Restart now" after an icon change runs a few milliseconds in a process of its own; nothing

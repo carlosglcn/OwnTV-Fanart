@@ -710,6 +710,8 @@ fun HomeScreen(
                                 track = track,
                                 modifier = rowModifier,
                                 onRemove = { vm.removeRecentChannel(it.id) },
+                                watchedAt = state.recentWatchedAt,
+                                pinnable = true,
                             )
 
                             HomeRow.FAVORITE_CHANNELS -> HomeLiveRow(
@@ -808,6 +810,22 @@ fun HomeScreen(
                                 start = contentStart,
                                 track = track,
                                 modifier = rowModifier,
+                            )
+
+                            // glcn: what starts within the half hour — OK sets a reminder, or goes straight to the
+                            // channel when it is about to start.
+                            HomeRow.STARTING_SOON -> TonightRow(
+                                title = row.displayTitle(),
+                                items = state.startingSoon,
+                                reminded = { t -> reminders.any { it.channelId == t.channel.id && it.startMs == t.programme.startMs } },
+                                onToggleReminder = vm::toggleTonightReminder,
+                                onOpenChannel = { t -> onPlayChannel(t.channel.id, state.startingSoon.map { it.channel }.distinctBy { it.id }) },
+                                onFocus = onNonHeroFocused,
+                                firstItemFocusRequester = firstItemFocusRequester,
+                                start = contentStart,
+                                track = track,
+                                modifier = rowModifier,
+                                soon = true,
                             )
 
                             HomeRow.GENRES -> androidx.compose.foundation.layout.Column(
@@ -960,6 +978,7 @@ private fun rowHasData(row: HomeRow, state: HomeUiState, sportsCards: Int): Bool
     HomeRow.FEATURED -> state.featured.isNotEmpty()
     HomeRow.TONIGHT -> state.tonight.isNotEmpty()
     HomeRow.GENRES -> state.genres.isNotEmpty()
+    HomeRow.STARTING_SOON -> state.startingSoon.isNotEmpty()
 }
 
 private fun rowCanRender(row: HomeRow, state: HomeUiState, showHeroFallback: Boolean, sportsCards: Int): Boolean =

@@ -196,6 +196,10 @@ internal fun ArtLiveCard(
     width: Dp = LocalHomeCardWidth.current ?: 400.mpx,
     startLabel: String? = null,
     bell: Boolean = false,
+    /** glcn: Recent channels — "watched 10 min ago", added to the line under the title. */
+    watchedAgo: String? = null,
+    /** glcn: pinned to the front of Recent channels. */
+    pinned: Boolean = false,
 ) {
     val a = stageAccent
     val setArt = LocalHomeFocusArt.current
@@ -298,6 +302,10 @@ internal fun ArtLiveCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (programme != null && startLabel == null && SportsNow.isLive(programme)) LiveBadge()
+                    if (pinned) Box(
+                        Modifier.size(34.mpx).clip(RoundedCornerShape(17.mpx)).background(Color.Black.copy(alpha = 0.55f)),
+                        contentAlignment = Alignment.Center,
+                    ) { tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.STAR, a.accent, Modifier.size(18.mpx), filled = true) }
                     if (bell) {
                         Box(
                             Modifier.size(34.mpx).clip(RoundedCornerShape(17.mpx)).background(a.accent),
@@ -327,7 +335,7 @@ internal fun ArtLiveCard(
                     startLabel != null -> "$startLabel · ${channel.name}"
                     programme != null -> channel.name + " · " + timeLeftText(((programme.stopMs - now).coerceAtLeast(0L) + 59_999L) / 60_000L)
                     else -> null
-                }
+                }.let { l -> if (watchedAgo != null) listOfNotNull(l ?: channel.name, watchedAgo).joinToString(" · ") else l }
                 line?.let {
                     Text(it, style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, overflow = if (focused) TextOverflow.Clip else TextOverflow.Ellipsis, modifier = drift)
                 }
@@ -350,6 +358,9 @@ internal fun ArtLiveRow(
     track: (FocusRequester) -> Unit,
     modifier: Modifier = Modifier,
     onLongPress: ((ChannelEntity) -> Unit)? = null,
+    /** glcn: Recent channels — when each was last watched, and which are pinned. */
+    watchedAt: Map<Long, Long> = emptyMap(),
+    pinned: (ChannelEntity) -> Boolean = { false },
 ) {
     if (channels.isEmpty()) return
     Column(modifier) {
@@ -391,6 +402,8 @@ internal fun ArtLiveRow(
                     now = now,
                     onClick = { onChannelClick(channel.id, channels) },
                     onLongClick = onLongPress?.let { lp -> { lp(channel) } },
+                    watchedAgo = watchedAt[channel.id]?.let { watchedAgoText(now, it) },
+                    pinned = pinned(channel),
                     modifier = Modifier
                         .then(if (index == 0 && firstItemFocusRequester != null) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
                         .focusRequester(cardFocus.getOrPut(channel.id) { FocusRequester() })
@@ -415,11 +428,14 @@ internal fun TonightRow(
     start: Dp,
     track: (FocusRequester) -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: "Starting soon" — the start as "In 5 min", and OK opens the channel once it is about to begin. */
+    soon: Boolean = false,
 ) {
     if (items.isEmpty()) return
     val context = androidx.compose.ui.platform.LocalContext.current
     val fmt = remember { android.text.format.DateFormat.getTimeFormat(context) }
-    val now = remember(items) { System.currentTimeMillis() }
+    var now by remember(items) { mutableLongStateOf(System.currentTimeMillis()) }
+    if (soon) LaunchedEffect(items) { while (true) { delay(30_000); now = System.currentTimeMillis() } }
     Column(modifier) {
         HomeRowHeader(title, small = stringResource(R.string.content_remind_me), start = start)
         HomeLazyRow(
@@ -432,9 +448,12 @@ internal fun TonightRow(
                     channel = item.channel,
                     programme = item.programme,
                     now = now,
-                    startLabel = fmt.format(java.util.Date(item.programme.startMs)),
+                    startLabel = if (soon) {
+                        val mins = ((item.programme.startMs - now + 59_999L) / 60_000L).toInt()
+                        if (mins <= 0) stringResource(R.string.glcn_starting_now) else stringResource(R.string.glcn_starts_in, mins)
+                    } else fmt.format(java.util.Date(item.programme.startMs)),
                     bell = reminded(item),
-                    onClick = { onToggleReminder(item) },
+                    onClick = { if (soon && item.programme.startMs - now <= SOON_OPEN_MS) onOpenChannel(item) else onToggleReminder(item) },
                     onLongClick = { onOpenChannel(item) },
                     modifier = Modifier
                         .then(if (index == 0 && firstItemFocusRequester != null) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
@@ -1080,3 +1099,18 @@ private const val CLASSIC_BACKDROP_SETTLE_MS = 1_800L
 
 /** glcn: the billboard's height when it runs edge to edge as Home's first row. */
 private val BILLBOARD_FULL_HEIGHT = 700.mpx
+
+/** glcn: "Starting soon" — this close to its start, OK goes to the channel instead of setting a reminder. */
+private const val SOON_OPEN_MS = 3 * 60_000L
+
+/** glcn: "watched 10 min ago" / "watched 3 h ago" / "watched yesterday" for a recent channel. */
+@Composable
+internal fun watchedAgoText(now: Long, at: Long): String {
+    val mins = ((now - at).coerceAtLeast(0L) / 60_000L).toInt()
+    return when {
+        mins < 1 -> stringResource(R.string.glcn_watched_just_now)
+        mins < 60 -> stringResource(R.string.glcn_watched_minutes_ago, mins)
+        mins < 24 * 60 -> stringResource(R.string.glcn_watched_hours_ago, mins / 60)
+        else -> stringResource(R.string.glcn_watched_days_ago, mins / (24 * 60))
+    }
+}

@@ -132,3 +132,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎬 Trailers now also play in the Movies and Series heroes and on the details page.
 - ⚙️ Settings › Home: "Trailers by themselves" switch (on by default).
 - 🌑 Home Cinema exclusive — lights down: a moment into the trailer the room darkens round it and the words and rows step back; any key brings the lights back.
+- 📺 "Last channel" pill: ▼ opens the last six channels watched, with what is on and how far through, from any screen; OK plays one.
+- ⏰ New Home row "Starting soon": what starts within the half hour on your favourite and recent channels ("In 5 min"); OK sets a reminder, or tunes in when it is about to begin.
+- 📌 Recent channels: "watched 10 min ago" on each card; hold OK › Pin to the front (pinned channels lead the row) or Remove.

@@ -14,6 +14,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.geometry.Offset
@@ -50,7 +53,11 @@ import tv.own.owntv.ui.theme.stageText
 import java.util.Date
 
 /** The Continue pill's content: the icon, the small action label ("Resume") and the title. */
-data class ContinuePill(val icon: OwnTVIcon, val iconFilled: Boolean, val action: String, val title: String, val onClick: () -> Unit)
+data class ContinuePill(
+    val icon: OwnTVIcon, val iconFilled: Boolean, val action: String, val title: String, val onClick: () -> Unit,
+    /** glcn: ▼ on the pill — the recent channels drop-down (null: nothing below it). */
+    val onDown: (() -> Unit)? = null,
+)
 
 /**
  * The top-right cluster on every screen: the Continue pill —
@@ -94,8 +101,14 @@ fun StageStatusCluster(
                     icon = continuePill.icon,
                     iconFilled = continuePill.iconFilled,
                     onClick = continuePill.onClick,
+                    trailingIcon = if (continuePill.onDown != null) OwnTVIcon.CHEVRON_DOWN else null,
                     modifier = (if (continueMaxWidth != null) Modifier.widthIn(max = continueMaxWidth) else Modifier)
-                        .focusProperties { canFocus = pillsFocusable },
+                        .focusProperties { canFocus = pillsFocusable }
+                        .then(continuePill.onDown?.let { down ->
+                            Modifier.onPreviewKeyEvent { e ->
+                                if (e.key == androidx.compose.ui.input.key.Key.DirectionDown && e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) { down(); true } else false
+                            }
+                        } ?: Modifier),
                 )
             }
             StagePill(

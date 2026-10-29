@@ -362,6 +362,8 @@ fun OwnTVShell(
     LaunchedEffect(showChannelList) { if (!showChannelList) deckPosters = false }
     // In-player watch-history list (Right while controls hidden, live only).
     var showHistoryList by remember { mutableStateOf(false) }
+    // glcn: ▼ on the "Last channel" pill — the recent channels drop-down.
+    var showRecentDrop by remember { mutableStateOf(false) }
     // Multiview: the grid, while it is up, and which tile is waiting for a channel to be picked.
     val multiviewEnabled by settingsRepo.multiviewEnabled.collectAsStateWithLifecycle(false)
     val recordWatchingEnabled by settingsRepo.recordWhatImWatching.collectAsStateWithLifecycle(false)
@@ -1630,6 +1632,12 @@ fun OwnTVShell(
                     with(clusterDensity) { ((pl.left - bar.right) - 28.mpx.toPx()).toDp() }
                 } else null
             }
+            if (showRecentDrop) tv.own.owntv.features.shell.components.RecentChannelsDrop(
+                load = { liveVm.historyChannels() },
+                loadNow = { liveVm.nowFull(it) },
+                onPlay = { ch -> showRecentDrop = false; scope.launch { if (liveVm.ensurePlayingByIdAsync(ch.id)) openFullscreen(MainSection.LIVE_TV) } },
+                onDismiss = { showRecentDrop = false },
+            )
             tv.own.owntv.features.shell.components.StageStatusCluster(
                 continueMaxWidth = continueMax,
                 continuePill = continueTarget?.let { target ->
@@ -1647,6 +1655,7 @@ fun OwnTVShell(
                         ),
                         title = target.name,
                         onClick = continueLastWatched,
+                        onDown = if (live) ({ showRecentDrop = true }) else null,
                     )
                 },
                 audioBar = audioBarContent,

@@ -66,22 +66,36 @@ fun HomeLiveRow(
     modifier: Modifier = Modifier,
     /** glcn: hold OK on a card → "Remove from Recent channels" (only the Recent row passes this). */
     onRemove: ((ChannelEntity) -> Unit)? = null,
+    /** glcn: Recent channels — when each was last watched; pinned channels lead the row (hold OK › Pin). */
+    watchedAt: Map<Long, Long> = emptyMap(),
+    pinnable: Boolean = false,
 ) {
     val onNow = mode == HomeLiveRowMode.ON_NOW
     val menuFor = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<ChannelEntity?>(null) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val pins = tv.own.owntv.glcn.RecentPins.keys
+    fun isPinned(ch: ChannelEntity) = pinnable && tv.own.owntv.core.customize.CustomizeKeys.channel(ch) in pins
     menuFor.value?.let { ch ->
-        KeepWatchingMenu(
-            title = ch.name, onRemove = { onRemove?.invoke(ch) }, onDismiss = { menuFor.value = null },
-            label = stringResource(R.string.glcn_remove_from_recent),
+        RecentChannelMenu(
+            title = ch.name,
+            pinned = isPinned(ch),
+            onPin = if (pinnable) ({ tv.own.owntv.glcn.RecentPins.toggle(ctx, tv.own.owntv.core.customize.CustomizeKeys.channel(ch)) }) else null,
+            onRemove = { onRemove?.invoke(ch) },
+            onDismiss = { menuFor.value = null },
         )
     }
+    // glcn: pinned channels first, in the order they were watched.
+    val pinFirst: (List<ChannelEntity>) -> List<ChannelEntity> = { list -> if (!pinnable || pins.isEmpty()) list else list.sortedBy { if (isPinned(it)) 0 else 1 } }
     val longPress: ((ChannelEntity) -> Unit)? = if (onRemove != null) ({ ch -> menuFor.value = ch }) else null
     // glcn: "On now" rails are drawn from the programmes' pictures.
     if (onNow) {
-        ArtLiveRow(title, guide.channels, guide.programmes, guide.now, onChannelClick, onFocus, firstItemFocusRequester, start, track, modifier, onLongPress = longPress)
+        ArtLiveRow(
+            title, pinFirst(guide.channels), guide.programmes, guide.now, onChannelClick, onFocus, firstItemFocusRequester, start, track, modifier,
+            onLongPress = longPress, watchedAt = watchedAt, pinned = ::isPinned,
+        )
         return
     }
-    val shown = if (onNow) guide.channels else channels
+    val shown = pinFirst(if (onNow) guide.channels else channels)
     if (shown.isEmpty()) return
     Column(modifier) {
         HomeRowHeader(title, small = if (onNow) stringResource(R.string.home_row_on_now) else null, start = start)
@@ -194,4 +208,21 @@ private fun currentProgramme(programmes: List<EpgProgrammeEntity>, now: Long): E
 private fun programmeProgress(programme: EpgProgrammeEntity, now: Long): Float {
     val duration = (programme.stopMs - programme.startMs).coerceAtLeast(1L)
     return ((now - programme.startMs).toFloat() / duration).coerceIn(0f, 1f)
+}
+
+/** glcn: hold OK on a recent channel — pin it to the front (or unpin it), or take it out of the row. */
+@Composable
+private fun RecentChannelMenu(title: String, pinned: Boolean, onPin: (() -> Unit)?, onRemove: () -> Unit, onDismiss: () -> Unit) {
+    tv.own.owntv.ui.stage.StagePopup(onDismiss = onDismiss, title = title, width = 600.mpx) {
+        onPin?.let { pin ->
+            tv.own.owntv.ui.stage.StagePopupOption(
+                title = stringResource(if (pinned) R.string.glcn_recent_unpin else R.string.glcn_recent_pin),
+                onClick = { pin(); onDismiss() },
+            )
+        }
+        tv.own.owntv.ui.stage.StagePopupOption(
+            title = stringResource(R.string.glcn_remove_from_recent),
+            onClick = { onRemove(); onDismiss() },
+        )
+    }
 }
