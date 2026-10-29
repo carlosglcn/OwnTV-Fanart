@@ -1,6 +1,10 @@
 package tv.own.owntv.features.movies
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -70,6 +74,8 @@ internal fun MovieTitlePage(
     onPlayVersion: (MovieEntity) -> Unit = {},
     onToggleFavorite: () -> Unit,
     onDismiss: () -> Unit,
+    /** glcn: titles like this one, for the page's second part. */
+    loadRelated: suspend () -> List<tv.own.owntv.features.shell.components.RelatedUi> = { emptyList() },
     /**
      * glcn: drawn on the list's own page, over its picture and the trailer already playing there — the trailer goes
      * on without a break (a new window would start a new player, from black). The list hides its words and posters.
@@ -91,7 +97,8 @@ internal fun MovieTitlePage(
     val enterSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(PAGE_ENTER_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
     LaunchedEffect(Unit) { enter.animateTo(1f, enterSpec) }
     LaunchedEffect(Unit) { androidx.compose.runtime.withFrameNanos { }; runCatching { playFocus.requestFocus() } }
-    androidx.activity.compose.BackHandler { onDismiss() }
+    var lower by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler { if (lower) { lower = false; runCatching { playFocus.requestFocus() } } else onDismiss() }
     fullTrailer?.let { key -> tv.own.owntv.ui.components.TrailerPlayerScreen(videoKey = key, title = movie.name) { fullTrailer = null } }
     val locale = androidx.compose.ui.text.intl.Locale.current.platformLocale
     val page = tv.own.owntv.ui.theme.stageTone(Color(0xFF070B0E), tv.own.owntv.ui.theme.LocalStagePalette.current.page)
@@ -100,77 +107,154 @@ internal fun MovieTitlePage(
         tv.own.owntv.features.home.CinemaTrailer.keepOnMove = true
         onDispose { tv.own.owntv.features.home.CinemaTrailer.keepOnMove = false }
     }
+    // glcn: two parts, as Apple TV draws it — the title over the picture, then (▼) the cast, the versions and more.
+    val lowerAt by androidx.compose.animation.core.animateFloatAsState(
+        if (lower) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(LOWER_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)), label = "titleLower",
+    )
+    val lowerFocus = remember { FocusRequester() }
+    var focusedLabel by remember { mutableStateOf<String?>(null) }
     val pageFocus = androidx.compose.ui.platform.LocalFocusManager.current
+    val related by produceState(emptyList<tv.own.owntv.features.shell.components.RelatedUi>(), movie.id) {
+        value = runCatching { loadRelated() }.getOrDefault(emptyList())
+    }
+    val goLower = { lower = true; scope.launch { androidx.compose.runtime.withFrameNanos { }; runCatching { lowerFocus.requestFocus() } }; Unit }
+    val goUpper = { lower = false; runCatching { playFocus.requestFocus() }; Unit }
     val body: @Composable () -> Unit = {
-        Box(Modifier.fillMaxSize().then(if (inPlace) Modifier.trapAllFocusExit().onKeyEvent { e ->
-            // The page's own ◀ ▶ between its buttons: the shell's "◀ at the edge goes to the menu" must not see them.
-            if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onKeyEvent false
-            when (e.key) {
-                androidx.compose.ui.input.key.Key.DirectionLeft -> { pageFocus.moveFocus(androidx.compose.ui.focus.FocusDirection.Left); true }
-                androidx.compose.ui.input.key.Key.DirectionRight -> { pageFocus.moveFocus(androidx.compose.ui.focus.FocusDirection.Right); true }
-                androidx.compose.ui.input.key.Key.DirectionUp, androidx.compose.ui.input.key.Key.DirectionDown -> true
-                else -> false
-            }
-        }.focusGroup() else Modifier.background(page))) {
+        Box(
+            Modifier.fillMaxSize().then(if (inPlace) Modifier else Modifier.background(page)).trapAllFocusExit()
+                .onPreviewKeyEvent { e ->
+                    if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    when (e.key) {
+                        androidx.compose.ui.input.key.Key.DirectionDown -> if (!lower) { goLower(); true } else false
+                        androidx.compose.ui.input.key.Key.DirectionUp -> { if (lower) goUpper(); true }
+                        else -> false
+                    }
+                }
+                .onKeyEvent { e ->
+                    // The page's own ◀ ▶: the shell's "◀ at the edge goes to the menu" must not see them.
+                    if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onKeyEvent false
+                    when (e.key) {
+                        androidx.compose.ui.input.key.Key.DirectionLeft -> { pageFocus.moveFocus(androidx.compose.ui.focus.FocusDirection.Left); true }
+                        androidx.compose.ui.input.key.Key.DirectionRight -> { pageFocus.moveFocus(androidx.compose.ui.focus.FocusDirection.Right); true }
+                        else -> false
+                    }
+                }
+                .focusGroup(),
+        ) {
             if (!inPlace) {
                 tv.own.owntv.ui.components.ArtTint(info.backdropUrl, Modifier.fillMaxSize(), strength = 0.7f)
-                // The picture, wide, and the trailer over it — the same window as the list's.
+                // The picture — or its trailer — edge to edge.
                 tv.own.owntv.features.shell.components.VodCinematicBackdrop(
                     info.backdropUrl, series = false, Modifier.align(Alignment.TopEnd),
-                    trailer = meta?.trailerKey, trailerTitle = movie.name, focusKey = movie.id,
+                    trailer = meta?.trailerKey, trailerTitle = movie.name, focusKey = movie.id, expand = 1f,
                 )
             }
+            // The lower half darkens for the words; the whole page darkens further for the second part.
             Box(
-                Modifier.fillMaxSize().graphicsLayer { if (inPlace) alpha = enter.value }
-                    .background(Brush.verticalGradient(0.45f to Color.Transparent, 0.8f to page.copy(alpha = 0.85f), 1f to page.copy(alpha = 0.96f))),
+                Modifier.fillMaxSize().graphicsLayer { alpha = enter.value }
+                    .background(Brush.verticalGradient(0.4f to Color.Transparent, 0.75f to page.copy(alpha = 0.8f), 1f to page.copy(alpha = 0.95f))),
             )
+            Box(Modifier.fillMaxSize().graphicsLayer { alpha = lowerAt }.background(page.copy(alpha = 0.86f)))
+            // First part: the title, its facts and the buttons.
             Column(
-                Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 72.mpx, end = 96.mpx)
-                    .graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 40.mpx.toPx() },
+                Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 64.mpx, end = 96.mpx)
+                    .graphicsLayer {
+                        alpha = enter.value * (1f - lowerAt)
+                        translationY = (1f - enter.value) * 40.mpx.toPx() - lowerAt * 160.mpx.toPx()
+                    },
                 verticalArrangement = Arrangement.spacedBy(14.mpx),
             ) {
-                // The list's hero, in full: lettering, facts, synopsis and cast.
-                tv.own.owntv.features.shell.components.VodHero(info, Modifier.width(1100.mpx))
-                Row(Modifier.padding(top = 8.mpx).horizontalScroll(androidx.compose.foundation.rememberScrollState()).focusGroup(), horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = Alignment.CenterVertically) {
-                    val resume = saved >= RESUME_MIN_MS
+                tv.own.owntv.features.shell.components.VodHero(info, Modifier.width(1100.mpx), showCast = false, plotLines = 3)
+                val resume = saved >= RESUME_MIN_MS
+                val audioName = tracks?.first?.let { TrackLanguages.displayName(it, locale) } ?: stringResource(R.string.settings_auto)
+                val subsName = when (val sub = tracks?.second) {
+                    null -> stringResource(R.string.settings_auto)
+                    PlaybackPrefsStore.SUBTITLES_OFF -> stringResource(R.string.common_off)
+                    else -> TrackLanguages.displayName(sub, locale)
+                }
+                Row(
+                    Modifier.padding(top = 10.mpx).horizontalScroll(androidx.compose.foundation.rememberScrollState()).focusGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val playLabel = if (resume) stringResource(R.string.glcn_title_resume, tv.own.owntv.features.shell.components.vodRuntime((saved / 1000).toInt()))
+                        else stringResource(R.string.content_play)
                     StageButton(
-                        if (resume) stringResource(R.string.glcn_title_resume, tv.own.owntv.features.shell.components.vodRuntime((saved / 1000).toInt()))
-                        else stringResource(R.string.content_play),
-                        onClick = { onPlay(if (resume) saved else 0L) },
-                        icon = OwnTVIcon.PLAY, iconFilled = true, height = 56.mpx, textSize = 20,
-                        modifier = Modifier.focusRequester(playFocus),
+                        playLabel, onClick = { onPlay(if (resume) saved else 0L) },
+                        icon = OwnTVIcon.PLAY, iconFilled = true, height = 64.mpx, textSize = 21,
+                        modifier = Modifier.focusRequester(playFocus).onFocusChanged { if (it.isFocused) focusedLabel = null },
                     )
-                    if (resume) StageButton(stringResource(R.string.glcn_title_start_over), onClick = { onPlay(0L) }, icon = OwnTVIcon.REWIND, height = 56.mpx, textSize = 19)
-                    meta?.trailerKey?.let { stored ->
-                        StageButton(stringResource(R.string.glcn_dock_trailer), onClick = {
-                            fullTrailer = trailerKeysFirst(stored)
-                        }, icon = OwnTVIcon.VIDEO, height = 56.mpx, textSize = 19)
-                    }
-                    if (trackKey != null) {
-                        StageButton(
-                            stringResource(R.string.glcn_title_audio, tracks?.first?.let { TrackLanguages.displayName(it, locale) } ?: stringResource(R.string.settings_auto)),
-                            onClick = { picking = Picker.AUDIO }, icon = OwnTVIcon.AUDIO, height = 56.mpx, textSize = 19,
-                        )
-                        StageButton(
-                            stringResource(
-                                R.string.glcn_title_subtitles,
-                                when (val s = tracks?.second) {
-                                    null -> stringResource(R.string.settings_auto)
-                                    PlaybackPrefsStore.SUBTITLES_OFF -> stringResource(R.string.common_off)
-                                    else -> TrackLanguages.displayName(s, locale)
-                                },
-                            ),
-                            onClick = { picking = Picker.SUBTITLES }, icon = OwnTVIcon.SUBTITLE, height = 56.mpx, textSize = 19,
-                        )
-                    }
-                    if (versions.size > 1) StageButton(
-                        stringResource(R.string.glcn_title_versions, versions.size),
-                        onClick = { choosingVersion = true }, icon = OwnTVIcon.LAYERS, height = 56.mpx, textSize = 19,
+                    @Composable
+                    fun roundButton(label: String, icon: OwnTVIcon, filled: Boolean = false, onClick: () -> Unit) = StageButton(
+                        null, onClick = onClick, icon = icon, iconFilled = filled, round = true, height = 64.mpx,
+                        modifier = Modifier.onFocusChanged { if (it.isFocused) focusedLabel = label },
                     )
-                    StageButton(
+                    if (resume) roundButton(stringResource(R.string.glcn_title_start_over), OwnTVIcon.REWIND) { onPlay(0L) }
+                    meta?.trailerKey?.let { stored -> roundButton(stringResource(R.string.glcn_dock_trailer), OwnTVIcon.VIDEO) { fullTrailer = trailerKeysFirst(stored) } }
+                    roundButton(
                         stringResource(if (favorite) R.string.content_remove_favourite else R.string.content_add_favourite),
-                        onClick = onToggleFavorite, icon = OwnTVIcon.FAVORITE, iconFilled = favorite, height = 56.mpx, textSize = 19,
+                        OwnTVIcon.FAVORITE, filled = favorite, onClick = onToggleFavorite,
                     )
+                    if (trackKey != null) {
+                        roundButton(stringResource(R.string.glcn_title_audio, audioName), OwnTVIcon.AUDIO) { picking = Picker.AUDIO }
+                        roundButton(stringResource(R.string.glcn_title_subtitles, subsName), OwnTVIcon.SUBTITLE) { picking = Picker.SUBTITLES }
+                    }
+                    if (versions.size > 1) roundButton(stringResource(R.string.glcn_title_versions, versions.size), OwnTVIcon.LAYERS) { choosingVersion = true }
+                }
+                // What the focused round button does, else the audio and subtitles chosen — and the way to the rest.
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
+                    Text(
+                        focusedLabel ?: if (trackKey != null) stringResource(R.string.glcn_title_audio, audioName) + "  \u00B7  " + stringResource(R.string.glcn_title_subtitles, subsName) else "",
+                        style = stageText(17, 600), color = StageColors.Body, maxLines = 1,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
+                        tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.CHEVRON_DOWN, StageColors.Muted, Modifier.size(18.mpx))
+                        Text(stringResource(R.string.content_media_cast), style = stageText(16, 600), color = StageColors.Muted, maxLines = 1)
+                    }
+                }
+            }
+            // Second part (▼): the cast, the versions and titles like it.
+            Column(
+                Modifier.align(Alignment.TopStart).padding(start = 96.mpx, top = 90.mpx, end = 96.mpx)
+                    .graphicsLayer { alpha = lowerAt; translationY = (1f - lowerAt) * 200.mpx.toPx() },
+                verticalArrangement = Arrangement.spacedBy(22.mpx),
+            ) {
+                Text(info.title, style = stageText(30, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // One focus stop for the reading part, so ▼ always has somewhere to land.
+                Column(
+                    Modifier.focusRequester(lowerFocus).focusable(),
+                    verticalArrangement = Arrangement.spacedBy(22.mpx),
+                ) {
+                    if (info.cast.isNotEmpty()) {
+                        Text(stringResource(R.string.content_media_cast), style = stageText(20, 700), color = StageColors.Text)
+                        tv.own.owntv.features.shell.components.VodCast(info.cast, 10)
+                    }
+                    if (related.isNotEmpty()) {
+                        Text(stringResource(R.string.glcn_similar_title), style = stageText(20, 700), color = StageColors.Text)
+                        Row(horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
+                            related.take(9).forEach { r ->
+                                Column(Modifier.width(150.mpx)) {
+                                    coil3.compose.AsyncImage(
+                                        model = r.posterUrl, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                        modifier = Modifier.width(150.mpx).height(225.mpx).clip(RoundedCornerShape(12.mpx)).background(Color.White.copy(alpha = 0.06f)),
+                                    )
+                                    Text(r.name, style = stageText(14, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.mpx))
+                                }
+                            }
+                        }
+                    }
+                }
+                if (versions.size > 1) {
+                    Text(stringResource(R.string.glcn_title_versions, versions.size), style = stageText(20, 700), color = StageColors.Text)
+                    Row(Modifier.focusGroup(), horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                        versions.forEach { (v, playlist) ->
+                            val tags = tv.own.owntv.core.live.ProviderTags.parse(v.name)
+                            tv.own.owntv.ui.stage.StagePill(
+                                text = listOfNotNull(tags.tags.joinToString(" ").ifBlank { null }, playlist).joinToString(" \u00B7 ").ifBlank { tags.name.ifBlank { v.name } },
+                                onClick = { onPlayVersion(v) },
+                                highlighted = v.id == movie.id,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -236,5 +320,6 @@ private fun trailerKeysFirst(stored: String): String = tv.own.owntv.core.metadat
 private val PICK_FIRST = listOf("spa", "eng", "cat", "fra", "por", "ita", "deu")
 
 private const val PAGE_ENTER_MS = 420
+private const val LOWER_MS = 480
 /** glcn: under a minute in is nothing to resume (it read "Resume from 0 min"). */
 private const val RESUME_MIN_MS = 60_000L

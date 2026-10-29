@@ -598,6 +598,7 @@ fun MoviesScreen(
             onPlayVersion = { v -> titleMovie = null; playMovieNow(v) },
             onToggleFavorite = { vm.toggleFavorite(m) },
             onDismiss = { titleMovie = null },
+            loadRelated = { vm.relatedTo(m) },
             inPlace = inPlace,
         )
     }
@@ -608,6 +609,8 @@ fun MoviesScreen(
         if (inPlaceTitle) wasInPlace[0] = true
         else if (wasInPlace[0]) { wasInPlace[0] = false; withFrameNanos { }; focusCurrentTitle() }
     }
+    // The list's picture grows to fill the screen for the page, and its trailer goes on as it does.
+    val backdropExpand by androidx.compose.animation.core.animateFloatAsState(if (inPlaceTitle) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(520, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)), label = "titleBackdropGrow")
     val listAlpha by androidx.compose.animation.core.animateFloatAsState(if (inPlaceTitle) 0f else 1f, tv.own.owntv.ui.theme.ownTvTween(260), label = "titleListFade")
     val emptyText = if (searchQuery.isNotBlank()) stringResource(R.string.content_no_movies_found, searchQuery.trim()) else stringResource(R.string.content_no_movies_here)
 
@@ -629,7 +632,7 @@ fun MoviesScreen(
             val toolTop = heroTop + heroH
             Box(Modifier.fillMaxSize().then(if (categoriesOpen) Modifier.graphicsLayer { alpha = 0.36f } else Modifier)) {
                 tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl, Modifier.matchParentSize())
-                VodCinematicBackdrop(titleInfo?.backdropUrl, series = false, Modifier.align(Alignment.TopEnd), trailer = selectedMeta?.trailerKey.takeIf { metadataMode.enrich }, trailerTitle = selectedMovie?.name, focusKey = selectedMovie?.id)
+                VodCinematicBackdrop(titleInfo?.backdropUrl, series = false, Modifier.align(Alignment.TopEnd), trailer = selectedMeta?.trailerKey.takeIf { metadataMode.enrich }, trailerTitle = selectedMovie?.name, focusKey = selectedMovie?.id, expand = backdropExpand)
                 VodHeader(
                     section = stringResource(R.string.common_nav_movies), category = headerLabel, count = vodCount(false, count),
                     showChevron = true, modifier = Modifier.padding(start = fx(84), top = 52.mpx - lift * 0.7f).width(fx(900)).graphicsLayer { alpha = listAlpha },

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -193,6 +194,8 @@ internal fun VodCinematicBackdrop(
     url: String?, series: Boolean, modifier: Modifier = Modifier,
     /** glcn: the title's trailer — silent in the picture after a few calm seconds, or at once when carried over from Home. */
     trailer: String? = null, trailerTitle: String? = null, focusKey: Any? = null,
+    /** glcn: 0 = the window at the top right; 1 = edge to edge (a title's page), the trailer going on as it grows. */
+    expand: Float = 0f,
 ) {
     var settled by remember { mutableStateOf(url) }
     // Art already shown once is in the image cache: it swaps at once; only new art waits the settle.
@@ -212,7 +215,9 @@ internal fun VodCinematicBackdrop(
     val wash = StageColors.Wash
     // object-position 30% 40% (Movies) / 100% 40% (Series), as drawn.
     val focus = BiasAlignment(if (series) 1f else -0.4f, -0.2f)
-    Box(modifier.fillMaxWidth(1400f / 1920f).aspectRatio(1400f / 720f).dissolveEdges(start = 0.34f, bottom = 0.38f)) {
+    val sized = if (expand <= 0f) modifier.fillMaxWidth(1400f / 1920f).aspectRatio(1400f / 720f)
+        else modifier.fillMaxWidth(1400f / 1920f + (1f - 1400f / 1920f) * expand).fillMaxHeight(720f / 1080f + (1f - 720f / 1080f) * expand)
+    Box(sized.dissolveEdges(start = (0.34f * (1f - expand)).coerceAtLeast(0.02f), bottom = (0.38f * (1f - expand)).coerceAtLeast(0.02f))) {
         Box(Modifier.fillMaxSize().graphicsLayer { alpha = hold }) {
             Crossfade(targetState = settled, animationSpec = ownTvTween(420), label = "vodBackdrop") { u ->
                 if (!u.isNullOrBlank()) {
@@ -244,7 +249,7 @@ internal fun VodCinematicBackdrop(
  * leaves the poster row.
  */
 @Composable
-internal fun VodHero(info: VodTitleInfo, modifier: Modifier = Modifier) {
+internal fun VodHero(info: VodTitleInfo, modifier: Modifier = Modifier, showCast: Boolean = true, plotLines: Int = 2) {
     Column(modifier.clipToBounds()) {
         var logoFailed by remember(info.logoUrl) { mutableStateOf(false) }
         Box(Modifier.fillMaxWidth().height(170.mpx), contentAlignment = Alignment.BottomStart) {
@@ -268,10 +273,10 @@ internal fun VodHero(info: VodTitleInfo, modifier: Modifier = Modifier) {
         info.plot?.takeIf { it.isNotBlank() }?.let {
             Text(
                 it, style = stageText(19.5f, 400).copy(lineHeight = (19.5f * 1.55f).mpxSp), color = StageColors.Body,
-                maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 860.mpx),
+                maxLines = plotLines, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 860.mpx),
             )
         }
-        if (info.cast.isNotEmpty()) VodCast(info.cast, 6, Modifier.padding(top = 20.mpx))
+        if (showCast && info.cast.isNotEmpty()) VodCast(info.cast, 6, Modifier.padding(top = 20.mpx))
     }
 }
 
