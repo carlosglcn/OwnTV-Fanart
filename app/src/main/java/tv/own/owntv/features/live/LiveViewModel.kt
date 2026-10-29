@@ -1810,7 +1810,9 @@ class LiveViewModel(
      *  playback browse/zap context instead of replacing it with provider-category metadata. */
     suspend fun ensurePlayingByIdAsync(channelId: Long, zapChannels: List<ChannelEntity> = emptyList()): Boolean {
         val channel = channelDao.getById(channelId) ?: return false
-        if (zapChannels.isEmpty()) {
+        // glcn: a list of one (Sports "Watch live" with a single channel) left nothing to zap through, so the
+        // quick guide, the channel list and CH± were all switched off — the channel's own group instead.
+        if (zapChannels.size < 2) {
             // A single Home "continue watching" tile has no browse rail of its own.
             zapList.armFor(channel)
         } else {

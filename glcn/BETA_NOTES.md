@@ -148,3 +148,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ Film page: "Versions (n)" when the film is in more than one playlist or quality — best first, with its tags and playlist; a pick plays that copy.
 - 🧯 The "it stutters" light-mode prompt and the meter's "slow" now count frames that reach the screen late (vsync to vsync): a busy GPU with video read "100 % slow" at 52 fps and asked for light mode wrongly.
 - 🔇 No trailers while a channel or film is already playing (full screen or in its window): two videos at once is heavy and their sound clashes.
+- 🏟️ A channel opened from Sports with only one option now zaps through its own group: hold OK opens the quick guide and ◀ the channel list again (before, OK paused it and ◀ did nothing).
