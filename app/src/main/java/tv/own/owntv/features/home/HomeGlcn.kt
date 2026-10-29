@@ -961,6 +961,8 @@ internal object CinemaTrailer {
     var blocked by mutableStateOf(false)
     /** Cinema's lights down: the trailer has played a moment, everything round it steps back. */
     var lightsDown by mutableStateOf(false)
+    /** A title's page is open over the trailer: moving between its buttons must not stop it. */
+    var keepOnMove by mutableStateOf(false)
     private var playTaken = false
 
     /** A carried-over trailer for [key], if it is fresh; taking it clears it. */
@@ -991,6 +993,7 @@ internal object CinemaTrailer {
             // OK does what it always does, and the trailer goes on meanwhile (a held OK's menu can turn its sound on);
             // it is handed to the page OK opens.
             if (ok) { playing?.let { handoff = Triple(it.first, second, android.os.SystemClock.uptimeMillis()) }; return false }
+            if (keepOnMove) return false
             playing = null; stopTick++
         }
         return false

@@ -151,3 +151,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏟️ A channel opened from Sports with only one option now zaps through its own group: hold OK opens the quick guide and ◀ the channel list again (before, OK paused it and ◀ did nothing).
 - 📺 TV profile: the Dock (and the classic Home) keep only TV — no films or series to resume — and the profile always opens on its last channel full screen, whatever start-up it had saved.
 - 🎞️ Classic Home: no trailer behind the rows once they have scrolled up over the picture — it played there unseen.
+- 🎬 Page before watching: under the Cinematic and Runway layouts it now opens on the list's own page, so the picture and a trailer already playing go on without a break (no new player starting from black); the buttons scroll if they do not fit, and "Resume" only shows after a minute in.

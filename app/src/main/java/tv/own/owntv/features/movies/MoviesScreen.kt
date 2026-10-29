@@ -583,6 +583,32 @@ fun MoviesScreen(
         // glcn: ◀ is not taken here — the shell moves it to the menu.
         e.key == Key.Unknown
     }
+    // glcn: the film's page — on this page itself under the Cinematic layout, so the picture and its trailer go on.
+    val favIds by vm.favoriteIds.collectAsStateWithLifecycle()
+    val titlePage: @Composable (MovieEntity, Boolean) -> Unit = { m, inPlace ->
+        val metaHere = selectedMovieMeta?.takeIf { it.movieId == m.id }?.cache
+        MovieTitlePage(
+            movie = m,
+            meta = metaHere,
+            info = movieTitleInfo(m, metaHere, metadataMode.tmdbWins || m.id in overridden),
+            favorite = m.id in favIds,
+            resumeMs = { vm.savedPositionMs(m) },
+            onPlay = { pos -> titleMovie = null; vm.play(m, pos); goFullscreen() },
+            loadVersions = { vm.versionsOf(m) },
+            onPlayVersion = { v -> titleMovie = null; playMovieNow(v) },
+            onToggleFavorite = { vm.toggleFavorite(m) },
+            onDismiss = { titleMovie = null },
+            inPlace = inPlace,
+        )
+    }
+    val inPlaceTitle = cinematic && titleMovie != null && titleMovie?.id == selectedMovie?.id
+    // Back from the page drawn here: the focus goes back to the film it was opened from.
+    val wasInPlace = remember { booleanArrayOf(false) }
+    LaunchedEffect(inPlaceTitle) {
+        if (inPlaceTitle) wasInPlace[0] = true
+        else if (wasInPlace[0]) { wasInPlace[0] = false; withFrameNanos { }; focusCurrentTitle() }
+    }
+    val listAlpha by androidx.compose.animation.core.animateFloatAsState(if (inPlaceTitle) 0f else 1f, tv.own.owntv.ui.theme.ownTvTween(260), label = "titleListFade")
     val emptyText = if (searchQuery.isNotBlank()) stringResource(R.string.content_no_movies_found, searchQuery.trim()) else stringResource(R.string.content_no_movies_here)
 
     BoxWithConstraints(
@@ -606,10 +632,12 @@ fun MoviesScreen(
                 VodCinematicBackdrop(titleInfo?.backdropUrl, series = false, Modifier.align(Alignment.TopEnd), trailer = selectedMeta?.trailerKey.takeIf { metadataMode.enrich }, trailerTitle = selectedMovie?.name, focusKey = selectedMovie?.id)
                 VodHeader(
                     section = stringResource(R.string.common_nav_movies), category = headerLabel, count = vodCount(false, count),
-                    showChevron = true, modifier = Modifier.padding(start = fx(84), top = 52.mpx - lift * 0.7f).width(fx(900)),
+                    showChevron = true, modifier = Modifier.padding(start = fx(84), top = 52.mpx - lift * 0.7f).width(fx(900)).graphicsLayer { alpha = listAlpha },
                 )
-                titleInfo?.let { VodHero(it, Modifier.padding(start = fx(84), top = heroTop).width(fx(1000)).height(heroH)) }
-                Column(Modifier.padding(top = toolTop).fillMaxSize().then(paneModifier)) {
+                titleInfo?.let { VodHero(it, Modifier.padding(start = fx(84), top = heroTop).width(fx(1000)).height(heroH).graphicsLayer { alpha = listAlpha }) }
+                // glcn: the film's page, here over the same picture and trailer (the rest above has faded out).
+                if (inPlaceTitle) titleMovie?.let { titlePage(it, true) }
+                Column(Modifier.padding(top = toolTop).fillMaxSize().graphicsLayer { alpha = listAlpha }.then(paneModifier)) {
                     Row(
                         Modifier.padding(start = fx(68), end = fx(64)).fillMaxWidth()
                             // ▼ from the toolbar returns to the title the hero shows, not the poster below the tool.
@@ -1121,22 +1149,7 @@ fun MoviesScreen(
         }
     }
 
-    titleMovie?.let { m ->
-        val metaHere = selectedMovieMeta?.takeIf { it.movieId == m.id }?.cache
-        val favs by vm.favoriteIds.collectAsStateWithLifecycle()
-        MovieTitlePage(
-            movie = m,
-            meta = metaHere,
-            info = movieTitleInfo(m, metaHere, metadataMode.tmdbWins || m.id in overridden),
-            favorite = m.id in favs,
-            resumeMs = { vm.savedPositionMs(m) },
-            onPlay = { pos -> titleMovie = null; vm.play(m, pos); goFullscreen() },
-            loadVersions = { vm.versionsOf(m) },
-            onPlayVersion = { v -> titleMovie = null; playMovieNow(v) },
-            onToggleFavorite = { vm.toggleFavorite(m) },
-            onDismiss = { titleMovie = null },
-        )
-    }
+    titleMovie?.let { m -> if (!inPlaceTitle) titlePage(m, false) }
 
     // Windowed TMDB details popup — read-only, Back exits.
     detailsMovie?.let { m ->
