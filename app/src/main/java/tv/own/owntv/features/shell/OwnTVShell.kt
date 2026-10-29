@@ -1479,6 +1479,15 @@ fun OwnTVShell(
                         )
 
                         // glcn: the Dock layout — the focused title over its picture and a glass dock with tabs.
+                        // glcn (TV profile): a Home of its own, only TV — the programme's picture filling the screen.
+                        selectedSection == MainSection.HOME && tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId) -> tv.own.owntv.features.home.TvHome(
+                            load = { liveVm.tvStripGroups() },
+                            loadNow = { liveVm.nowFull(it) },
+                            onTune = { ch, list -> scope.launch { if (liveVm.ensurePlayingByIdAsync(ch.id, list)) openFullscreen(MainSection.LIVE_TV) } },
+                            onChildFocused = { focusedLayer = ShellLayer.CONTENT },
+                            contentStart = if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.FLOATING) 150.mpx else 64.mpx,
+                            modifier = Modifier.fillMaxSize(),
+                        )
                         selectedSection == MainSection.HOME && homeLayout == 3 -> tv.own.owntv.features.home.LumenHome(
                             vm = homeVm,
                             onHideRow = { homeVm.hideRow(it) },
@@ -1531,15 +1540,6 @@ fun OwnTVShell(
                             modifier = Modifier.fillMaxSize(),
                         )
 
-                        // glcn (TV profile): a Home of its own, only TV — the programme's picture filling the screen.
-                        selectedSection == MainSection.HOME && tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId) -> tv.own.owntv.features.home.TvHome(
-                            load = { liveVm.tvStripGroups() },
-                            loadNow = { liveVm.nowFull(it) },
-                            onTune = { ch, list -> scope.launch { if (liveVm.ensurePlayingByIdAsync(ch.id, list)) openFullscreen(MainSection.LIVE_TV) } },
-                            onChildFocused = { focusedLayer = ShellLayer.CONTENT },
-                            contentStart = if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.FLOATING) 150.mpx else 64.mpx,
-                            modifier = Modifier.fillMaxSize(),
-                        )
                         selectedSection == MainSection.HOME -> HomeScreen(
                             vm = homeVm,
                             seasonActive = playerMode != PlayerMode.FULLSCREEN,
@@ -1559,6 +1559,7 @@ fun OwnTVShell(
                                         is TrendingHomeItem.Series -> {
                                             seriesVm.openSeries(current.series)
                                             restoreFocus = true
+                                            seriesFromHome = true
                                             onSelectSection(MainSection.SERIES)
                                         }
                                         null -> onUnavailable()
@@ -1566,13 +1567,18 @@ fun OwnTVShell(
                                 }
                             },
                             onOpenMovie = { movie ->
-                                restoreFocus = false
-                                movieVm.revealMovie(movie)
-                                onSelectSection(MainSection.MOVIES)
+                                // glcn: with "Page before watching" on, a film chosen on Home opens its page right here.
+                                if (tv.own.owntv.glcn.DockPrefs.titlePage) homeFilm = movie
+                                else {
+                                    restoreFocus = false
+                                    movieVm.revealMovie(movie)
+                                    onSelectSection(MainSection.MOVIES)
+                                }
                             },
                             onOpenSeries = { series ->
                                 seriesVm.openSeries(series)
                                 restoreFocus = true
+                                seriesFromHome = true
                                 onSelectSection(MainSection.SERIES)
                             },
                             onOpenTrendingSearch = { query ->
