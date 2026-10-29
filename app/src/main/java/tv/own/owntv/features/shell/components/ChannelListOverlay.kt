@@ -405,7 +405,7 @@ internal fun ZapPreviewPanel(
             Box(Modifier.fillMaxWidth(f).height(4.mpx).background(stageAccent.accent))
         }
         p.description?.takeIf { it.isNotBlank() }?.let {
-            DriftingSynopsis(it, style = stageText(16, 400), color = StageColors.Dim, lines = if (framed) 4 else bareLines)
+            DriftingSynopsis(it, style = stageText(16, 400), color = StageColors.Body, lines = if (framed) 4 else bareLines)
         }
         // glcn: and what follows it.
         next?.let { n ->

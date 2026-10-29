@@ -350,15 +350,23 @@ internal fun DriftingSynopsis(
     /** glcn: a long text fades out at its foot instead of being cut through a line. */
     fade: Boolean = true,
 ) {
-    val lineH = with(androidx.compose.ui.platform.LocalDensity.current) { style.fontSize.toDp() } * 1.4f
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val lineH = with(density) { style.fontSize.toDp() } * 1.4f
+    val linePx = with(density) { lineH.toPx() }
     val scroll = androidx.compose.foundation.rememberScrollState()
     LaunchedEffect(text, scroll.maxValue) {
         scroll.scrollTo(0)
         if (scroll.maxValue <= 0 || tv.own.owntv.glcn.LowRam.on) return@LaunchedEffect // light mode: no animation
         while (true) {
             kotlinx.coroutines.delay(tv.own.owntv.glcn.DriftPace.START_MS.toLong())
-            scroll.animateScrollTo(scroll.maxValue, androidx.compose.animation.core.tween(scroll.maxValue * tv.own.owntv.glcn.DriftPace.MS_PER_PX, easing = androidx.compose.animation.core.LinearEasing))
-            kotlinx.coroutines.delay(3_000)
+            // glcn: a line at a time, and a pause on each — while it rests every line shown is whole; a steady drift
+            // always left one cut in half at the top and the bottom.
+            while (scroll.value < scroll.maxValue) {
+                val next = minOf(scroll.maxValue, (((scroll.value + 1) / linePx).toInt() + 1).let { k -> (k * linePx).toInt() })
+                scroll.animateScrollTo(next, androidx.compose.animation.core.tween(LINE_STEP_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                kotlinx.coroutines.delay(LINE_REST_MS)
+            }
+            kotlinx.coroutines.delay(1_500)
             // glcn: back to the start gently, not in one jump.
             scroll.animateScrollTo(0, androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         }
@@ -373,10 +381,12 @@ internal fun DriftingSynopsis(
                     .drawWithContent {
                         drawContent()
                         // glcn: once the words have drifted up, the line leaving at the top fades out too, never cut in half.
-                        val top = if (scroll.value > 0) (lineH.toPx() / size.height).coerceIn(0f, 0.3f) else 0f
+                        // Only a sliver at the top while a line moves; at rest the lines are whole.
+                        val top = if (scroll.value > 0 && scroll.isScrollInProgress) (lineH.toPx() * 0.35f / size.height).coerceIn(0f, 0.15f) else 0f
                         drawRect(
                             if (top > 0f) Brush.verticalGradient(0f to Color.Transparent, top to Color.Black, 0.86f to Color.Black, 1f to Color.Transparent)
-                            else Brush.verticalGradient(0.86f to Color.Black, 1f to Color.Transparent),
+                            else if (scroll.value < scroll.maxValue) Brush.verticalGradient(0.86f to Color.Black, 1f to Color.Transparent)
+                            else Brush.verticalGradient(0f to Color.Black, 1f to Color.Black),
                             blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
                         )
                     }
@@ -392,4 +402,6 @@ internal fun DriftingSynopsis(
 
 /** glcn: the floating card's glass in the light theme — enough that its words read over a bright picture. */
 private const val LIGHT_CARD_GLASS = 0.94f
+private const val LINE_STEP_MS = 520
+private const val LINE_REST_MS = 2_600L
 private const val DARK_CARD_GLASS = 0.92f

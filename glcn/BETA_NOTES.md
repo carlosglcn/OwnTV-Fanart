@@ -177,3 +177,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎬 Smoother trailers: their edges now fade into the page by paint instead of a mask redrawn on every video frame (the stutter), and the player is made on the app's screen itself.
 - ▶️ A trailer no longer stops now and then on entering a title's page: moved to the page, the player paused itself; a trailer still wanted now plays on.
 - 🕘 Recently watched (in the player) opens with the focus on the channel playing, at the top, instead of the one before it.
+- 📖 Synopses in the panels move a line at a time and rest on each, so the lines you read are always whole (a steady drift always cut one at the top and the bottom); in the channel list they are brighter too.
