@@ -236,7 +236,6 @@
 1	preference-key	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	refetch_tmdb
 2	technical	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	remove_history
 1	preference-key	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	set_tmdb_name
-1	technical	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	titleBackdropGrow
 1	technical	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	titleListFade
 2	technical	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	tmdb_details
 2	technical	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	trailer_sound
