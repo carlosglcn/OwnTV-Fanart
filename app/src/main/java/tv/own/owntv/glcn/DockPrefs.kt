@@ -29,7 +29,7 @@ object DockPrefs {
         app = context.applicationContext
     }
 
-    fun setTrailerSound(on: Boolean) {
+    fun keepTrailerSound(on: Boolean) {
         if (trailerSound == on) return
         trailerSound = on
         app?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.edit()?.putBoolean(TRAILER_SOUND, on)?.apply()

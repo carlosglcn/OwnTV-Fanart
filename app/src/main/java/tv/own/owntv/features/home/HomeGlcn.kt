@@ -957,7 +957,7 @@ internal object CinemaTrailer {
     /** Sound on — kept on the device once asked for (Vol +, Play/Pause, a page's sound button); see DockPrefs. */
     var sound: Boolean
         get() = tv.own.owntv.glcn.DockPrefs.trailerSound
-        set(value) = tv.own.owntv.glcn.DockPrefs.setTrailerSound(value)
+        set(value) = tv.own.owntv.glcn.DockPrefs.keepTrailerSound(value)
     /** How far the playing trailer has got, for the carry-over to the title's page. */
     var second = 0f
     /** A trailer that was playing when OK opened its title: the page it lands on goes on with it (key, second, when). */
