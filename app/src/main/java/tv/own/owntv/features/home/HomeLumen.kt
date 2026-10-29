@@ -332,7 +332,18 @@ fun LumenHome(
                         modifier = Modifier.height(150.mpx).widthIn(max = 760.mpx),
                         onFailed = { k?.let { logoFailed.add(it) } },
                     ) else Text(it0?.title.orEmpty(), style = stageText(64f, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    it0?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
+                    // glcn: a film or series reads its facts as tags — the year, ★ the rating in the accent, its genres.
+                    val film = it0?.movie != null || it0?.series != null
+                    if (film) {
+                        val year = it0?.movie?.year ?: it0?.series?.year
+                        val rating = (it0?.movie?.rating ?: it0?.series?.rating)?.takeIf { it > 0 }
+                        val genres = remember(k, metas[k]?.genresJson) { dockJsonList(k?.let { metas[it]?.genresJson }) }
+                        Row(Modifier.padding(top = 14.mpx), horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
+                            rating?.let { DockChip(ratingOf(it), accent = true, star = true) }
+                            year?.let { DockChip(it.toString()) }
+                            genres.take(2).forEach { DockChip(it) }
+                        }
+                    } else it0?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
                     // glcn: how far along — a film or episode left half-way, or the programme on air.
                     it0?.progress?.takeIf { it > 0f }?.let { tv.own.owntv.ui.stage.StageProgress(it.coerceIn(0f, 1f), Modifier.padding(top = 14.mpx).width(440.mpx)) }
                     (it0?.plot ?: it0?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(1040.mpx), style = stageText(20, 400), color = StageColors.Body, lines = if (tv.own.owntv.glcn.DockPrefs.doubleRow) 2 else 3, fade = true) }
@@ -548,6 +559,30 @@ private val NoBringIntoView = object : androidx.compose.foundation.gestures.Brin
 private data class TrendingFacts(val name: String, val poster: String?, val backdrop: String?, val plot: String?, val year: Int?)
 
 private fun ratingOf(r: Double): String = String.format(java.util.Locale.getDefault(), "%.1f", r)
+
+/** glcn: one fact above the dock as a tag; the rating in the accent with its star. */
+@Composable
+private fun DockChip(text: String, accent: Boolean = false, star: Boolean = false) {
+    val a = stageAccent
+    val tint = if (accent) a.accent else StageColors.Text.copy(alpha = 0.9f)
+    Row(
+        Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.mpx))
+            .background(if (accent) a.accent.copy(alpha = 0.18f) else StageColors.Text.copy(alpha = 0.12f))
+            .padding(horizontal = 14.mpx, vertical = 6.mpx),
+        horizontalArrangement = Arrangement.spacedBy(6.mpx), verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (star) tv.own.owntv.ui.components.OwnTVIcon(tv.own.owntv.ui.components.OwnTVIcon.STAR, tint, Modifier.size(18.mpx))
+        Text(text, style = stageText(19, 700), color = tint, maxLines = 1)
+    }
+}
+
+private fun dockJsonList(json: String?): List<String> {
+    if (json.isNullOrBlank()) return emptyList()
+    return runCatching {
+        val arr = org.json.JSONArray(json)
+        (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { s -> s.isNotBlank() } }
+    }.getOrDefault(emptyList())
+}
 
 /** glcn: quiet this long and the title's trailer replaces its picture; this long and the words and dock fade away. */
 private const val DOCK_TRAILER_MS = 3_000L

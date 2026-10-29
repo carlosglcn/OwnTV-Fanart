@@ -353,7 +353,8 @@ internal fun DriftingSynopsis(
             kotlinx.coroutines.delay(tv.own.owntv.glcn.DriftPace.START_MS.toLong())
             scroll.animateScrollTo(scroll.maxValue, androidx.compose.animation.core.tween(scroll.maxValue * tv.own.owntv.glcn.DriftPace.MS_PER_PX, easing = androidx.compose.animation.core.LinearEasing))
             kotlinx.coroutines.delay(3_000)
-            scroll.scrollTo(0)
+            // glcn: back to the start gently, not in one jump.
+            scroll.animateScrollTo(0, androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         }
     }
     // A little room under the last line, so its descenders are not cut where the drift ends.
@@ -365,8 +366,11 @@ internal fun DriftingSynopsis(
                     .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
                     .drawWithContent {
                         drawContent()
+                        // glcn: once the words have drifted up, the line leaving at the top fades out too, never cut in half.
+                        val top = if (scroll.value > 0) (lineH.toPx() / size.height).coerceIn(0f, 0.3f) else 0f
                         drawRect(
-                            Brush.verticalGradient(0.86f to Color.Black, 1f to Color.Transparent),
+                            if (top > 0f) Brush.verticalGradient(0f to Color.Transparent, top to Color.Black, 0.86f to Color.Black, 1f to Color.Transparent)
+                            else Brush.verticalGradient(0.86f to Color.Black, 1f to Color.Transparent),
                             blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
                         )
                     }

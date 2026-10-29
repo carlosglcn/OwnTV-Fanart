@@ -113,3 +113,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ Details page: the trailer plays silently over the backdrop after 3 s (light mode off, animations on); scrolling down stops it.
 - 🎭 Screensaver (cartelera): films and series show their poster beside the picture and their TMDB title logo; deeper Ken Burns with a side drift; the words arrive one after another.
 - 📁 Favourites groups (Live TV): hold OK on a favourite › Move to group (or New group…); the groups appear as folders under Favourites; hold OK on a group to rename or delete it (its channels stay in Favourites). Synced with the phone.
+- 🏷️ Dock: films and series show their facts as tags — ★ rating in the accent, year and genres.
+- 📜 Drifting synopsis: the line leaving at the top fades out instead of being cut, and it glides back to the start.
