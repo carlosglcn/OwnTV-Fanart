@@ -1608,7 +1608,12 @@ private fun PlayerOptionsSheet(
 ) {
     val enter = remember { androidx.compose.animation.core.Animatable(0f) }
     val enterSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(320)
-    LaunchedEffect(Unit) { enter.animateTo(1f, enterSpec) }
+    // glcn: the sheet comes in once its head (the programme on air, with its picture) is known — read a moment after
+    // opening, it used to drop in afterwards and push the whole list down with a jolt. Never waits long.
+    var headReady by remember { mutableStateOf(onAir != null) }
+    LaunchedEffect(onAir) { if (onAir != null) headReady = true }
+    LaunchedEffect(Unit) { kotlinx.coroutines.delay(HEAD_WAIT_MS); headReady = true }
+    LaunchedEffect(headReady) { if (headReady) enter.animateTo(1f, enterSpec) }
     val shade = tv.own.owntv.ui.theme.stageTone(androidx.compose.ui.graphics.Color(2, 5, 6), androidx.compose.ui.graphics.Color(244, 247, 245))
     val accent = tv.own.owntv.ui.theme.stageAccent.accent
     tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onDismiss, stageLayout = true) {
@@ -1641,7 +1646,15 @@ private fun PlayerOptionsSheet(
                         Modifier.fillMaxWidth().aspectRatio(16f / 9f)
                             .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.mpx)),
                     ) {
-                        coil3.compose.AsyncImage(model = art, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        // The frame is there at once (a soft tile); the picture fades into it when it has loaded.
+                        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.06f)))
+                        var shown by remember(art) { mutableStateOf(false) }
+                        val picAlpha by androidx.compose.animation.core.animateFloatAsState(if (shown) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(260), label = "sheetArt")
+                        coil3.compose.AsyncImage(
+                            model = art, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            onSuccess = { shown = true },
+                            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = picAlpha },
+                        )
                         Box(
                             Modifier.fillMaxSize().background(
                                 androidx.compose.ui.graphics.Brush.verticalGradient(
@@ -2089,3 +2102,6 @@ internal fun liveEpgShiftLabel(minutes: Int): String {
 
 /** glcn: how much glass the channel menu over the player has — the quick view's list panel's share. */
 private const val PLAYER_MENU_GLASS = 0.66f
+
+/** glcn: how long the player's options sheet waits for its programme head before coming in anyway. */
+private const val HEAD_WAIT_MS = 450L

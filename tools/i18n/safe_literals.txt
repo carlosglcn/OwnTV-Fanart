@@ -157,6 +157,7 @@
 1	preference-key	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	remove_history
 1	preference-key	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	rename
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	schedule_record
+1	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	sheetArt
 4	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	−
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	▶
