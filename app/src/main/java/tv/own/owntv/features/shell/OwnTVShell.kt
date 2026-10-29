@@ -1055,9 +1055,12 @@ fun OwnTVShell(
     val holdArmed = playerMode == PlayerMode.FULLSCREEN && backToWindow && zapSource == MainSection.LIVE_TV &&
         !showChannelList && !showQuickGuide && !showHistoryList && zapOptionsChannel == null && !showTvStrip
     val holdArmedNow by androidx.compose.runtime.rememberUpdatedState(holdArmed)
+    // glcn: the live channel in its window after a Back — a second Back right away closes it (see BackHold).
+    val windowOpenNow by androidx.compose.runtime.rememberUpdatedState(playerMode == PlayerMode.MINI && zapSource == MainSection.LIVE_TV)
     val exitNow by androidx.compose.runtime.rememberUpdatedState(exitPlayer)
     DisposableEffect(Unit) {
         tv.own.owntv.glcn.BackHold.armed = { holdArmedNow }
+        tv.own.owntv.glcn.BackHold.windowOpen = { windowOpenNow }
         // A full stop: closing the player alone leaves a live channel playing on in the preview (the "window").
         tv.own.owntv.glcn.BackHold.onHold = {
             exitNow(); liveVm.stopForGood()

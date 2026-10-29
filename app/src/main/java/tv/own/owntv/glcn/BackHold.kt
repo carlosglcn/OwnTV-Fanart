@@ -18,6 +18,12 @@ object BackHold {
     @Volatile var onHold: () -> Unit = {}
     /** A line for the playback report about a long Back that did not close the player — to see why on the device. */
     @Volatile var note: (String) -> Unit = {}
+    /**
+     * glcn: the channel's little window is open (Back just sent it there). A second Back straight after closes it
+     * for good — for remotes that cannot hold Back: a TV's own remote over HDMI sends each press already let go.
+     */
+    @Volatile var windowOpen: () -> Boolean = { false }
+    private var lastUpAt = 0L
 
     private val main = Handler(Looper.getMainLooper())
     private var fired = false
@@ -55,6 +61,10 @@ object BackHold {
                     act("release")
                 }
                 if (!fired && held >= NOTE_MS) note("Back held $held ms; armed at press=$armedAtDown, now=${armed()}; repeats=$repeats")
+                if (!fired) {
+                    if (event.eventTime - lastUpAt < DOUBLE_MS && windowOpen()) act("double")
+                    lastUpAt = if (fired) 0L else event.eventTime
+                }
                 val taken = fired
                 fired = false
                 return taken
@@ -65,4 +75,5 @@ object BackHold {
 
     private const val HOLD_MS = 800L
     private const val NOTE_MS = 500L
+    private const val DOUBLE_MS = 700L
 }
