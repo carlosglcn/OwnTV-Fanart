@@ -152,3 +152,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 TV profile: the Dock (and the classic Home) keep only TV — no films or series to resume — and the profile always opens on its last channel full screen, whatever start-up it had saved.
 - 🎞️ Classic Home: no trailer behind the rows once they have scrolled up over the picture — it played there unseen.
 - 🎬 Page before watching: under the Cinematic and Runway layouts it now opens on the list's own page, so the picture and a trailer already playing go on without a break (no new player starting from black); the buttons scroll if they do not fit, and "Resume" only shows after a minute in.
+- 📲 "Send the report to your phone" works again: the TV↔phone sync running in the background took the link back a moment later, so the phone got "Not found" — it now leaves it alone while the report is shown.
