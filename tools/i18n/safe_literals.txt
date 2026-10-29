@@ -143,6 +143,7 @@
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	match_epg
 1	preference-key	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	move
 1	preference-key	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	move_to_category
+1	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	move_to_group
 1	preference-key	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	play_external
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	record
 1	preference-key	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	remove_from_category

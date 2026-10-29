@@ -109,6 +109,8 @@ data class LiveRailItem(
     val providerName: String? = null,
     /** The playlist a folder belongs to: its mark in the Movies / Series category list. */
     val sourceId: Long? = null,
+    /** glcn: a group inside Favourites ([tv.own.owntv.core.live.FavoriteGroups]), drawn set in under it. */
+    val nested: Boolean = false,
 )
 
 class LiveViewModel(
@@ -613,6 +615,45 @@ class LiveViewModel(
     /** The stable key of a provider folder ([null] when the folder vanished) — the Move dialog's origin. */
     fun folderKey(id: Long): String? = folderContextKeys.value[id]
 
+    // --- glcn: groups inside Favourites ---
+    private val favoriteGroups: tv.own.owntv.core.live.FavoriteGroups by lazy { org.koin.core.context.GlobalContext.get().get() }
+
+    /** The profile's groups inside Favourites, A–Z — the "Move to group" list. */
+    val favoriteGroupNames: StateFlow<List<String>> = ctx
+        .flatMapLatest { c -> if (c.profileId < 0) flowOf(emptyList()) else favoriteGroups.observeNames(c.profileId) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** The group [channel] is in, or null. */
+    suspend fun favoriteGroupOf(channel: ChannelEntity): String? {
+        val pid = currentProfileId() ?: return null
+        return favoriteGroups.groupOf(pid, channel.id)
+    }
+
+    /** Puts [channels] in the group [name], or in none. A channel not yet a favourite becomes one. */
+    fun moveToFavoriteGroup(channels: List<ChannelEntity>, name: String?) {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            if (name != null) channels.filter { it.id !in favoriteIds.value }.takeIf { it.isNotEmpty() }?.let { setFavorites(it, true) }
+            channels.forEach { favoriteGroups.move(pid, it.id, name) }
+        }
+    }
+
+    fun renameFavoriteGroup(from: String, to: String) {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            favoriteGroups.rename(pid, from, to)
+            if (_selected.value == LiveKey.Custom(tv.own.owntv.core.live.FavoriteGroups.keyOf(from))) _selected.value = LiveKey.Custom(tv.own.owntv.core.live.FavoriteGroups.keyOf(to))
+        }
+    }
+
+    fun deleteFavoriteGroup(name: String) {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            favoriteGroups.delete(pid, name)
+            if (_selected.value == LiveKey.Custom(tv.own.owntv.core.live.FavoriteGroups.keyOf(name))) _selected.value = LiveKey.Favorites
+        }
+    }
+
     /** Creates a custom category — the Move dialog's "＋ New category…" flow. */
     fun createCustomCategory(name: String) {
         viewModelScope.launch {
@@ -739,6 +780,13 @@ class LiveViewModel(
                             ?.sourceId
                             ?.let(multiSourceNames::get),
                     )
+                }
+            }.combine(favoriteGroups.observeNames(c.profileId)) { rail, groups ->
+                // glcn: Favourites' groups, right under it.
+                if (groups.isEmpty()) rail
+                else rail.flatMap { item ->
+                    if (item.key != LiveKey.Favorites) listOf(item)
+                    else listOf(item) + groups.map { g -> LiveRailItem(LiveKey.Custom(tv.own.owntv.core.live.FavoriteGroups.keyOf(g)), title = g, nested = true) }
                 }
             }
         }

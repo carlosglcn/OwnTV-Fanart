@@ -466,7 +466,7 @@ internal fun liveCategoryEntries(railItems: List<LiveRailItem>, railCounts: Map<
     val recentLabel = stringResource(R.string.content_category_recently_watched)
     val entries = railItems.map { item ->
         val label = if (item.key == tv.own.owntv.core.live.LiveKey.History) recentLabel else item.displayLabel()
-        val parsed = if (item.key is tv.own.owntv.core.live.LiveKey.Folder || item.key is tv.own.owntv.core.live.LiveKey.Custom) ProviderTags.parse(label) else null
+        val parsed = if (!item.nested && (item.key is tv.own.owntv.core.live.LiveKey.Folder || item.key is tv.own.owntv.core.live.LiveKey.Custom)) ProviderTags.parse(label) else null
         LiveCategoryEntry(
             item = item,
             label = parsed?.name ?: label,
@@ -476,7 +476,8 @@ internal fun liveCategoryEntries(railItems: List<LiveRailItem>, railCounts: Map<
                 tv.own.owntv.core.live.LiveKey.History -> OwnTVIcon.HISTORY
                 tv.own.owntv.core.live.LiveKey.Catchup -> OwnTVIcon.REWIND
                 tv.own.owntv.core.live.LiveKey.All -> OwnTVIcon.LIVE_TV
-                else -> null
+                // glcn: a group inside Favourites — a folder, set in under it.
+                else -> if (item.nested) OwnTVIcon.FOLDER else null
             },
             count = railCounts[item.key],
             mark = null,
@@ -602,7 +603,7 @@ internal fun LiveCategories(
     // was not composed yet, focus was lost, and coming back in landed on the selected category far away — the list
     // went off to a group and returned. Scroll just enough, wait a frame, then focus the row; the newest press wins.
     // Where the fixed entries end and the provider groups begin (the "GROUPS · DE" heading).
-    val firstGroup = entries.indexOfFirst { it.item.key is tv.own.owntv.core.live.LiveKey.Folder || it.item.key is tv.own.owntv.core.live.LiveKey.Custom }
+    val firstGroup = entries.indexOfFirst { !it.item.nested && (it.item.key is tv.own.owntv.core.live.LiveKey.Folder || it.item.key is tv.own.owntv.core.live.LiveKey.Custom) }
     var stepTarget by remember { mutableStateOf<Int?>(null) }
     var stepJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun lazyIndexOf(pos: Int): Int {
@@ -803,6 +804,8 @@ internal fun LiveCategories(
                             }
                         }
                     val selected = index == selectedIndex
+                    // glcn: Favourites' groups sit in under it.
+                    val rowModifier = if (entry.item.nested) rowModifier.padding(start = NESTED_INDENT) else rowModifier
                     if (sheet) {
                         StageSheetItem(
                             text = entry.label,
@@ -885,3 +888,6 @@ private fun LiveColumnItem(
 
 /** glcn: the share of the glass the categories sheet draws over the player, so the picture shows through. */
 internal const val PLAYER_SHEET_GLASS = 0.78f
+
+/** glcn: how far a group inside Favourites sits in under it. */
+private val NESTED_INDENT = 28.mpx

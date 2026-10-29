@@ -273,6 +273,11 @@ fun LiveScreen(
     // Resolved through resources rather than stringResource: the count is only known inside the click.
     val multiviewRes = androidx.compose.ui.platform.LocalContext.current.resources
     var contextCategory by remember { mutableStateOf<LiveRailItem?>(null) }
+    // glcn: groups inside Favourites.
+    var groupingChannels by remember { mutableStateOf<List<ChannelEntity>?>(null) }
+    var namingGroupFor by remember { mutableStateOf<List<ChannelEntity>?>(null) }
+    var groupMenuFor by remember { mutableStateOf<String?>(null) }
+    var renamingGroup by remember { mutableStateOf<String?>(null) }
     // The rail row a category menu was opened from, kept after the menu closes so the cursor can go
     // back to that exact row. Held as a key, not an index: a Move changes the row's position.
     var contextCategoryKey by remember { mutableStateOf<LiveKey?>(null) }
@@ -591,7 +596,9 @@ fun LiveScreen(
     }
     val onCategoryLongSelect: (Int) -> Unit = { idx ->
         railItems.getOrNull(idx)?.let { item ->
-            if (item.key is LiveKey.Folder || item.key is LiveKey.Custom) {
+            // glcn: a group inside Favourites has its own menu (rename, delete).
+            if (item.nested) groupMenuFor = item.title
+            else if (item.key is LiveKey.Folder || item.key is LiveKey.Custom) {
                 contextCategory = item
                 contextCategoryKey = item.key
             }
@@ -1203,6 +1210,69 @@ fun LiveScreen(
 
     synopsisChannel?.let { ch -> SynopsisPopup(ch, load = { vm.nowFull(it) }, onDismiss = { synopsisChannel = null }) }
 
+    // glcn: groups inside Favourites — "Move to group", a new group's name, a group's own menu.
+    val inFavoritesArea = selectedKey == LiveKey.Favorites ||
+        (selectedKey as? LiveKey.Custom)?.id?.let { tv.own.owntv.core.live.FavoriteGroups.isGroup(it) } == true
+    groupingChannels?.let { chs ->
+        val groups by vm.favoriteGroupNames.collectAsStateWithLifecycle()
+        val current by produceState<String?>(null, chs) { value = chs.singleOrNull()?.let { vm.favoriteGroupOf(it) } }
+        tv.own.owntv.ui.stage.StagePopup(
+            onDismiss = { groupingChannels = null },
+            title = stringResource(R.string.glcn_favgroup_move),
+            body = chs.singleOrNull()?.name,
+            width = 620.mpx,
+        ) {
+            groups.forEach { g ->
+                tv.own.owntv.ui.stage.StagePopupOption(
+                    title = g, chosen = g == current,
+                    onClick = { vm.moveToFavoriteGroup(chs, g); groupingChannels = null; selecting = null },
+                )
+            }
+            tv.own.owntv.ui.stage.StagePopupOption(
+                title = stringResource(R.string.glcn_favgroup_new),
+                onClick = { namingGroupFor = chs; groupingChannels = null },
+            )
+            if (current != null || chs.size > 1) tv.own.owntv.ui.stage.StagePopupOption(
+                title = stringResource(R.string.glcn_favgroup_none),
+                onClick = { vm.moveToFavoriteGroup(chs, null); groupingChannels = null; selecting = null },
+            )
+        }
+    }
+    namingGroupFor?.let { chs ->
+        TextInputDialog(
+            title = stringResource(R.string.glcn_favgroup_new),
+            hint = stringResource(R.string.glcn_favgroup_name_hint),
+            onConfirm = { name -> if (name.isNotBlank()) vm.moveToFavoriteGroup(chs, name.trim()); namingGroupFor = null; selecting = null },
+            onDismiss = { namingGroupFor = null },
+        )
+    }
+    groupMenuFor?.let { g ->
+        tv.own.owntv.ui.stage.StagePopup(
+            onDismiss = { groupMenuFor = null },
+            title = g,
+            body = stringResource(R.string.glcn_favgroup_delete_note),
+            width = 620.mpx,
+        ) {
+            tv.own.owntv.ui.stage.StagePopupOption(
+                title = stringResource(R.string.glcn_favgroup_rename),
+                onClick = { renamingGroup = g; groupMenuFor = null },
+            )
+            tv.own.owntv.ui.stage.StagePopupOption(
+                title = stringResource(R.string.glcn_favgroup_delete), danger = true,
+                onClick = { vm.deleteFavoriteGroup(g); groupMenuFor = null },
+            )
+        }
+    }
+    renamingGroup?.let { g ->
+        TextInputDialog(
+            title = stringResource(R.string.glcn_favgroup_rename),
+            initial = g,
+            hint = stringResource(R.string.glcn_favgroup_name_hint),
+            onConfirm = { name -> if (name.isNotBlank()) vm.renameFavoriteGroup(g, name.trim()); renamingGroup = null },
+            onDismiss = { renamingGroup = null },
+        )
+    }
+
     // Long-press a channel → quick actions.
     contextChannel?.let { ch ->
         ChannelContextMenu(
@@ -1258,6 +1328,7 @@ fun LiveScreen(
             onSelectMany = if (cinematic) null else { { selecting = listOf(ch); contextChannel = null } },
             onRemoveFromCategory = (selectedKey as? LiveKey.Custom)?.let { k -> { vm.removeFromCustomCategory(ch, k); contextChannel = null } },
             onDismiss = { contextChannel = null },
+            onMoveToGroup = if (inFavoritesArea) ({ groupingChannels = listOf(ch); contextChannel = null }) else null,
         )
     }
 
@@ -1285,6 +1356,10 @@ fun LiveScreen(
                         batchActions = false
                         batchMove = true
                     },
+                )
+                if (inFavoritesArea) tv.own.owntv.ui.stage.StagePopupOption(
+                    title = stringResource(R.string.glcn_favgroup_move),
+                    onClick = { groupingChannels = sel; batchActions = false },
                 )
                 if (!inFavs) tv.own.owntv.ui.stage.StagePopupOption(
                     title = stringResource(R.string.content_add_favourite),
@@ -1651,6 +1726,8 @@ private fun ChannelContextMenu(
     // Only inside a custom category: take the channel out of that category alone.
     onRemoveFromCategory: (() -> Unit)?,
     onDismiss: () -> Unit,
+    /** glcn: in Favourites or one of its groups — put the channel in a group. */
+    onMoveToGroup: (() -> Unit)? = null,
     /** glcn: over the player — a see-through sheet on the right with the programme on air at its head, the picture left free. */
     overPlayer: Boolean = false,
     onAir: tv.own.owntv.core.database.entity.EpgProgrammeEntity? = null,
@@ -1690,6 +1767,7 @@ private fun ChannelContextMenu(
         if (canMove && onSelectMany != null) {
             add(MenuAction("select_many", stringResource(R.string.glcn_select_many), OwnTVIcon.CHECK, group = organise, onClick = onSelectMany))
         }
+        onMoveToGroup?.let { add(MenuAction("move_to_group", stringResource(R.string.glcn_favgroup_move), OwnTVIcon.FOLDER, group = organise, onClick = it)) }
         if (onRemoveFromCategory != null) {
             add(MenuAction("remove_from_category", stringResource(R.string.content_remove_from_category), OwnTVIcon.CLOSE, group = organise, onClick = onRemoveFromCategory))
         }
