@@ -462,6 +462,8 @@ internal fun FeaturedBillboard(
     start: Dp,
     track: (FocusRequester) -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: first on Home — edge to edge, taller, its foot melting into the page instead of a framed card. */
+    fullWidth: Boolean = false,
 ) {
     // glcn: only slides whose picture can fill the screen (see rememberBillboardSlides).
     val slides = tv.own.owntv.ui.components.rememberBillboardSlides(allItems)
@@ -482,25 +484,33 @@ internal fun FeaturedBillboard(
     val a = stageAccent
     val context = androidx.compose.ui.platform.LocalContext.current
     val fmt = remember { android.text.format.DateFormat.getTimeFormat(context) }
+    val page = tv.own.owntv.ui.theme.stageTone(Color(0xFF070B0E), tv.own.owntv.ui.theme.LocalStagePalette.current.page)
+    val animate = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
     Box(
         modifier
             .fillMaxWidth()
-            .height(560.mpx)
-            .padding(start = start, end = 64.mpx),
+            .height(if (fullWidth) BILLBOARD_FULL_HEIGHT else 560.mpx)
+            .then(if (fullWidth) Modifier else Modifier.padding(start = start, end = 64.mpx)),
     ) {
-        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(28.mpx))) {
+        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(if (fullWidth) 0.mpx else 28.mpx))) {
             Crossfade(targetState = artUrl, label = "billboard") { url ->
+                // glcn (full width): a slow push into each slide's picture.
+                val zoom = remember(url) { androidx.compose.animation.core.Animatable(1f) }
+                LaunchedEffect(url, fullWidth, animate) {
+                    if (fullWidth && animate) zoom.animateTo(1.07f, androidx.compose.animation.core.tween(10_000, easing = androidx.compose.animation.core.LinearEasing))
+                }
                 AsyncImage(
                     model = url, contentDescription = null, contentScale = ContentScale.Crop,
                     alignment = androidx.compose.ui.BiasAlignment(0f, -0.3f),
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = zoom.value; scaleY = zoom.value },
                 )
             }
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.92f), 0.5f to Color.Black.copy(alpha = 0.55f), 1f to Color.Black.copy(alpha = 0.1f))))
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))))
+            if (fullWidth) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.35f), 0.2f to Color.Transparent, 0.62f to Color.Transparent, 0.86f to page.copy(alpha = 0.85f), 1f to page)))
+            else Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))))
         }
         Column(
-            Modifier.align(Alignment.BottomStart).padding(start = 48.mpx, bottom = 40.mpx).widthIn(max = 900.mpx),
+            Modifier.align(Alignment.BottomStart).padding(start = if (fullWidth) start + 8.mpx else 48.mpx, bottom = if (fullWidth) 64.mpx else 40.mpx).widthIn(max = 900.mpx),
             verticalArrangement = Arrangement.spacedBy(10.mpx),
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = Alignment.CenterVertically) {
@@ -1010,3 +1020,6 @@ private const val FOCUS_LOSS_WINDOW_MS = 400L
 
 /** glcn: classic Home — how long the focus rests on a card before its picture fills the backdrop. */
 private const val CLASSIC_BACKDROP_SETTLE_MS = 1_800L
+
+/** glcn: the billboard's height when it runs edge to edge as Home's first row. */
+private val BILLBOARD_FULL_HEIGHT = 700.mpx

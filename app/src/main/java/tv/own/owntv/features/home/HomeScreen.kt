@@ -788,6 +788,7 @@ fun HomeScreen(
                                 start = contentStart,
                                 track = track,
                                 modifier = rowModifier,
+                                fullWidth = row == renderRows.firstOrNull(),
                             )
 
                             HomeRow.TONIGHT -> TonightRow(
