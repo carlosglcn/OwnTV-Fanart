@@ -209,7 +209,12 @@ fun HomeScreen(
     val showHeroFallback = heroVisible && state.heroItems.isEmpty() && !hasNonHeroContent
     // glcn: under the "Cinema" background the full-screen picture is the billboard — no second one in the rows.
     val cinemaEarly by koinInject<tv.own.owntv.core.settings.SettingsRepository>().homeBackdropStyle.collectAsStateWithLifecycle(initialValue = 0)
-    val renderRows = orderedRows.filter { rowCanRender(it, state, showHeroFallback, sportsCards.size) && !(cinemaEarly == 1 && it == HomeRow.FEATURED) }
+    // glcn (TV profile): Home keeps to TV — the live rows only.
+    val tvOnly = tv.own.owntv.glcn.TvProfiles.activeIsTv
+    val renderRows = orderedRows.filter {
+        rowCanRender(it, state, showHeroFallback, sportsCards.size) && !(cinemaEarly == 1 && it == HomeRow.FEATURED) &&
+            (!tvOnly || it in TV_PROFILE_ROWS)
+    }
     val firstDataRow = renderRows.firstOrNull { it != HomeRow.HERO && rowHasData(it, state, sportsCards.size) }
     val showAllHiddenState = orderedRows.isEmpty()
     val showEmptyState = orderedRows.isNotEmpty() && renderRows.isEmpty()
@@ -1941,3 +1946,9 @@ private fun HomeReadScope(content: @Composable () -> Unit) { content() }
 
 /** glcn: Home's one focus box glides slower than a menu's — soft, never a jump. */
 private const val HOME_GLIDE_STIFFNESS = 240f
+
+/** glcn: the rows a TV profile's Home keeps. */
+private val TV_PROFILE_ROWS = setOf(
+    HomeRow.FEATURED, HomeRow.RECENT_CHANNELS, HomeRow.FAVORITE_CHANNELS, HomeRow.STARTING_SOON,
+    HomeRow.SPORTS_NOW, HomeRow.LIVE_SPORTS, HomeRow.TONIGHT,
+)

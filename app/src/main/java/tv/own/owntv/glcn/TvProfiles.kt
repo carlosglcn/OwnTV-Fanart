@@ -14,6 +14,11 @@ object TvProfiles {
     var ids by mutableStateOf<Set<Long>>(emptySet())
         private set
     var pendingName: String? = null
+    /** The profile in use, set by the shell. */
+    var active by mutableStateOf<Long?>(null)
+
+    /** Whether the profile in use is a TV profile. */
+    val activeIsTv: Boolean get() = isTv(active)
 
     fun isTv(profileId: Long?): Boolean = profileId != null && profileId in ids
 

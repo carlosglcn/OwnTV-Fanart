@@ -254,6 +254,9 @@ fun OwnTVShell(
     // glcn: where the top bar ends, so the "Last channel" pill never runs under it.
     var topBarBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     // glcn: when a bigger bar would reach the playlist pill and the clock, it drops to Compact by itself.
+    // glcn (TV profile): the menu keeps to TV — no Movies, Series or Downloads.
+    androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.TvProfiles.active = activeProfileId }
+    val navSections = if (tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId)) visibleSections - setOf(MainSection.MOVIES, MainSection.SERIES, MainSection.DOWNLOADS) else visibleSections
     var topCompactForced by remember(topSize, visibleSections) { mutableStateOf(false) }
     val topGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 16.mpx.toPx() }
     LaunchedEffect(topBarBounds, playlistPillBounds, navStyle, topCompactForced) {
@@ -503,6 +506,21 @@ fun OwnTVShell(
     // The single most-recent resumable item, surfaced as a shared top-bar "Continue" chip.
     val continueTarget by homeVm.continueTarget.collectAsStateWithLifecycle()
 
+    // glcn (TV profile): switching into a TV profile goes straight to its last channel, full screen, as launching does.
+    val tvSwitchSeen = remember { longArrayOf(Long.MIN_VALUE) }
+    LaunchedEffect(activeProfileId) {
+        val id = activeProfileId ?: return@LaunchedEffect
+        val first = tvSwitchSeen[0] == Long.MIN_VALUE
+        tvSwitchSeen[0] = id
+        if (first || !tv.own.owntv.glcn.TvProfiles.isTv(id) || playerMode != PlayerMode.NONE) return@LaunchedEffect
+        kotlinx.coroutines.delay(400)
+        val ch = liveVm.lastWatchedLiveChannel() ?: return@LaunchedEffect
+        if (playerMode == PlayerMode.NONE) {
+            zapSource = MainSection.LIVE_TV
+            liveVm.watchFullscreen(ch, emptyList())
+            playerMode = PlayerMode.FULLSCREEN
+        }
+    }
     // Per-profile startup action runs once when the authenticated shell first appears. With one unlocked
     // profile that is immediately; profile/PIN gates keep the shell out of composition until authorized.
     val resumeSettings = koinInject<tv.own.owntv.core.settings.SettingsRepository>()
@@ -1031,7 +1049,8 @@ fun OwnTVShell(
     val exitNow by androidx.compose.runtime.rememberUpdatedState(exitPlayer)
     DisposableEffect(Unit) {
         tv.own.owntv.glcn.BackHold.armed = { holdArmedNow }
-        tv.own.owntv.glcn.BackHold.onHold = { exitNow() }
+        // A full stop: closing the player alone leaves a live channel playing on in the preview (the "window").
+        tv.own.owntv.glcn.BackHold.onHold = { exitNow(); liveVm.stopPreview() }
         onDispose { tv.own.owntv.glcn.BackHold.armed = { false } }
     }
 
@@ -1675,7 +1694,7 @@ fun OwnTVShell(
             )
             if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.TOP) tv.own.owntv.features.shell.components.StageTopBar(
                 selected = selectedSection,
-                visibleSections = visibleSections,
+                visibleSections = navSections,
                 onSelect = selectFromNav,
                 profileName = profileName.ifBlank { stringResource(R.string.common_own_tv_user) },
                 onSwitchProfile = onSwitchProfile,
@@ -1703,7 +1722,7 @@ fun OwnTVShell(
                 size = railSize,
                 length = navLength,
                 selected = selectedSection,
-                visibleSections = visibleSections,
+                visibleSections = navSections,
                 onSelect = selectFromNav,
                 count = { section -> railCounts[section]?.takeIf { it > 0 } },
                 detail = { section -> railDetail(section, railDetails) },
