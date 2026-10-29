@@ -120,3 +120,8 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪟 Channel menu over the player: as see-through as the quick view's panels.
 - ⬆️ Player bar: rises gently from the bottom when called (not in light mode).
 - 🖼️ Picons: logos drawn on a big transparent canvas are trimmed, so they fill their tile instead of showing as a speck.
+- 🔙 Holding Back while watching (with "Back in the player: Window") now really closes the player — watched at the window, so it works even when nothing on screen holds focus.
+- 🗂️ Dock: ▼ from the buttons goes back to the tab you came from; the double row's peek shows match crests (and titles when there is no picture).
+- ⏳ Classic Home: the backdrop waits a little longer (≈1.8 s) on a card before changing.
+- ➡️ Recently watched / channel lists: glide in from their side with the shade fading up (not in light mode).
+- 🖼️ Movies & Series: one backdrop per title — the playlist's own wide picture first (TMDB's only when it has none, or when TMDB wins), so the hero no longer swaps pictures a moment after landing.

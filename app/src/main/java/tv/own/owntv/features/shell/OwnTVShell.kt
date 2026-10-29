@@ -1019,6 +1019,18 @@ fun OwnTVShell(
         if (openedSeries == null && searchReturn == MainSection.SERIES && selectedSection == MainSection.SERIES) returnToSearch()
     }
 
+    // glcn: with "Back in the player: Window" on, holding Back in the full-screen player closes it outright (back to the
+    // menu, no window) — for when you have finished watching. Watched at the window ([tv.own.owntv.glcn.BackHold]).
+    val holdArmed = playerMode == PlayerMode.FULLSCREEN && backToWindow && zapSource == MainSection.LIVE_TV &&
+        !showChannelList && !showQuickGuide && !showHistoryList && zapOptionsChannel == null
+    val holdArmedNow by androidx.compose.runtime.rememberUpdatedState(holdArmed)
+    val exitNow by androidx.compose.runtime.rememberUpdatedState(exitPlayer)
+    DisposableEffect(Unit) {
+        tv.own.owntv.glcn.BackHold.armed = { holdArmedNow }
+        tv.own.owntv.glcn.BackHold.onHold = { exitNow() }
+        onDispose { tv.own.owntv.glcn.BackHold.armed = { false } }
+    }
+
     BackHandler {
         when {
             // glcn: "Back in the player: Window" — a live channel goes to the mini player instead of stopping.
@@ -1111,16 +1123,8 @@ fun OwnTVShell(
                     KeyEventType.KeyDown -> {
                         // glcn: with "Back in the player: Window" on, holding Back in the full-screen player closes it
                         // outright instead (back to the menu, no window), for when you have finished watching.
-                        val closeArmed = playerMode == PlayerMode.FULLSCREEN && backToWindow && zapSource == MainSection.LIVE_TV &&
-                            !showChannelList && !showQuickGuide && !showHistoryList && zapOptionsChannel == null
-                        if (closeArmed && backHoldJob == null) {
-                            backLongFired = false
-                            backHoldJob = scope.launch {
-                                kotlinx.coroutines.delay(BACK_HOLD_CLOSE_MS)
-                                backLongFired = true
-                                exitPlayer()
-                            }
-                        } else if (longPressBackArmed && backHoldJob == null) {
+                        // (Holding Back to close the full-screen player is watched at the window: see BackHold below.)
+                        if (longPressBackArmed && backHoldJob == null) {
                             backLongFired = false
                             backHoldJob = scope.launch {
                                 kotlinx.coroutines.delay(600)
@@ -2535,4 +2539,3 @@ private fun railDetail(section: MainSection, d: RailDetails): String? = when (se
 private const val RAIL_KEY_WINDOW_MS = 400L
 
 /** glcn: how long Back is held in the full-screen player to close it rather than leave it in the window. */
-private const val BACK_HOLD_CLOSE_MS = 800L

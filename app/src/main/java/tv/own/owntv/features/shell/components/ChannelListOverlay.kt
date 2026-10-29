@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import tv.own.owntv.core.epg.displayLogoUrl
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -141,10 +142,15 @@ fun ChannelListOverlay(
 
     val accent = stageAccent.accent
     val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
+    // glcn: the list glides in from its own side and the shade fades up with it (not in light mode).
+    val enterAnim = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
+    val enterSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(OVERLAY_ENTER_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
+    androidx.compose.runtime.LaunchedEffect(Unit) { enterAnim.animateTo(1f, enterSpec) }
     Box(
         modifier = modifier
             .fillMaxSize()
             .okAfterFreshPress()
+            .graphicsLayer { alpha = 0.2f + 0.8f * enterAnim.value }
             // Darken only the side the sheet is on, so the picture stays visible beside it.
             .gradientWash(
                 vertical = false,
@@ -157,6 +163,7 @@ fun ChannelListOverlay(
         Row(
             Modifier
                 .align(if (alignEnd) Alignment.CenterEnd else Alignment.CenterStart)
+                .graphicsLayer { translationX = (1f - enterAnim.value) * OVERLAY_ENTER_PX.mpx.toPx() * (if (alignEnd) 1f else -1f) }
                 .padding(horizontal = 14.mpx, vertical = 8.mpx)
                 .fillMaxHeight()
                 .then(if (unified) Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS) else Modifier),
@@ -569,3 +576,7 @@ private object PreviewShapes {
     /** Pictures found to be logos, so the next time they open as such straight away. */
     val logoLike = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 }
+
+/** glcn: the channel list's entrance — how long, and from how far to the side. */
+private const val OVERLAY_ENTER_MS = 380
+private const val OVERLAY_ENTER_PX = 120

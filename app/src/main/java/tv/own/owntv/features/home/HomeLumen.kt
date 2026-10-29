@@ -363,7 +363,16 @@ fun LumenHome(
             shown?.let { it0 ->
                 val trailerKey = metas[it0.key]?.trailerKey?.let { tv.own.owntv.core.metadata.TrailerKeys.split(it).firstOrNull() }
                 val details = it0.movie != null || it0.series != null
-                if (it0.onPlay != null || details || trailerKey != null) Row(Modifier.padding(top = 18.mpx).focusGroup(), horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                if (it0.onPlay != null || details || trailerKey != null) Row(
+                    Modifier.padding(top = 18.mpx)
+                        // glcn: ▼ from the buttons goes back to the tab it came from, not to the nearest one (the first).
+                        .onPreviewKeyEvent { e ->
+                            if (e.key == androidx.compose.ui.input.key.Key.DirectionDown && e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                                runCatching { selectedTab.requestFocus() }.isSuccess
+                            } else false
+                        }
+                        .focusGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
                     it0.onPlay?.let { play ->
                         tv.own.owntv.ui.stage.StageButton(stringResource(it0.playLabel ?: R.string.content_play), onClick = play, icon = OwnTVIcon.PLAY, iconFilled = true, height = 52.mpx, textSize = 19)
                     }
@@ -546,10 +555,17 @@ fun LumenHome(
                     Text(next.row.displayTitle(), style = stageText(17, 700), color = StageColors.Muted, maxLines = 1, modifier = Modifier.width(220.mpx))
                     next.items.take(DOCK_PEEK_CARDS).forEach { n ->
                         val pic = n.backdrop ?: n.art
-                        val w = if (n.landscape || n.backdrop != null) 160.mpx else 66.mpx
-                        Box(Modifier.size(w, 92.mpx).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.mpx)).background(accent.accent.copy(alpha = 0.12f))) {
-                            if (pic != null) AsyncImage(model = pic, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                            else n.logo?.takeIf { l -> l.isNotEmpty() }?.let { l -> AsyncImage(model = l, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding(14.mpx)) }
+                        val w = if (n.landscape || n.backdrop != null || n.crests != null || pic == null) 160.mpx else 66.mpx
+                        Box(Modifier.size(w, 92.mpx).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.mpx)).background(accent.accent.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                            when {
+                                // glcn: a match has no picture — its two crests, as on its card.
+                                n.crests != null -> Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
+                                    n.crests.forEach { tv.own.owntv.features.sports.Crest(it, 52) }
+                                }
+                                pic != null -> AsyncImage(model = pic, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                !n.logo.isNullOrEmpty() -> AsyncImage(model = n.logo, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding(14.mpx))
+                                else -> Text(n.title, style = stageText(14, 700), color = StageColors.Muted, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(8.mpx))
+                            }
                         }
                     }
                 }

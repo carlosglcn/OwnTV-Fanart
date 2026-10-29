@@ -95,7 +95,7 @@ internal val LocalHomeFocusArt = staticCompositionLocalOf<(String?) -> Unit> { {
 internal fun HomeFocusBackdrop(url: String?, modifier: Modifier = Modifier, trailer: String? = null, trailerTitle: String? = null, focusKey: Any? = null) {
     var settled by remember { mutableStateOf(url) }
     // glcn: long enough that holding ◀ ▶ across a row does not load a picture per card.
-    LaunchedEffect(url) { if (url != settled) { delay(350); settled = url } }
+    LaunchedEffect(url) { if (url != settled) { delay(CLASSIC_BACKDROP_SETTLE_MS); settled = url } }
     Box(modifier.fillMaxSize()) {
         tv.own.owntv.ui.components.ArtTint(settled, Modifier.fillMaxSize(), strength = 0.55f)
         Box(
@@ -1007,3 +1007,6 @@ internal fun HomeLazyRow(
 
 /** glcn: a row that lost focus this recently, as its cards changed, lost it because the focused card went. */
 private const val FOCUS_LOSS_WINDOW_MS = 400L
+
+/** glcn: classic Home — how long the focus rests on a card before its picture fills the backdrop. */
+private const val CLASSIC_BACKDROP_SETTLE_MS = 1_800L

@@ -204,6 +204,7 @@ open class MainActivity : ComponentActivity() {
     // glcn: menu sounds hear every key first; they never consume one.
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         tv.own.owntv.glcn.UiSounds.onKey(event)
+        if (tv.own.owntv.glcn.BackHold.onKey(event)) return true
         return super.dispatchKeyEvent(event)
     }
 

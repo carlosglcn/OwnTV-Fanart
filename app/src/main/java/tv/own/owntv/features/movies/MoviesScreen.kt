@@ -1305,8 +1305,11 @@ internal fun movieTitleInfo(
     return VodTitleInfo(
         title = movie.name,
         logoUrl = tv.own.owntv.core.metadata.MetadataImages.logo(meta?.logoPath),
-        backdropUrl = tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath, size = "w1280")
-            ?: movie.backdropUrl?.takeIf { it.isNotBlank() }
+        // glcn: one picture per title, chosen the same way every time: the playlist's own wide picture when it has one
+        // (it is there at once, so the hero never swaps it when TMDB answers a moment later), TMDB's only when the
+        // playlist has none — or first, when TMDB is set to win.
+        backdropUrl = (if (tmdbWins) tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath, size = "w1280") ?: movie.backdropUrl?.takeIf { it.isNotBlank() }
+            else movie.backdropUrl?.takeIf { it.isNotBlank() } ?: tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath, size = "w1280"))
             // glcn: no wide picture (yet) — the cover itself fills the hero, so the space is never empty.
             ?: providerPoster ?: tmdbPoster,
         posterUrl = if (tmdbWins) tmdbPoster ?: providerPoster else providerPoster ?: tmdbPoster,
