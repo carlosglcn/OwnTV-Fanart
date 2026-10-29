@@ -104,6 +104,8 @@ object TrailerPool {
     /** The video the player holds now (cued or playing), and whether it is playing — a page taking over the same
      *  trailer keeps it going rather than loading it again (that reload was the slow step on opening a title). */
     private var loadedKey: String? = null
+    private var lastSecond = 0f
+    private var lastWindow: android.os.IBinder? = null
     private var isPlaying = false
     private val idleFree = Runnable { if (request == null) free() }
 
@@ -130,6 +132,19 @@ object TrailerPool {
         }.getOrNull() ?: return null
         val options = IFramePlayerOptions.Builder(app).controls(0).fullscreen(0).rel(0).ivLoadPolicy(3).ccLoadPolicy(0).build()
         if (runCatching { created.initialize(listener, options) }.isFailure) { runCatching { created.release() }; return null }
+        // glcn: moved into another window (a title's page opens in its own), the video went on playing but its picture
+        // did not follow — heard and not seen. On such a move a playing trailer is loaded again at the second it was at.
+        created.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: android.view.View) {
+                val token = v.windowToken
+                val moved = lastWindow != null && token != null && token != lastWindow
+                lastWindow = token
+                val r = request ?: return
+                val key = loadedKey ?: return
+                if (moved && r.started) main.post { if (request === r) runCatching { player?.loadVideo(key, lastSecond) } }
+            }
+            override fun onViewDetachedFromWindow(v: android.view.View) {}
+        })
         view = created
         return created
     }
@@ -186,6 +201,7 @@ object TrailerPool {
         player = null
         loadedKey = null
         isPlaying = false
+        lastWindow = null
         (v.parent as? ViewGroup)?.removeView(v)
         runCatching { v.release() }
         r?.onDone?.invoke()
@@ -219,7 +235,7 @@ object TrailerPool {
             player = youTubePlayer
             request?.let { load(youTubePlayer, it) }
         }
-        override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) { request?.onSecond?.invoke(second) }
+        override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) { lastSecond = second; request?.onSecond?.invoke(second) }
         override fun onStateChange(youTubePlayer: YouTubePlayer, state: PlayerConstants.PlayerState) {
             isPlaying = state == PlayerConstants.PlayerState.PLAYING
             if (state == PlayerConstants.PlayerState.ENDED) loadedKey = null

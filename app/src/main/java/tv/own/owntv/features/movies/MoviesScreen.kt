@@ -598,7 +598,8 @@ fun MoviesScreen(
             onPlayVersion = { v -> titleMovie = null; playMovieNow(v) },
             onToggleFavorite = { vm.toggleFavorite(m) },
             onDismiss = { titleMovie = null },
-            loadRelated = { vm.relatedTo(m) },
+            loadRelated = { vm.relatedMoviesOf(m) },
+            onOpenRelated = { r -> titleMovie = r },
             inPlace = inPlace,
         )
     }

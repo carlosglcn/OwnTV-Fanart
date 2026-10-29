@@ -180,3 +180,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📖 Synopses in the panels move a line at a time and rest on each, so the lines you read are always whole (a steady drift always cut one at the top and the bottom); in the channel list they are brighter too.
 - 🏠 The film page from Home now opens from the classic Home too (it was wired to the Dock only), and the TV profile's own Home also shows when the Dock is the chosen Home.
 - 🔽 The "Last channel" drop-down closes the way you leave it: ◀ or ▶, ▼ past the last channel or ▲ above the first — not only with Back.
+- 🎞️ Film page fixes: in its own window (from the Dock or Home) ◀ ▶ move between the buttons again; the focused Play button's glow is no longer clipped on its left; "You may like" films can be chosen and open their own page; a trailer handed to the page that played unseen is reloaded at the same second when it moves to the page's window.
+- 📺 Live TV (Cinema layout): no stray channel number under the channel's name, and white logos get a dark plate in the light theme.

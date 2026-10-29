@@ -1159,6 +1159,16 @@ class MovieViewModel(
         )
     }
 
+    /** glcn: the films behind [relatedTo], for the title page (each opens its own page). */
+    suspend fun relatedMoviesOf(movie: MovieEntity): List<MovieEntity> {
+        val cat = movie.categoryId ?: return emptyList()
+        return movieDao.inCategoryTop(cat, 40)
+            .filter { it.id != movie.id && it.canonicalTitle != movie.canonicalTitle }
+            .distinctBy { it.canonicalTitle.ifBlank { it.name } }
+            .sortedByDescending { !it.posterUrl.isNullOrBlank() }
+            .take(10)
+    }
+
     /** glcn: "Related" on the details page — the best-rated others of the movie's category. */
     suspend fun relatedTo(movie: MovieEntity): List<tv.own.owntv.features.shell.components.RelatedUi> {
         val cat = movie.categoryId ?: return emptyList()

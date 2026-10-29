@@ -1085,7 +1085,8 @@ fun OwnTVShell(
                 },
                 onToggleFavorite = { movieVm.toggleFavorite(film) },
                 onDismiss = { homeFilm = null },
-                loadRelated = { movieVm.relatedTo(film) },
+                loadRelated = { movieVm.relatedMoviesOf(film) },
+                onOpenRelated = { r -> homeFilm = r },
             )
         }
     }

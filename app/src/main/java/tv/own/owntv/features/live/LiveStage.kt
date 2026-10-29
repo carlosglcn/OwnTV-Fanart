@@ -212,7 +212,9 @@ internal fun LivePlate(
     radius: androidx.compose.ui.unit.Dp = StageRadii.Plate,
 ) {
     Box(Modifier.size(width, height).clip(RoundedCornerShape(radius))) {
-        ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize(), fill = StageColors.ControlFill) {
+        // glcn: the page's own lightness, so a white logo gets a dark plate in the light theme (it vanished there).
+        val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+        ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize(), fill = StageColors.ControlFill, surfaceLuminance = if (light) 0.9f else 0.02f) {
             OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.align(Alignment.Center).size(height * 0.5f))
         }
     }

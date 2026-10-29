@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -74,8 +75,9 @@ internal fun MovieTitlePage(
     onPlayVersion: (MovieEntity) -> Unit = {},
     onToggleFavorite: () -> Unit,
     onDismiss: () -> Unit,
-    /** glcn: titles like this one, for the page's second part. */
-    loadRelated: suspend () -> List<tv.own.owntv.features.shell.components.RelatedUi> = { emptyList() },
+    /** glcn: films like this one (in the library), for the page's second part; choosing one opens its page. */
+    loadRelated: suspend () -> List<MovieEntity> = { emptyList() },
+    onOpenRelated: (MovieEntity) -> Unit = {},
     /**
      * glcn: drawn on the list's own page, over its picture and the trailer already playing there — the trailer goes
      * on without a break (a new window would start a new player, from black). The list hides its words and posters.
@@ -113,13 +115,15 @@ internal fun MovieTitlePage(
     )
     val lowerFocus = remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf<String?>(null) }
-    val pageFocus = androidx.compose.ui.platform.LocalFocusManager.current
-    val related by produceState(emptyList<tv.own.owntv.features.shell.components.RelatedUi>(), movie.id) {
+    val related by produceState(emptyList<MovieEntity>(), movie.id) {
         value = runCatching { loadRelated() }.getOrDefault(emptyList())
     }
     val goLower = { lower = true; scope.launch { androidx.compose.runtime.withFrameNanos { }; runCatching { lowerFocus.requestFocus() } }; Unit }
     val goUpper = { lower = false; runCatching { playFocus.requestFocus() }; Unit }
     val body: @Composable () -> Unit = {
+        // glcn: this window's own focus — in its separate window (not in place), the shell's could not move it, and
+        // ◀ ▶ were taken for nothing.
+        val pageFocus = androidx.compose.ui.platform.LocalFocusManager.current
         Box(
             Modifier.fillMaxSize().then(if (inPlace) Modifier else Modifier.background(page)).trapAllFocusExit()
                 .onPreviewKeyEvent { e ->
@@ -173,7 +177,9 @@ internal fun MovieTitlePage(
                     else -> TrackLanguages.displayName(sub, locale)
                 }
                 Row(
-                    Modifier.padding(top = 10.mpx).horizontalScroll(androidx.compose.foundation.rememberScrollState()).focusGroup(),
+                    // The row scrolls when it does not fit; room inside it, so the focused button's glow is never clipped.
+                    Modifier.padding(top = 2.mpx).offset(x = (-16).mpx).horizontalScroll(androidx.compose.foundation.rememberScrollState())
+                        .padding(horizontal = 16.mpx, vertical = 8.mpx).focusGroup(),
                     horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val playLabel = if (resume) stringResource(R.string.glcn_title_resume, tv.own.owntv.features.shell.components.vodRuntime((saved / 1000).toInt()))
@@ -233,17 +239,26 @@ internal fun MovieTitlePage(
                         Text(stringResource(R.string.content_media_cast), style = stageText(20, 700), color = StageColors.Text)
                         tv.own.owntv.features.shell.components.VodCast(info.cast, 10)
                     }
-                    if (related.isNotEmpty()) {
-                        Text(stringResource(R.string.glcn_similar_title), style = stageText(20, 700), color = StageColors.Text)
-                        Row(horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
-                            related.take(9).forEach { r ->
-                                Column(Modifier.width(150.mpx)) {
+                }
+                if (related.isNotEmpty()) {
+                    // glcn: films like this one — each opens its own page.
+                    Text(stringResource(R.string.glcn_similar_title), style = stageText(20, 700), color = StageColors.Text)
+                    Row(
+                        Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(vertical = 10.mpx).focusGroup(),
+                        horizontalArrangement = Arrangement.spacedBy(18.mpx),
+                    ) {
+                        related.take(10).forEach { r ->
+                            Column(Modifier.width(150.mpx)) {
+                                tv.own.owntv.ui.stage.StageSurface(
+                                    onClick = { onOpenRelated(r) }, radius = 12.mpx,
+                                    modifier = Modifier.width(150.mpx).height(225.mpx),
+                                ) { _ ->
                                     coil3.compose.AsyncImage(
                                         model = r.posterUrl, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                        modifier = Modifier.width(150.mpx).height(225.mpx).clip(RoundedCornerShape(12.mpx)).background(Color.White.copy(alpha = 0.06f)),
+                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.mpx)).background(Color.White.copy(alpha = 0.06f)),
                                     )
-                                    Text(r.name, style = stageText(14, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.mpx))
                                 }
+                                Text(r.name, style = stageText(14, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.mpx))
                             }
                         }
                     }

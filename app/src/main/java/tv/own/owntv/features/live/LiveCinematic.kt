@@ -393,9 +393,6 @@ private fun LiveCinematicHero(
                             ProviderTags.parse(channel.name).name, style = stageText(22, 700), color = StageColors.Text,
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
-                        channel.number?.let {
-                            Text(it.toString(), style = stageText(16, 600), color = StageColors.Muted, maxLines = 1)
-                        }
                     }
                 }
                 Spacer(Modifier.height(16.mpx))
