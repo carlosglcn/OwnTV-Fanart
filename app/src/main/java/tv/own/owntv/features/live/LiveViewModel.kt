@@ -1118,6 +1118,10 @@ class LiveViewModel(
         // say) — that is not the viewer moving, and it must not turn the playing channel into another one
         // for the info card, the channel list and CH±.
         if (playerFullscreen) return
+        // glcn: the channel just closed for good (hold Back) stays quiet when the list hands it the focus back;
+        // moving to another channel lifts that.
+        if (quietChannelId != null && channel.id == quietChannelId) { _previewChannel.value = channel; return }
+        quietChannelId = null
         _previewArmed.value = true // a real user focus — the in-pane preview may now play
         _previewChannel.value = channel
     }
@@ -2273,6 +2277,16 @@ class LiveViewModel(
 
     /** glcn: stop what the preview pane plays, keeping the focused channel (its details stay on screen). */
     fun stopPreviewPlayback() { live.stop() }
+
+    /** glcn: a channel closed with a held Back — it must not start again in the preview pane. */
+    @Volatile private var quietChannelId: Long? = null
+
+    /** glcn: hold Back — close for good: stop it, and keep the preview pane from playing it again at once. */
+    fun stopForGood() {
+        _previewChannel.value?.id?.let { quietChannelId = it }
+        _previewArmed.value = false
+        stopPreview()
+    }
 
     fun stopPreview() {
         runCatching { habitTracker.stopped() }

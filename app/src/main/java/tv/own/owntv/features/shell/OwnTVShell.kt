@@ -1055,7 +1055,11 @@ fun OwnTVShell(
     DisposableEffect(Unit) {
         tv.own.owntv.glcn.BackHold.armed = { holdArmedNow }
         // A full stop: closing the player alone leaves a live channel playing on in the preview (the "window").
-        tv.own.owntv.glcn.BackHold.onHold = { exitNow(); liveVm.stopPreview() }
+        tv.own.owntv.glcn.BackHold.onHold = {
+            exitNow(); liveVm.stopForGood()
+            // Whatever the closing set going again a moment later (the preview pane re-taking the engine) is stopped too.
+            scope.launch { kotlinx.coroutines.delay(HOLD_SETTLE_MS); if (playerMode == PlayerMode.NONE) liveVm.stopForGood() }
+        }
         onDispose { tv.own.owntv.glcn.BackHold.armed = { false } }
     }
 
@@ -2584,3 +2588,6 @@ private fun railDetail(section: MainSection, d: RailDetails): String? = when (se
 private const val RAIL_KEY_WINDOW_MS = 400L
 
 /** glcn: how long Back is held in the full-screen player to close it rather than leave it in the window. */
+
+/** glcn: a second stop after a held Back, once the closing has settled. */
+private const val HOLD_SETTLE_MS = 600L

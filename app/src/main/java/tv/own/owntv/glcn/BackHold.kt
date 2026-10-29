@@ -27,6 +27,9 @@ object BackHold {
                 if (event.repeatCount == 0) {
                     fired = false
                     if (armed()) { pending = true; main.postDelayed(fire, HOLD_MS) }
+                } else if (!fired && event.eventTime - event.downTime >= HOLD_MS && (pending || armed())) {
+                    // The key's own repeats say it is still held: act now if the timer has not (a busy main thread).
+                    main.removeCallbacks(fire); pending = false; fired = true; onHold()
                 }
                 return fired
             }
