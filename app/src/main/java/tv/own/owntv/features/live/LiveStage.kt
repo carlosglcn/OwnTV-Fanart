@@ -791,7 +791,7 @@ internal fun LiveCategories(
                     }
                 }
                 item(key = entry.item.key.toString()) {
-                    val rowModifier = Modifier.focusRequester(rowFocusers[pos]).then(rightKey)
+                    val baseRow = Modifier.focusRequester(rowFocusers[pos]).then(rightKey)
                         .onFocusChanged { if (it.hasFocus) onRowFocus(index) }
                         .onPreviewKeyEvent { e ->
                             val down = e.key == Key.DirectionDown
@@ -805,7 +805,7 @@ internal fun LiveCategories(
                         }
                     val selected = index == selectedIndex
                     // glcn: Favourites' groups sit in under it.
-                    val rowModifier = if (entry.item.nested) rowModifier.padding(start = NESTED_INDENT) else rowModifier
+                    val rowModifier = if (entry.item.nested) baseRow.padding(start = NESTED_INDENT) else baseRow
                     if (sheet) {
                         StageSheetItem(
                             text = entry.label,
