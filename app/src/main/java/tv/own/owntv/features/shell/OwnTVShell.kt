@@ -181,6 +181,9 @@ fun OwnTVShell(
     // One-shot: set when leaving the player so the returning browse screen re-focuses the item you played.
     var restoreFocus by remember { mutableStateOf(false) }
     var searchReturn by remember { mutableStateOf<MainSection?>(null) }
+    // glcn: a film's page opened from Home, and a series opened from Home (its Back comes home).
+    var homeFilm by remember { mutableStateOf<tv.own.owntv.core.database.entity.MovieEntity?>(null) }
+    var seriesFromHome by remember { mutableStateOf(false) }
     var restoreTrendingSearchFocus by remember { mutableStateOf(false) }
     var trendingSearchActive by remember { mutableStateOf(false) }
     val player = koinInject<OwnTVPlayer>()
@@ -1048,6 +1051,43 @@ fun OwnTVShell(
     val openedSeries by seriesVm.openedSeries.collectAsStateWithLifecycle()
     LaunchedEffect(openedSeries == null) {
         if (openedSeries == null && searchReturn == MainSection.SERIES && selectedSection == MainSection.SERIES) returnToSearch()
+        // glcn: a series opened from Home goes back to Home when it closes, not to the Series grid.
+        if (openedSeries == null && seriesFromHome) {
+            seriesFromHome = false
+            if (selectedSection == MainSection.SERIES) { restoreFocus = true; onSelectSection(MainSection.HOME) }
+        }
+    }
+    LaunchedEffect(selectedSection) { if (selectedSection != MainSection.SERIES) seriesFromHome = false }
+    // glcn: a film chosen on Home — its page over Home, played from there; Back returns to Home.
+    homeFilm?.let { film ->
+        val metaRepo = koinInject<tv.own.owntv.core.metadata.MetadataRepository>()
+        val meta by androidx.compose.runtime.produceState<tv.own.owntv.core.database.entity.MetadataCacheEntity?>(null, film.id) {
+            value = runCatching { metaRepo.resolveMovie(film) }.getOrNull()
+        }
+        val mode by movieVm.metadataMode.collectAsStateWithLifecycle()
+        val overridden by movieVm.overriddenMovies.collectAsStateWithLifecycle()
+        val favs by movieVm.favoriteIds.collectAsStateWithLifecycle()
+        androidx.compose.runtime.key(film.id) {
+            tv.own.owntv.features.movies.MovieTitlePage(
+                movie = film,
+                meta = meta,
+                info = tv.own.owntv.features.movies.movieTitleInfo(film, meta, mode.tmdbWins || film.id in overridden),
+                favorite = film.id in favs,
+                resumeMs = { movieVm.savedPositionMs(film) },
+                onPlay = { pos ->
+                    homeFilm = null
+                    scope.launch { if (movieVm.playByIdAsync(film.id, pos) && !movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES) }
+                },
+                loadVersions = { movieVm.versionsOf(film) },
+                onPlayVersion = { v ->
+                    homeFilm = null
+                    scope.launch { if (movieVm.playByIdAsync(v.id, 0L) && !movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES) }
+                },
+                onToggleFavorite = { movieVm.toggleFavorite(film) },
+                onDismiss = { homeFilm = null },
+                loadRelated = { movieVm.relatedTo(film) },
+            )
+        }
     }
 
     // glcn: with "Back in the player: Window" on, holding Back in the full-screen player closes it outright (back to the
@@ -1450,6 +1490,7 @@ fun OwnTVShell(
                                         is TrendingHomeItem.Series -> {
                                             seriesVm.openSeries(current.series)
                                             restoreFocus = true
+                                            seriesFromHome = true
                                             onSelectSection(MainSection.SERIES)
                                         }
                                         null -> onUnavailable()
@@ -1457,13 +1498,18 @@ fun OwnTVShell(
                                 }
                             },
                             onOpenMovie = { movie ->
-                                restoreFocus = false
-                                movieVm.revealMovie(movie)
-                                onSelectSection(MainSection.MOVIES)
+                                // glcn: with "Page before watching" on, a film chosen on Home opens its page right here.
+                                if (tv.own.owntv.glcn.DockPrefs.titlePage) homeFilm = movie
+                                else {
+                                    restoreFocus = false
+                                    movieVm.revealMovie(movie)
+                                    onSelectSection(MainSection.MOVIES)
+                                }
                             },
                             onOpenSeries = { series ->
                                 seriesVm.openSeries(series)
                                 restoreFocus = true
+                                seriesFromHome = true
                                 onSelectSection(MainSection.SERIES)
                             },
                             onOpenMatch = { m ->
