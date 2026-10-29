@@ -307,7 +307,7 @@ fun LumenHome(
                         onPlaying = { CinemaTrailer.playing = key to shown?.title.orEmpty() },
                     ) { ambientKey = null }
                 }
-                if (CinemaTrailer.playing?.first == key) TrailerSoundHint(Modifier.align(Alignment.BottomEnd).padding(end = 40.mpx, bottom = 40.mpx))
+                if (CinemaTrailer.playing?.first == key) TrailerSoundHint(Modifier.align(Alignment.TopEnd).padding(end = 56.mpx, top = TRAILER_HINT_TOP))
             }
         }
         LaunchedEffect(ambientKey) { if (ambientKey == null) CinemaTrailer.playing = null }

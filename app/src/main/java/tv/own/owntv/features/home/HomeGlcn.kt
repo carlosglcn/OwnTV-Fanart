@@ -909,7 +909,7 @@ internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, m
             ) { ready = null; CinemaTrailer.playing = null }
         }
         // The one hint while it plays: Play/Pause for its sound.
-        if (CinemaTrailer.playing?.first == key) TrailerSoundHint(Modifier.align(Alignment.BottomEnd).padding(end = 40.mpx, bottom = 40.mpx))
+        if (CinemaTrailer.playing?.first == key) TrailerSoundHint(Modifier.align(Alignment.TopEnd).padding(end = 56.mpx, top = TRAILER_HINT_TOP))
     }
 }
 
@@ -1134,3 +1134,6 @@ internal fun watchedAgoText(now: Long, at: Long): String {
         else -> stringResource(R.string.glcn_watched_days_ago, mins / (24 * 60))
     }
 }
+
+/** glcn: the trailer's sound hint sits up on the right, under the clock — never behind the cards at the foot. */
+internal val TRAILER_HINT_TOP = 150.mpx
