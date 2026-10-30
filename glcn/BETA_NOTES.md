@@ -208,3 +208,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 👆 OK on a card or button: it sinks a touch and springs back.
 - 🔈 New Move sound (a soft, low tap) in the Natural style.
 - ↩️ Movies, Series and Home rows with the sliding focus box: the picture no longer leans and circles inside it — back to the slow zoom it had (as asked).
+- ⚡ Lighter motion: the focused card no longer sways in circles anywhere (a short tip on arrival, then still, with its slow zoom); sections slide in without a fade (nothing drawn twice while a screen loads); Home rows sit back without re-drawing every row; buttons and lists no longer carry the press animation (posters keep it).

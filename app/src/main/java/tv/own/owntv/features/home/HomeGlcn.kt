@@ -65,6 +65,7 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.delay
 import tv.own.owntv.R
 import tv.own.owntv.core.database.entity.ChannelEntity
@@ -1132,8 +1133,14 @@ internal fun HomeLazyRow(
     // only while some row of Home holds focus. A painted veil, not a transparent layer: nothing extra to composite.
     val rowFocused = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { if (rowFocused.value) { rowFocused.value = false; HomeRowFocus.count-- } } }
-    val sitBack = motion && !rowFocused.value && HomeRowFocus.count > 0
-    val back by androidx.compose.animation.core.animateFloatAsState(if (sitBack) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(ROW_SIT_BACK_MS), label = "rowSitBack")
+    // Watched outside composition: a focus move between rows must not recompose every row of Home.
+    val backAnim = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+    val backSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(ROW_SIT_BACK_MS)
+    androidx.compose.runtime.LaunchedEffect(motion) {
+        if (!motion) { backAnim.snapTo(0f); return@LaunchedEffect }
+        androidx.compose.runtime.snapshotFlow { !rowFocused.value && HomeRowFocus.count > 0 }
+            .collectLatest { sit -> backAnim.animateTo(if (sit) 1f else 0f, backSpec) }
+    }
     val veil = tv.own.owntv.ui.theme.LocalStagePalette.current.page
     androidx.compose.runtime.CompositionLocalProvider(
         androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides spec,
@@ -1147,7 +1154,7 @@ internal fun HomeLazyRow(
                     }
                 }
                 .graphicsLayer {
-                    val b = back
+                    val b = backAnim.value
                     if (b > 0f) {
                         val sc = 1f - ROW_SIT_BACK_SCALE * b
                         scaleX = sc; scaleY = sc
@@ -1156,7 +1163,7 @@ internal fun HomeLazyRow(
                 }
                 .drawWithContent {
                     drawContent()
-                    val b = back
+                    val b = backAnim.value
                     if (b > 0f) drawRect(veil.copy(alpha = ROW_SIT_BACK_VEIL * b))
                 }
                 .onKeyEvent { e ->

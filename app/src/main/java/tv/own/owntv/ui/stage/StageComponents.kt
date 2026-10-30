@@ -171,7 +171,6 @@ fun StageSurface(
     val interaction = remember { MutableInteractionSource() }
     val real = interaction.collectIsFocusedAsState().value
     val focused = real || highlighted
-    val pressed = interaction.collectIsPressedAsState().value
     val palette = LocalStagePalette.current
     // glcn: inside a list or menu with a sliding focus box, the item leaves the focus drawing to it.
     val slide = tv.own.owntv.glcn.LocalSlideFocus.current?.takeIf { focusDecor && (focusStyle == StageFocus.FILLED || focusStyle == StageFocus.FX) }
@@ -179,7 +178,6 @@ fun StageSurface(
     Box(
         modifier = modifier
             .stageLift(focused, focusStyle)
-            .pressSink(pressed)
             .then(if (slide != null) Modifier.slideFocusReport(slide, focusStyle, radius, accent) else Modifier)
             .then(if (focused && focusDecor && !sliding) Modifier.stageFocusDecor(focusStyle, radius, accent, palette) else if (focused) Modifier else idle)
             .stageClickable(interaction, enabled, onClick, onLongClick),

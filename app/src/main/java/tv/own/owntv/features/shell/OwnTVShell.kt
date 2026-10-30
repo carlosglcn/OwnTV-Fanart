@@ -1404,7 +1404,7 @@ fun OwnTVShell(
                     homeVm.stopPreview()
                     if (playerMode != PlayerMode.MINI) playerMode = PlayerMode.FULLSCREEN
                 }
-                // glcn: a new section comes in with a short fade and a slight slide — no hard cut between screens.
+                // glcn: a new section comes in with a slight slide — no hard cut between screens.
                 val sectionIn = remember { androidx.compose.animation.core.Animatable(1f) }
                 val sectionMotion = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
                 val sectionSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(SECTION_IN_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
@@ -1417,7 +1417,8 @@ fun OwnTVShell(
                     modifier = Modifier.weight(1f).fillMaxWidth()
                         .graphicsLayer {
                             val t = sectionIn.value
-                            if (t < 1f) { alpha = SECTION_IN_ALPHA + (1f - SECTION_IN_ALPHA) * t; translationX = (1f - t) * SECTION_IN_SLIDE.toPx() }
+                            // A slide only: no transparency, so the whole screen is never drawn twice while it loads.
+                            if (t < 1f) translationX = (1f - t) * SECTION_IN_SLIDE.toPx()
                         }
                         .then(
                             // The floating rail sits over the content, so the content starts at the screen
@@ -2696,7 +2697,6 @@ private const val HOLD_SETTLE_MS = 600L
 /** glcn: how long after tuning a film's details are read ahead for its info screen. */
 private const val FILM_WARM_MS = 1_500L
 
-/** glcn: a section's entrance — how long, from how faint and from how far right. */
-private const val SECTION_IN_MS = 240
-private const val SECTION_IN_ALPHA = 0.35f
-private val SECTION_IN_SLIDE = 22.dp
+/** glcn: a section's entrance — how long and from how far right. */
+private const val SECTION_IN_MS = 180
+private val SECTION_IN_SLIDE = 14.dp

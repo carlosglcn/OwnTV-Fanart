@@ -79,31 +79,9 @@ internal fun BoxScope.FocusArtFx(focused: Boolean, content: @Composable BoxScope
     Box(
         Modifier
             .fillMaxSize()
-            .graphicsLayer {
-                scaleX = zoom; scaleY = zoom
-                // glcn: depth — the picture slides a little against the card's lean, as if behind glass.
-                val t = if (focused) FocusTilt.active else null
-                if (t != null) {
-                    val cover = maxOf(zoom, 1f + PARALLAX * 2.5f * t.amp.value.coerceAtLeast(kotlin.math.abs(t.kickY.value) / KICK_DEG))
-                    scaleX = cover; scaleY = cover
-                    translationX = -(t.rotY / SWAY_Y).coerceIn(-1f, 1f) * size.width * PARALLAX
-                    translationY = (t.rotX / SWAY_X).coerceIn(-1f, 1f) * size.height * PARALLAX
-                }
-            }
+            .graphicsLayer { scaleX = zoom; scaleY = zoom }
             .drawWithContent {
                 drawContent()
-                // glcn: a soft gloss that follows the lean, on the side tipped towards the light.
-                val t = if (focused && sweep) FocusTilt.active else null
-                if (t != null && t.amp.value > 0.01f) {
-                    val cx = size.width * (0.5f + (t.rotY / SWAY_Y).coerceIn(-1f, 1f) * 0.45f)
-                    val cy = size.height * (0.2f - (t.rotX / SWAY_X).coerceIn(-1f, 1f) * 0.25f)
-                    drawRect(
-                        Brush.radialGradient(
-                            listOf(Color.White.copy(alpha = GLOSS * t.amp.value), Color.Transparent),
-                            center = Offset(cx, cy), radius = size.maxDimension * 0.6f,
-                        ),
-                    )
-                }
                 val s = shine.value
                 if (s > -0.9f && s < 1.5f) {
                     val x = size.width * s
@@ -137,19 +115,13 @@ internal fun Modifier.stageTilt(focused: Boolean, delayMs: Long = 0L): Modifier 
         if (focused) {
             if (delayMs > 0) kotlinx.coroutines.delay(delayMs)
             FocusTilt.active = anims
-            // glcn: momentum — on arrival the card tips the way the focus travelled and springs back, then sways.
+            // glcn: momentum — on arrival the card tips the way the focus travelled and springs back, then rests
+            // (no endless sway: the person preferred the still card with its slow zoom).
             kickY.snapTo(FocusMotion.dx * KICK_DEG)
             kickX.snapTo(-FocusMotion.dy * KICK_DEG * 0.8f)
             kotlinx.coroutines.coroutineScope {
                 launch { kickY.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = KICK_DAMPING, stiffness = KICK_STIFFNESS)) }
                 launch { kickX.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = KICK_DAMPING, stiffness = KICK_STIFFNESS)) }
-                launch { amp.animateTo(1f, tween(600, easing = FastOutSlowInEasing)) }
-                launch {
-                    while (true) {
-                        phase.animateTo(phase.value + TWO_PI, tween(7_000, easing = androidx.compose.animation.core.LinearEasing))
-                        phase.snapTo(phase.value % TWO_PI)
-                    }
-                }
             }
         } else {
             if (FocusTilt.active === anims) FocusTilt.active = null
@@ -172,9 +144,6 @@ internal fun Modifier.stageTilt(focused: Boolean, delayMs: Long = 0L): Modifier 
 private const val TWO_PI = (2 * Math.PI).toFloat()
 private const val SWAY_Y = 3.2f
 private const val SWAY_X = 2.2f
-/** How far the picture slides against the lean, as a share of its size (the zoom keeps the edges covered). */
-private const val PARALLAX = 0.012f
-private const val GLOSS = 0.14f
 private const val KICK_DEG = 7f
 private const val KICK_DAMPING = 0.42f
 private const val KICK_STIFFNESS = 240f
