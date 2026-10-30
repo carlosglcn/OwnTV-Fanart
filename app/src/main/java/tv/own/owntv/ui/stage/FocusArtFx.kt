@@ -63,8 +63,10 @@ internal object FocusTilt {
 @Composable
 internal fun BoxScope.FocusArtFx(focused: Boolean, content: @Composable BoxScope.() -> Unit) {
     val animate = tv.own.owntv.ui.theme.animationsOn
+    // glcn: the slow push-in redraws the card for six seconds — not on a modest box.
+    val zoomOn = animate && tv.own.owntv.glcn.DeviceClass.richMotion
     val zoom by animateFloatAsState(
-        targetValue = if (focused && animate) (if (GlcnMotion.subtle) 1.03f else 1.08f) else 1f,
+        targetValue = if (focused && zoomOn) (if (GlcnMotion.subtle) 1.03f else 1.08f) else 1f,
         animationSpec = tween(if (focused) 6_000 else 400, easing = LinearOutSlowInEasing),
         label = "artZoom",
     )

@@ -322,7 +322,7 @@ fun LumenHome(
                     // glcn: each new picture drifts slowly closer (a Ken Burns push-in) instead of sitting flat.
                     val drift = remember(url) { androidx.compose.animation.core.Animatable(1f) }
                     // Still while a trailer plays: the picture then has a hole in it, and a moving picture would redraw it every frame.
-                val driftOn = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.ui.stage.GlcnMotion.subtle && !tv.own.owntv.glcn.LowRam.on && !dockHoleOpen
+                val driftOn = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.ui.stage.GlcnMotion.subtle && tv.own.owntv.glcn.DeviceClass.richMotion && !dockHoleOpen
                     LaunchedEffect(url, driftOn) {
                         if (driftOn) drift.animateTo(DOCK_DRIFT_TO, androidx.compose.animation.core.tween(DOCK_DRIFT_MS, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
                     }

@@ -385,6 +385,8 @@ open class MainActivity : ComponentActivity() {
             val selectedSection by viewModel.selectedSection.collectAsStateWithLifecycle()
             val visibleSections by viewModel.visibleSections.collectAsStateWithLifecycle()
             val activeProfileId by viewModel.activeProfileId.collectAsStateWithLifecycle()
+            // glcn: accessible mode belongs to the profile in use.
+            LaunchedEffect(activeProfileId) { tv.own.owntv.glcn.Accessible.load(applicationContext, activeProfileId ?: -1L) }
             val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
 
             val profilesVm: ProfilesViewModel = koinViewModel()
@@ -495,7 +497,7 @@ open class MainActivity : ComponentActivity() {
                 CompositionLocalProvider(
                     LocalDensity provides Density(
                         base.density * UiZoom.factor(uiZoomPercent),
-                        base.fontScale * UiFontScale.factor(fontCustomization.sizePercent),
+                        base.fontScale * UiFontScale.factor(fontCustomization.sizePercent) * tv.own.owntv.glcn.Accessible.fontFactor,
                     ),
                     LocalUiFontScaleFactor provides UiFontScale.factor(fontCustomization.sizePercent),
                     LocalGlass provides glassConfig,

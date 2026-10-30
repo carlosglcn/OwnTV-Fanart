@@ -128,7 +128,7 @@ internal fun HomeFocusBackdrop(url: String?, modifier: Modifier = Modifier, trai
                         val glow = tv.own.owntv.ui.components.rememberArtColor(u)?.luminance() ?: 0.3f
                         // glcn: the backdrop drifts slowly closer too, in step with the focused card.
                         val drift = remember(u) { androidx.compose.animation.core.Animatable(1f) }
-                        val driftOn = animate && !tv.own.owntv.ui.stage.GlcnMotion.subtle && !holeOpen
+                        val driftOn = animate && !tv.own.owntv.ui.stage.GlcnMotion.subtle && tv.own.owntv.glcn.DeviceClass.richMotion && !holeOpen
                         LaunchedEffect(u, driftOn) {
                             if (driftOn) drift.animateTo(1.06f, androidx.compose.animation.core.tween(8_000, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
                         }
@@ -1171,7 +1171,7 @@ internal fun HomeLazyRow(
                 }
                 .graphicsLayer {
                     val b = backAnim.value
-                    if (b > 0f) {
+                    if (b > 0f && tv.own.owntv.glcn.DeviceClass.richMotion) {
                         val sc = 1f - ROW_SIT_BACK_SCALE * b
                         scaleX = sc; scaleY = sc
                         transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)

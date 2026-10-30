@@ -316,6 +316,7 @@ fun SettingsScreen(
     val animStyle by settingsVm.animStyle.collectAsStateWithLifecycle()
     val logoPlate by settingsVm.logoPlate.collectAsStateWithLifecycle()
     val homeBackdrop by settingsVm.homeBackdropStyle.collectAsStateWithLifecycle()
+    val accessibleContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val zapPanel by settingsVm.zapPanel.collectAsStateWithLifecycle()
     val zapViews by settingsVm.zapViews.collectAsStateWithLifecycle()
     val backToWindow by settingsVm.backToWindow.collectAsStateWithLifecycle()
@@ -523,6 +524,14 @@ fun SettingsScreen(
             chip = glcnStyle?.label() ?: stringResource(R.string.glcn_style_none),
             chipTone = if (glcnStyle != null) TileTone.PRIMARY else TileTone.SECONDARY,
             onClick = { showGlcnStyle = true },
+        ),
+        RootRow(
+            "glcn_accessible", TileTone.PRIMARY, OwnTVIcon.PERSON,
+            title = stringResource(R.string.glcn_accessible_title),
+            desc = stringResource(R.string.glcn_accessible_desc),
+            chip = stringResource(if (tv.own.owntv.glcn.Accessible.on) R.string.common_on else R.string.common_off),
+            chipTone = if (tv.own.owntv.glcn.Accessible.on) TileTone.PRIMARY else TileTone.SECONDARY,
+            onClick = { tv.own.owntv.glcn.Accessible.set(accessibleContext, !tv.own.owntv.glcn.Accessible.on) },
         ),
         RootRow(
             "glcn_home_backdrop", TileTone.PRIMARY, OwnTVIcon.THEME,

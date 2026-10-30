@@ -90,6 +90,17 @@ private fun Modifier.stageFocusDecor(style: StageFocus, radius: Dp, a: StageAcce
 
 /** glcn: the focus treatment as a drawing, for an overlay that slides between items. */
 fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocus(style: StageFocus, radius: Dp, a: StageAccent, palette: StagePalette) {
+    drawStageFocusInner(style, radius, a, palette)
+    // glcn: accessible mode — a thick ring round whatever has focus, white on dark, ink on light, never missed.
+    if (tv.own.owntv.glcn.Accessible.on) {
+        val px = 1.mpx.toPx()
+        drawOuterRing(if (palette.isLight) palette.text else Color.White, ACCESSIBLE_RING * px, radius.toPx(), inset = 3 * px)
+    }
+}
+
+private const val ACCESSIBLE_RING = 5f
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocusInner(style: StageFocus, radius: Dp, a: StageAccent, palette: StagePalette) {
     val r = radius.toPx()
     val px = 1.mpx.toPx()
     if (palette.isLight) {

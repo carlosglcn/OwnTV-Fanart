@@ -130,6 +130,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         tv.own.owntv.player.SubtitleFontAssets.resourceOf = { it.subtitleFontResource }
         // The six icon colours are MainActivity + a suffix (see MainActivityColours.kt); core switches them.
         tv.own.owntv.core.brand.AppIconSwitcher.mainActivityClass = MainActivity::class.java.name
+        tv.own.owntv.glcn.DeviceClass.detect(this) // glcn: a modest box skips purely decorative motion
         startKoin {
             androidLogger(if (BuildConfig.DEBUG) Level.ERROR else Level.NONE)
             androidContext(this@OwnTVApp)
@@ -224,7 +225,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             // Opaque poster art doesn't need an alpha channel; RGB_565 halves bitmap memory
             // under the deliberately small memory cap.
             .allowRgb565(true)
-            .crossfade(if (tv.own.owntv.glcn.LowRam.on || lowRam) 0 else 220)
+            .crossfade(if (tv.own.owntv.glcn.LowRam.on || lowRam) 0 else if (tv.own.owntv.glcn.DeviceClass.modest) 120 else 220)
             .build()
     }
 

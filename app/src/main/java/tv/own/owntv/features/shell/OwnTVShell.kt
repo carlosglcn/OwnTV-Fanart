@@ -206,7 +206,8 @@ fun OwnTVShell(
     val glcnZapViews by settingsRepo.zapViews.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.ZapViews.DEFAULT)
     // The saved view may have been switched off in Settings; show the next enabled one instead.
     val glcnZapPanel = tv.own.owntv.core.settings.ZapViews.effective(glcnZapPanelSaved, glcnZapViews)
-    LaunchedEffect(glcnAnimStyle) { tv.own.owntv.ui.stage.GlcnMotion.subtle = glcnAnimStyle == 1 }
+    // glcn: accessible mode keeps motion calm, whatever the style.
+    LaunchedEffect(glcnAnimStyle, tv.own.owntv.glcn.Accessible.on) { tv.own.owntv.ui.stage.GlcnMotion.subtle = glcnAnimStyle == 1 || tv.own.owntv.glcn.Accessible.on }
     val glcnLogoPlate by settingsRepo.logoPlate.collectAsStateWithLifecycle(initialValue = 0)
     LaunchedEffect(glcnLogoPlate) { tv.own.owntv.ui.components.LogoPlate.mode = glcnLogoPlate }
     LaunchedEffect(playerMode) { tv.own.owntv.glcn.UiSounds.suppressed = playerMode != PlayerMode.NONE }
@@ -1462,7 +1463,7 @@ fun OwnTVShell(
                 }
                 // glcn: a new section comes in with a slight slide — no hard cut between screens.
                 val sectionIn = remember { androidx.compose.animation.core.Animatable(1f) }
-                val sectionMotion = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
+                val sectionMotion = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on && !tv.own.owntv.glcn.Accessible.on
                 val sectionSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(SECTION_IN_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
                 LaunchedEffect(selectedSection) {
                     if (!sectionMotion) return@LaunchedEffect

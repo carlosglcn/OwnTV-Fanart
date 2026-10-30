@@ -732,6 +732,7 @@
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	focus_highlight
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	fonts
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	github.com/ahXN00/OwnTV
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_accessible
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_fps
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_light_mode
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_reset_appearance
@@ -986,6 +987,8 @@
 2	technical	app/src/main/java/tv/own/owntv/features/update/UpdateDialog.kt	**
 2	technical	app/src/main/java/tv/own/owntv/features/update/UpdateDialog.kt	-
 2	technical	app/src/main/java/tv/own/owntv/features/update/UpdateDialog.kt	•
+1	technical	app/src/main/java/tv/own/owntv/glcn/Accessible.kt	glcn_accessible
+1	technical	app/src/main/java/tv/own/owntv/glcn/Accessible.kt	on_$profile
 1	technical	app/src/main/java/tv/own/owntv/glcn/ArtPrefetch.kt	http
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	Back held $held ms; armed at press=$armedAtDown, now=${armed()}; repeats=$repeats
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	Back hold closed the player ($how)
@@ -993,6 +996,7 @@
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	release
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	repeats
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	timer
+1	technical	app/src/main/java/tv/own/owntv/glcn/DeviceClass.kt	/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_max_freq
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	auto_trailers
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	double_row
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	glcn_dock

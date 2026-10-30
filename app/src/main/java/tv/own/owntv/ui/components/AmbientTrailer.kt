@@ -130,7 +130,8 @@ object TrailerPool {
 
     /** Get the player ready ahead of the first trailer (a page that may show one calls this). */
     fun warm(context: Context) {
-        if (!allowed()) return
+        // glcn: a modest box makes the player only when a trailer is really about to play (it is heavy).
+        if (!allowed() || tv.own.owntv.glcn.DeviceClass.modest) return
         view(context)
         if (request == null) { main.removeCallbacks(idleFree); main.postDelayed(idleFree, IDLE_FREE_MS) }
     }

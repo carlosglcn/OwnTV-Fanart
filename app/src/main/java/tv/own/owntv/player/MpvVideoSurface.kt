@@ -239,7 +239,7 @@ fun ExoPreviewSurface(
                 )
             }
         }
-        if (holdLastFrame && !useTextureView && !tv.own.owntv.glcn.LowRam.on) ZapFreezeFrame(engine, zapHold)
+        if (holdLastFrame && !useTextureView && tv.own.owntv.glcn.DeviceClass.richMotion) ZapFreezeFrame(engine, zapHold)
         // Subtitle overlay — mounted ONLY while subs are on, so 4K live keeps its direct hardware-overlay path.
         // Sized like the video, not like the screen: at any zoom other than Fit the two differ, and
         // mounting this full-screen put the same subtitle in a different place depending on which engine
