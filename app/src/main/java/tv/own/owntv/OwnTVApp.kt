@@ -142,6 +142,14 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
                 GlobalContext.get().get<tv.own.owntv.core.settings.SettingsRepository>().applyStageDefaults()
             }
         }
+        // glcn: the logins of home-network shares, for playing their files (kept up to date as sources change).
+        appScope.launch {
+            runCatching {
+                GlobalContext.get().get<tv.own.owntv.core.database.dao.SourceDao>().observeAll().collect { list ->
+                    tv.own.owntv.core.netshare.NetShare.rememberSources(list.map { it.url })
+                }
+            }
+        }
         // Sports: core decides from Auto rebuild whether the stored board is due ("on every app start",
         // or older than the chosen hours). It reads one small file and touches no database.
         appScope.launch {

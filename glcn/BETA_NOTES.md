@@ -193,3 +193,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Posters show a soft tinted card while they load, and pictures fade in more gently.
 - ✨ Sections come in with a short fade and slide instead of a hard cut.
 - 🪶 The poster tilt and light sweep rest in light mode.
+- 🗄️ Network folders (NAS): add a folder shared over SMB on your NAS or PC as a playlist (Add playlist → Network folder), with a films folder and a series folder. Films and episodes are recognised by their file and folder names ("Dune (2024)", "S01E02", "1x02", "Season 1/02"), matched with TMDB for posters, page and trailer, and play straight from the share with seeking, on either player.
