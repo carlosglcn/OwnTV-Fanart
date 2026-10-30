@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -170,6 +171,7 @@ fun StageSurface(
     val interaction = remember { MutableInteractionSource() }
     val real = interaction.collectIsFocusedAsState().value
     val focused = real || highlighted
+    val pressed = interaction.collectIsPressedAsState().value
     val palette = LocalStagePalette.current
     // glcn: inside a list or menu with a sliding focus box, the item leaves the focus drawing to it.
     val slide = tv.own.owntv.glcn.LocalSlideFocus.current?.takeIf { focusDecor && (focusStyle == StageFocus.FILLED || focusStyle == StageFocus.FX) }
@@ -177,6 +179,7 @@ fun StageSurface(
     Box(
         modifier = modifier
             .stageLift(focused, focusStyle)
+            .pressSink(pressed)
             .then(if (slide != null) Modifier.slideFocusReport(slide, focusStyle, radius, accent) else Modifier)
             .then(if (focused && focusDecor && !sliding) Modifier.stageFocusDecor(focusStyle, radius, accent, palette) else if (focused) Modifier else idle)
             .stageClickable(interaction, enabled, onClick, onLongClick),
@@ -821,6 +824,7 @@ fun StagePoster(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val pressed by interaction.collectIsPressedAsState()
     val accent = stageAccent
     val r = StageRadii.Poster
     val badge = Color(8, 12, 14)
@@ -856,6 +860,7 @@ fun StagePoster(
                 // glcn: under the sliding focus box the card itself stays put, but once the box has arrived its picture
                 // leans and sways a little inside it, the Apple TV way.
                 .then(if (slide != null) Modifier.stageTilt(focused, SLIDE_TILT_DELAY_MS) else Modifier)
+                .pressSink(pressed)
                 .clip(RoundedCornerShape(r))
                 .posterWait(),
         ) {
@@ -889,8 +894,11 @@ fun StagePoster(
             }
         }
         Spacer(Modifier.height(12.mpx))
+        // glcn: the focused card's name rises into place under it; the others rest a little lower.
+        val titleRise by androidx.compose.animation.core.animateFloatAsState(if (focused) 0f else 1f, ownTvTween(260), label = "posterTitle")
         Text(
             title,
+            modifier = Modifier.graphicsLayer { translationY = titleRise * POSTER_TITLE_DROP.toPx() },
             style = if (line != null) stageText(18, 700) else stageText(if (compact) 15.5f else 17f, if (focused) 700 else 600),
             color = if (focused || line != null) stageTone(Color.White, StageColors.Text) else StageColors.Muted,
             maxLines = 1,
@@ -1033,6 +1041,7 @@ fun StageEpisode(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val pressed by interaction.collectIsPressedAsState()
     val accent = stageAccent
     val r = StageRadii.Poster
     val badge = Color(8, 12, 14)
@@ -1233,3 +1242,6 @@ private const val POSTER_WAIT_BOTTOM = 0.13f
 
 /** glcn: how long the focus box takes to arrive before the picture under it starts to lean. */
 private const val SLIDE_TILT_DELAY_MS = 240L
+
+/** glcn: how much lower an unfocused poster's name rests. */
+private val POSTER_TITLE_DROP = 5.mpx

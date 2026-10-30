@@ -178,3 +178,18 @@ private const val GLOSS = 0.14f
 private const val KICK_DEG = 7f
 private const val KICK_DAMPING = 0.42f
 private const val KICK_STIFFNESS = 240f
+
+/** glcn: OK pressed on a card or a button: it sinks a touch and springs back, so the press is felt. */
+@Composable
+internal fun Modifier.pressSink(pressed: Boolean): Modifier {
+    if (!tv.own.owntv.ui.theme.animationsOn || tv.own.owntv.glcn.LowRam.on) return this
+    val s by animateFloatAsState(
+        if (pressed) PRESS_SCALE else 1f,
+        if (pressed) tween(PRESS_IN_MS) else androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 520f),
+        label = "pressSink",
+    )
+    return this.graphicsLayer { scaleX = s; scaleY = s }
+}
+
+private const val PRESS_SCALE = 0.95f
+private const val PRESS_IN_MS = 90

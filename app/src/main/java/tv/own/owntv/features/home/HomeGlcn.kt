@@ -1128,11 +1128,37 @@ internal fun HomeLazyRow(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val nudgePx = with(density) { ROW_END_NUDGE.toPx() }
     val motion = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
+    // glcn: the row you are in stands forward; the others sit back a touch (a little smaller, a veil of the page) —
+    // only while some row of Home holds focus. A painted veil, not a transparent layer: nothing extra to composite.
+    val rowFocused = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { if (rowFocused.value) { rowFocused.value = false; HomeRowFocus.count-- } } }
+    val sitBack = motion && !rowFocused.value && HomeRowFocus.count > 0
+    val back by androidx.compose.animation.core.animateFloatAsState(if (sitBack) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(ROW_SIT_BACK_MS), label = "rowSitBack")
+    val veil = tv.own.owntv.ui.theme.LocalStagePalette.current.page
     androidx.compose.runtime.CompositionLocalProvider(
         androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides spec,
     ) {
         androidx.compose.foundation.lazy.LazyRow(
             modifier = modifier
+                .onFocusChanged { f ->
+                    if (f.hasFocus != rowFocused.value) {
+                        rowFocused.value = f.hasFocus
+                        HomeRowFocus.count += if (f.hasFocus) 1 else -1
+                    }
+                }
+                .graphicsLayer {
+                    val b = back
+                    if (b > 0f) {
+                        val sc = 1f - ROW_SIT_BACK_SCALE * b
+                        scaleX = sc; scaleY = sc
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                    }
+                }
+                .drawWithContent {
+                    drawContent()
+                    val b = back
+                    if (b > 0f) drawRect(veil.copy(alpha = ROW_SIT_BACK_VEIL * b))
+                }
                 .onKeyEvent { e ->
                     if (!motion || e.key != Key.DirectionRight || e.type != KeyEventType.KeyDown) return@onKeyEvent false
                     if (focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right)) return@onKeyEvent true
@@ -1155,6 +1181,15 @@ internal fun HomeLazyRow(
         )
     }
 }
+
+/** glcn: how many Home rows hold focus (0 or 1) — the others sit back only while one does. */
+internal object HomeRowFocus {
+    var count by androidx.compose.runtime.mutableStateOf(0)
+}
+
+private const val ROW_SIT_BACK_MS = 280
+private const val ROW_SIT_BACK_SCALE = 0.02f
+private const val ROW_SIT_BACK_VEIL = 0.32f
 
 /** glcn: how far and how fast a row nudges when ▶ finds no card after the last. */
 private val ROW_END_NUDGE = 18.mpx

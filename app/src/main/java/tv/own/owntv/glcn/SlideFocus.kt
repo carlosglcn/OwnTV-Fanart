@@ -55,16 +55,19 @@ class SlideFocusState {
     val alpha = Animatable(0f)
     /** How briskly the box glides (spring stiffness): menus snap, Home's rows take their time. */
     var stiffness = 700f
+    /** glcn: the box stretches as it goes — its leading edge gets there first, the trailing one follows (menu bars). */
+    var stretch = false
 }
 
 val LocalSlideFocus = compositionLocalOf<SlideFocusState?> { null }
 
 /** Wraps a list or a menu: draws the sliding box behind [content] and tells its items to leave focus drawing to it. */
 @Composable
-fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, content: @Composable () -> Unit) {
+fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, stretch: Boolean = false, content: @Composable () -> Unit) {
     if (LowRam.on) { content(); return }
     val st = remember { SlideFocusState() }
     st.stiffness = stiffness
+    st.stretch = stretch
     val palette = LocalStagePalette.current
     val on = st.current != null
     val fade = ownTvTween<Float>(140)
@@ -76,10 +79,22 @@ fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, conte
             val live = st.live
             if (a <= 0.01f || accent == null || live == Rect.Zero) return@Canvas
             val g = st.glide.value
-            val l = live.left + st.gap.left * g - st.origin.x
-            val t = live.top + st.gap.top * g - st.origin.y
-            val w = live.width + st.gap.width * g
-            val h = live.height + st.gap.height * g
+            var l = live.left + st.gap.left * g - st.origin.x
+            var t = live.top + st.gap.top * g - st.origin.y
+            var w = live.width + st.gap.width * g
+            var h = live.height + st.gap.height * g
+            if (st.stretch && g > 0f) {
+                // The edge it travels towards arrives first (g²), the other trails (g^0.7): a drop that stretches.
+                val lead = g * g
+                val trail = Math.pow(g.toDouble(), 0.7).toFloat()
+                val right = st.gap.left < 0f
+                val down = st.gap.top < 0f
+                val left = live.left + st.gap.left * (if (right) trail else lead)
+                val rightEdge = live.right + st.gap.right * (if (right) lead else trail)
+                val top = live.top + st.gap.top * (if (down) trail else lead)
+                val bottom = live.bottom + st.gap.bottom * (if (down) lead else trail)
+                l = left - st.origin.x; t = top - st.origin.y; w = rightEdge - left; h = bottom - top
+            }
             st.drawn = Rect(l + st.origin.x, t + st.origin.y, l + st.origin.x + w, t + st.origin.y + h)
             inset(l, t, size.width - l - w, size.height - t - h) {
                 drawAtAlpha(a, Rect(-80f, -80f, size.width + 80f, size.height + 80f)) {

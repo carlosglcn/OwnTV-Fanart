@@ -201,3 +201,9 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🍎 Apple TV touch in Home, Movies and Series: once the sliding focus box reaches a poster, the picture inside it leans and sways a little, with the light sweep.
 - 🍎 Focus with momentum and depth: arriving on a poster, it tips the way you moved and springs back, then sways; its picture slides a touch against the lean, as if behind glass, with a soft gloss that follows it.
 - 🔈 New, softer Back sound in the Natural style.
+- 💧 Top menu bar: one focus pill glides between entries and stretches like a drop on the way.
+- 🎚️ Home rows: the row you are in stands forward; the others sit back a touch (slightly smaller, gently veiled).
+- 🏷️ A focused poster's name rises into place under it.
+- 🌅 Dock: the backdrop drifts slowly closer on each new picture.
+- 👆 OK on a card or button: it sinks a touch and springs back.
+- 🔈 New Move sound (a soft, low tap) in the Natural style.

@@ -297,7 +297,18 @@ fun LumenHome(
             if (wanted != null) { delay(150); settled = wanted } else if (shown?.crests != null) settled = null
         }
         Crossfade(settled, modifier = Modifier.fillMaxSize(), label = "lumen-backdrop") { url ->
-            if (url != null) AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(1f))
+            if (url != null) {
+                // glcn: each new picture drifts slowly closer (a Ken Burns push-in) instead of sitting flat.
+                val drift = remember(url) { androidx.compose.animation.core.Animatable(1f) }
+                val driftOn = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.ui.stage.GlcnMotion.subtle && !tv.own.owntv.glcn.LowRam.on
+                LaunchedEffect(url, driftOn) {
+                    if (driftOn) drift.animateTo(DOCK_DRIFT_TO, androidx.compose.animation.core.tween(DOCK_DRIFT_MS, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                }
+                AsyncImage(
+                    model = url, contentDescription = null, contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = drift.value; scaleY = drift.value },
+                )
+            }
         }
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(palette.page.copy(alpha = 0.78f), palette.page.copy(alpha = 0.34f), palette.page.copy(alpha = 0f)))))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to palette.page.copy(alpha = 0.95f))))
@@ -627,3 +638,7 @@ private fun dockJsonList(json: String?): List<String> {
 private const val DOCK_TRAILER_MS = 2_200L
 private const val DOCK_TRAILER_WARM_MS = 900L
 private const val DOCK_REST_MS = 20_000L
+
+/** glcn: the Dock backdrop's slow push-in — how close and over how long. */
+private const val DOCK_DRIFT_TO = 1.06f
+private const val DOCK_DRIFT_MS = 9_000
