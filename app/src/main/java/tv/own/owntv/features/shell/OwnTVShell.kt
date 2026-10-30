@@ -515,6 +515,7 @@ fun OwnTVShell(
                 tv.own.owntv.glcn.CinemaInfo(
                     title = m.name,
                     logoUrl = tv.own.owntv.core.metadata.MetadataImages.logo(meta?.logoPath),
+                    backdropUrl = tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath, "w1280") ?: m.backdropUrl,
                     year = m.year ?: meta?.year,
                     durationMin = m.durationSecs?.let { it / 60 }?.takeIf { it > 0 },
                     rating = meta?.rating?.takeIf { it > 0 } ?: m.rating?.takeIf { it > 0 },
@@ -531,6 +532,7 @@ fun OwnTVShell(
                 tv.own.owntv.glcn.CinemaInfo(
                     title = ep?.name?.takeIf { it.isNotBlank() } ?: show.name,
                     logoUrl = tv.own.owntv.core.metadata.MetadataImages.logo(meta?.logoPath),
+                    backdropUrl = tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath, "w1280") ?: show.backdropUrl,
                     year = show.year ?: meta?.year,
                     durationMin = ep?.durationSecs?.let { it / 60 }?.takeIf { it > 0 },
                     rating = meta?.rating?.takeIf { it > 0 } ?: show.rating?.takeIf { it > 0 },
@@ -2096,6 +2098,12 @@ fun OwnTVShell(
                     .clip(RoundedCornerShape(14.dp)).background(Color.Black)
             }).then(pipSource),
         ) {
+            // glcn: the film's fanart around the picture while the cinema side panel is open.
+            if (isFull && !inPip && !liveOnExo) {
+                tv.own.owntv.player.CinemaBackdrop(
+                    url = cinemaInfo?.backdropUrl, shown = tv.own.owntv.glcn.CinemaStage.panelOpen, modifier = Modifier.fillMaxSize(),
+                )
+            }
             // "Promote Preview": a Live channel playing on ExoPlayer renders the ExoPlayer surface — in BOTH
             // full-screen AND the docked mini-player (same call site = the surface persists across dock/
             // expand, so playback never blips). Everything else (mpv) renders mpv's surface.

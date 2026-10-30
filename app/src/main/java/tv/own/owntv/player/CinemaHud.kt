@@ -295,6 +295,21 @@ internal fun CinemaBanner(
     }
 }
 
+/**
+ * The film's fanart behind everything while the side panel is open: it fills the room around the slid picture,
+ * dimmed and darker towards the panel so the words stay readable. Fades in and out with the panel.
+ */
+@Composable
+internal fun CinemaBackdrop(url: String?, shown: Boolean, modifier: Modifier = Modifier) {
+    val a by androidx.compose.animation.core.animateFloatAsState(if (shown && url != null) 1f else 0f, tween(PANEL_IN_MS), label = "cinemaBackdrop")
+    if (a <= 0f || url == null) return
+    Box(modifier.graphicsLayer { alpha = a }) {
+        coil3.compose.AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
+        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.35f), 0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.7f))))
+    }
+}
+
 /** What the Settings tab can open or do — the HUD's own dialogs and actions. */
 internal class CinemaActions(
     val openDialog: (HudDialog) -> Unit,
@@ -336,7 +351,7 @@ internal fun CinemaPanel(
             Modifier.align(Alignment.CenterEnd).padding(top = 48.mpx, bottom = 48.mpx, end = 48.mpx)
                 .width(PANEL_WIDTH.mpx).fillMaxHeight()
                 .graphicsLayer { translationX = (1f - slide.value) * 120.mpx.toPx(); alpha = slide.value }
-                .clip(RoundedCornerShape(28.mpx)).background(Color(0xF20E1113))
+                .clip(RoundedCornerShape(28.mpx)).background(Color(0xD90E1113))
                 .padding(28.mpx),
         ) {
             Row(Modifier.focusGroup(), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {

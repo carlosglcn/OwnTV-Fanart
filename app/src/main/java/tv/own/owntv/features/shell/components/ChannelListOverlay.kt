@@ -370,6 +370,8 @@ internal fun ZapPreviewPanel(
     bareLines: Int = 2,
     /** glcn: an already-read programme for the channel, shown in the same frame instead of after a read. */
     peek: ((ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?)? = null,
+    /** glcn: a coming programme (and the one after it) picked in the schedule, shown instead of what is on. */
+    showing: Pair<EpgProgrammeEntity, EpgProgrammeEntity?>? = null,
 ) {
     // glcn: the previous channel's programme goes at once — a stale poster for seconds was worse than none.
     var programme by remember(channel?.id) { mutableStateOf(channel?.let { peek?.invoke(it) }) }
@@ -377,8 +379,8 @@ internal fun ZapPreviewPanel(
         if (channel == null || programme != null) return@LaunchedEffect
         programme = runCatching { loadNow(channel) }.getOrNull()
     }
-    val p = programme?.first ?: return
-    val next = programme?.second
+    val p = showing?.first ?: programme?.first ?: return
+    val next = if (showing != null) showing.second else programme?.second
     val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
     Column(
         modifier
@@ -433,11 +435,16 @@ internal fun ZapSchedulePanel(
     joined: Boolean = false,
     /** glcn: an already-read programme for the card under the schedule (see [ZapPreviewPanel]). */
     peek: ((ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?)? = null,
+    /** glcn: the coming programme picked with the D-pad (-1 = none): lit, and shown in the card below. */
+    selected: Int = -1,
+    /** glcn: told how many programmes the schedule holds, so the picker stays inside it. */
+    onRowCount: (Int) -> Unit = {},
 ) {
     var rows by remember { mutableStateOf<List<EpgProgrammeEntity>>(emptyList()) }
     LaunchedEffect(channel?.id) {
-        if (channel == null) { rows = emptyList(); return@LaunchedEffect }
+        if (channel == null) { rows = emptyList(); onRowCount(0); return@LaunchedEffect }
         rows = runCatching { loadSchedule(channel) }.getOrDefault(emptyList())
+        onRowCount(rows.size)
     }
     val ch = channel ?: return
     if (rows.isEmpty()) return
@@ -466,24 +473,28 @@ internal fun ZapSchedulePanel(
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             // Only as many rows as fit above the programme card, so none is cut in half.
             val fit = if (joined) ((maxHeight - 180.mpx) / 56.mpx).toInt().coerceAtLeast(3) else rows.size
+            // glcn: the window follows the picked programme down the evening.
+            val start = if (selected >= fit) selected - fit + 1 else 0
             Column(verticalArrangement = Arrangement.spacedBy(5.mpx)) {
-            rows.take(fit).forEach { p ->
+            rows.drop(start).take(fit).forEachIndexed { k, p ->
             val onAir = now in p.startMs until p.stopMs
+            val picked = start + k == selected
+            val onAccent = stageAccent.onAccent
             Row(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.mpx))
-                    .background(if (onAir) accent.copy(alpha = 0.16f) else Color.Transparent)
+                    .background(if (picked) accent else if (onAir) accent.copy(alpha = 0.16f) else Color.Transparent)
                     .padding(horizontal = 12.mpx, vertical = 13.mpx),
                 horizontalArrangement = Arrangement.spacedBy(14.mpx),
             ) {
                 Text(
                     fmt.format(java.util.Date(p.startMs)),
-                    style = stageText(19, 700), color = if (onAir) accent else StageColors.Muted, maxLines = 1,
+                    style = stageText(19, 700), color = if (picked) onAccent else if (onAir) accent else StageColors.Muted, maxLines = 1,
                     modifier = Modifier.width(78.mpx),
                 )
                 Column(Modifier.weight(1f)) {
-                    Text(p.title, style = stageText(20, if (onAir) 800 else 600), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(p.title, style = stageText(20, if (onAir || picked) 800 else 600), color = if (picked) onAccent else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (onAir && !joined) {
                         val span = (p.stopMs - p.startMs).coerceAtLeast(1L)
                         val f = ((now - p.startMs).toFloat() / span).coerceIn(0f, 1f)
@@ -500,7 +511,11 @@ internal fun ZapSchedulePanel(
             }
         }
         if (joined && loadNow != null) {
-            ZapPreviewPanel(channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 46.mpx), framed = false, peek = peek)
+            val pick = rows.getOrNull(selected)
+            ZapPreviewPanel(
+                channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 46.mpx), framed = false, peek = peek,
+                showing = pick?.let { it to rows.getOrNull(selected + 1) },
+            )
         }
     }
 }

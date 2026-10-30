@@ -120,8 +120,11 @@ fun ZapDeck(
     }
     val activeChip = playlists?.activeId?.takeIf { it > 0L } ?: -1L
 
-    // 0 = groups, 1 = channels, -1 = the playlist chips.
+    // 0 = groups, 1 = channels, -1 = the playlist chips, 2 = the focused channel's coming programmes.
     var column by remember { mutableIntStateOf(1) }
+    // glcn: the coming programme picked in the schedule (column 2), and how many there are.
+    var schedIdx by remember { mutableIntStateOf(0) }
+    var schedCount by remember { mutableIntStateOf(0) }
     var groupIdx by remember { mutableIntStateOf(entries.indexOfFirst { it.item.key == currentKey }.coerceAtLeast(0)) }
     var chipIdx by remember { mutableIntStateOf(chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0)) }
     // The group whose channels are shown: the zap list itself when it is that group's, else the group read whole.
@@ -221,6 +224,7 @@ fun ZapDeck(
                     Key.DirectionUp, Key.DirectionDown -> {
                         val up = e.key == Key.DirectionUp
                         when (column) {
+                            2 -> schedIdx = (schedIdx + if (up) -1 else 1).coerceIn(0, (schedCount - 1).coerceAtLeast(0))
                             1 -> if (list.size > 1) chIdx = if (up) (if (chIdx == 0) list.lastIndex else chIdx - 1) else (if (chIdx == list.lastIndex) 0 else chIdx + 1)
                             0 -> when {
                                 up && groupIdx == 0 && chips.isNotEmpty() -> { column = -1; chipIdx = chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0) }
@@ -241,6 +245,7 @@ fun ZapDeck(
                     }
                     Key.DirectionLeft -> {
                         when (column) {
+                            2 -> column = 1
                             1 -> { column = 0; groupIdx = entries.indexOfFirst { it.item.key == shownKey }.takeIf { it >= 0 } ?: groupIdx }
                             -1 -> chipIdx = (chipIdx - 1).coerceAtLeast(0)
                         }
@@ -250,14 +255,19 @@ fun ZapDeck(
                         when (column) {
                             0 -> if (list.isNotEmpty() && entries.getOrNull(groupIdx)?.item?.key == shownKey) column = 1
                             // ▶ from the channels gives the picture back, as Back does.
-                            1 -> if (first) { if (onCycleDetail != null) onCycleDetail() else onDismiss() }
+                            // glcn: in the schedule view ▶ walks into the coming programmes (their picture and synopsis below).
+                            1 -> if (first) {
+                                if (detail == 1 && schedCount > 1) { column = 2; schedIdx = 1 }
+                                else if (onCycleDetail != null) onCycleDetail() else onDismiss()
+                            }
+                            2 -> if (first) { column = 1; if (onCycleDetail != null) onCycleDetail() }
                             -1 -> chipIdx = (chipIdx + 1).coerceAtMost(chips.lastIndex)
                         }
                         true
                     }
                     Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                         if (first) when (column) {
-                            1 -> tuneFocused()
+                            1, 2 -> tuneFocused()
                             0 -> if (list.isNotEmpty() && entries.getOrNull(groupIdx)?.item?.key == shownKey) column = 1
                             -1 -> chips.getOrNull(chipIdx)?.let { (id, _) -> playlists?.onSelect?.invoke(id); column = 0; groupIdx = 0 }
                         }
@@ -358,7 +368,8 @@ fun ZapDeck(
                     listOfNotNull(
                         stringResource(R.string.common_ok) to stringResource(R.string.content_key_watch),
                         "◀" to stringResource(R.string.content_category_browser_title),
-                        if (onCycleDetail != null) "▶" to stringResource(R.string.glcn_zap_view_next) else null,
+                        if (detail == 1) "▶" to stringResource(R.string.glcn_zap_coming_up)
+                        else if (onCycleDetail != null) "▶" to stringResource(R.string.glcn_zap_view_next) else null,
                         (if (onCycleDetail != null) stringResource(R.string.common_back) else "▶ / " + stringResource(R.string.common_back)) to stringResource(R.string.content_close),
                     ),
                     textSize = 15,
@@ -373,7 +384,11 @@ fun ZapDeck(
             Box(Modifier.matchParentSize().graphicsLayer { alpha = DECK_DETAIL_GLASS }.stageGlass(StageRadii.Sheet, overContent = true))
             Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
             if (detail == 1) {
-                ZapSchedulePanel(channel = focusedChannel, loadSchedule = loadSchedule, modifier = Modifier.width(480.mpx), loadNow = cachedNow, joined = true, peek = { nowCache[it.id] })
+                ZapSchedulePanel(
+                    channel = focusedChannel, loadSchedule = loadSchedule, modifier = Modifier.width(480.mpx), loadNow = cachedNow, joined = true, peek = { nowCache[it.id] },
+                    selected = if (column == 2) schedIdx else -1,
+                    onRowCount = { schedCount = it },
+                )
             } else {
                 Column(Modifier.width(480.mpx).fillMaxHeight().padding(horizontal = 22.mpx)) {
                     focusedChannel?.let { ch ->

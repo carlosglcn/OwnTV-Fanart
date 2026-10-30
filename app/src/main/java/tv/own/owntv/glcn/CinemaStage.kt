@@ -19,6 +19,8 @@ object CinemaStage {
 data class CinemaInfo(
     val title: String,
     val logoUrl: String? = null,
+    /** The film's or show's wide picture (fanart), behind the picture while the side panel is open. */
+    val backdropUrl: String? = null,
     val year: Int? = null,
     val durationMin: Int? = null,
     val rating: Double? = null,

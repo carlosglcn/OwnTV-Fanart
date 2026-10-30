@@ -684,6 +684,7 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	ssa
 1	log	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	startup-settled
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	vtt
+2	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	w1280
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	webvtt
 2	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	⏯
@@ -853,7 +854,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckGroupText
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckRowSub
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckRowText
-1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▶
+2	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▶
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▶ /
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	◀
 3	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapPosters.kt	·
@@ -1066,6 +1067,7 @@
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	ac-3
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	ac3
 2	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	atmos
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	cinemaBackdrop
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	dca
 1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	dolby vision
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	dolby_atmos
