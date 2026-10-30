@@ -78,12 +78,13 @@ internal fun BoxScope.FocusArtFx(focused: Boolean, content: @Composable BoxScope
  * recomposes the card. Still with animations off.
  */
 @Composable
-internal fun Modifier.stageTilt(focused: Boolean): Modifier {
+internal fun Modifier.stageTilt(focused: Boolean, delayMs: Long = 0L): Modifier {
     if (!tv.own.owntv.ui.theme.animationsOn || tv.own.owntv.glcn.LowRam.on) return this
     val amp = remember { Animatable(0f) }
     val phase = remember { Animatable(0f) }
     LaunchedEffect(focused) {
         if (focused) {
+            if (delayMs > 0) kotlinx.coroutines.delay(delayMs)
             kotlinx.coroutines.coroutineScope {
                 launch { amp.animateTo(1f, tween(600, easing = FastOutSlowInEasing)) }
                 launch {

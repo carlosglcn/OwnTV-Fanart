@@ -44,6 +44,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -178,6 +181,44 @@ internal fun VodHeader(section: String, category: String, count: String, showChe
     }
 }
 
+/** glcn: how long the hole in the picture takes to open over a starting trailer. */
+private const val TRAILER_HOLE_MS = 600
+
+/** glcn: past the picture's own melting edge, how far the picture still covers the video, melting into it. */
+private const val TRAILER_BLEND = 0.14f
+
+/**
+ * glcn: the hole the trailer shows through — none at the window's left and bottom (where the picture melts into the
+ * page), opening softly past [start] and above [bottom] to the full middle. A small mask, drawn stretched.
+ */
+private fun trailerHoleMask(start: Float, bottom: Float): androidx.compose.ui.graphics.ImageBitmap {
+    val w = 160
+    val h = 80
+    fun smooth(t: Float): Float { val x = t.coerceIn(0f, 1f); return x * x * (3f - 2f * x) }
+    val px = IntArray(w * h)
+    for (y in 0 until h) {
+        val fy = (y + 0.5f) / h
+        val vy = smooth(((1f - bottom) - fy) / TRAILER_BLEND)
+        for (x in 0 until w) {
+            val fx = (x + 0.5f) / w
+            val vx = smooth((fx - start) / TRAILER_BLEND)
+            val a = (vx * vy * 255f).toInt().coerceIn(0, 255)
+            px[y * w + x] = a shl 24
+        }
+    }
+    return android.graphics.Bitmap.createBitmap(px, w, h, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
+}
+
+/** glcn: lays the content out in the window minus a [start] share on the left and a [bottom] share below. */
+private fun Modifier.insetFraction(start: Float, bottom: Float): Modifier = this.layout { m, c ->
+    val w = c.maxWidth
+    val h = c.maxHeight
+    val l = (w * start).toInt()
+    val b = (h * bottom).toInt()
+    val p = m.measure(androidx.compose.ui.unit.Constraints.fixed((w - l).coerceAtLeast(1), (h - b).coerceAtLeast(1)))
+    layout(w, h) { p.placeRelative(l, 0) }
+}
+
 /** "136 titles" / "32 series" for the crumb. */
 @Composable
 internal fun vodCount(series: Boolean, count: Int): String =
@@ -220,19 +261,36 @@ internal fun VodCinematicBackdrop(
         else modifier.fillMaxWidth(1400f / 1920f + (1f - 1400f / 1920f) * expand).fillMaxHeight(720f / 1080f + (1f - 720f / 1080f) * expand)
     val edgeStart = (0.34f * (1f - expand)).coerceAtLeast(0.02f)
     val edgeBottom = (0.38f * (1f - expand)).coerceAtLeast(0.02f)
-    // glcn: the still picture and the washes melt at their edges through a mask (cached: they do not move); the trailer
-    // between them fades into the page by paint instead (see fadeEdgesInto), so a video frame never redraws a mask.
+    // glcn: the trailer plays UNDER the still picture, in the part of the window where the picture is solid; once it
+    // runs, a soft hole opens in the picture's middle and the video shows through. So the window's edges are always
+    // the picture melting into the real page (tint and light included) — a painted fade into a flat page colour left
+    // a hard line wherever the page behind was tinted. Both masks are on still layers: no video frame redraws them.
+    val playingNow = trailer != null && tv.own.owntv.features.home.CinemaTrailer.playing?.first == trailer
+    val holeSpec = ownTvTween<Float>(TRAILER_HOLE_MS)
+    val hole by androidx.compose.animation.core.animateFloatAsState(if (playingNow) 1f else 0f, holeSpec, label = "vodTrailerHole")
+    val holeMask = remember(edgeStart, edgeBottom) { trailerHoleMask(edgeStart, edgeBottom) }
     Box(sized) {
-        Box(Modifier.fillMaxSize().dissolveEdges(start = edgeStart, bottom = edgeBottom).graphicsLayer { alpha = hold }) {
+        tv.own.owntv.features.home.FocusTrailer(
+            trailer, trailerTitle, focusKey, Modifier.fillMaxSize().insetFraction(edgeStart, edgeBottom), dissolve = false,
+        )
+        Box(
+            Modifier.fillMaxSize().dissolveEdges(start = edgeStart, bottom = edgeBottom)
+                .drawWithContent {
+                    drawContent()
+                    val h = hole
+                    if (h > 0.001f) drawImage(
+                        holeMask, dstSize = androidx.compose.ui.unit.IntSize(kotlin.math.ceil(size.width).toInt(), kotlin.math.ceil(size.height).toInt()),
+                        alpha = h, blendMode = androidx.compose.ui.graphics.BlendMode.DstOut,
+                    )
+                }
+                .graphicsLayer { alpha = hold },
+        ) {
             Crossfade(targetState = settled, animationSpec = ownTvTween(420), label = "vodBackdrop") { u ->
                 if (!u.isNullOrBlank()) {
                     AsyncImage(model = u, contentDescription = null, contentScale = ContentScale.Crop, alignment = focus, modifier = Modifier.fillMaxSize())
                 }
             }
         }
-        // glcn: the trailer over the picture but under the page's washes, so the words, the tools and the hints below
-        // stay as readable over it as over the picture.
-        tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize().fadeEdgesInto(tv.own.owntv.ui.theme.LocalStagePalette.current.page, edgeStart, edgeBottom), dissolve = false)
         Box(Modifier.fillMaxSize().dissolveEdges(start = edgeStart, bottom = edgeBottom)) {
         Box(
             Modifier.fillMaxSize().backdropLeftWash(0f to 0.85f, 0.34f to 0.35f, 0.64f to 0f, 1f to 0f),
