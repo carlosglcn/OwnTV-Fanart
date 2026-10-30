@@ -309,8 +309,13 @@ fun HomeScreen(
             restoreFocus -> firstDataRow
             else -> null
         }
-        val targetIndex = targetRow?.let { renderRows.indexOf(it) } ?: 0
-        runCatching { listState.scrollToItem(targetIndex.coerceAtLeast(0)) }
+        // glcn: only when there is somewhere to go back to. This runs again each time a row's data arrives (the guide,
+        // the recent channels…), and scrolling to the top then threw someone already going down the rows back up to
+        // the first row — "it jumps to Featured all of a sudden", mostly just after opening Home.
+        if (targetRow != null) {
+            val targetIndex = renderRows.indexOf(targetRow)
+            runCatching { listState.scrollToItem(targetIndex.coerceAtLeast(0)) }
+        }
 
         // Only pull focus INTO the Home content when returning from the player (restoreFocus). On a cold
         // start or a tab switch, leave focus on the rail's Home item so the nav is immediately navigable.

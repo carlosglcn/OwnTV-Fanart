@@ -184,3 +184,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 Live TV (Cinema layout): no stray channel number under the channel's name, and white logos get a dark plate in the light theme.
 - 🎬 Info on a TV channel's film, in full: the film's lettering, year, genres, rating, TMDB's synopsis in your language and the cast with photos, over its wide picture — read a moment after tuning, so the screen opens with it at once. "Up next" now lists the rest of the evening (six programmes) in its own panel.
 - 🖼️ Trailers fill their window to the edges: YouTube centred a 16:9 picture in the wider window, leaving bars beside it (a visible cut inside the faded window); the video now covers the window, and its edges fade into the page's own colour.
+- 🏠 Classic Home no longer jumps back to the top while you go down the rows just after opening it: each row's data arriving (guide, recent channels…) scrolled the list to the first row.
