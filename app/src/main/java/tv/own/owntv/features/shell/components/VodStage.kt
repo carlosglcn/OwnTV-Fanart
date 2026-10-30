@@ -184,6 +184,12 @@ internal fun VodHeader(section: String, category: String, count: String, showChe
 /** glcn: how long the hole in the picture takes to open over a starting trailer. */
 private const val TRAILER_HOLE_MS = 600
 
+/** glcn: where the trailer starts inside its window (shares from the left and from the bottom). */
+private const val TRAILER_VIDEO_START = 0.14f
+private const val TRAILER_VIDEO_BOTTOM = 0.16f
+/** glcn: the picture's melting edge moves in steps of this share, so each step's mask is made once and kept. */
+private const val EDGE_STEP = 0.02f
+
 /** glcn: past the picture's own melting edge, how far the picture still covers the video, melting into it. */
 private const val TRAILER_BLEND = 0.14f
 
@@ -268,13 +274,20 @@ internal fun VodCinematicBackdrop(
     val playingNow = trailer != null && tv.own.owntv.features.home.CinemaTrailer.playing?.first == trailer
     val holeSpec = ownTvTween<Float>(TRAILER_HOLE_MS)
     val hole by androidx.compose.animation.core.animateFloatAsState(if (playingNow) 1f else 0f, holeSpec, label = "vodTrailerHole")
-    val holeMask = remember(edgeStart, edgeBottom) { trailerHoleMask(edgeStart, edgeBottom) }
+    // glcn: the video takes most of the window: it starts well inside the picture's melting edge, and while it plays
+    // that edge tightens to match (in a few steps, each a cached mask), so the picture still covers the video's border.
+    val vidStart = minOf(edgeStart, TRAILER_VIDEO_START)
+    val vidBottom = minOf(edgeBottom, TRAILER_VIDEO_BOTTOM)
+    val holeMask = remember(vidStart, vidBottom) { trailerHoleMask(vidStart, vidBottom) }
+    fun stepped(v: Float) = (kotlin.math.round(v / EDGE_STEP) * EDGE_STEP).coerceAtLeast(0.02f)
+    val imageStart = stepped(edgeStart + (vidStart - edgeStart) * hole)
+    val imageBottom = stepped(edgeBottom + (vidBottom - edgeBottom) * hole)
     Box(sized) {
         tv.own.owntv.features.home.FocusTrailer(
-            trailer, trailerTitle, focusKey, Modifier.fillMaxSize().insetFraction(edgeStart, edgeBottom), dissolve = false,
+            trailer, trailerTitle, focusKey, Modifier.fillMaxSize().insetFraction(vidStart, vidBottom), dissolve = false,
         )
         Box(
-            Modifier.fillMaxSize().dissolveEdges(start = edgeStart, bottom = edgeBottom)
+            Modifier.fillMaxSize().dissolveEdges(start = imageStart, bottom = imageBottom)
                 .drawWithContent {
                     drawContent()
                     val h = hole

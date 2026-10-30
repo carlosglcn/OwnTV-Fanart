@@ -213,3 +213,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎬 Home: films and series open their page — Keep watching and Trending too (the page's Play / Resume plays; the Dock card's own Resume still plays at once).
 - ⏸️ Playing a film's extra pauses the trailer behind the page, and the trailer goes on by itself when you come back (its sound no longer plays over the extra).
 - 🕒 The date and weather under the clock read over bright backdrops: near-white instead of grey, a touch bolder, with a stronger soft shade behind.
+- 📐 Bigger trailers in Movies, Series and classic Home: the video now fills most of its window — while it plays, the picture's melting edge tightens round it, so there is still no visible border.

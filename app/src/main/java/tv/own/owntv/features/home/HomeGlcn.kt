@@ -111,12 +111,15 @@ internal fun HomeFocusBackdrop(url: String?, modifier: Modifier = Modifier, trai
         // opens there (see TrailerHole), so the window's edges stay the picture melting into the page — no hard box.
         val holeOpen = trailer != null && CinemaTrailer.playing?.first == trailer
         val hole by androidx.compose.animation.core.animateFloatAsState(if (holeOpen) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(TRAILER_HOLE_MS), label = "classicTrailerHole")
+        // The video takes most of the window; while it plays the picture's melting edge tightens to cover its border
+        // (in steps, each a cached mask).
+        val edge = (kotlin.math.round((CLASSIC_EDGE + (CLASSIC_VIDEO_EDGE - CLASSIC_EDGE) * hole) / 0.02f) * 0.02f)
         Box(Modifier.align(Alignment.TopEnd).fillMaxWidth(0.6f).height(560.mpx)) {
-            FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize().insetShare(CLASSIC_EDGE, CLASSIC_EDGE), dissolve = false)
+            FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize().insetShare(CLASSIC_VIDEO_EDGE, CLASSIC_VIDEO_EDGE), dissolve = false)
             Box(
                 Modifier.fillMaxSize()
-                    .dissolveEdges(start = CLASSIC_EDGE, bottom = CLASSIC_EDGE)
-                    .innerTrailerHole(CLASSIC_EDGE, CLASSIC_EDGE, TRAILER_HOLE_BLEND) { hole },
+                    .dissolveEdges(start = edge, bottom = edge)
+                    .innerTrailerHole(CLASSIC_VIDEO_EDGE, CLASSIC_VIDEO_EDGE, TRAILER_HOLE_BLEND) { hole },
             ) {
                 val animate = tv.own.owntv.ui.theme.animationsOn
                 Crossfade(targetState = settled, label = "homeFocusArt") { u ->
@@ -1058,6 +1061,7 @@ internal val TRAILER_HOLE_SOFT = 150.mpx
 private const val TRAILER_HOLE_BLEND = 0.14f
 /** glcn: classic Home's picture window — the share of it that melts into the page on the left and below. */
 private const val CLASSIC_EDGE = 0.38f
+private const val CLASSIC_VIDEO_EDGE = 0.16f
 private const val STAGGER_STEP = 0.18f
 private const val STAGGER_SPAN = 0.46f
 private const val STAGGER_TOTAL_MS = 620
