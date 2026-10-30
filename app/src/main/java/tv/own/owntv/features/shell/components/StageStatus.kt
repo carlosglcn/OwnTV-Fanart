@@ -178,7 +178,7 @@ fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColo
                 val cr = androidx.compose.ui.geometry.CornerRadius(18.mpx.toPx())
                 val tl = Offset(-dx, -dy)
                 val sz = androidx.compose.ui.geometry.Size(size.width + 2 * dx, size.height + 2 * dy)
-                drawRoundRect(Color.White.copy(alpha = 0.74f), tl, sz, cr)
+                drawRoundRect(Color.White.copy(alpha = CLOCK_CHIP_ALPHA), tl, sz, cr)
                 drawRoundRect(rim, tl, sz, cr, style = androidx.compose.ui.graphics.drawscope.Stroke(1.mpx.toPx()))
                 return@drawBehind
             }
@@ -235,3 +235,5 @@ fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColo
 
 /** glcn: how bright the date and weather under the clock are in the dark theme. */
 private const val CLOCK_SUB_ALPHA = 0.88f
+/** glcn: the light theme's chip behind the clock — nearly solid, so a bright picture or a video's own text behind never shows through. */
+private const val CLOCK_CHIP_ALPHA = 0.94f

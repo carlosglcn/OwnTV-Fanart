@@ -97,7 +97,7 @@ fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, stret
             }
             st.drawn = Rect(l + st.origin.x, t + st.origin.y, l + st.origin.x + w, t + st.origin.y + h)
             inset(l, t, size.width - l - w, size.height - t - h) {
-                drawAtAlpha(a, Rect(-80f, -80f, size.width + 80f, size.height + 80f)) {
+                drawAtAlpha(a, Rect(-SLIDE_GLOW_ROOM, -SLIDE_GLOW_ROOM, size.width + SLIDE_GLOW_ROOM, size.height + SLIDE_GLOW_ROOM)) {
                     drawStageFocus(st.style, st.radius, accent, palette)
                 }
             }
@@ -156,3 +156,6 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
             },
         )
 }
+
+/** glcn: room round the sliding box for its glow — at 80 px a wide glow (an FX row's) was cut off in a hard line. */
+private const val SLIDE_GLOW_ROOM = 180f

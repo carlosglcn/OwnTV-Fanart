@@ -214,3 +214,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏸️ Playing a film's extra pauses the trailer behind the page, and the trailer goes on by itself when you come back (its sound no longer plays over the extra).
 - 🕒 The date and weather under the clock read over bright backdrops: near-white instead of grey, a touch bolder, with a stronger soft shade behind.
 - 📐 Bigger trailers in Movies, Series and classic Home: the video now fills most of its window — while it plays, the picture's melting edge tightens round it, so there is still no visible border.
+- 🧹 No more hard line under a focused row's glow (the sliding focus box had too little room for it, and cut it off).
+- 🕒 Light theme: the chip behind the clock is nearly solid, so a bright picture or a video's own title never shows through the date and weather.
