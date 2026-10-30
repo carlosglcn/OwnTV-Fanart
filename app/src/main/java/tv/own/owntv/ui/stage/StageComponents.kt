@@ -857,9 +857,6 @@ fun StagePoster(
                         }
                     },
                 )
-                // glcn: under the sliding focus box the card itself stays put, but once the box has arrived its picture
-                // leans and sways a little inside it, the Apple TV way.
-                .then(if (slide != null) Modifier.stageTilt(focused, SLIDE_TILT_DELAY_MS) else Modifier)
                 .pressSink(pressed)
                 .clip(RoundedCornerShape(r))
                 .posterWait(),
@@ -986,9 +983,6 @@ fun StageStill(
                         }
                     },
                 )
-                // glcn: under the sliding focus box the card itself stays put, but once the box has arrived its picture
-                // leans and sways a little inside it, the Apple TV way.
-                .then(if (slide != null) Modifier.stageTilt(focused, SLIDE_TILT_DELAY_MS) else Modifier)
                 .clip(RoundedCornerShape(r))
                 .posterWait(),
         ) {
@@ -1240,8 +1234,6 @@ private fun Modifier.posterWait(): Modifier {
 private const val POSTER_WAIT_TOP = 0.07f
 private const val POSTER_WAIT_BOTTOM = 0.13f
 
-/** glcn: how long the focus box takes to arrive before the picture under it starts to lean. */
-private const val SLIDE_TILT_DELAY_MS = 240L
 
 /** glcn: how much lower an unfocused poster's name rests. */
 private val POSTER_TITLE_DROP = 5.mpx

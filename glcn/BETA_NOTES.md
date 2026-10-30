@@ -207,3 +207,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌅 Dock: the backdrop drifts slowly closer on each new picture.
 - 👆 OK on a card or button: it sinks a touch and springs back.
 - 🔈 New Move sound (a soft, low tap) in the Natural style.
+- ↩️ Movies, Series and Home rows with the sliding focus box: the picture no longer leans and circles inside it — back to the slow zoom it had (as asked).
