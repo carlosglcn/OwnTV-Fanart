@@ -2409,7 +2409,7 @@ class LiveViewModel(
         runCatching { visible(channelDao.snapshotFavoritesManual(pid, ContentOrderEntity.FAV_CONTEXT, ids, STRIP_LIMIT)) }.getOrNull()
             ?.takeIf { it.isNotEmpty() }?.let { out += StripGroup(null, StripKind.FAVORITES, it) }
         runCatching { favoriteGroups.observeNames(pid).first() }.getOrDefault(emptyList()).forEach { g ->
-            runCatching { visible(customCategoryDao.snapshotChannels(pid, tv.own.owntv.core.live.FavoriteGroups.keyOf(g), ids, STRIP_LIMIT)) }.getOrNull()
+            runCatching { visible(customCategoryDao.snapshotChannels(pid, tv.own.owntv.core.live.FavoriteGroups.keyOf(g), ids, false, STRIP_LIMIT)) }.getOrNull()
                 ?.takeIf { it.isNotEmpty() }?.let { out += StripGroup(g, StripKind.GROUP, it) }
         }
         runCatching { historyChannels(STRIP_LIMIT).map { it.channel } }.getOrNull()
