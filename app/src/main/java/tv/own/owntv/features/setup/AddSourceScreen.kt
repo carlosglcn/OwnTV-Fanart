@@ -136,10 +136,16 @@ fun AddSourceScreen(
     // glcn: a folder shared on the home network (NAS): server, share, login and the films / series folders.
     val initialShare = remember(initial) { initial?.url?.let { tv.own.owntv.core.netshare.NetShare.parse(it) } }
     // glcn: SMB at home; WebDAV (http or https, said in the server field) also from outside.
-    var smbDav by remember(initial) { mutableStateOf(initialShare != null && initialShare.scheme != tv.own.owntv.core.netshare.NetShare.SCHEME) }
+    // 0 = SMB, 1 = WebDAV, 2 = NFS.
+    var smbProto by remember(initial) {
+        mutableStateOf(when (initialShare?.scheme) { tv.own.owntv.core.netshare.NetShare.DAV, tv.own.owntv.core.netshare.NetShare.DAVS -> 1; tv.own.owntv.core.netshare.NetShare.NFS -> 2; else -> 0 })
+    }
+    val smbDav = smbProto == 1
+    val smbNfs = smbProto == 2
     var smbHost by remember(initial) {
         mutableStateOf(initialShare?.let { t ->
             if (t.scheme == tv.own.owntv.core.netshare.NetShare.SCHEME) tv.own.owntv.core.netshare.NetShare.hostPort(t.host, t.port)
+            else if (t.scheme == tv.own.owntv.core.netshare.NetShare.NFS) t.host
             else (if (t.scheme == tv.own.owntv.core.netshare.NetShare.DAVS) "https://" else "http://") + t.host + (if (t.port == tv.own.owntv.core.netshare.NetShare.defaultPort(t.scheme)) "" else ":" + t.port)
         } ?: "")
     }
@@ -151,13 +157,14 @@ fun AddSourceScreen(
     fun smbLink(): String {
         val h = smbHost.trim()
         val scheme = when {
+            smbNfs -> tv.own.owntv.core.netshare.NetShare.NFS
             !smbDav -> tv.own.owntv.core.netshare.NetShare.SCHEME
             h.startsWith("https://", ignoreCase = true) -> tv.own.owntv.core.netshare.NetShare.DAVS
             h.startsWith("http://", ignoreCase = true) -> tv.own.owntv.core.netshare.NetShare.DAV
             h.endsWith(":5006") || h.endsWith(":443") -> tv.own.owntv.core.netshare.NetShare.DAVS
             else -> tv.own.owntv.core.netshare.NetShare.DAV
         }
-        return tv.own.owntv.core.netshare.NetShare.link(h, smbShare, smbUser, smbPassword, smbMovies, smbSeries, scheme)
+        return tv.own.owntv.core.netshare.NetShare.link(h, smbShare, smbUser, if (smbNfs) "" else smbPassword, smbMovies, smbSeries, scheme)
     }
     var portalUrl by remember(initial) { mutableStateOf(if (initial != null && initial.type == SourceType.STALKER) initial.url else "") }
     var mac by remember(initial) { mutableStateOf(initial?.mac ?: "") }
@@ -544,14 +551,14 @@ fun AddSourceScreen(
             }
             SourceKind.SMB -> {
                 val protoTitle = stringResource(R.string.glcn_setup_net_protocol)
-                val protoLabels = listOf("SMB", "WebDAV")
+                val protoLabels = listOf("SMB", "WebDAV", "NFS")
                 StageSettingRow(
                     icon = OwnTVIcon.LAYERS,
                     title = protoTitle,
-                    desc = stringResource(if (smbDav) R.string.glcn_setup_net_protocol_dav else R.string.glcn_setup_net_protocol_smb),
-                    value = SettingValue.Segmented(protoLabels, if (smbDav) 1 else 0),
-                    onClick = { smbDav = !smbDav },
-                    onStep = { step -> smbDav = step > 0 },
+                    desc = stringResource(when (smbProto) { 1 -> R.string.glcn_setup_net_protocol_dav; 2 -> R.string.glcn_setup_net_protocol_nfs; else -> R.string.glcn_setup_net_protocol_smb }),
+                    value = SettingValue.Segmented(protoLabels, smbProto),
+                    onClick = { smbProto = (smbProto + 1) % protoLabels.size },
+                    onStep = { step -> smbProto = (smbProto + step).coerceIn(0, protoLabels.lastIndex) },
                     help = help(protoTitle, stringResource(R.string.glcn_setup_net_protocol_help), listOf("◀ ▶" to stringResource(R.string.settings_key_change), back to parent)),
                 )
                 field(
@@ -559,9 +566,16 @@ fun AddSourceScreen(
                     placeholder = stringResource(if (smbDav) R.string.glcn_setup_dav_server_example else R.string.glcn_setup_smb_server_example), keyboardType = KeyboardType.Uri,
                     about = stringResource(R.string.glcn_setup_smb_help),
                 )
-                field(stringResource(R.string.glcn_setup_smb_share), smbShare, { smbShare = it }, placeholder = stringResource(R.string.glcn_setup_smb_share_example))
-                field(stringResource(R.string.glcn_setup_smb_user), smbUser, { smbUser = it })
-                field(stringResource(R.string.setup_password), smbPassword, { smbPassword = it }, password = true)
+                if (smbNfs) {
+                    // NFS: the export's path, and (optionally) the user id the NAS should see; no password.
+                    field(stringResource(R.string.glcn_setup_nfs_export), smbShare, { smbShare = it }, placeholder = stringResource(R.string.glcn_setup_nfs_export_example),
+                        about = stringResource(R.string.glcn_setup_nfs_help))
+                    field(stringResource(R.string.glcn_setup_nfs_uid), smbUser, { smbUser = it }, keyboardType = KeyboardType.Number)
+                } else {
+                    field(stringResource(R.string.glcn_setup_smb_share), smbShare, { smbShare = it }, placeholder = stringResource(R.string.glcn_setup_smb_share_example))
+                    field(stringResource(R.string.glcn_setup_smb_user), smbUser, { smbUser = it })
+                    field(stringResource(R.string.setup_password), smbPassword, { smbPassword = it }, password = true)
+                }
                 field(stringResource(R.string.glcn_setup_smb_movies), smbMovies, { smbMovies = it }, placeholder = stringResource(R.string.glcn_setup_smb_movies_example))
                 field(stringResource(R.string.glcn_setup_smb_series), smbSeries, { smbSeries = it }, placeholder = stringResource(R.string.glcn_setup_smb_series_example))
             }
