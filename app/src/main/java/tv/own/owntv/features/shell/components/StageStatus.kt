@@ -147,8 +147,10 @@ fun clockColor(stored: String, default: Color): Color = when (stored) {
 @Composable
 fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColors) {
     val timeColor = clockColor(colors.time, StageColors.Text)
-    val dateColor = clockColor(colors.date, StageColors.Muted)
-    val weatherColor = clockColor(colors.weather, StageColors.Muted)
+    // glcn: the date and weather default to near-white in the dark theme — grey 400 vanished over a bright backdrop.
+    val subDefault = if (LocalStagePalette.current.isLight) StageColors.Muted else StageColors.Text.copy(alpha = CLOCK_SUB_ALPHA)
+    val dateColor = clockColor(colors.date, subDefault)
+    val weatherColor = clockColor(colors.weather, subDefault)
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -185,8 +187,8 @@ fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColo
             scale(scaleX = (size.width * 0.8f) / r, scaleY = 1f, pivot = center) {
                 drawCircle(
                     Brush.radialGradient(
-                        0f to Color.Black.copy(alpha = 0.34f),
-                        0.55f to Color.Black.copy(alpha = 0.16f),
+                        0f to Color.Black.copy(alpha = 0.5f),
+                        0.55f to Color.Black.copy(alpha = 0.26f),
                         1f to Color.Transparent,
                         center = center,
                         radius = r,
@@ -209,7 +211,7 @@ fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColo
             horizontalArrangement = Arrangement.spacedBy(10.mpx),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val sub: TextStyle = stageText(17, 400).copy(shadow = shadow)
+            val sub: TextStyle = stageText(17, if (light) 400 else 500).copy(shadow = shadow)
             Text(date, style = sub, color = dateColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (weatherInfo != null) {
                 Text("·", style = sub, color = StageColors.Muted.copy(alpha = 0.5f), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -230,3 +232,6 @@ fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColo
         }
     }
 }
+
+/** glcn: how bright the date and weather under the clock are in the dark theme. */
+private const val CLOCK_SUB_ALPHA = 0.88f
