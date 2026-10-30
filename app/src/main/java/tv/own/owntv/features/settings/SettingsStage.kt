@@ -284,8 +284,9 @@ fun StageSettingsPage(
                     query = searchQuery,
                     onQueryChange = onSearchQuery,
                     placeholder = stringResource(R.string.more_settings_search),
-                    modifier = Modifier.widthIn(max = if (tools != null) 360.mpx else 520.mpx).focusRequester(searchFocus),
-                    height = 52.mpx,
+                    // glcn: as wide as the help panel below it, so the two line up; narrower beside a page's tools.
+                    modifier = Modifier.width(if (tools != null) w * 440 else w * 696).focusRequester(searchFocus),
+                    height = 60.mpx,
                     radius = 18.mpx,
                     horizontalPadding = 20.mpx,
                     autoEdit = searchAutoEdit,
