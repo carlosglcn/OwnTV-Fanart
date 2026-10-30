@@ -75,7 +75,10 @@ internal fun SeriesTitleCover(
     val pageFocus = androidx.compose.ui.platform.LocalFocusManager.current
     val page = tv.own.owntv.ui.theme.stageTone(Color(0xFF070B0E), tv.own.owntv.ui.theme.LocalStagePalette.current.page)
     Box(
-        Modifier.fillMaxSize().background(page).trapAllFocusExit()
+        Modifier.fillMaxSize()
+            // glcn: the cover grows out of the card it came from (a short zoom).
+            .graphicsLayer { val s = COVER_ZOOM_FROM + (1f - COVER_ZOOM_FROM) * enter.value; scaleX = s; scaleY = s }
+            .background(page).trapAllFocusExit()
             .onPreviewKeyEvent { e ->
                 if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown) { onEpisodes(); true }
                 else e.key == Key.DirectionUp
@@ -144,3 +147,4 @@ internal fun SeriesTitleCover(
 }
 
 private const val COVER_ENTER_MS = 420
+private const val COVER_ZOOM_FROM = 0.96f

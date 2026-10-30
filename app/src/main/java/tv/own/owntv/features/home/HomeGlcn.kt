@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
@@ -63,6 +64,7 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import tv.own.owntv.R
 import tv.own.owntv.core.database.entity.ChannelEntity
@@ -1120,11 +1122,28 @@ internal fun HomeLazyRow(
     // glcn: nothing is drawn left of the first card's place (bar its focus ring), so no sliver of the card before it.
     // Up to just short of the gap before the first card: room for its ring, none for the card before it.
     val clipLeft = startPx - (gapPx - with(density) { 2.mpx.toPx() }).coerceIn(0f, with(density) { 14.mpx.toPx() })
+    // glcn: ▶ on the last card gives a small elastic nudge instead of nothing — the row says "that's all".
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val nudge = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val nudgePx = with(density) { ROW_END_NUDGE.toPx() }
+    val motion = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
     androidx.compose.runtime.CompositionLocalProvider(
         androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides spec,
     ) {
         androidx.compose.foundation.lazy.LazyRow(
-            modifier = modifier.then(
+            modifier = modifier
+                .onKeyEvent { e ->
+                    if (!motion || e.key != Key.DirectionRight || e.type != KeyEventType.KeyDown) return@onKeyEvent false
+                    if (focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right)) return@onKeyEvent true
+                    if (!nudge.isRunning && e.nativeKeyEvent.repeatCount == 0) scope.launch {
+                        nudge.animateTo(-nudgePx, androidx.compose.animation.core.tween(ROW_END_OUT_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                        nudge.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = 0.42f, stiffness = 420f))
+                    }
+                    true
+                }
+                .graphicsLayer { translationX = nudge.value }
+                .then(
                 if (clipLeft > 0f) androidx.compose.ui.Modifier.drawWithContent {
                     clipRect(left = clipLeft, top = -size.height, right = size.width * 2, bottom = size.height * 2) { this@drawWithContent.drawContent() }
                 } else androidx.compose.ui.Modifier,
@@ -1136,6 +1155,10 @@ internal fun HomeLazyRow(
         )
     }
 }
+
+/** glcn: how far and how fast a row nudges when ▶ finds no card after the last. */
+private val ROW_END_NUDGE = 18.mpx
+private const val ROW_END_OUT_MS = 90
 
 /** glcn: a row that lost focus this recently, as its cards changed, lost it because the focused card went. */
 private const val FOCUS_LOSS_WINDOW_MS = 400L

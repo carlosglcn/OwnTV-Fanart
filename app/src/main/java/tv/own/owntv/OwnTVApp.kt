@@ -205,7 +205,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             // Opaque poster art doesn't need an alpha channel; RGB_565 halves bitmap memory
             // under the deliberately small memory cap.
             .allowRgb565(true)
-            .crossfade(if (tv.own.owntv.glcn.LowRam.on || lowRam) 0 else 120)
+            .crossfade(if (tv.own.owntv.glcn.LowRam.on || lowRam) 0 else 220)
             .build()
     }
 

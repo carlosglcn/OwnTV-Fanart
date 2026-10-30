@@ -43,7 +43,7 @@ internal fun BoxScope.FocusArtFx(focused: Boolean, content: @Composable BoxScope
         label = "artZoom",
     )
     val shine = remember { Animatable(-1f) }
-    val sweep = animate && !GlcnMotion.subtle
+    val sweep = animate && !GlcnMotion.subtle && !tv.own.owntv.glcn.LowRam.on
     LaunchedEffect(focused, sweep) {
         if (focused && sweep) {
             shine.snapTo(-0.6f)
@@ -79,7 +79,7 @@ internal fun BoxScope.FocusArtFx(focused: Boolean, content: @Composable BoxScope
  */
 @Composable
 internal fun Modifier.stageTilt(focused: Boolean): Modifier {
-    if (!tv.own.owntv.ui.theme.animationsOn) return this
+    if (!tv.own.owntv.ui.theme.animationsOn || tv.own.owntv.glcn.LowRam.on) return this
     val amp = remember { Animatable(0f) }
     val phase = remember { Animatable(0f) }
     LaunchedEffect(focused) {

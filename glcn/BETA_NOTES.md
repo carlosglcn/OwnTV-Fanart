@@ -187,3 +187,9 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏠 Classic Home no longer jumps back to the top while you go down the rows just after opening it: each row's data arriving (guide, recent channels…) scrolled the list to the first row.
 - 📝 The programme info screen gives the synopsis more room (wider, up to the panels on the right, and a line more), so most read whole without drifting.
 - 🎞️ Extras on a film's page: in its second part (▼), a row of the film's other videos from TMDB — teasers, clips, featurettes, behind the scenes — in your language first; each plays full screen with sound. The second part scrolls when it does not fit.
+- 📺 Changing channel full screen no longer flashes black: the last picture stays, dimmed, and fades into the new one.
+- 🔍 Films and series opened over Home grow out of their card into the title page.
+- 🧲 ▶ on the last card of a Home row gives a small elastic nudge instead of nothing.
+- 🖼️ Posters show a soft tinted card while they load, and pictures fade in more gently.
+- ✨ Sections come in with a short fade and slide instead of a hard cut.
+- 🪶 The poster tilt and light sweep rest in light mode.

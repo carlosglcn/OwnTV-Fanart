@@ -853,7 +853,8 @@ fun StagePoster(
                         }
                     },
                 )
-                .clip(RoundedCornerShape(r)),
+                .clip(RoundedCornerShape(r))
+                .posterWait(),
         ) {
             FocusArtFx(focused) { artwork() }
             if (rating != null) StageRatingChip(rating, Modifier.padding(8.mpx), small = compact)
@@ -974,7 +975,8 @@ fun StageStill(
                         }
                     },
                 )
-                .clip(RoundedCornerShape(r)),
+                .clip(RoundedCornerShape(r))
+                .posterWait(),
         ) {
             FocusArtFx(focused) { artwork() }
             if (progress != null && progress > 0f) {
@@ -1211,3 +1213,14 @@ val stageStillBack: Color
 /** glcn: a title added to the library in the last seven days. */
 fun isFreshlyAdded(addedAt: Long?): Boolean =
     addedAt != null && addedAt > 0L && System.currentTimeMillis() - addedAt in 0L..(7L * 24 * 60 * 60 * 1000)
+
+/** glcn: while a picture loads, a soft tinted card (not a hole) — the theme's ink, faint above, a touch stronger below; the picture fades in over it. */
+@Composable
+private fun Modifier.posterWait(): Modifier {
+    val ink = LocalStagePalette.current.ink
+    val brush = remember(ink) { Brush.verticalGradient(listOf(ink.copy(alpha = POSTER_WAIT_TOP), ink.copy(alpha = POSTER_WAIT_BOTTOM))) }
+    return drawBehind { drawRect(brush) }
+}
+
+private const val POSTER_WAIT_TOP = 0.07f
+private const val POSTER_WAIT_BOTTOM = 0.13f

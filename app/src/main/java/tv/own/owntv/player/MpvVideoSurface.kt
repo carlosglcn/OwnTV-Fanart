@@ -7,6 +7,8 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.TextureView
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -172,6 +174,8 @@ fun ExoPreviewSurface(
      * quarter-screen tile and a bad one for full screen — hence a parameter rather than a change.
      */
     useTextureView: Boolean = false,
+    /** glcn: full screen — on a channel change the last picture stays (and fades out) instead of a black flash. */
+    holdLastFrame: Boolean = false,
 ) {
     // Only the full-screen live player passes autoFrameRate = true — the in-pane preview must never
     // reconfigure the display while the user is just scrolling the channel list.
@@ -189,6 +193,7 @@ fun ExoPreviewSurface(
         // 4K codec per Surface — see LivePreviewEngine.recreateSurface.
         val surfaceGeneration by engine.surfaceGeneration.collectAsStateWithLifecycle()
         val viewModifier = Modifier.videoZoom(zoom, aspect, videoSize, maxWidth, maxHeight)
+        val zapHold = androidx.compose.runtime.remember { ZapHold() }
         key(surfaceGeneration) {
             if (useTextureView) {
                 AndroidView(
@@ -222,6 +227,7 @@ fun ExoPreviewSurface(
                     modifier = viewModifier,
                     factory = { ctx ->
                         SurfaceView(ctx).apply {
+                            zapHold.view = this
                             holder.addCallback(object : SurfaceHolder.Callback {
                                 override fun surfaceCreated(holder: SurfaceHolder) = engine.setSurface(holder.surface)
                                 override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
@@ -233,6 +239,7 @@ fun ExoPreviewSurface(
                 )
             }
         }
+        if (holdLastFrame && !useTextureView && !tv.own.owntv.glcn.LowRam.on) ZapFreezeFrame(engine, zapHold)
         // Subtitle overlay — mounted ONLY while subs are on, so 4K live keeps its direct hardware-overlay path.
         // Sized like the video, not like the screen: at any zoom other than Fit the two differ, and
         // mounting this full-screen put the same subtitle in a different place depending on which engine
@@ -342,3 +349,108 @@ private fun anchor(cue: androidx.media3.common.text.Cue, position: SubtitleStyle
         )
         .build()
 }
+
+/** glcn: the live picture's view and the last small copy of what it showed. */
+private class ZapHold {
+    var view: SurfaceView? = null
+    var frame: android.graphics.Bitmap? = null
+}
+
+/**
+ * glcn: changing channel without a black flash. While a channel plays full screen, a small copy of the picture is
+ * taken now and then (PixelCopy, a few hundred pixels — not on 4K, whose path stays untouched). When the next channel
+ * starts tuning, that copy covers the hole, slightly dimmed, and fades out as soon as the new picture runs. The
+ * cover is only there for the change, so the picture keeps its direct hardware path the rest of the time.
+ */
+@Composable
+private fun ZapFreezeFrame(engine: LivePreviewEngine, hold: ZapHold) {
+    val size by engine.videoSize.collectAsStateWithLifecycle()
+    val playing by engine.isPlaying.collectAsStateWithLifecycle()
+    val buffering by engine.buffering.collectAsStateWithLifecycle()
+    val running = size != null && playing && !buffering
+    val shown = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<android.graphics.Bitmap?>(null) }
+    val fade = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+    // Copies while it runs (only SD/HD; a 4K picture is left alone).
+    LaunchedEffect(running, size) {
+        val (w, h) = size ?: return@LaunchedEffect
+        if (!running || h > ZAP_COPY_MAX_SOURCE) return@LaunchedEffect
+        kotlinx.coroutines.delay(ZAP_COPY_FIRST_MS)
+        while (true) {
+            copyFrame(hold, w, h)
+            kotlinx.coroutines.delay(ZAP_COPY_EVERY_MS)
+        }
+    }
+    // A change: the picture's size is forgotten as the next channel starts. Cover the hole with the last copy.
+    var hadPicture by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    LaunchedEffect(size == null) {
+        if (size != null) { hadPicture = true; return@LaunchedEffect }
+        val last = hold.frame
+        if (!hadPicture || last == null) return@LaunchedEffect
+        shown.value = last
+        fade.snapTo(1f)
+        // Not forever: a channel that never starts gives its own message, not an old picture.
+        kotlinx.coroutines.delay(ZAP_HOLD_MAX_MS)
+        fade.animateTo(0f, androidx.compose.animation.core.tween(ZAP_FADE_MS))
+        shown.value = null
+    }
+    LaunchedEffect(running) {
+        if (!running || shown.value == null) return@LaunchedEffect
+        hold.frame = null
+        kotlinx.coroutines.delay(ZAP_SETTLE_MS) // the first frames on screen before the cover lifts
+        fade.animateTo(0f, androidx.compose.animation.core.tween(ZAP_FADE_MS))
+        shown.value = null
+    }
+    val bmp = shown.value ?: return
+    val image = androidx.compose.runtime.remember(bmp) { bmp.asImageBitmap() }
+    androidx.compose.foundation.Image(
+        image, contentDescription = null,
+        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = fade.value },
+        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color.Black.copy(alpha = ZAP_DIM), androidx.compose.ui.graphics.BlendMode.SrcAtop),
+    )
+}
+
+
+private suspend fun copyFrame(hold: ZapHold, w: Int, h: Int) {
+    val view = hold.view ?: return
+    if (!view.holder.surface.isValid) return
+    val outW = ZAP_COPY_WIDTH
+    val outH = (outW * h / w.coerceAtLeast(1)).coerceIn(1, outW)
+    val bmp = runCatching { android.graphics.Bitmap.createBitmap(outW, outH, android.graphics.Bitmap.Config.ARGB_8888) }.getOrNull() ?: return
+    val ok = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+        runCatching {
+            android.view.PixelCopy.request(view, bmp, { result -> if (cont.isActive) cont.resumeWith(Result.success(result == android.view.PixelCopy.SUCCESS)) }, android.os.Handler(android.os.Looper.getMainLooper()))
+        }.onFailure { if (cont.isActive) cont.resumeWith(Result.success(false)) }
+    }
+    // A tunnelled or protected picture copies as black: keep nothing rather than a black cover.
+    if (ok && !looksBlack(bmp)) hold.frame = bmp else bmp.recycle()
+}
+
+private fun looksBlack(bmp: android.graphics.Bitmap): Boolean {
+    var sum = 0L
+    var n = 0
+    val stepX = (bmp.width / 8).coerceAtLeast(1)
+    val stepY = (bmp.height / 6).coerceAtLeast(1)
+    var y = stepY / 2
+    while (y < bmp.height) {
+        var x = stepX / 2
+        while (x < bmp.width) {
+            val c = bmp.getPixel(x, y)
+            sum += ((c shr 16) and 0xFF) + ((c shr 8) and 0xFF) + (c and 0xFF)
+            n++
+            x += stepX
+        }
+        y += stepY
+    }
+    return n == 0 || sum / (n * 3) < ZAP_BLACK_LEVEL
+}
+
+private const val ZAP_COPY_WIDTH = 480
+private const val ZAP_COPY_MAX_SOURCE = 1088
+private const val ZAP_COPY_FIRST_MS = 500L
+private const val ZAP_COPY_EVERY_MS = 2_500L
+private const val ZAP_HOLD_MAX_MS = 8_000L
+private const val ZAP_SETTLE_MS = 120L
+private const val ZAP_FADE_MS = 320
+private const val ZAP_DIM = 0.28f
+private const val ZAP_BLACK_LEVEL = 10

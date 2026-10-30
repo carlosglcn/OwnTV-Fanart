@@ -133,7 +133,13 @@ internal fun MovieTitlePage(
         // ◀ ▶ were taken for nothing.
         val pageFocus = androidx.compose.ui.platform.LocalFocusManager.current
         Box(
-            Modifier.fillMaxSize().then(if (inPlace) Modifier else Modifier.background(page)).trapAllFocusExit()
+            Modifier.fillMaxSize()
+                // glcn: opened over another screen, the page grows out of the card it came from (a short zoom).
+                .then(if (inPlace) Modifier else Modifier.graphicsLayer {
+                    val s = PAGE_ZOOM_FROM + (1f - PAGE_ZOOM_FROM) * enter.value
+                    scaleX = s; scaleY = s; alpha = (enter.value * 2f).coerceAtMost(1f)
+                })
+                .then(if (inPlace) Modifier else Modifier.background(page)).trapAllFocusExit()
                 .onPreviewKeyEvent { e ->
                     if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onPreviewKeyEvent false
                     when (e.key) {
@@ -376,6 +382,7 @@ private fun trailerKeysFirst(stored: String): String = tv.own.owntv.core.metadat
 private val PICK_FIRST = listOf("spa", "eng", "cat", "fra", "por", "ita", "deu")
 
 private const val PAGE_ENTER_MS = 420
+private const val PAGE_ZOOM_FROM = 0.94f
 private const val LOWER_MS = 480
 /** glcn: under a minute in is nothing to resume (it read "Resume from 0 min"). */
 private const val RESUME_MIN_MS = 60_000L
