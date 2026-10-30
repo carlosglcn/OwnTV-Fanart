@@ -43,6 +43,7 @@ import tv.own.owntv.core.epg.displayLogoUrl
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.layout
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -500,6 +501,56 @@ fun OwnTVShell(
         MainSection.MOVIES -> playingMovie?.let { movieFavoriteIds.contains(it.id) } ?: false
         MainSection.SERIES -> playingSeries?.let { seriesFavoriteIds.contains(it.id) } ?: false
         else -> false
+    }
+    // glcn: what the film player's cinema chrome shows — the film or episode, its lettering and rating (TMDB, cached).
+    val cinemaMeta = koinInject<tv.own.owntv.core.metadata.MetadataRepository>()
+    val cinemaQueue by seriesVm.cinemaQueue.collectAsStateWithLifecycle()
+    val cinemaEpisodeNow = cinemaQueue?.let { (eps, i) -> eps.getOrNull(i) }
+    val cinemaInfo by androidx.compose.runtime.produceState<tv.own.owntv.glcn.CinemaInfo?>(
+        null, zapSource, playingMovie?.id, playingSeries?.id, cinemaEpisodeNow?.id,
+    ) {
+        value = when (zapSource) {
+            MainSection.MOVIES -> playingMovie?.let { m ->
+                val meta = runCatching { cinemaMeta.resolveMovie(m) }.getOrNull()
+                tv.own.owntv.glcn.CinemaInfo(
+                    title = m.name,
+                    logoUrl = tv.own.owntv.core.metadata.MetadataImages.logo(meta?.logoPath),
+                    year = m.year ?: meta?.year,
+                    durationMin = m.durationSecs?.let { it / 60 }?.takeIf { it > 0 },
+                    rating = meta?.rating?.takeIf { it > 0 } ?: m.rating?.takeIf { it > 0 },
+                    genres = cinemaJsonList(meta?.genresJson),
+                    overview = meta?.overview?.takeIf { it.isNotBlank() } ?: m.plot,
+                    cast = tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson).map { it.name },
+                    capabilities = m.advertisedCapabilities,
+                    qualityRank = m.qualityRank,
+                )
+            }
+            MainSection.SERIES -> playingSeries?.let { show ->
+                val meta = runCatching { cinemaMeta.resolveSeries(show) }.getOrNull()
+                val ep = cinemaEpisodeNow
+                tv.own.owntv.glcn.CinemaInfo(
+                    title = ep?.name?.takeIf { it.isNotBlank() } ?: show.name,
+                    logoUrl = tv.own.owntv.core.metadata.MetadataImages.logo(meta?.logoPath),
+                    year = show.year ?: meta?.year,
+                    durationMin = ep?.durationSecs?.let { it / 60 }?.takeIf { it > 0 },
+                    rating = meta?.rating?.takeIf { it > 0 } ?: show.rating?.takeIf { it > 0 },
+                    genres = cinemaJsonList(meta?.genresJson),
+                    overview = ep?.plot?.takeIf { it.isNotBlank() } ?: meta?.overview ?: show.plot,
+                    cast = tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson).map { it.name },
+                    show = show.name,
+                    season = ep?.seasonNumber,
+                    episode = ep?.episodeNumber,
+                    capabilities = show.advertisedCapabilities,
+                    qualityRank = show.qualityRank,
+                )
+            }
+            else -> null
+        }
+    }
+    val cinemaEpisodes = remember(cinemaQueue?.first) {
+        cinemaQueue?.first.orEmpty().map {
+            tv.own.owntv.glcn.CinemaEpisode(it.seasonNumber, it.episodeNumber, it.name, it.plot, it.durationSecs?.let { s -> s / 60 }?.takeIf { m -> m > 0 })
+        }
     }
     // Tell core which playlist is on screen, so its background catalogue drain steps aside while the
     // user is watching. Core cannot work this out alone: the player engines are handed
@@ -2054,8 +2105,14 @@ fun OwnTVShell(
                     keepAwake = true, autoFrameRate = isFull && !inPip && autoFrameRate, holdLastFrame = isFull && !inPip,
                 )
             } else {
+                // glcn: the cinema side panel slides the film to the left, still playing.
+                val cinemaShift by androidx.compose.animation.core.animateFloatAsState(
+                    if (isFull && !inPip && tv.own.owntv.glcn.CinemaStage.panelOpen) 1f else 0f,
+                    androidx.compose.animation.core.tween(if (tv.own.owntv.glcn.DeviceClass.richMotion) CINEMA_SHIFT_MS else 0),
+                    label = "cinemaShift",
+                )
                 MpvVideoSurface(
-                    player = player, modifier = Modifier.fillMaxSize(), autoFrameRate = isFull && !inPip && autoFrameRate,
+                    player = player, modifier = Modifier.fillMaxSize().cinemaInset(cinemaShift), autoFrameRate = isFull && !inPip && autoFrameRate,
                     afrMatchResolution = afrMatchResolution, afrHoldSecs = afrPauseSecs,
                 )
             }
@@ -2075,7 +2132,7 @@ fun OwnTVShell(
             // dropping the only line of dialogue there made subtitles look broken. Scaled to the box.
             if (!liveOnExo && !inPip) {
                 tv.own.owntv.player.SubtitleOverlay(
-                    player = player, modifier = Modifier.fillMaxSize(),
+                    player = player, modifier = Modifier.fillMaxSize().cinemaInset(if (tv.own.owntv.glcn.CinemaStage.panelOpen && isFull) 1f else 0f),
                     // Tied to the chosen mini size, but nudged up and floored: a strictly proportional
                     // line would be unreadable in the smallest box.
                     sizeScale = if (isFull) 1f else {
@@ -2164,6 +2221,11 @@ fun OwnTVShell(
                     onTune = { ch, _ -> liveVm.ensurePlaying(ch); showTvStrip = false },
                     onDismiss = { showTvStrip = false },
                 )
+                androidx.compose.runtime.CompositionLocalProvider(
+                    // glcn: a film is watched with the lights down — the player is dark whatever the app's style.
+                    tv.own.owntv.ui.theme.LocalStagePalette provides
+                        if (!isLiveStream && !isLiveChannel) tv.own.owntv.ui.theme.StagePalette.Dark else tv.own.owntv.ui.theme.LocalStagePalette.current,
+                ) {
                 PlayerHud(
                     player = if (liveOnExo) liveVm.previewEngine else mpvEngine, // HUD drives the active engine
                     onOpenStrip = if (isTunedLive && tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId)) ({ showTvStrip = true }) else null,
@@ -2322,6 +2384,17 @@ fun OwnTVShell(
                     // glcn: the Info button opens the programme's own screen on a live channel.
                     onProgrammeInfo = if (isTunedLive && previewChannel != null) { { showProgramInfo = true } } else null,
                     onToastOk = goalToast?.let { a -> { switchToMatch(a.match) } },
+                    // glcn: films and episodes get the cinema chrome.
+                    cinema = if (!isLiveStream && !isLiveChannel) cinemaInfo else null,
+                    cinemaEpisodes = if (zapSource == MainSection.SERIES) cinemaEpisodes else emptyList(),
+                    cinemaEpisodeIndex = cinemaQueue?.second ?: -1,
+                    onPlayEpisode = if (zapSource == MainSection.SERIES) {
+                        { i ->
+                            val q = cinemaQueue
+                            val show = playingSeries
+                            if (q != null && show != null) q.first.getOrNull(i)?.let { seriesVm.playEpisodeQueue(show, q.first, it) }
+                        }
+                    } else null,
                     modifier = Modifier.fillMaxSize().onPreviewKeyEvent { e ->
                         // glcn: OK while "Skip intro" shows jumps the intro.
                         val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
@@ -2330,6 +2403,7 @@ fun OwnTVShell(
                         true
                     },
                 )
+                }
                 // glcn: "Skip intro" on series episodes — OK while it shows (controls hidden) jumps it.
                 if (!isLiveChannel) tv.own.owntv.glcn.IntroSkip.Chip(
                     engine = if (liveOnExo) liveVm.previewEngine else mpvEngine,
@@ -2771,3 +2845,34 @@ private const val FILM_WARM_MS = 1_500L
 /** glcn: a section's entrance — how long and from how far right. */
 private const val SECTION_IN_MS = 180
 private val SECTION_IN_SLIDE = 14.dp
+
+/** glcn: a stored JSON array of strings (TMDB genres) as a list; empty when absent or unreadable. */
+private fun cinemaJsonList(json: String?): List<String> {
+    if (json.isNullOrBlank()) return emptyList()
+    return runCatching {
+        val arr = org.json.JSONArray(json)
+        (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { s -> s.isNotBlank() } }
+    }.getOrDefault(emptyList())
+}
+
+/** glcn: how long the film takes to slide aside for the cinema panel. */
+private const val CINEMA_SHIFT_MS = 380
+
+/**
+ * glcn: the film's box as the cinema panel opens — at [p] = 0 the whole screen, at 1 a 16:9 picture filling
+ * the left 56% of the width, centred top to bottom. Measured, not scaled: the picture is a SurfaceView, which
+ * follows its layout box but not a drawing transform.
+ */
+private fun Modifier.cinemaInset(p: Float): Modifier = if (p <= 0f) this else this.layout { measurable, constraints ->
+    val fullW = constraints.maxWidth
+    val fullH = constraints.maxHeight
+    val smallW = fullW * 0.56f
+    val smallH = smallW * 9f / 16f
+    val left = 48.dp.toPx()
+    val w = (fullW + (smallW - fullW) * p).toInt()
+    val h = (fullH + (smallH - fullH) * p).toInt()
+    val x = (left * p).toInt()
+    val y = ((fullH - h) / 2f).toInt()
+    val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w.coerceAtLeast(1), h.coerceAtLeast(1)))
+    layout(fullW, fullH) { placeable.place(x, y) }
+}

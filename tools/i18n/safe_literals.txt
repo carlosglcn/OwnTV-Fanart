@@ -677,6 +677,7 @@
 1	json	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	,
 1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	OK
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	ass
+1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	cinemaShift
 1	performance	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	epg-preload
 1	performance	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	shell-composed
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	srt
@@ -1036,6 +1037,59 @@
 1	technical	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	liveDot
 1	technical	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	liveDotAlpha
 1	technical	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	tnum
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	\0
+1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	$code · ${e.title}
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	${t.width}×${t.height}
+1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	%.3f fps
+1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	%d fps
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	,
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	2.0
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	4K
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	4k
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	5.1
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	5_1
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	7.1
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	7_1
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	:
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	DTS
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	DTS-HD
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	DiscouragedApi
+1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	Dolby Atmos
+1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	Dolby Digital
+1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	Dolby Digital Plus
+1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	Dolby Vision
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	HD
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	HDR10
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	HDR10+
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	HLG
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	TrueHD
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	ac-3
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	ac3
+2	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	atmos
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	dca
+1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	dolby vision
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	dolby_atmos
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	dolby_digital
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	dolby_digital_plus
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	dolby_vision
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	drawable
+3	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	dts
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	dts_hd
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	e-ac-3
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	eac3
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	glcn_badge_
+2	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	hd
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	hdr
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	hdr10
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	hdr10+
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	hdr10_plus
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	hlg
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	joc
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	ma
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	true-hd
+2	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	truehd
+4	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	·
+1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	★
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR apply failed: ${it.message}
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR reset failed: ${it.message}
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR: ${fps}fps -> mode $targetId deferred ${waitMs}ms (cooldown)

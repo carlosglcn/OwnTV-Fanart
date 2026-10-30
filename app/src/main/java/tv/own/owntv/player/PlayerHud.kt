@@ -218,6 +218,12 @@ fun PlayerHud(
     // The match page.
     // A goal toast for another followed match is up: OK switches to it instead of showing the controls.
     onToastOk: (() -> Unit)? = null,
+    /** glcn: films and episodes — the cinema chrome (banner + side panel). Null keeps the classic bar. */
+    cinema: tv.own.owntv.glcn.CinemaInfo? = null,
+    /** glcn: the season playing (Episodes tab) and which one is on. */
+    cinemaEpisodes: List<tv.own.owntv.glcn.CinemaEpisode> = emptyList(),
+    cinemaEpisodeIndex: Int = -1,
+    onPlayEpisode: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     // Nothing that ticks is read in this root scope: with the controls hidden it used to recompose
@@ -281,11 +287,21 @@ fun PlayerHud(
     // Used only by "Report this stream", which writes the current readout into the playback log.
     val reportContext = androidx.compose.ui.platform.LocalContext.current
     var wakeTick by remember { mutableIntStateOf(0) }
-    val forceShow = error != null || dialog != HudDialog.NONE
+    // glcn: the cinema chrome — films and episodes only; its side panel, while open, keeps the controls up.
+    val cinemaMode = !isLive && cinema != null
+    var cinemaTab by remember { mutableStateOf<CinemaTab?>(null) }
+    val panelFocus = remember { FocusRequester() }
+    androidx.compose.runtime.DisposableEffect(cinemaTab) {
+        tv.own.owntv.glcn.CinemaStage.panelOpen = cinemaTab != null
+        onDispose { tv.own.owntv.glcn.CinemaStage.panelOpen = false }
+    }
+    val forceShow = error != null || dialog != HudDialog.NONE || cinemaTab != null
     // First Back hides the controls (instead of leaving the channel); with the controls already hidden
     // this handler is disabled, so Back falls through to the shell, which exits the player. Also disabled
     // while an error/dialog is up (a dialog handles its own Back; an error should exit).
     BackHandler(enabled = controlsVisible && !forceShow) { controlsVisible = false }
+    // glcn: Back closes the cinema side panel first (registered after, so it wins while enabled).
+    BackHandler(enabled = cinemaTab != null && dialog == HudDialog.NONE) { cinemaTab = null }
     // Channel zap (live only): a brief "now watching" card on up/down without revealing the full HUD.
     val canZap = onChannelUp != null && onChannelDown != null
     var channelFlash by remember { mutableIntStateOf(0) }
@@ -440,10 +456,16 @@ fun PlayerHud(
         val hideAfter = tv.own.owntv.core.settings.OsdRules.controlsMs(osdSetting)
         if (controlsVisible && !forceShow && !inert && hideAfter != null) { delay(hideAfter); controlsVisible = false }
     }
-    LaunchedEffect(controlsVisible, error, dialog, inert, showNextCard) {
+    LaunchedEffect(controlsVisible, error, dialog, inert, showNextCard, cinemaTab) {
         // Never steal focus while a dialog is open (its rows own it) or while a shell overlay is up
         // (inert — the overlay owns the D-pad); when either closes this re-runs and hands focus back.
         if (dialog != HudDialog.NONE || inert) return@LaunchedEffect
+        // glcn: the cinema panel owns focus while it is open (its selected tab).
+        if (cinemaTab != null && error == null) {
+            kotlinx.coroutines.delay(16)
+            runCatching { panelFocus.requestFocus() }
+            return@LaunchedEffect
+        }
         // The next-episode countdown card owns focus while it's up so Play now / Cancel are reachable.
         if (showNextCard) { runCatching { nextFocus.requestFocus() }; return@LaunchedEffect }
         if (controlsVisible) {
@@ -749,7 +771,41 @@ fun PlayerHud(
         // stop button one stray D-pad press from the middle of a programme is not a kindness.
         RecordingBadge(modifier = Modifier.align(Alignment.TopEnd))
 
-        if (controlsVisible) {
+        if (controlsVisible && cinemaMode && error == null && cinema != null) {
+            // glcn: films and episodes — the cinema banner, or the side panel with the picture slid left.
+            val tech = rememberCinemaTech(player)
+            val openTab = cinemaTab
+            if (openTab == null) {
+                CinemaBanner(
+                    player = player, info = cinema, tech = tech,
+                    position = { position.value }, duration = duration, isPlaying = isPlaying,
+                    hasNext = nav.hasNext, hasEpisodes = cinemaEpisodes.size > 1 && onPlayEpisode != null,
+                    playFocus = playFocus, seekFocus = seekFocus,
+                    onOpen = { cinemaTab = it },
+                    onNext = { player.next() },
+                )
+                Box(Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 40.dp)) {
+                    PlayerClock(watchingMs = watchingWallMs?.invoke())
+                }
+            } else {
+                CinemaPanel(
+                    tab = openTab, onTab = { cinemaTab = it },
+                    player = player, info = cinema, tech = tech,
+                    episodes = cinemaEpisodes, episodeIndex = cinemaEpisodeIndex, onPlayEpisode = onPlayEpisode,
+                    actions = CinemaActions(
+                        openDialog = { dialog = it },
+                        vodOnExo = vodOnExo, onToggleEngine = toggleVod,
+                        onPip = onPip?.let { pip -> { cinemaTab = null; pip() } },
+                        onAudioOnly = onAudioMode?.let { a -> { cinemaTab = null; a() } },
+                        favorite = favorite, onToggleFavorite = onToggleFavorite,
+                        onTechDetails = { cinemaTab = null; showInfo = !showInfo },
+                        onSearchSubtitles = onSearchSubtitles?.let { open -> { cinemaTab = null; open() } },
+                        onLocalSubtitle = onSelectLocalSubtitle?.let { open -> { cinemaTab = null; open() } },
+                    ),
+                    focus = panelFocus,
+                )
+            }
+        } else if (controlsVisible) {
             // glcn: the bar rises gently from the foot of the screen each time it is called (not in light mode).
             val rise = remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
             val riseSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(HUD_RISE_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))

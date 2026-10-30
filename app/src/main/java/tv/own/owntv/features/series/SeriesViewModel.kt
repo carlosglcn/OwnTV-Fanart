@@ -356,6 +356,9 @@ class SeriesViewModel(
 
     // The series whose episode queue is currently playing — drives the player HUD's favorite toggle
     // (distinct from _openedSeries, which tracks the browse/detail selection).
+    /** glcn: the season playing and which of its episodes is on — the film player's Episodes tab. */
+    private val _cinemaQueue = MutableStateFlow<Pair<List<EpisodeEntity>, Int>?>(null)
+    val cinemaQueue: StateFlow<Pair<List<EpisodeEntity>, Int>?> = _cinemaQueue.asStateFlow()
     private val _playingSeries = MutableStateFlow<SeriesEntity?>(null)
     val playingSeries: StateFlow<SeriesEntity?> = _playingSeries.asStateFlow()
 
@@ -448,6 +451,7 @@ class SeriesViewModel(
                 playingEpisodeRef = PlayingEpisodeRef(
                     ep, q.profileId, tv.own.owntv.core.player.enginePinKey(q.show.sourceId, "EPISODE", ep.remoteId),
                 )
+                _cinemaQueue.value = q.episodes to index
                 subtitleController.setEpisode(q.profileId, q.show, ep, q.parentTmdbId)
             }
         }
@@ -463,6 +467,7 @@ class SeriesViewModel(
     )
 
     private var playingQueue: PlayingQueue? = null
+
 
     /** A season's last episode finished with auto-play on — start the next season's first episode, if any.
      *  Matches the just-finished episode by its stream URL (robust to in-season auto-advance). The next
@@ -1088,6 +1093,7 @@ class SeriesViewModel(
                 return@launch
             }
             val startIndex = queue.indexOfFirst { it.id == episode.id }.coerceAtLeast(0)
+            _cinemaQueue.value = queue to startIndex
             Log.d(TAG, "playEpisodeQueue seriesId=${show.id} episodeId=${episode.id} profile=$pid queue=${queue.size} startIndex=$startIndex startPositionMs=$startPositionMs")
             val source = sourceDao.getById(show.sourceId)
             val sourceUa = source?.userAgent
