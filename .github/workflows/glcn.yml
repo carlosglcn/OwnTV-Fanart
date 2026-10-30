@@ -90,6 +90,16 @@ jobs:
           mkdir -p dist && cp "$APK" dist/OwnTV-Fanart.apk
           ls -la dist
 
+      # glcn: the R8 mapping of every build, kept 90 days, so a crash report's obfuscated lines can be read back.
+      - name: Keep R8 mapping
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapping-${{ env.VERSION_NAME }}
+          path: app/build/outputs/mapping/**/mapping.txt
+          retention-days: 90
+          if-no-files-found: ignore
+
       # glcn: every push is built and checked, but a version is only published when asked:
       # a commit whose message carries [release], or a manual run. The notes come from
       # glcn/RELEASE_NOTES.md, which the in-app updater shows.
