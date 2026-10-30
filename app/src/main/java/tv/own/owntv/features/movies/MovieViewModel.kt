@@ -771,6 +771,10 @@ class MovieViewModel(
                 vodEngineOverride = SourceOverrides.vodEngineOf(source),
                 drmConfig = movie.drmConfig,
                 manifestType = movie.manifestType,
+                // glcn: the engine this file suits (4K/HDR/DV → ExoPlayer, AVI/ISO… → mpv).
+                enginePick = tv.own.owntv.core.player.EngineHint.of(
+                    movie.name, movie.streamUrl, movie.qualityRank, movie.advertisedCapabilities, movie.containerExt,
+                ),
                 // Engine pins key on this, not on playUrl (a Stalker playUrl is minted per play).
                 contentKey = pinKey,
                 // A Stalker create_link URL dies before a long film ends; give the player a way to

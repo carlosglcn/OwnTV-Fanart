@@ -1114,6 +1114,10 @@ class SeriesViewModel(
                             contentKey = tv.own.owntv.core.player.enginePinKey(show.sourceId, "EPISODE", ep.remoteId),
                             // v44 — audio/subtitle choices are remembered per series.
                             trackKey = tv.own.owntv.core.player.enginePinKey(show.sourceId, "SERIES", show.remoteId),
+                            // glcn: the engine this file suits; the show carries the quality marks.
+                            enginePick = tv.own.owntv.core.player.EngineHint.of(
+                                ep.name, ep.streamUrl, show.qualityRank, show.advertisedCapabilities, ep.containerExt,
+                            ),
                         ),
                         resolveUrl = if (needsResolve && source != null) {
                             { streamUrlResolver.resolve(source, ep.streamUrl, vod = true, episode = ep.episodeNumber) }
