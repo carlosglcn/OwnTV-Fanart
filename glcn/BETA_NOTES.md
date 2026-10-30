@@ -199,3 +199,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔔 Suggested programmes come one at a time: when two you usually watch air together, only the one you watch most is suggested (and a reminder you set yourself always wins), instead of one prompt right after the other (thanks to the community for the report).
 - 🎞️ No more line at the trailer window's left edge: the trailer now plays under the still picture and shows through a soft opening in its middle, so the window's edges are always the picture melting into the page (tint and light included).
 - 🍎 Apple TV touch in Home, Movies and Series: once the sliding focus box reaches a poster, the picture inside it leans and sways a little, with the light sweep.
+- 🍎 Focus with momentum and depth: arriving on a poster, it tips the way you moved and springs back, then sways; its picture slides a touch against the lean, as if behind glass, with a soft gloss that follows it.
+- 🔈 New, softer Back sound in the Natural style.
