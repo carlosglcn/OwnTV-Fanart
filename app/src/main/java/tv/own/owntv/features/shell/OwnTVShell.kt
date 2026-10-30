@@ -41,6 +41,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import tv.own.owntv.core.epg.displayLogoUrl
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -1404,10 +1405,11 @@ fun OwnTVShell(
                 // glcn: a new section comes in with a short fade and a slight slide — no hard cut between screens.
                 val sectionIn = remember { androidx.compose.animation.core.Animatable(1f) }
                 val sectionMotion = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
+                val sectionSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(SECTION_IN_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
                 LaunchedEffect(selectedSection) {
                     if (!sectionMotion) return@LaunchedEffect
                     sectionIn.snapTo(0f)
-                    sectionIn.animateTo(1f, tv.own.owntv.ui.theme.ownTvTween(SECTION_IN_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+                    sectionIn.animateTo(1f, sectionSpec)
                 }
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth()

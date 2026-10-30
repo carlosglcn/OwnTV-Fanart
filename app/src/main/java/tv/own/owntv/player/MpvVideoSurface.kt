@@ -381,11 +381,11 @@ private fun ZapFreezeFrame(engine: LivePreviewEngine, hold: ZapHold) {
         }
     }
     // A change: the picture's size is forgotten as the next channel starts. Cover the hole with the last copy.
-    var hadPicture by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val hadPicture = androidx.compose.runtime.remember { booleanArrayOf(false) }
     LaunchedEffect(size == null) {
-        if (size != null) { hadPicture = true; return@LaunchedEffect }
+        if (size != null) { hadPicture[0] = true; return@LaunchedEffect }
         val last = hold.frame
-        if (!hadPicture || last == null) return@LaunchedEffect
+        if (!hadPicture[0] || last == null) return@LaunchedEffect
         shown.value = last
         fade.snapTo(1f)
         // Not forever: a channel that never starts gives its own message, not an old picture.
