@@ -1404,6 +1404,22 @@ fun OwnTVShell(
                     homeVm.stopPreview()
                     if (playerMode != PlayerMode.MINI) playerMode = PlayerMode.FULLSCREEN
                 }
+                // glcn: films and series chosen on Home open their page (Keep watching and Trending too) when "Page before
+                // watching" is on; the page's own Play / Resume plays.
+                val homeMovieDao: tv.own.owntv.core.database.dao.MovieDao = org.koin.compose.koinInject()
+                val openContinueMovie: ((Long) -> Unit)? = if (!tv.own.owntv.glcn.DockPrefs.titlePage) null else { id ->
+                    scope.launch {
+                        val m = runCatching { homeMovieDao.getById(id) }.getOrNull()
+                        if (m != null) homeFilm = m
+                        else if (movieVm.playByIdAsync(id, 0L) && !movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES)
+                    }
+                }
+                val openContinueSeries: ((Long) -> Unit)? = if (!tv.own.owntv.glcn.DockPrefs.titlePage) null else { id ->
+                    seriesVm.openSeriesById(id)
+                    restoreFocus = true
+                    seriesFromHome = true
+                    onSelectSection(MainSection.SERIES)
+                }
                 // glcn: a new section comes in with a slight slide — no hard cut between screens.
                 val sectionIn = remember { androidx.compose.animation.core.Animatable(1f) }
                 val sectionMotion = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
@@ -1526,9 +1542,13 @@ fun OwnTVShell(
                                 scope.launch {
                                     when (val current = homeVm.revalidateTrendingItem(selected)) {
                                         is TrendingHomeItem.Movie -> {
-                                            val played = movieVm.playByIdAsync(current.movie.id)
-                                            if (!played) onUnavailable()
-                                            else if (!movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES)
+                                            if (tv.own.owntv.glcn.DockPrefs.titlePage) {
+                                                homeFilm = current.movie
+                                            } else {
+                                                val played = movieVm.playByIdAsync(current.movie.id)
+                                                if (!played) onUnavailable()
+                                                else if (!movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES)
+                                            }
                                         }
                                         is TrendingHomeItem.Series -> {
                                             seriesVm.openSeries(current.series)
@@ -1555,6 +1575,8 @@ fun OwnTVShell(
                                 seriesFromHome = true
                                 onSelectSection(MainSection.SERIES)
                             },
+                            onOpenContinueMovie = openContinueMovie,
+                            onOpenContinueSeries = openContinueSeries,
                             onOpenMatch = { m ->
                                 sportsMatchRequests.pendingMatch.value = m to null
                                 onSelectSection(MainSection.SPORTS)
@@ -1580,9 +1602,13 @@ fun OwnTVShell(
                                 scope.launch {
                                     when (val current = homeVm.revalidateTrendingItem(selected)) {
                                         is TrendingHomeItem.Movie -> {
-                                            val played = movieVm.playByIdAsync(current.movie.id)
-                                            if (!played) onUnavailable()
-                                            else if (!movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES)
+                                            if (tv.own.owntv.glcn.DockPrefs.titlePage) {
+                                                homeFilm = current.movie
+                                            } else {
+                                                val played = movieVm.playByIdAsync(current.movie.id)
+                                                if (!played) onUnavailable()
+                                                else if (!movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES)
+                                            }
                                         }
                                         is TrendingHomeItem.Series -> {
                                             seriesVm.openSeries(current.series)
@@ -1609,6 +1635,8 @@ fun OwnTVShell(
                                 seriesFromHome = true
                                 onSelectSection(MainSection.SERIES)
                             },
+                            onOpenContinueMovie = openContinueMovie,
+                            onOpenContinueSeries = openContinueSeries,
                             onOpenTrendingSearch = { query ->
                                 searchVm.setQuery(query)
                                 trendingSearchActive = true

@@ -209,3 +209,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔈 New Move sound (a soft, low tap) in the Natural style.
 - ↩️ Movies, Series and Home rows with the sliding focus box: the picture no longer leans and circles inside it — back to the slow zoom it had (as asked).
 - ⚡ Lighter motion: the focused card no longer sways in circles anywhere (a short tip on arrival, then still, with its slow zoom); sections slide in without a fade (nothing drawn twice while a screen loads); Home rows sit back without re-drawing every row; buttons and lists no longer carry the press animation (posters keep it).
+- 🎞️ No hard box round the trailer on any Home (Dock, classic, Cinema): it plays under the picture and shows through a soft opening, so its edges are the picture itself; the backdrop holds still while it plays, so nothing is redrawn under the video.
+- 🎬 Home: films and series open their page — Keep watching and Trending too (the page's Play / Resume plays; the Dock card's own Resume still plays at once).
+- ⏸️ Playing a film's extra pauses the trailer behind the page, and the trailer goes on by itself when you come back (its sound no longer plays over the extra).

@@ -117,6 +117,16 @@ object TrailerPool {
     private var lastWindow: android.os.IBinder? = null
     private var isPlaying = false
     private val idleFree = Runnable { if (request == null) free() }
+    /** glcn: another video is playing full screen (a film's extra): the trailer waits, paused, and goes on after. */
+    private var holds = 0
+
+    /** glcn: pause the trailer while something else plays ([on] = true), and let it go on once that ends. */
+    fun hold(on: Boolean) {
+        holds = (holds + if (on) 1 else -1).coerceAtLeast(0)
+        val p = player ?: return
+        if (holds > 0) runCatching { p.pause() }
+        else request?.takeIf { it.started }?.let { runCatching { p.play() } }
+    }
 
     /** Get the player ready ahead of the first trailer (a page that may show one calls this). */
     fun warm(context: Context) {
@@ -166,7 +176,7 @@ object TrailerPool {
             // The same trailer, handed on: it goes on from where it is, no new load.
             request = r
             applyMute(p, r.muted)
-            if (r.start) { r.started = true; if (isPlaying) r.onPlaying() else p.play() }
+            if (r.start) { r.started = true; if (isPlaying) r.onPlaying() else if (holds == 0) p.play() }
             return
         }
         request?.let { old -> if (old.owner !== r.owner) runCatching { player?.pause() } }
@@ -178,7 +188,7 @@ object TrailerPool {
         val r = request?.takeIf { it.owner === owner } ?: return
         r.start = true
         val p = player ?: return
-        if (!r.started) { r.started = true; p.play() }
+        if (!r.started) { r.started = true; if (holds == 0) p.play() }
     }
 
     fun setMuted(owner: Any, muted: Boolean) {
@@ -236,7 +246,7 @@ object TrailerPool {
         val key = r.keys.getOrNull(r.index) ?: return
         loadedKey = key
         isPlaying = false
-        if (r.start) { r.started = true; p.loadVideo(key, r.startAt) } else p.cueVideo(key, r.startAt)
+        if (r.start && holds == 0) { r.started = true; p.loadVideo(key, r.startAt) } else p.cueVideo(key, r.startAt)
     }
 
     private val listener = object : AbstractYouTubePlayerListener() {
@@ -251,8 +261,8 @@ object TrailerPool {
             val r = request ?: return
             // glcn: moved to another page (another window), the web view pauses the video by itself — a trailer that is
             // still wanted plays on, so entering a title's page never stops it.
-            if (state == PlayerConstants.PlayerState.PAUSED && r.started) {
-                main.postDelayed({ if (request === r && !isPlaying) runCatching { player?.play() } }, RESUME_AFTER_MOVE_MS)
+            if (state == PlayerConstants.PlayerState.PAUSED && r.started && holds == 0) {
+                main.postDelayed({ if (request === r && !isPlaying && holds == 0) runCatching { player?.play() } }, RESUME_AFTER_MOVE_MS)
             }
             when (state) {
                 PlayerConstants.PlayerState.PLAYING -> if (r.started) r.onPlaying()

@@ -83,6 +83,9 @@ import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.StageRadii
 import tv.own.owntv.ui.theme.dissolveEdges
 import tv.own.owntv.ui.theme.fadeEdgesInto
+import tv.own.owntv.glcn.insetShare
+import tv.own.owntv.glcn.innerTrailerHole
+import tv.own.owntv.glcn.topRightTrailerHole
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.mpxSp
 import tv.own.owntv.ui.theme.stageAccent
@@ -104,42 +107,39 @@ internal fun HomeFocusBackdrop(url: String?, modifier: Modifier = Modifier, trai
     LaunchedEffect(url) { if (url != settled) { delay(CLASSIC_BACKDROP_SETTLE_MS); settled = url } }
     Box(modifier.fillMaxSize()) {
         tv.own.owntv.ui.components.ArtTint(settled, Modifier.fillMaxSize(), strength = 0.55f)
-        Box(
-            Modifier
-                .align(Alignment.TopEnd)
-                .fillMaxWidth(0.6f)
-                .height(560.mpx)
-                .dissolveEdges(start = 0.45f, bottom = 0.45f),
-        ) {
-            val animate = tv.own.owntv.ui.theme.animationsOn
-            Crossfade(targetState = settled, label = "homeFocusArt") { u ->
-                if (!u.isNullOrBlank()) {
-                    // glcn: a bright picture is brought down to the page, so cards always read over it.
-                    val glow = tv.own.owntv.ui.components.rememberArtColor(u)?.luminance() ?: 0.3f
-                    // glcn: the backdrop drifts slowly closer too, in step with the focused card.
-                    val drift = remember(u) { androidx.compose.animation.core.Animatable(1f) }
-                    val driftOn = animate && !tv.own.owntv.ui.stage.GlcnMotion.subtle
-                    LaunchedEffect(u, driftOn) {
-                        if (driftOn) drift.animateTo(1.06f, androidx.compose.animation.core.tween(8_000, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+        // glcn: the focused film's trailer plays under the picture, where the picture is solid; once it runs a soft hole
+        // opens there (see TrailerHole), so the window's edges stay the picture melting into the page — no hard box.
+        val holeOpen = trailer != null && CinemaTrailer.playing?.first == trailer
+        val hole by androidx.compose.animation.core.animateFloatAsState(if (holeOpen) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(TRAILER_HOLE_MS), label = "classicTrailerHole")
+        Box(Modifier.align(Alignment.TopEnd).fillMaxWidth(0.6f).height(560.mpx)) {
+            FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize().insetShare(CLASSIC_EDGE, CLASSIC_EDGE), dissolve = false)
+            Box(
+                Modifier.fillMaxSize()
+                    .dissolveEdges(start = CLASSIC_EDGE, bottom = CLASSIC_EDGE)
+                    .innerTrailerHole(CLASSIC_EDGE, CLASSIC_EDGE, TRAILER_HOLE_BLEND) { hole },
+            ) {
+                val animate = tv.own.owntv.ui.theme.animationsOn
+                Crossfade(targetState = settled, label = "homeFocusArt") { u ->
+                    if (!u.isNullOrBlank()) {
+                        // glcn: a bright picture is brought down to the page, so cards always read over it.
+                        val glow = tv.own.owntv.ui.components.rememberArtColor(u)?.luminance() ?: 0.3f
+                        // glcn: the backdrop drifts slowly closer too, in step with the focused card.
+                        val drift = remember(u) { androidx.compose.animation.core.Animatable(1f) }
+                        val driftOn = animate && !tv.own.owntv.ui.stage.GlcnMotion.subtle && !holeOpen
+                        LaunchedEffect(u, driftOn) {
+                            if (driftOn) drift.animateTo(1.06f, androidx.compose.animation.core.tween(8_000, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                        }
+                        AsyncImage(
+                            model = u, contentDescription = null, contentScale = ContentScale.Crop,
+                            alignment = androidx.compose.ui.BiasAlignment(0f, -0.4f),
+                            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = drift.value; scaleY = drift.value },
+                        )
+                        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = (0.1f + glow * 0.5f).coerceAtMost(0.5f))))
                     }
-                    AsyncImage(
-                        model = u, contentDescription = null, contentScale = ContentScale.Crop,
-                        alignment = androidx.compose.ui.BiasAlignment(0f, -0.4f),
-                        modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = drift.value; scaleY = drift.value },
-                    )
-                    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = (0.1f + glow * 0.5f).coerceAtMost(0.5f))))
                 }
+                Box(Modifier.fillMaxSize().backdropLeftWash(0f to 0.85f, 0.35f to 0.45f, 0.7f to 0.15f, 1f to 0f))
             }
-            Box(Modifier.fillMaxSize().backdropLeftWash(0f to 0.85f, 0.35f to 0.45f, 0.7f to 0.15f, 1f to 0f))
         }
-        // glcn: the focused film's trailer in the same window, silent, after a few calm seconds — outside the masked
-        // picture, its edges fading into the page by paint (a mask redrawn every video frame made it stutter).
-        FocusTrailer(
-            trailer, trailerTitle, focusKey,
-            Modifier.align(Alignment.TopEnd).fillMaxWidth(0.6f).height(560.mpx)
-                .fadeEdgesInto(tv.own.owntv.ui.theme.LocalStagePalette.current.page, 0.45f, 0.45f),
-            dissolve = false,
-        )
     }
 }
 
@@ -840,6 +840,15 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
     }
     Box(modifier.fillMaxSize()) {
         tv.own.owntv.ui.components.ArtTint(art, Modifier.fillMaxSize(), strength = 0.75f)
+        // glcn: the trailer in its window up on the right, UNDER the picture and its washes: once it plays a soft hole
+        // opens there (see TrailerHole), so its edges are the picture itself — no hard box.
+        FocusTrailer(
+            meta?.trailerKey, shown?.title, metaKey,
+            Modifier.align(Alignment.TopEnd).fillMaxWidth(TRAILER_WINDOW_WIDTH).height(CINEMA_ROWS_TOP + 40.mpx), dissolve = false,
+        )
+        val cinemaHoleOpen = meta?.trailerKey != null && CinemaTrailer.playing?.first == meta?.trailerKey
+        val cinemaHole by androidx.compose.animation.core.animateFloatAsState(if (cinemaHoleOpen) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(TRAILER_HOLE_MS), label = "cinemaTrailerHole")
+        Box(Modifier.fillMaxSize().topRightTrailerHole(TRAILER_WINDOW_WIDTH, CINEMA_ROWS_TOP + 40.mpx, TRAILER_HOLE_SOFT) { cinemaHole }) {
         FullBackdrop(art, Modifier.fillMaxSize(), kenBurns = true)
         // Words on the left, rows at the foot: dark only where they are.
         Box(Modifier.fillMaxSize().backdropLeftWash(0f to 0.94f, 0.32f to 0.78f, 0.58f to 0.25f, 0.85f to 0f))
@@ -862,12 +871,7 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
             androidx.compose.animation.core.tween(if (CinemaTrailer.lightsDown) 1_600 else 350), label = "cinemaLights",
         )
         Box(Modifier.fillMaxSize().graphicsLayer { alpha = sala }.background(Color.Black.copy(alpha = 0.62f)))
-        // glcn: the trailer in its own window up on the right, clear of the words and the washes, its edges melting
-        // into the page — the picture there stays sharp instead of being washed out under the page's veil.
-        FocusTrailer(
-            meta?.trailerKey, shown?.title, metaKey,
-            Modifier.align(Alignment.TopEnd).fillMaxWidth(TRAILER_WINDOW_WIDTH).height(CINEMA_ROWS_TOP + 40.mpx),
-        )
+        }
         Box(Modifier.padding(start = start, top = 112.mpx, end = 760.mpx).height(CINEMA_ROWS_TOP - 130.mpx).then(Modifier.clipToBounds()).graphicsLayer { alpha = 1f - 0.7f * sala }) {
             if (shown != null) androidx.compose.runtime.key(shown) {
                 val logo = metaKey?.takeIf { it !in logoFailed }?.let { meta?.logoPath }?.let { tv.own.owntv.core.metadata.MetadataImages.logo(it) }
@@ -1046,6 +1050,13 @@ private const val TRAILER_WARM_MS = 900L
 private const val LIGHTS_DOWN_MS = 2_500L
 /** glcn: the trailer window's share of the screen's width, up on the right. */
 internal const val TRAILER_WINDOW_WIDTH = 0.62f
+
+/** glcn: a trailer's hole in the picture — how long it takes to open, and how softly its edges melt. */
+internal const val TRAILER_HOLE_MS = 600
+internal val TRAILER_HOLE_SOFT = 150.mpx
+private const val TRAILER_HOLE_BLEND = 0.14f
+/** glcn: classic Home's picture window — the share of it that melts into the page on the left and below. */
+private const val CLASSIC_EDGE = 0.38f
 private const val STAGGER_STEP = 0.18f
 private const val STAGGER_SPAN = 0.46f
 private const val STAGGER_TOTAL_MS = 620

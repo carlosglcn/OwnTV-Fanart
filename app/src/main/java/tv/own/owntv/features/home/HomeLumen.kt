@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import tv.own.owntv.ui.theme.dissolveEdges
 import tv.own.owntv.ui.theme.fadeEdgesInto
+import tv.own.owntv.glcn.topRightTrailerHole
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -118,6 +119,9 @@ fun LumenHome(
     onActivateTrending: (TrendingHomeItem, onUnavailable: () -> Unit) -> Unit,
     onOpenMovie: (MovieEntity) -> Unit,
     onOpenSeries: (SeriesEntity) -> Unit,
+    /** glcn: Keep watching opens the title's page (its Resume button plays); the card's own Resume still plays. */
+    onOpenContinueMovie: ((Long) -> Unit)? = null,
+    onOpenContinueSeries: ((Long) -> Unit)? = null,
     onOpenMatch: (Match) -> Unit,
     onChildFocused: () -> Unit,
     restoreFocus: Boolean,
@@ -169,10 +173,10 @@ fun LumenHome(
         buildList {
             val keep = state.continueMovies.map { c ->
                 LumenItem("p" + c.stableKey, c.title, c.subtitle, c.plot, c.posterUrl, c.backdropUrl, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false,
-                    playLabel = R.string.glcn_dock_resume, onPlay = { onPlayMovie(c.sourceItemId, c.positionMs) }) { onPlayMovie(c.sourceItemId, c.positionMs) }
+                    playLabel = R.string.glcn_dock_resume, onPlay = { onPlayMovie(c.sourceItemId, c.positionMs) }) { onOpenContinueMovie?.invoke(c.sourceItemId) ?: onPlayMovie(c.sourceItemId, c.positionMs) }
             } + state.continueSeries.map { c ->
                 LumenItem("p" + c.stableKey, c.title, c.subtitle, c.plot, c.posterUrl, c.backdropUrl, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false,
-                    playLabel = R.string.glcn_dock_resume, onPlay = { onPlayEpisode(0L, c.targetItemId, c.positionMs) }) { onPlayEpisode(0L, c.targetItemId, c.positionMs) }
+                    playLabel = R.string.glcn_dock_resume, onPlay = { onPlayEpisode(0L, c.targetItemId, c.positionMs) }) { onOpenContinueSeries?.invoke(c.sourceItemId) ?: onPlayEpisode(0L, c.targetItemId, c.positionMs) }
             }
             if (keep.isNotEmpty() && order.any { it == HomeRow.HERO || it == HomeRow.CONTINUE_MOVIES || it == HomeRow.CONTINUE_SERIES }) add(LumenTab(HomeRow.HERO, keep))
             if (state.recentLive.isNotEmpty() && HomeRow.RECENT_CHANNELS in order) add(LumenTab(HomeRow.RECENT_CHANNELS, state.recentLive.map { channelItem(it, state.recentGuide, state.recentLive) }))
@@ -296,26 +300,10 @@ fun LumenHome(
         LaunchedEffect(wanted, shown?.crests == null) {
             if (wanted != null) { delay(150); settled = wanted } else if (shown?.crests != null) settled = null
         }
-        Crossfade(settled, modifier = Modifier.fillMaxSize(), label = "lumen-backdrop") { url ->
-            if (url != null) {
-                // glcn: each new picture drifts slowly closer (a Ken Burns push-in) instead of sitting flat.
-                val drift = remember(url) { androidx.compose.animation.core.Animatable(1f) }
-                val driftOn = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.ui.stage.GlcnMotion.subtle && !tv.own.owntv.glcn.LowRam.on
-                LaunchedEffect(url, driftOn) {
-                    if (driftOn) drift.animateTo(DOCK_DRIFT_TO, androidx.compose.animation.core.tween(DOCK_DRIFT_MS, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
-                }
-                AsyncImage(
-                    model = url, contentDescription = null, contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = drift.value; scaleY = drift.value },
-                )
-            }
-        }
-        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(palette.page.copy(alpha = 0.78f), palette.page.copy(alpha = 0.34f), palette.page.copy(alpha = 0f)))))
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to palette.page.copy(alpha = 0.95f))))
-        // glcn: the trailer in a window up on the right — above the dock, clear of the words and the page's veil, its edges
-        // melting into the picture around it.
+        // glcn: the trailer in a window up on the right, UNDER the picture and its veils: once it plays a soft hole opens
+        // there (see TrailerHole), so its edges are the picture itself — no hard box — and the video stays unveiled.
         ambientKey?.let { key ->
-            Box(Modifier.align(Alignment.TopEnd).fillMaxWidth(TRAILER_WINDOW_WIDTH).height(560.mpx).fadeEdgesInto(palette.page, 0.35f, 0.35f)) {
+            Box(Modifier.align(Alignment.TopEnd).fillMaxWidth(TRAILER_WINDOW_WIDTH).height(DOCK_TRAILER_HEIGHT)) {
                 androidx.compose.runtime.key(key) {
                     tv.own.owntv.ui.components.AmbientTrailer(
                         key, Modifier.fillMaxSize(), start = ambientStart, muted = !CinemaTrailer.sound,
@@ -325,6 +313,27 @@ fun LumenHome(
                 }
                 if (CinemaTrailer.playing?.first == key) TrailerSoundHint(Modifier.align(Alignment.TopEnd).padding(end = 56.mpx, top = TRAILER_HINT_TOP))
             }
+        }
+        val dockHoleOpen = ambientKey != null && CinemaTrailer.playing?.first == ambientKey
+        val dockHole by androidx.compose.animation.core.animateFloatAsState(if (dockHoleOpen) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(TRAILER_HOLE_MS), label = "dockTrailerHole")
+        Box(Modifier.fillMaxSize().topRightTrailerHole(TRAILER_WINDOW_WIDTH, DOCK_TRAILER_HEIGHT, TRAILER_HOLE_SOFT) { dockHole }) {
+            Crossfade(settled, modifier = Modifier.fillMaxSize(), label = "lumen-backdrop") { url ->
+                if (url != null) {
+                    // glcn: each new picture drifts slowly closer (a Ken Burns push-in) instead of sitting flat.
+                    val drift = remember(url) { androidx.compose.animation.core.Animatable(1f) }
+                    // Still while a trailer plays: the picture then has a hole in it, and a moving picture would redraw it every frame.
+                val driftOn = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.ui.stage.GlcnMotion.subtle && !tv.own.owntv.glcn.LowRam.on && !dockHoleOpen
+                    LaunchedEffect(url, driftOn) {
+                        if (driftOn) drift.animateTo(DOCK_DRIFT_TO, androidx.compose.animation.core.tween(DOCK_DRIFT_MS, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                    }
+                    AsyncImage(
+                        model = url, contentDescription = null, contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = drift.value; scaleY = drift.value },
+                    )
+                }
+            }
+            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(palette.page.copy(alpha = 0.78f), palette.page.copy(alpha = 0.34f), palette.page.copy(alpha = 0f)))))
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to palette.page.copy(alpha = 0.95f))))
         }
         LaunchedEffect(ambientKey) { if (ambientKey == null) CinemaTrailer.playing = null }
 
@@ -642,3 +651,6 @@ private const val DOCK_REST_MS = 20_000L
 /** glcn: the Dock backdrop's slow push-in — how close and over how long. */
 private const val DOCK_DRIFT_TO = 1.06f
 private const val DOCK_DRIFT_MS = 9_000
+
+/** glcn: the Dock's trailer window height. */
+private val DOCK_TRAILER_HEIGHT = 560.mpx

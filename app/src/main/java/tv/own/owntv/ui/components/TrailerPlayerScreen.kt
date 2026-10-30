@@ -89,6 +89,11 @@ fun TrailerPlayerScreen(videoKey: String, title: String? = null, onExit: () -> U
 @Composable
 private fun TrailerPlayerContent(videoKey: String, title: String?, onExit: () -> Unit) {
     val context = LocalContext.current
+    // glcn: the silent trailer behind the page waits while this one plays, and goes on by itself afterwards.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        TrailerPool.hold(true)
+        onDispose { TrailerPool.hold(false) }
+    }
     // The stored value may hold several keys, best first (core TrailerKeys): a blocked one moves on to the next.
     val keys = remember(videoKey) { tv.own.owntv.core.metadata.TrailerKeys.split(videoKey).ifEmpty { listOf(videoKey) } }
     var keyIndex by remember { mutableIntStateOf(0) }
