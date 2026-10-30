@@ -309,7 +309,7 @@ internal fun LiveStagePane(
                     horizontalArrangement = Arrangement.spacedBy(14.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    channel.number?.let { Text(it.toString(), style = stageText(30, 800), color = stageAccent.accent, maxLines = 1) }
+                    channel.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.let { Text(it.toString(), style = stageText(30, 800), color = stageAccent.accent, maxLines = 1) }
                     Text(channelName.orEmpty(), style = stageText(24, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }

@@ -1183,6 +1183,8 @@ fun OwnTVShell(
         // glcn: every row, grid and list glides to the focus with one eased slide.
         tv.own.owntv.glcn.SmoothScroll.provided(),
         LocalRemoteShortcuts provides remoteShortcutEnvironment,
+        // glcn: Settings › Live TV › Channel numbers, read by every place that prints one.
+        tv.own.owntv.glcn.LocalShowChannelNumbers provides directTuneEnabled,
         tv.own.owntv.features.shell.components.LocalClockWeather provides (weatherInfo to weatherFahrenheit),
         // glcn: the category sheets list the playlists when there are several.
         tv.own.owntv.features.live.LocalCategoryPlaylists provides (

@@ -388,7 +388,7 @@ fun SearchScreen(
                             val name = ProviderTags.parse(ch.name)
                             val line = listOfNotNull(
                                 e.row.categoryName?.takeIf { it.isNotBlank() }?.let { ProviderTags.parse(it).name },
-                                ch.number?.toString(),
+                                ch.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.toString(),
                                 nowPlaying[ch.id],
                             ).joinToString(sep)
                             SearchRow(

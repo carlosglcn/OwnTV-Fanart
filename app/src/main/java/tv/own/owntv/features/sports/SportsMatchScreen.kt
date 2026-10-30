@@ -259,7 +259,7 @@ fun SportsMatchScreen(
                 val video = focused ?: shown.firstOrNull()
                 GuideVideo(
                     channel = video?.channel,
-                    channelLine = video?.channel?.let { listOfNotNull(it.number?.toString(), ProviderTags.parse(it.name).name).joinToString(sep) },
+                    channelLine = video?.channel?.let { listOfNotNull(it.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.toString(), ProviderTags.parse(it.name).name).joinToString(sep) },
                     nowTitle = video?.guideTitle,
                     previewEngine = liveVm.previewEngine,
                     showVideo = previewOn && focused != null,

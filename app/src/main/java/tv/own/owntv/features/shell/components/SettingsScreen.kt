@@ -1732,7 +1732,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.StartupChannelList(
             ) { focused ->
                 Row(Modifier.padding(horizontal = 14.mpx), horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = Alignment.CenterVertically) {
                     tv.own.owntv.features.settings.StageRadio(isSelected)
-                    Text(
+                    if (tv.own.owntv.glcn.LocalShowChannelNumbers.current) Text(
                         channel.number?.toString().orEmpty(), style = tv.own.owntv.ui.theme.stageText(16, 700),
                         color = tv.own.owntv.ui.theme.StageColors.Dim, modifier = Modifier.width(54.mpx), maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )

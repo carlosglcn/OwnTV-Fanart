@@ -1127,7 +1127,7 @@ fun LiveScreen(
             title = p.title,
             subtitle = listOf(
                 stringResource(R.string.content_live_time_range_plain, formatTime(p.startMs), formatTime(p.stopMs)),
-                listOfNotNull(ch.number?.toString(), ProviderTags.parse(ch.name).name).joinToString(" "),
+                listOfNotNull(ch.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.toString(), ProviderTags.parse(ch.name).name).joinToString(" "),
             ).joinToString(" · "),
             actions = tv.own.owntv.features.epg.guideProgrammeActions(
                 epgVm, ch, p, System.currentTimeMillis(),
@@ -1673,7 +1673,7 @@ private fun PlayerOptionsSheet(
                     }
                     Spacer(Modifier.height(16.mpx))
                     tv.own.owntv.ui.stage.StageMenuHeader(
-                        title = listOfNotNull(channel.number?.toString(), ProviderTags.parse(channel.name).name).joinToString(" · "),
+                        title = listOfNotNull(channel.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.toString(), ProviderTags.parse(channel.name).name).joinToString(" · "),
                         subtitle = subtitle,
                         leading = { LivePlate(channel.displayLogoUrl, 70.mpx, 50.mpx) },
                     )
@@ -1827,7 +1827,7 @@ private fun ChannelContextMenu(
                     .focusGroup(),
             ) {
                 tv.own.owntv.ui.stage.StageMenuHeader(
-                    title = listOfNotNull(channel.number?.toString(), ProviderTags.parse(channel.name).name).joinToString(" · "),
+                    title = listOfNotNull(channel.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.toString(), ProviderTags.parse(channel.name).name).joinToString(" · "),
                     subtitle = subtitle,
                     leading = {
                         LivePlate(channel.displayLogoUrl, 70.mpx, 50.mpx)

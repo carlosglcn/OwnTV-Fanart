@@ -286,7 +286,8 @@ internal fun GuideChannelLabel(channel: ChannelEntity, name: String, dot: Color?
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(7.mpx).background(dot ?: Color.Transparent, RoundedCornerShape(50)))
-        Text(
+        // glcn: Settings › Live TV › Channel numbers off drops the whole column, not just its digits.
+        if (tv.own.owntv.glcn.LocalShowChannelNumbers.current) Text(
             channel.number?.toString().orEmpty(),
             style = stageText(17, 700).copy(fontFeatureSettings = Tabular), color = if (selected) a.accent else StageColors.Dim,
             // Always whole: the column fits the longest number in the list; only the name is cut.
@@ -587,7 +588,7 @@ internal fun GuideChannelMenu(
     val locale = androidx.compose.ui.text.intl.Locale.current.platformLocale
     GuideMenuHost(x = 1150f, top = 64.mpx, width = 560.mpx, onDismiss = onDismiss) {
         StageMenuHeader(
-            title = listOfNotNull(channel.number?.toString(), tv.own.owntv.core.live.ProviderTags.displayName(channel.name)).joinToString(" · "),
+            title = listOfNotNull(channel.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.toString(), tv.own.owntv.core.live.ProviderTags.displayName(channel.name)).joinToString(" · "),
             subtitle = stringResource(R.string.content_epg_no_programme),
         )
         StageGroupLabel(stringResource(R.string.content_menu_group_watch).uppercase(locale))

@@ -544,7 +544,7 @@ fun EpgScreen(
         val videoChannel = if (effectivePreview) previewChannel ?: topChannel else topChannel
         GuideVideo(
             channel = videoChannel,
-            channelLine = videoChannel?.let { listOfNotNull(it.number?.toString(), ProviderTags.displayName(it.name)).joinToString(" · ") },
+            channelLine = videoChannel?.let { listOfNotNull(it.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.toString(), ProviderTags.displayName(it.name)).joinToString(" · ") },
             nowTitle = videoChannel?.let { ch -> programmeAt(vm.cachedProgrammes(ch), liveNow)?.takeIf { liveNow < it.stopMs }?.title },
             previewEngine = liveVm.previewEngine,
             showVideo = effectivePreview && previewArmed,
@@ -816,7 +816,7 @@ fun EpgScreen(
             title = p.title,
             subtitle = listOf(
                 stringResource(R.string.content_live_time_range_plain, formatTime(p.startMs), formatTime(p.stopMs)),
-                listOfNotNull(ch.number?.toString(), ProviderTags.displayName(ch.name)).joinToString(" "),
+                listOfNotNull(ch.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.toString(), ProviderTags.displayName(ch.name)).joinToString(" "),
             ).joinToString(" · "),
             actions = actionsFor(ch, p),
             leadMinutes = leadMinutes,

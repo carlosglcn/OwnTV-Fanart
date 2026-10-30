@@ -196,7 +196,8 @@ fun ChannelPlate(channel: ChannelEntity, modifier: Modifier = Modifier) {
         fill = StageColors.ControlFill,
     ) {
         Text(
-            channel.number?.toString() ?: channel.name.take(1).uppercase(),
+            // glcn: with Channel numbers off, a channel without a logo shows its initial instead.
+            channel.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.toString() ?: channel.name.take(1).uppercase(),
             style = stageText(18, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
     }
