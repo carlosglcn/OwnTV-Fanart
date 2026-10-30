@@ -14,6 +14,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -69,11 +71,18 @@ fun AmbientTrailer(
     }
     LaunchedEffect(start) { if (start) TrailerPool.play(owner) }
     LaunchedEffect(muted) { TrailerPool.setMuted(owner, muted) }
-    AndroidView(
-        factory = { (view.parent as? ViewGroup)?.removeView(view); view },
-        modifier = modifier.graphicsLayer { this.alpha = alpha },
-        onRelease = { (it.parent as? ViewGroup)?.removeView(it) },
-    )
+    // glcn: the video filled to the window's edges — YouTube centres a 16:9 picture in whatever box it gets, and a
+    // wider window showed it as a smaller rectangle with bars beside it, a visible cut inside the faded window.
+    // Scaled up just enough to cover, the overflow clipped.
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.clipToBounds()) {
+        val ratio = if (maxHeight.value > 0f) maxWidth.value / maxHeight.value else VIDEO_RATIO
+        val cover = maxOf(ratio / VIDEO_RATIO, VIDEO_RATIO / ratio).coerceIn(1f, 1.6f) * TRAILER_OVERSCAN
+        AndroidView(
+            factory = { (view.parent as? ViewGroup)?.removeView(view); view },
+            modifier = Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha; scaleX = cover; scaleY = cover },
+            onRelease = { (it.parent as? ViewGroup)?.removeView(it) },
+        )
+    }
 }
 
 /**
@@ -266,6 +275,10 @@ object TrailerPool {
     private const val HANDOVER_MS = 250L
     private const val RESUME_AFTER_MOVE_MS = 120L
 }
+
+/** glcn: a trailer's own shape, and a little more so a thin line at its edge never shows. */
+private const val VIDEO_RATIO = 16f / 9f
+private const val TRAILER_OVERSCAN = 1.03f
 
 /** glcn: how fast a trailer comes in over the picture once it plays. */
 private const val TRAILER_FADE_MS = 450

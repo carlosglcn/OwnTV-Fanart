@@ -232,7 +232,7 @@ internal fun VodCinematicBackdrop(
         }
         // glcn: the trailer over the picture but under the page's washes, so the words, the tools and the hints below
         // stay as readable over it as over the picture.
-        tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize().fadeEdgesInto(wash, edgeStart, edgeBottom), dissolve = false)
+        tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize().fadeEdgesInto(tv.own.owntv.ui.theme.LocalStagePalette.current.page, edgeStart, edgeBottom), dissolve = false)
         Box(Modifier.fillMaxSize().dissolveEdges(start = edgeStart, bottom = edgeBottom)) {
         Box(
             Modifier.fillMaxSize().backdropLeftWash(0f to 0.85f, 0.34f to 0.35f, 0.64f to 0f, 1f to 0f),
