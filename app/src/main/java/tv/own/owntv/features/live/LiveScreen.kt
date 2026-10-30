@@ -1070,7 +1070,8 @@ fun LiveScreen(
 
         // The preview sits outside the dimmed list side: a video surface under a translucent layer goes
         // black, and the show keeps playing while the categories are open.
-        if (previewShown) {
+        // glcn: not under the Cinematic layout — it has its own picture at the top (a second one floated over the cards).
+        if (previewShown && !cinematic) {
             LiveStagePane(
                 channel = previewChannel,
                 channelName = previewChannel?.let { ProviderTags.parse(it.name).name },
