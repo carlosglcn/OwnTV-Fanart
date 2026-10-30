@@ -857,6 +857,7 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
                 Brush.verticalGradient(0f to Color.Transparent, 0.32f to Color.Transparent, 0.5f to page.copy(alpha = 0.72f), 0.66f to page.copy(alpha = 0.94f), 1f to page),
             ),
         )
+        }
         // glcn (Cinema only): lights down — a moment into the trailer the room darkens round it, and the words and the
         // rows step back, so the trailer is the one thing lit, as in a cinema. Any key brings the lights back.
         val playingHere = CinemaTrailer.playing != null
@@ -870,8 +871,8 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
             if (CinemaTrailer.lightsDown) 1f else 0f,
             androidx.compose.animation.core.tween(if (CinemaTrailer.lightsDown) 1_600 else 350), label = "cinemaLights",
         )
-        Box(Modifier.fillMaxSize().graphicsLayer { alpha = sala }.background(Color.Black.copy(alpha = 0.62f)))
-        }
+        // The room darkens round the trailer's window, not over it.
+        Box(Modifier.fillMaxSize().topRightTrailerHole(TRAILER_WINDOW_WIDTH, CINEMA_ROWS_TOP + 40.mpx, TRAILER_HOLE_SOFT) { cinemaHole }.graphicsLayer { alpha = sala }.background(Color.Black.copy(alpha = 0.62f)))
         Box(Modifier.padding(start = start, top = 112.mpx, end = 760.mpx).height(CINEMA_ROWS_TOP - 130.mpx).then(Modifier.clipToBounds()).graphicsLayer { alpha = 1f - 0.7f * sala }) {
             if (shown != null) androidx.compose.runtime.key(shown) {
                 val logo = metaKey?.takeIf { it !in logoFailed }?.let { meta?.logoPath }?.let { tv.own.owntv.core.metadata.MetadataImages.logo(it) }
