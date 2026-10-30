@@ -152,7 +152,7 @@ fun ProgrammeInfoScreen(
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color(0xF2050809), 0.55f to Color(0xB3050809), 1f to Color(0x4D050809))))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color(0xE6050809))))
 
-        Column(Modifier.padding(start = 96.mpx, top = 80.mpx, end = 96.mpx).width(1020.mpx)) {
+        Column(Modifier.padding(start = 96.mpx, top = 80.mpx, end = 96.mpx).width(1240.mpx)) {
             Row(Modifier.staggerIn(0), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
                 val logo = channel.displayLogoUrl?.takeIf { it.isNotBlank() }
                 if (logo != null) ChannelLogoTile(logoUrl = logo, modifier = Modifier.size(132.mpx, 80.mpx), fill = Color.Transparent, surfaceLuminance = 0.02f) { }
@@ -202,7 +202,9 @@ fun ProgrammeInfoScreen(
                 if (facts.isNotEmpty()) Text(facts, style = stageText(20, 600), color = Dim, modifier = Modifier.staggerIn(250).padding(top = 16.mpx), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 // A film: TMDB's synopsis (in your language) before the guide's, which is often a list of credits.
                 ((film?.overview?.takeIf { it.isNotBlank() }) ?: ownSynopsis ?: lent?.overview)?.let {
-                    DriftingSynopsis(it, modifier = Modifier.staggerIn(300).padding(top = 16.mpx).width(960.mpx), style = stageText(21, 400), color = Soft, lines = if (film?.cast.isNullOrEmpty()) 6 else 4, fade = true)
+                    // glcn: as wide as the room up to the panels on the right, and a line more, so most synopses read whole
+                    // without drifting.
+                    DriftingSynopsis(it, modifier = Modifier.staggerIn(300).padding(top = 16.mpx).width(1220.mpx), style = stageText(21, 400), color = Soft, lines = if (film?.cast.isNullOrEmpty()) 7 else 5, fade = true)
                 }
                 film?.cast?.takeIf { it.isNotEmpty() }?.let { cast ->
                     tv.own.owntv.features.shell.components.VodCast(cast, 7, Modifier.staggerIn(360).padding(top = 20.mpx))
