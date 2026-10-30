@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -115,6 +116,13 @@ internal fun MovieTitlePage(
     )
     val lowerFocus = remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf<String?>(null) }
+    // glcn: the film's other videos — teasers, clips, featurettes, behind the scenes — each full screen with sound.
+    val metaRepo: tv.own.owntv.core.metadata.MetadataRepository = koinInject()
+    val extras by produceState(emptyList<tv.own.owntv.core.metadata.VideoExtra>(), meta?.tmdbId) {
+        val id = meta?.tmdbId ?: return@produceState
+        value = runCatching { metaRepo.extrasFor(id, isTv = false) }.getOrDefault(emptyList())
+            .filterNot { it.key == meta.trailerKey?.let { k -> trailerKeysFirst(k) } }
+    }
     val related by produceState(emptyList<MovieEntity>(), movie.id) {
         value = runCatching { loadRelated() }.getOrDefault(emptyList())
     }
@@ -226,7 +234,9 @@ internal fun MovieTitlePage(
             // Second part (▼): the cast, the versions and titles like it.
             Column(
                 Modifier.align(Alignment.TopStart).padding(start = 96.mpx, top = 90.mpx, end = 96.mpx)
-                    .graphicsLayer { alpha = lowerAt; translationY = (1f - lowerAt) * 200.mpx.toPx() },
+                    .graphicsLayer { alpha = lowerAt; translationY = (1f - lowerAt) * 200.mpx.toPx() }
+                    // Cast, extras, films like it and versions may not all fit: the part scrolls as the focus goes down.
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(bottom = 60.mpx),
                 verticalArrangement = Arrangement.spacedBy(22.mpx),
             ) {
                 Text(info.title, style = stageText(30, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -238,6 +248,32 @@ internal fun MovieTitlePage(
                     if (info.cast.isNotEmpty()) {
                         Text(stringResource(R.string.content_media_cast), style = stageText(20, 700), color = StageColors.Text)
                         tv.own.owntv.features.shell.components.VodCast(info.cast, 10)
+                    }
+                }
+                if (extras.isNotEmpty()) {
+                    Text(stringResource(R.string.glcn_title_extras), style = stageText(20, 700), color = StageColors.Text)
+                    Row(
+                        Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(vertical = 10.mpx).focusGroup(),
+                        horizontalArrangement = Arrangement.spacedBy(18.mpx),
+                    ) {
+                        extras.forEach { x ->
+                            Column(Modifier.width(300.mpx)) {
+                                tv.own.owntv.ui.stage.StageSurface(
+                                    onClick = { fullTrailer = x.key }, radius = 12.mpx,
+                                    modifier = Modifier.width(300.mpx).height(169.mpx),
+                                ) { _ ->
+                                    Box(Modifier.fillMaxSize()) {
+                                        coil3.compose.AsyncImage(
+                                            model = "https://img.youtube.com/vi/" + x.key + "/mqdefault.jpg", contentDescription = null,
+                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.mpx)).background(Color.White.copy(alpha = 0.06f)),
+                                        )
+                                        tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.PLAY, Color.White, Modifier.align(Alignment.Center).size(36.mpx))
+                                    }
+                                }
+                                Text(x.name, style = stageText(14, 600), color = StageColors.Muted, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.mpx))
+                            }
+                        }
                     }
                 }
                 if (related.isNotEmpty()) {

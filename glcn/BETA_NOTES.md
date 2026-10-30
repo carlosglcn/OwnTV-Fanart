@@ -186,3 +186,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Trailers fill their window to the edges: YouTube centred a 16:9 picture in the wider window, leaving bars beside it (a visible cut inside the faded window); the video now covers the window, and its edges fade into the page's own colour.
 - 🏠 Classic Home no longer jumps back to the top while you go down the rows just after opening it: each row's data arriving (guide, recent channels…) scrolled the list to the first row.
 - 📝 The programme info screen gives the synopsis more room (wider, up to the panels on the right, and a line more), so most read whole without drifting.
+- 🎞️ Extras on a film's page: in its second part (▼), a row of the film's other videos from TMDB — teasers, clips, featurettes, behind the scenes — in your language first; each plays full screen with sound. The second part scrolls when it does not fit.
