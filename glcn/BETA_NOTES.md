@@ -216,3 +216,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📐 Bigger trailers in Movies, Series and classic Home: the video now fills most of its window — while it plays, the picture's melting edge tightens round it, so there is still no visible border.
 - 🧹 No more hard line under a focused row's glow (the sliding focus box had too little room for it, and cut it off).
 - 🕒 Light theme: the chip behind the clock is nearly solid, so a bright picture or a video's own title never shows through the date and weather.
+- 🏷️ Quality shown from the file itself: for Emby (and network folders) the film's or series' real resolution, HDR format and audio (4K, Dolby Vision, HDR10, Dolby Atmos, 5.1…) now show on its page and as poster marks, even when the title says nothing (after the next sync of that playlist).
+- 🔀 Versions on a film's page: choosing one makes it the page's copy — its quality marks show, and Play plays that one (before, choosing played it straight away).

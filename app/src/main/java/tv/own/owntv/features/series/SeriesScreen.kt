@@ -714,7 +714,7 @@ private fun SeriesGrid(
                                 if (show == null) Spacer(Modifier.fillMaxWidth().height(294.mpx)) else {
                                     StagePoster(
                                         title = show.name,
-                                        badges = androidx.compose.runtime.remember(show.name) { tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(show.name) },
+                                        badges = androidx.compose.runtime.remember(show.name, show.qualityRank, show.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(show.name, show.qualityRank, show.advertisedCapabilities) },
                                         rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
                                         width = 196.mpx, height = 294.mpx, fillWidth = true,
                                         progress = seriesProgress[show.id],
@@ -758,7 +758,7 @@ private fun SeriesGrid(
                                         val show = series[index] ?: return@items
                                         StagePoster(
                                             title = show.name,
-                                            badges = androidx.compose.runtime.remember(show.name) { tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(show.name) },
+                                            badges = androidx.compose.runtime.remember(show.name, show.qualityRank, show.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(show.name, show.qualityRank, show.advertisedCapabilities) },
                                             rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
                                             width = 196.mpx, height = 294.mpx,
                                             progress = seriesProgress[show.id],
@@ -926,7 +926,7 @@ private fun SeriesGrid(
                                     val show = series[index] ?: return@items
                                     StagePoster(
                                         title = show.name,
-                                        badges = androidx.compose.runtime.remember(show.name) { tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(show.name) },
+                                        badges = androidx.compose.runtime.remember(show.name, show.qualityRank, show.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(show.name, show.qualityRank, show.advertisedCapabilities) },
                                         rating = show.rating?.takeIf { it > 0 }?.let(::vodRating),
                                         width = posterW, height = posterW * 1.5f,
                                         compact = true,

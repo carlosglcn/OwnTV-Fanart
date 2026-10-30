@@ -150,6 +150,26 @@ internal fun vodRuntime(secs: Int): String {
  * "•"-joined list of HDR and audio markers. They are technical tokens, not prose — "4K" is "4K" in
  * every language — so nothing here is translated.
  */
+/**
+ * glcn: a poster's quality marks — from its name, else from what its source said outright (Emby's streams, a share's
+ * file): one picture mark (DV, HDR10+, HDR10, HDR, else 8K / 4K) and REMUX.
+ */
+fun posterQualityBadges(name: String, qualityRank: Int, advertisedCapabilities: String?): List<String> {
+    val named = tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(name)
+    if (named.isNotEmpty() || (qualityRank == 0 && advertisedCapabilities == null)) return named
+    val caps = advertisedCapabilities.orEmpty()
+    val picture = when {
+        "Dolby Vision" in caps -> "DV"
+        "HDR10+" in caps -> "HDR10+"
+        "HDR10" in caps -> "HDR10"
+        "HDR" in caps -> "HDR"
+        qualityRank >= 5 -> "8K"
+        qualityRank == 4 -> "4K"
+        else -> null
+    }
+    return listOfNotNull(picture, "REMUX".takeIf { "REMUX" in caps })
+}
+
 fun cinematicQualityBadges(qualityRank: Int, advertisedCapabilities: String?): List<String> = buildList {
     when (qualityRank) {
         5 -> add("8K")

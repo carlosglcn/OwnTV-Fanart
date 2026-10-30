@@ -94,6 +94,10 @@ internal fun MovieTitlePage(
     var picking by remember { mutableStateOf<Picker?>(null) }
     val versions by produceState<List<Pair<MovieEntity, String?>>>(emptyList(), movie.id) { value = runCatching { loadVersions() }.getOrDefault(emptyList()) }
     var choosingVersion by remember { mutableStateOf(false) }
+    // glcn: the copy the page will play — another version can be chosen (its quality shows), then Play plays it.
+    var chosen by remember(movie.id) { mutableStateOf(movie) }
+    val shownInfo = if (chosen.id == movie.id) info else info.copy(tags = versionBadges(chosen))
+    val playChosen: (Long) -> Unit = { start -> if (chosen.id == movie.id) onPlay(start) else onPlayVersion(chosen) }
     var fullTrailer by remember { mutableStateOf<String?>(null) }
     val playFocus = remember { FocusRequester() }
     val enter = remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
@@ -182,7 +186,7 @@ internal fun MovieTitlePage(
                     },
                 verticalArrangement = Arrangement.spacedBy(14.mpx),
             ) {
-                tv.own.owntv.features.shell.components.VodHero(info, Modifier.width(1100.mpx), showCast = false, plotLines = 3)
+                tv.own.owntv.features.shell.components.VodHero(shownInfo, Modifier.width(1100.mpx), showCast = false, plotLines = 3)
                 val resume = saved >= RESUME_MIN_MS
                 val audioName = tracks?.first?.let { TrackLanguages.displayName(it, locale) } ?: stringResource(R.string.settings_auto)
                 val subsName = when (val sub = tracks?.second) {
@@ -199,7 +203,7 @@ internal fun MovieTitlePage(
                     val playLabel = if (resume) stringResource(R.string.glcn_title_resume, tv.own.owntv.features.shell.components.vodRuntime((saved / 1000).toInt()))
                         else stringResource(R.string.content_play)
                     StageButton(
-                        playLabel, onClick = { onPlay(if (resume) saved else 0L) },
+                        playLabel, onClick = { playChosen(if (resume && chosen.id == movie.id) saved else 0L) },
                         icon = OwnTVIcon.PLAY, iconFilled = true, height = 64.mpx, textSize = 21,
                         modifier = Modifier.focusRequester(playFocus).onFocusChanged { if (it.isFocused) focusedLabel = null },
                     )
@@ -208,7 +212,7 @@ internal fun MovieTitlePage(
                         null, onClick = onClick, icon = icon, iconFilled = filled, round = true, height = 64.mpx,
                         modifier = Modifier.onFocusChanged { if (it.isFocused) focusedLabel = label },
                     )
-                    if (resume) roundButton(stringResource(R.string.glcn_title_start_over), OwnTVIcon.REWIND) { onPlay(0L) }
+                    if (resume) roundButton(stringResource(R.string.glcn_title_start_over), OwnTVIcon.REWIND) { playChosen(0L) }
                     meta?.trailerKey?.let { stored -> roundButton(stringResource(R.string.glcn_dock_trailer), OwnTVIcon.VIDEO) { fullTrailer = trailerKeysFirst(stored) } }
                     // glcn: the trailer's sound, for remotes whose volume never reaches the box (a TV's own, by HDMI).
                     if (meta?.trailerKey != null) roundButton(
@@ -310,10 +314,11 @@ internal fun MovieTitlePage(
                     Row(Modifier.focusGroup(), horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
                         versions.forEach { (v, playlist) ->
                             val tags = tv.own.owntv.core.live.ProviderTags.parse(v.name)
+                            val quality = versionBadges(v).joinToString(" ").ifBlank { null } ?: tags.tags.joinToString(" ").ifBlank { null }
                             tv.own.owntv.ui.stage.StagePill(
-                                text = listOfNotNull(tags.tags.joinToString(" ").ifBlank { null }, playlist).joinToString(" \u00B7 ").ifBlank { tags.name.ifBlank { v.name } },
-                                onClick = { onPlayVersion(v) },
-                                highlighted = v.id == movie.id,
+                                text = listOfNotNull(quality, playlist).joinToString(" \u00B7 ").ifBlank { tags.name.ifBlank { v.name } },
+                                onClick = { chosen = v; goUpper() },
+                                highlighted = v.id == chosen.id,
                             )
                         }
                     }
@@ -330,11 +335,13 @@ internal fun MovieTitlePage(
     ) {
         versions.forEach { (v, playlist) ->
             val tags = tv.own.owntv.core.live.ProviderTags.parse(v.name)
+            val quality = versionBadges(v).joinToString(" ").ifBlank { null } ?: tags.tags.joinToString(" ").ifBlank { null }
             tv.own.owntv.ui.stage.StagePopupOption(
-                title = tags.name.ifBlank { v.name },
-                subtitle = listOfNotNull(tags.tags.joinToString(" ").ifBlank { null }, v.year?.toString(), playlist).joinToString(" · ").ifBlank { null },
-                chosen = v.id == movie.id,
-                onClick = { choosingVersion = false; onPlayVersion(v) },
+                title = quality ?: tags.name.ifBlank { v.name },
+                subtitle = listOfNotNull(tags.name.ifBlank { v.name }.takeIf { quality != null }, v.year?.toString(), playlist).joinToString(" · ").ifBlank { null },
+                chosen = v.id == chosen.id,
+                // glcn: picking a version makes it the page's copy (its quality shows); Play then plays it.
+                onClick = { choosingVersion = false; chosen = v; runCatching { playFocus.requestFocus() } },
             )
         }
     }
@@ -386,3 +393,8 @@ private const val PAGE_ZOOM_FROM = 0.94f
 private const val LOWER_MS = 480
 /** glcn: under a minute in is nothing to resume (it read "Resume from 0 min"). */
 private const val RESUME_MIN_MS = 60_000L
+
+/** glcn: a copy's quality marks — from its name, else what its source said outright (Emby's streams, a share's file). */
+internal fun versionBadges(m: MovieEntity): List<String> =
+    tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.badges(m.name)
+        .ifEmpty { tv.own.owntv.features.shell.components.cinematicQualityBadges(m.qualityRank, m.advertisedCapabilities) }

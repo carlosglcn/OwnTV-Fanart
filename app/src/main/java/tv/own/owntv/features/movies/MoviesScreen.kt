@@ -687,7 +687,7 @@ fun MoviesScreen(
                                     val done = prog?.let { vm.isMovieCompleted(it) } == true
                                     StagePoster(
                                         title = movie.name,
-                                        badges = androidx.compose.runtime.remember(movie.name) { tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(movie.name) },
+                                        badges = androidx.compose.runtime.remember(movie.name, movie.qualityRank, movie.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(movie.name, movie.qualityRank, movie.advertisedCapabilities) },
                                         rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
                                         width = 196.mpx, height = 294.mpx, fillWidth = true,
                                         progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
@@ -733,7 +733,7 @@ fun MoviesScreen(
                                         val done = prog?.let { vm.isMovieCompleted(it) } == true
                                         StagePoster(
                                             title = movie.name,
-                                            badges = androidx.compose.runtime.remember(movie.name) { tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(movie.name) },
+                                            badges = androidx.compose.runtime.remember(movie.name, movie.qualityRank, movie.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(movie.name, movie.qualityRank, movie.advertisedCapabilities) },
                                             rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
                                             width = 196.mpx, height = 294.mpx,
                                             progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
@@ -905,7 +905,7 @@ fun MoviesScreen(
                                     val done = prog?.let { vm.isMovieCompleted(it) } == true
                                     StagePoster(
                                         title = movie.name,
-                                        badges = androidx.compose.runtime.remember(movie.name) { tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(movie.name) },
+                                        badges = androidx.compose.runtime.remember(movie.name, movie.qualityRank, movie.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(movie.name, movie.qualityRank, movie.advertisedCapabilities) },
                                         rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
                                         width = posterW, height = posterW * 1.5f,
                                         compact = true,
