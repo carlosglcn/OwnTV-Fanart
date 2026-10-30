@@ -100,7 +100,6 @@
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	cinemaAmbient
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	cinemaLights
 2	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	m
-1	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	rowSitBack
 2	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	s
 9	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	·
 3	empty	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	\0
