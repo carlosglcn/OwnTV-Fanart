@@ -36,7 +36,9 @@ for that step shown in the corner.
    which parts of the backup to bring back before it applies anything, so you can take the playlists
    and leave the old box's settings behind. Untick **Sources** and it warns you: the TV then gets no
    playlists. The app opens only once the whole restore is done, and starts downloading the restored
-   playlists straight away. An encrypted backup asks for its
+   playlists straight away. An Xtream playlist whose password was not in the backup waits instead:
+   the last screen names it, and typing the password in that playlist's edit form in Settings loads
+   it. An encrypted backup asks for its
    password; press ▶ on the field to see what you typed.
 5. **Profile** — name it, pick an avatar, and optionally make it a **Kids** profile or give it a PIN.
 6. **Add a playlist** — four cards: **Remote** (fill it in on your phone), **Type it here** (type it
@@ -156,6 +158,8 @@ types into it, and **▶** on the side panel starts the import: **Xtream** (serv
 password), **M3U** (URL or a local file), or **Stalker/Ministra** (portal URL + MAC).
 An M3U link of the form `…/get.php?username=…&password=…` is really an Xtream account: when the
 provider's server confirms it, it is added as **Xtream**, with movies and series in their own tabs.
+A name another playlist already has gets a number, so two unnamed playlists are **My IPTV** and
+**My IPTV 2**.
 Under **User-Agent** there is an optional **Referer** — leave it empty unless your provider asks
 for one; it is then sent with every stream of that playlist.
 
@@ -250,6 +254,8 @@ custom category) and **Play in external player**.
 The Move window opens with that item picked up. **▲ ▼** carry it a row, **CH+ / CH−** a page, and a
 **long press** of them to the first or last place. **OK** puts it down or picks up another, so several
 can move in one go. **Save** keeps the new order; **Cancel** or **Back** leaves it as it was.
+What you moved keeps its place in **A–Z** and **Provider** alike; everything you never moved follows
+the sort around it. **Restore to playlist default** on a category clears its moved items.
 
 ### 🏷️ What the row tells you
 Number, logo, name, the programme on now with its time left and a progress bar, the provider's tags
@@ -296,7 +302,8 @@ then the grid, opened at now with the now-line about a third of the way across.
   steps out. Across an empty stretch, Left/Right move 30 minutes at a time.
 - **Hold OK** on a programme: **Remind me** (upcoming) or **Watch from start** (past), **Record**,
   **Watch channel** and more.
-- **Order:** Provider, A–Z, Catch-up first or Favourites first. **Category** uses Live TV's own list.
+- **Order:** Provider, A–Z, Catch-up first or Favourites first. **Category** uses Live TV's own list,
+  and in Provider or A–Z the channels come in Live TV's order, moved ones in their place.
   Its **Show** group: **Channels without guide**, and **Video preview** — off, the top shows the
   channel's logo instead of playing it (also off whenever Live TV's preview is off).
 - **Rewind mark:** a channel with catch-up shows the rewind icon after its name, as in the channel lists.
@@ -688,6 +695,11 @@ creates a profile, and in Settings → **Profile** when you edit one.
   assistant.
 - **A notification won't pause your film** — the sound dips and comes back.
 - **Mini-player** — subtitles show in it too. Get back to it from any screen via **Now Playing**.
+- **Picture-in-picture** — with Settings → Watching & recording → **Picture-in-picture when leaving
+  the app** on (off by default), pressing **Home** while a video plays full screen or in the mini-player
+  keeps it playing in a small window. Open OwnTV again for full screen; close the window to stop. Not
+  in Multiview, not when OwnTV itself opens another app (an external player, a trailer on YouTube),
+  and only on TVs that offer picture-in-picture.
 
 ### 🎧 Audio Mode — listen with the screen free
 **Where:** the **headphones** button on the player controls
@@ -836,7 +848,14 @@ Hide, rename, reorder, and **unhide**. Highlights:
   are on (Live TV, Movies or Series): hidden categories and items, renames, category order and custom
   order. Other playlists, combined categories, favorites and guide matches are kept.
 - **Span select** — long-press a **Hide** or **move** button to act on a whole block at once.
-- **PIN lock** this screen with **Set PIN**.
+- **PIN lock** this screen with **Set PIN**. With a PIN set, **⋯ More → Ask for PIN to open Settings**
+  makes Settings ask for the same PIN each time it opens, on this profile. Removing the PIN turns it off.
+- **Lock a category with a PIN** — long-press a playlist category in Live TV, Movies or Series →
+  **Lock with PIN**. It uses this screen's PIN (the first lock asks you to set one). The category stays
+  in the list with a lock; its channels, films and shows stay out of everything else (search, Guide,
+  Home rows, CH+/−, counts, history, Downloads) until you open it with **Enter PIN**. It stays open
+  until OwnTV goes to the background or you switch profile. **Remove lock** in the same menu asks the
+  PIN, and removing this screen's PIN unlocks every category. 5 wrong PINs → a 30 s wait.
 
 ### 🔀 Reorder the long-press menus
 **Where:** Settings → Layout → **Long-press menus**
@@ -867,6 +886,7 @@ all settings** lists every setting whose name contains what you type, with its p
 | Setting | Where | Why |
 |---|---|---|
 | **Multiview** | Watching & recording | Watch up to four channels at once. Off by default; also sets the tile ceiling |
+| **Picture-in-picture when leaving the app** | Watching & recording | Home keeps the video in a small window. Off by default; hidden on TVs without picture-in-picture |
 | **Live latency** | Live TV | How close to the live edge to play. Lower = less delay, more stutter risk |
 | **Pre-buffer live streams** | Live TV | Collect a few seconds first on a flaky provider |
 | **Give up on a channel after** | Live TV | 30 s default — bounds how long a dead channel can spin (+ per playlist) |

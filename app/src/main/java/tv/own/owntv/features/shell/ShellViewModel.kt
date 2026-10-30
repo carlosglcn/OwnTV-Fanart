@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import tv.own.owntv.core.customize.CategoryUnlockSession
+import tv.own.owntv.core.customize.CustomizationStore
 import tv.own.owntv.core.nav.MainSection
 import tv.own.owntv.core.nav.NavVisibility
 import tv.own.owntv.core.network.ConnectivityObserver
@@ -34,6 +36,8 @@ import tv.own.owntv.core.theme.FontCustomization
 import tv.own.owntv.core.theme.ThemeMode
 import tv.own.owntv.core.theme.UiFontScale
 import tv.own.owntv.core.theme.UiZoom
+import tv.own.owntv.core.categorylock.CategoryRelock
+import tv.own.owntv.core.categorylock.SealedPlaybackGuard
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class ShellViewModel(
@@ -49,6 +53,8 @@ class ShellViewModel(
     private val profiles: tv.own.owntv.core.profile.ProfileManager,
     private val catalogSyncScheduler: tv.own.owntv.core.sync.work.CatalogSyncScheduler,
     private val importFinalizer: tv.own.owntv.core.sync.ImportFinalizer,
+    private val categoryUnlocks: CategoryUnlockSession,
+    private val customize: CustomizationStore,
 ) : ViewModel() {
 
     companion object {
@@ -64,6 +70,9 @@ class ShellViewModel(
     /** The startup update check runs once per launch, not once per shell composition. */
     var startupUpdateCheckDone = false
 
+    /** Relocks the categories the PIN opened when the app leaves the screen or the profile changes. */
+    private val relock = CategoryRelock(viewModelScope, settings, customize, categoryUnlocks)
+
     init {
         // One-time: move any existing playlist EPG into the new standalone EPG sources (v2.2.0).
         viewModelScope.launch { runCatching { epgMigration.run() } }
@@ -72,6 +81,8 @@ class ShellViewModel(
             settings.activeProfileId
                 .distinctUntilChanged()
                 .collect { pid ->
+                    // What the PIN opened belongs to the profile that entered it.
+                    relock.profileChanged(pid)
                     Log.d(TAG, "activeProfileChanged profile=$pid androidTvHomeEnabled=${settings.androidTvHomeEnabled.first()}")
                     if (pid >= 0 && settings.androidTvHomeEnabled.first()) {
                         runCatching { launcherIntegrationRepository.refreshProfile(pid, allowBrowsableRequest = true) }
@@ -79,6 +90,20 @@ class ShellViewModel(
                 }
         }
     }
+
+    /** Set by the shell while it is up: stops what plays from a category a relock seals. */
+    internal var sealedPlayback: SealedPlaybackGuard?
+        get() = relock.guard
+        set(value) { relock.guard = value }
+
+    /**
+     * Closes every category the PIN opened; the app does this whenever it leaves the screen. Call it
+     * before the engines free their streams: what is playing is read first, then stopped if now sealed.
+     */
+    fun relockCategories() = relock.leftApp()
+
+    /** Back in front: [resume] what was freed only once the relock check has stopped what it sealed. */
+    fun afterSealCheck(resume: () -> Unit) = relock.afterSealCheck(resume)
 
     /** Whether the device currently has internet (drives the offline banner). */
     val isOnline: StateFlow<Boolean> = connectivity.isOnline
@@ -226,9 +251,19 @@ class ShellViewModel(
     private val _selectedSection = MutableStateFlow(MainSection.HOME)
     val selectedSection: StateFlow<MainSection> = _selectedSection.asStateFlow()
 
+    // The section Settings was opened from, for Back out of its PIN prompt.
+    private var sectionBeforeSettings = MainSection.MORE
+
     fun selectSection(section: MainSection) {
+        if (section == MainSection.SETTINGS && _selectedSection.value != MainSection.SETTINGS) {
+            sectionBeforeSettings = _selectedSection.value
+        }
         _selectedSection.value = section
     }
+
+    /** Where to go when Settings stays locked: see [sectionAfterLockedSettings]. */
+    fun sectionToLeaveLockedSettings(): MainSection =
+        sectionAfterLockedSettings(sectionBeforeSettings, visibleSections.value)
 
     /** Which browse sections currently show as icons in the rail (v4.3.0 — Nav menu customization).
      *  The rule itself lives in core's [NavVisibility], shared with the mobile app's bottom bar. */

@@ -86,8 +86,9 @@ private fun VoiceSearchButton(onQuery: (String) -> Unit, modifier: Modifier = Mo
         boxed = true,
         onClick = {
             // Resolving is not a promise: the recogniser can be disabled between the check and OK.
+            // The recogniser is a screen OwnTV opens itself, so it must not open picture-in-picture.
             try {
-                launcher.launch(VoiceSearch.intent(prompt, language))
+                tv.own.owntv.features.pip.startAsHandOff(VoiceSearch.intent(prompt, language)) { launcher.launch(it) }
             } catch (_: ActivityNotFoundException) {
                 available = false
             }

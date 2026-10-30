@@ -157,6 +157,8 @@ series jumps to the last-watched episode.
 
 The **mini-player** docks a film, episode or channel to a corner and keeps playing across the whole
 app; selecting another channel updates it in place. Size and position are one popup in Settings.
+With **Picture-in-picture when leaving the app** on (off by default, only on TVs that offer it), Home
+keeps a playing video going in the system's small window; a screen OwnTV opens itself never does.
 
 ### 2.8 Robustness
 
@@ -320,7 +322,7 @@ Favorites, or one chosen channel.
   30-minute steps. Every programme action (Remind me / Watch from start, Record, Watch channel…) is in
   the Hold-OK menu.
 - Order by Provider, A–Z, Catch-up first or Favourites first; the category filter is Live TV's own
-  list; *Show → Channels without guide* and *Show → Video preview* (off shows the channel's logo
+  list, and Provider/A–Z follow Live TV's order with moved channels in their place; *Show → Channels without guide* and *Show → Video preview* (off shows the channel's logo
   instead of playing it; kept in backups).
 - **Programme reminders** — at the chosen lead time (5 min by default) OwnTV asks to switch, over any
   screen including the player, or switches, or only notifies.
@@ -428,7 +430,7 @@ their group.
 | **Picture** | Hardware decoding, Prefer SDR, Maximum video quality, Tunneled playback, Default zoom, saved zoom · Auto frame rate, Pause during the switch, Match resolution |
 | **Sound & subtitles** | Default volume, Surround, Dolby/DTS passthrough, Night mode, Volume leveling, Audio sync (+ saved) · Preferred audio / subtitle language, Subtitle appearance |
 | **Live TV** | Channel numbers, Live preview, Preview audio, Pause and rewind live TV, Rewind length, Resume a saved channel, Left and right rewind · Live latency, Pre-buffer, Give up after (each + per playlist) |
-| **Watching & recording** | Seek step, Live rewind step, Resume playback, Auto-play next episode · Multiview, Max tiles, Mini-player · Recording: keep one stream free, record what I'm watching, start early, keep going after the end |
+| **Watching & recording** | Seek step, Live rewind step, Resume playback, Auto-play next episode · Multiview, Max tiles, Mini-player, Picture-in-picture when leaving the app · Recording: keep one stream free, record what I'm watching, start early, keep going after the end |
 | **App** | Language, App icon, Accent-colored logo, App startup, Check for updates (+ on startup) · Proxy, DNS · Measured stream stats, Detailed playback logging |
 
 - **Appearance** — any accent colour (presets, hex, a saturation square and hue bar as separate focus

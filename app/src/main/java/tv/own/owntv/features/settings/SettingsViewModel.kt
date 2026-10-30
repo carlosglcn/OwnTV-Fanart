@@ -30,6 +30,7 @@ import tv.own.owntv.player.AudioOutputPolicy
 import tv.own.owntv.core.player.SurroundMode
 import tv.own.owntv.core.database.dao.SourceDao
 import tv.own.owntv.core.database.entity.SourceEntity
+import tv.own.owntv.core.repository.SourceEditor
 import tv.own.owntv.core.repository.SourceRepository
 import tv.own.owntv.core.repository.SourceTestResult
 import tv.own.owntv.core.setup.SourceImporter
@@ -93,6 +94,7 @@ class SettingsViewModel(
     private val enginePool: tv.own.owntv.player.LiveEnginePool,
     // Adding a playlist is core's sequence, not a copy of it — see [importState].
     private val importer: SourceImporter,
+    private val sourceEditor: SourceEditor,
 ) : ViewModel() {
     companion object {
         private const val TAG = "OwnTVHome"
@@ -651,7 +653,7 @@ class SettingsViewModel(
             sources.map { it.id }
         }
         if (sourceIds.isEmpty()) return emptyList()
-        val customizations = customizationStore.observe(profileId, tv.own.owntv.core.model.MediaType.LIVE).first()
+        val customizations = customizationStore.observeVisible(profileId, tv.own.owntv.core.model.MediaType.LIVE).first()
         val isKids = profileDao.getById(profileId)?.isKids == true
         val hiddenCategoryIds = tv.own.owntv.core.content.AdultCategoryClassifier.hiddenCategoryIds(
             categoryDao.observe(sourceIds, tv.own.owntv.core.model.MediaType.LIVE).first(),
@@ -1155,9 +1157,8 @@ class SettingsViewModel(
     }
 
     /**
-     * Edit an existing source's settings. When enabledScope changes (or lastSyncAt is still null),
-     * cancel any in-flight sync and enqueue a scoped resync so completion stamps and newly-On
-     * sections refresh. Cache is never deleted on Off.
+     * Edit an existing source's settings. Blank fields keep what is stored; saving, the Stalker
+     * session drop and the resync decision are core's [SourceEditor].
      */
     fun updateSource(
         id: Long,
@@ -1182,14 +1183,8 @@ class SettingsViewModel(
     ) {
         viewModelScope.launch {
             val existing = sourceDao.getById(id) ?: return@launch
-            // A Stalker edit re-canonicalizes the MAC; a garbled edit keeps the stored one. On
-            // MAC/URL change the cached portal session is stale — drop it so the next call re-handshakes.
+            // A Stalker edit re-canonicalizes the MAC; a garbled edit keeps the stored one.
             val newMac = tv.own.owntv.core.stalker.StalkerClient.canonicalizeMac(mac) ?: existing.mac
-            if (existing.type == tv.own.owntv.core.model.SourceType.STALKER) stalkerAuth.invalidate(id)
-            val scopeChanged =
-                existing.syncLive != syncLive || existing.syncMovies != syncMovies || existing.syncSeries != syncSeries
-            val scopeTurnedOn =
-                (!existing.syncLive && syncLive) || (!existing.syncMovies && syncMovies) || (!existing.syncSeries && syncSeries)
             val updated = existing.copy(
                 name = name.ifBlank { existing.name },
                 url = urlOrServer.trim().ifBlank { existing.url },
@@ -1208,25 +1203,13 @@ class SettingsViewModel(
                 syncSeries = syncSeries,
                 preferHls = preferHls,
             )
-            sourceRepository.updateSource(updated)
+            sourceEditor.save(existing, updated)
             settings.setPlaylistAutoRefresh(id, autoRefresh)
             // Apply the "Default playlist" toggle: on → this becomes the active playlist; off → if this was
             // the default, clear it back to All. Leaves another playlist's default untouched.
             when {
                 isDefault -> settings.setDefaultSource(id)
                 settings.defaultSourceId.first() == id -> settings.setDefaultSource(-1L)
-            }
-            if (scopeChanged) {
-                catalogSyncScheduler.cancelSync(id)
-            }
-            if (scopeTurnedOn || updated.lastSyncAt == null) {
-                val counts = importFinalizer.contentCounts(id)
-                catalogSyncScheduler.enqueueSync(
-                    id,
-                    reason = "scope_edit",
-                    contentTypes = SyncContentTypes.enabledFor(updated),
-                    baseItemCount = counts.channels + counts.movies + counts.series,
-                )
             }
             // Hidden sections must drop from the Android TV launcher immediately.
             runCatching { refreshActiveTvHome(allowBrowsableRequest = true) }

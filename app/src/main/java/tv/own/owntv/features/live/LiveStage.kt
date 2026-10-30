@@ -110,7 +110,7 @@ private val Tabular = "tnum"
 
 /** "Live TV" 46/800, then the crumb: "‹ **Sky Cinema** · 9 channels" (no ‹ when the column is on screen). */
 @Composable
-internal fun LiveHeader(category: String, count: Int, showChevron: Boolean, modifier: Modifier = Modifier) {
+internal fun LiveHeader(category: String, count: Int?, showChevron: Boolean, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(22.mpx), verticalAlignment = Alignment.Bottom) {
         Text(stringResource(R.string.common_nav_live_tv), style = stageText(46, 800, (-1).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(
@@ -123,7 +123,7 @@ internal fun LiveHeader(category: String, count: Int, showChevron: Boolean, modi
                 category, style = stageText(20, 700), color = stageAccent.accent,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
             )
-            Text(
+            if (count != null) Text(
                 "· " + pluralStringResource(R.plurals.content_live_channel_count, count, count),
                 style = stageText(20, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
@@ -478,10 +478,10 @@ internal fun liveCategoryEntries(railItems: List<LiveRailItem>, railCounts: Map<
                 tv.own.owntv.core.live.LiveKey.History -> OwnTVIcon.HISTORY
                 tv.own.owntv.core.live.LiveKey.Catchup -> OwnTVIcon.REWIND
                 tv.own.owntv.core.live.LiveKey.All -> OwnTVIcon.LIVE_TV
-                // glcn: a group inside Favourites — a folder, set in under it.
-                else -> if (item.nested) OwnTVIcon.FOLDER else null
+                // glcn: a group inside Favourites — a folder, set in under it; a locked category shows its lock.
+                else -> if (item.locked) OwnTVIcon.LOCK else if (item.nested) OwnTVIcon.FOLDER else null
             },
-            count = railCounts[item.key],
+            count = if (item.sealed) null else railCounts[item.key],
             mark = null,
         )
     }

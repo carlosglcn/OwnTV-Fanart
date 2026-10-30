@@ -21,8 +21,18 @@
 - **🚀 Start on the last channel in the TV Guide or Live TV** (community PR #294 by @Kevsosmooth)
 - **🏷️ Menu labels: off, when focused or always** (community PR #280 by @Kevsosmooth)
 - **🎤 Voice search on the Search screen** (community PR #281 by @Kevsosmooth)
+- **🔒 Lock a category with the Customize PIN** (community PR #273 by @Kevsosmooth)
+- **🔐 Ask for the PIN to open Settings** (community PR #286 by @Kevsosmooth)
+- **🪟 Picture-in-picture when leaving the app** (community PR #278 by @Kevsosmooth)
+- **📺 Live TV: the preview keeps playing while you browse the categories** (community PR #270 by @Kevsosmooth)
 
 ### 🐛 Fixes
+- **🗑️ Deleting a download or recording asks first**
+- **↕️ Moved categories, channels, films and series keep their place in A–Z and Provider; the rest follow the sort**
+- **📺 Back to the TV Guide focuses the channel that was playing and previews it**
+- **📋 TV Guide order follows Live TV, moved channels included**
+- **⏱️ "Mark as watched" no longer shows "0 min"**
+- **↕️ Move opens on the item asked for, even far down the list**
 - **Home: the last card of a row stays on screen when it has focus** (community PR #314 by @arch-fan)
 - **Setup: the choice cards line up when one has a shorter line** (community PR #315 by @arch-fan)
 - **The update popup's What's new scrolls with Up and Down** (community PR #291 by @camchis)
@@ -30,6 +40,17 @@
 - **TV Guide: the now-line reaches the bottom** (community PR #303 by @spotandjake)
 - **Settings no longer shows "0 playlists" while loading**
 - **Live TV no longer keeps showing a category from the playlist you just switched away from**
+- **Wrong PINs for Settings, Customize and the category locks share one wait**
+- **Settings search says what to type instead of showing an empty page**
+- **The channel banner names the new channel at once on CH+/CH−**
+- **An mpv channel comes back after Home, with Resume / Go live, instead of a black screen**
+- **Starting on the last channel no longer flashes Home first on large playlists**
+- **An Xtream playlist with a refused password says so instead of loading empty**
+- **A changed password, server, username or MAC re-syncs the playlist on save**
+- **Restoring a backup without passwords names the playlists that need one**
+- **A new playlist with a name already in use is numbered: "My IPTV 2"**
+- **Renamed channels, films and series keep their name on Home and in Continue**
+- **Stalker portals behind a redirect stay signed in; their posters load**
 
 ## v5.2.1 — 2026-10-21
 

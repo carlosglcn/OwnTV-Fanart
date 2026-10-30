@@ -227,7 +227,7 @@ fun EpgScreen(
     val recordingRows by vm.recordingRows.collectAsStateWithLifecycle()
     val reminderRows by vm.reminderRows.collectAsStateWithLifecycle()
     val leadMinutes by vm.reminderLeadMinutes.collectAsStateWithLifecycle()
-    val railItems by liveVm.railItems.collectAsStateWithLifecycle()
+    val railItems = liveVm.railItems.collectAsStateWithLifecycle().value.let { all -> remember(all) { all.filterNot { it.sealed } } }
     val liveSelected by liveVm.selectedKey.collectAsStateWithLifecycle()
     val playlistMarks by liveVm.playlistMarks.collectAsStateWithLifecycle()
     val livePreviewSetting by liveVm.livePreviewEnabled.collectAsStateWithLifecycle()
@@ -383,10 +383,32 @@ fun EpgScreen(
         }
     }
 
-    // Back from a channel tuned in the guide: its row again, once the reload has the grid on screen.
-    LaunchedEffect(restoreFocus, state.loading, state.channels.size) {
+    // Back from the player: the row of the channel that was playing, zapped-to included, once the reload has
+    // the grid on screen. That channel was chosen, so its preview starts without another OK. Any other return
+    // (a menu, Settings) goes back to the channel last tuned here and leaves the preview as it was.
+    // The playing channel's category is opened once; if the channel is still not listed, the old target is used.
+    var categoryOpenedFor by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(restoreFocus, state.loading, state.channels) {
         if (!restoreFocus || state.loading || state.channels.isEmpty()) return@LaunchedEffect
-        val idx = vm.lastTunedChannelId?.let { id -> state.channels.indexOfFirst { it.id == id } }?.takeIf { it >= 0 } ?: 0
+        val playing = previewChannel.takeIf { vm.playerClosed && previewEnabled }
+        val playingIdx = playing?.let { ch -> state.channels.indexOfFirst { it.id == ch.id } } ?: -1
+        if (playing != null && playingIdx < 0 && categoryOpenedFor != playing.id) {
+            categoryOpenedFor = playing.id
+            val key = liveVm.railKeyOf(playing)
+            if (key != (categoryKey ?: LiveKey.All)) {
+                if (liveMode) liveVm.select(key) else vm.setCategoryFilter(key)
+                return@LaunchedEffect // runs again when that category has loaded
+            }
+        }
+        vm.playerClosed = false
+        categoryOpenedFor = null
+        val idx = if (playing != null && playingIdx >= 0) {
+            vm.noteChannelTuned(playing)
+            liveVm.onChannelFocused(playing)
+            playingIdx
+        } else {
+            vm.lastTunedChannelId?.let { id -> state.channels.indexOfFirst { it.id == id } }?.takeIf { it >= 0 } ?: 0
+        }
         focusedRow = idx
         delay(80)
         focusGrid(idx)

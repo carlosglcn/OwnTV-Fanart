@@ -1,6 +1,7 @@
 package tv.own.owntv.di
 
 import tv.own.owntv.features.sports.SportsPlayback
+import tv.own.owntv.features.pip.PictureInPicture
 import tv.own.owntv.features.sports.SportsSettingsViewModel
 import tv.own.owntv.features.sports.SportsViewModel
 import org.koin.core.module.dsl.viewModel
@@ -9,8 +10,10 @@ import org.koin.core.module.dsl.viewModelOf
 import tv.own.owntv.features.more.MoreCountsViewModel
 import tv.own.owntv.features.shell.RailCountsViewModel
 import org.koin.dsl.module
+import tv.own.owntv.features.categorylock.CategoryLockViewModel
 import tv.own.owntv.features.customize.CustomizeItemsViewModel
 import tv.own.owntv.features.customize.CustomizeViewModel
+import tv.own.owntv.features.settings.lock.SettingsPinViewModel
 import tv.own.owntv.features.downloads.DownloadsViewModel
 import tv.own.owntv.features.recordings.RecordingsViewModel
 import tv.own.owntv.features.epg.EpgViewModel
@@ -64,6 +67,8 @@ val appModule = module {
     singleOf(::HomeFeedReader)
     // Sports Hub: which match the playing channel came from. Lazy; nothing runs until it is asked.
     singleOf(::SportsPlayback)
+    // Picture-in-picture when leaving the app: one instance shared by the activity and the shell.
+    singleOf(::PictureInPicture)
     // Process-long scope for work that must outlive the screen that started it (a first-run restore).
     single<kotlinx.coroutines.CoroutineScope> {
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
@@ -152,6 +157,7 @@ val appModule = module {
             livePreview = get(),
             enginePool = get(),
             importer = get(),
+            sourceEditor = get(),
         )
     }
     viewModel { LocalSyncViewModel(get(), get()) }
@@ -164,6 +170,7 @@ val appModule = module {
     viewModelOf(::RecordingsViewModel)
     viewModelOf(::EpgViewModel)
     viewModelOf(::CustomizeViewModel)
+    viewModelOf(::SettingsPinViewModel)
     viewModelOf(::CustomizeItemsViewModel)
     viewModelOf(::BackupViewModel)
     viewModelOf(::EpgSourcesViewModel)
@@ -172,4 +179,5 @@ val appModule = module {
     viewModelOf(::MoreCountsViewModel)
     // The counts beside the sections in the open Stage rail.
     viewModelOf(::RailCountsViewModel)
+    viewModelOf(::CategoryLockViewModel)
 }
