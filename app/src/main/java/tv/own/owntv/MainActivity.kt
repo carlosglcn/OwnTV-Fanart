@@ -387,6 +387,15 @@ open class MainActivity : ComponentActivity() {
             val activeProfileId by viewModel.activeProfileId.collectAsStateWithLifecycle()
             // glcn: accessible mode belongs to the profile in use.
             LaunchedEffect(activeProfileId) { tv.own.owntv.glcn.Accessible.load(applicationContext, activeProfileId ?: -1L) }
+            // glcn: and so do its colours — switching profile swaps the outgoing profile's look for the incoming one's.
+            val lookRepo = org.koin.compose.koinInject<tv.own.owntv.core.settings.SettingsRepository>()
+            val lookProfile = remember { arrayOfNulls<Long>(1) }
+            LaunchedEffect(activeProfileId) {
+                val to = activeProfileId ?: return@LaunchedEffect
+                val from = lookProfile[0]
+                lookProfile[0] = to
+                if (from != null && from != to) runCatching { lookRepo.swapLookForProfile(from, to) }
+            }
             val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
 
             val profilesVm: ProfilesViewModel = koinViewModel()
