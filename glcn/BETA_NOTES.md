@@ -255,3 +255,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔐 Emby / Jellyfin and WebDAV: they now use the app's own connection settings — the newer Let's Encrypt certificates the TV does not know, your custom DNS and proxy. A server whose certificate moved to the new roots said "Could not reach the server" on the TV while the phone reached it
 - 🩺 Playlists › Test connection: when the server cannot be reached, the technical reason is shown under the message (name not found, certificate, timeout, HTTP code…)
 - 🔐 Secure connections: a server that sends its certificate without the intermediate one (common behind a NAS reverse proxy) is now accepted — the app fetches the missing certificate itself, as browsers do. Emby on such a server said "Trust anchor for certification path not found"
+- 🪟 Menus, sheets and the rail over content: more solid glass (86% at the default instead of 78%), so the words behind a menu no longer show through

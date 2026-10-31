@@ -182,7 +182,9 @@ fun Modifier.stageGlass(radius: Dp, overContent: Boolean = false, share: Float =
     val palette = LocalStagePalette.current
     // Light glass is white 74% at the 56% default, so the flat opacity is lifted (0.3 + 0.8 x).
     val flat = if (palette.isLight) (0.3f + 0.8f * config.alpha).coerceIn(0f, 1f) else config.alpha
-    val fill0 = if (on) palette.glassTint.copy(alpha = if (overContent) 0.55f + 0.45f * config.alpha.coerceIn(0f, 1f) else flat) else palette.glassOff
+    // glcn: over content the scale starts higher (72-100%, 86% at the default): at 78% a menu over a row of
+    // cards still showed the words behind it, tinted by the background picture.
+    val fill0 = if (on) palette.glassTint.copy(alpha = if (overContent) 0.72f + 0.28f * config.alpha.coerceIn(0f, 1f) else flat) else palette.glassOff
     // glcn: [share] < 1 — a panel over the picture (the player's sheets) lets the video show through: a share of the
     // fill, no frosted slice behind it, a lighter shadow.
     val fill = if (share < 1f) fill0.copy(alpha = fill0.alpha * share) else fill0
