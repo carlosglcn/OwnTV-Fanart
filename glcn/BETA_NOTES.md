@@ -233,3 +233,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 Channel list, schedule view: ▶ walks into "Coming up" — each programme after the current one shows its picture (or its film's fanart) and synopsis in the card below; ◀ goes back to the channels, OK tunes the channel.
 - 🖼️ Cinema player: with the side panel open, the film's fanart fills the room around the picture (dimmed), and shows through the panel.
 - 🔒 Beta: test builds are now published to a private repository, so only the beta can see them. Paste the read-only access token once in About › Beta access to keep updating from the app
+- 🔎 Settings search finds Auto trailers.
