@@ -121,19 +121,41 @@ jobs:
           gh release list --limit 100 --json tagName,createdAt --jq 'map(select(.tagName|startswith("v")))|sort_by(.createdAt)|reverse|.[3:]|.[].tagName' \
             | while read -r t; do gh release delete "$t" --yes --cleanup-tag || true; done
 
-      # glcn: the dev branch is the beta — every push publishes it, as a pre-release (never "latest", so
-      # the stable app never sees it). The beta app reads this tag; the version is in the release name.
-      - name: Publish beta
+      # glcn: the dev branch is the beta — every push publishes it, but only to the PRIVATE repository
+      # carlosglcn/OwnTV-Fanart-Beta (tag beta-tv), so nobody else can see or download it. The beta app
+      # reads that tag with a read-only token pasted once in About. BETA_PUBLISH_TOKEN is a fine-grained
+      # token limited to that repository (Contents: read and write).
+      - name: Publish beta (private)
+        if: success() && github.ref == 'refs/heads/dev'
+        env:
+          GH_TOKEN: ${{ secrets.BETA_PUBLISH_TOKEN }}
+          BETA_REPO: carlosglcn/OwnTV-Fanart-Beta
+          BETA_TAG: beta-tv
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "::error::Missing secret BETA_PUBLISH_TOKEN"; exit 1; fi
+          cp dist/OwnTV-Fanart.apk dist/OwnTV-Fanart-Beta.apk
+          NOTES="Beta ${GITHUB_SHA::7} — core $(tr -d '[:space:]' < glcn/core.ref | cut -c1-7)"
+          if [ -s glcn/BETA_NOTES.md ]; then NOTES="$(cat glcn/BETA_NOTES.md)"$'\n\n'"$NOTES"; fi
+          # A release needs a commit to hang its tag on: give the empty repository its first one.
+          if ! gh api "repos/$BETA_REPO/commits?per_page=1" >/dev/null 2>&1; then
+            gh api -X PUT "repos/$BETA_REPO/contents/README.md" -f message="init" \
+              -f content="$(printf '# OwnTV Fanart Beta\n\nPrivate test builds.\n' | base64 -w0)" >/dev/null || true
+          fi
+          gh release delete "$BETA_TAG" -R "$BETA_REPO" --yes --cleanup-tag || true
+          gh release create "$BETA_TAG" dist/OwnTV-Fanart-Beta.apk -R "$BETA_REPO" \
+            --title "OwnTV Fanart Beta $VERSION_NAME" --notes "$NOTES" --prerelease
+
+      # glcn: TRANSITION ONLY — the betas already installed still look for the public "beta-latest", so it is
+      # published once more for them to update to the build that reads the private repository. Remove this
+      # step (and delete beta-latest) once both devices run that build.
+      - name: Publish beta (public, transition)
         if: success() && github.ref == 'refs/heads/dev'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp dist/OwnTV-Fanart.apk dist/OwnTV-Fanart-Beta.apk
-          NOTES="Beta ${GITHUB_SHA::7} — core $(tr -d '[:space:]' < glcn/core.ref | cut -c1-7)"
-          if [ -s glcn/BETA_NOTES.md ]; then NOTES="$(cat glcn/BETA_NOTES.md)"$'\n\n'"$NOTES"; fi
           gh release delete beta-latest --yes --cleanup-tag || true
           gh release create beta-latest dist/OwnTV-Fanart-Beta.apk \
-            --title "OwnTV Fanart Beta $VERSION_NAME" --notes "$NOTES" --target "$GITHUB_SHA" --prerelease
+            --title "OwnTV Fanart Beta $VERSION_NAME" --notes "Beta ${GITHUB_SHA::7}" --target "$GITHUB_SHA" --prerelease
 
       - name: Report status to ci-status branch
         if: always()

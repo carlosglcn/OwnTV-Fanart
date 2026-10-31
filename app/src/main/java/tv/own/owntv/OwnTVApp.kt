@@ -115,7 +115,12 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // repository instead of relying on core to guess it, the same as the phone app does. A
         // default that happens to be right for one app is a trap for every other one.
         tv.own.owntv.core.CoreBuildInfo.releaseRepo = "carlosglcn/OwnTV-Fanart" // glcn: our own releases
-        if (BuildConfig.GLCN_BETA) tv.own.owntv.core.CoreBuildInfo.releaseTag = "beta-latest" // glcn: the beta follows its own pre-release
+        // glcn: the beta is published only to a private repository, read with the token pasted once in About.
+        if (BuildConfig.GLCN_BETA) {
+            tv.own.owntv.core.CoreBuildInfo.releaseRepo = "carlosglcn/OwnTV-Fanart-Beta"
+            tv.own.owntv.core.CoreBuildInfo.releaseTag = "beta-tv"
+            tv.own.owntv.core.CoreBuildInfo.releaseNeedsToken = true
+        }
         // Fixed for this process before any player exists: the setting applies only after a restart.
         tv.own.owntv.core.player.FfmpegAudioSetting.load(this)
         // First thing after the context exists: a crash from here on leaves a trace on disk that the

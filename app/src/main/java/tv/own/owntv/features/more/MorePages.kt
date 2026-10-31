@@ -793,6 +793,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
     val updateState by manager.state.collectAsStateWithLifecycle()
     val checkedAt by vm.lastUpdateCheckAt.collectAsStateWithLifecycle()
     var showUpdate by remember { mutableStateOf(false) }
+    var showToken by remember { mutableStateOf(false) }
     val updateFocus = remember { FocusRequester() }
     var updateWasOpen by remember { mutableStateOf(false) }
     LaunchedEffect(showUpdate) { if (showUpdate) updateWasOpen = true else if (updateWasOpen) { updateWasOpen = false; withFrameNanos { }; runCatching { updateFocus.requestFocus() } } }
@@ -888,9 +889,23 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
             val languages = SupportedLocales.all.count { it.packaged }
             StageTool(pluralStringResource(R.plurals.more_about_languages, languages, languages), onClick = onOpenLanguage, icon = OwnTVIcon.LIST, boxed = true, modifier = Modifier.focusRequester(entry))
             StageTool(stringResource(R.string.settings_check_updates), onClick = { showUpdate = true }, icon = OwnTVIcon.REFRESH, boxed = true, modifier = Modifier.focusRequester(updateFocus))
+            // glcn: the beta's updates come from a private repository; its token is pasted here once.
+            if (BuildConfig.GLCN_BETA) {
+                StageTool(stringResource(R.string.glcn_beta_token), onClick = { showToken = true }, icon = OwnTVIcon.PENCIL, boxed = true,
+                    value = if (manager.accessToken != null) stringResource(R.string.glcn_beta_token_saved) else null)
+            }
         }
     }
     if (showUpdate) {
         UpdateDialog(onDismiss = { showUpdate = false }, checkOnOpen = true)
+    }
+    if (showToken) {
+        tv.own.owntv.ui.components.TextInputDialog(
+            title = stringResource(R.string.glcn_beta_token_title),
+            label = stringResource(R.string.glcn_beta_token_label),
+            hint = stringResource(R.string.glcn_beta_token_hint),
+            onConfirm = { manager.accessToken = it; showToken = false; showUpdate = true },
+            onDismiss = { showToken = false },
+        )
     }
 }
