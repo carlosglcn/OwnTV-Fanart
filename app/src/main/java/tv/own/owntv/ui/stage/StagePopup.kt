@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
@@ -334,6 +335,8 @@ fun StagePopupButton(
             focused -> a.onAccent
             // glcn: a pale accent (turquoise, pink…) as text on the light page all but vanished — darkened there.
             primary && light -> androidx.compose.ui.graphics.lerp(a.accent, androidx.compose.ui.graphics.Color.Black, 0.35f)
+            // …and a deep accent (dark teal, navy…) on the dark page the same way, lifted towards white.
+            primary && a.accent.luminance() < 0.3f -> androidx.compose.ui.graphics.lerp(a.accent, androidx.compose.ui.graphics.Color.White, 0.5f)
             primary -> a.accent
             else -> StageColors.Text
         }
