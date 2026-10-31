@@ -1097,8 +1097,10 @@ class LiveViewModel(
             if (!settings.rememberLastLive.first()) return@launch
             val savedId = settings.lastLiveChannelId.first()
             if (savedId > 0 && _previewChannel.value == null) {
-                val pid = ctx.first { it.profileId >= 0 }.profileId
-                channelDao.getById(savedId)?.takeIf { !customize.sealsCategory(pid, it.categoryId) }?.let { if (_previewChannel.value == null) _previewChannel.value = it }
+                val c = ctx.first { it.profileId >= 0 }
+                val pid = c.profileId
+                // glcn: only a channel of this profile's own playlists — the remembered channel is one for the whole app.
+                channelDao.getById(savedId)?.takeIf { !customize.sealsCategory(pid, it.categoryId) && it.sourceId in c.sourceIds }?.let { if (_previewChannel.value == null) _previewChannel.value = it }
             }
         }
     }
@@ -1435,14 +1437,17 @@ class LiveViewModel(
     /** The most-recently-watched live channel for the active profile (for "resume last channel"). Waits
      *  for the profile to be known, then reads the newest watch-history row. Null if there is none. */
     suspend fun lastWatchedLiveChannel(): ChannelEntity? {
-        val pid = ctx.first { it.profileId >= 0 }.profileId
+        // glcn: the profile now active, not whatever [ctx] still holds — right after a profile switch it is the
+        // previous profile's, and its last channel then started in the new one and landed in its Recent.
+        val pid = currentProfileId() ?: return null
+        val visibleIds = kotlinx.coroutines.withTimeoutOrNull(PROFILE_CTX_WAIT_MS) { ctx.first { it.profileId == pid } }?.sourceIds
         // At a cold start the lock store's first read costs as much as the history query (0.3–0.6 s each on
         // the TCL with a 55k-channel playlist), and the start-up choice holds the splash on this call: read
         // it alongside the query, so the seal check below finds it already loaded.
         return kotlinx.coroutines.coroutineScope {
             launch { customize.observeHasLocks(pid).first() }
             channelDao.recentlyWatched(pid, 1).first().firstOrNull()
-        }?.takeIf { !customize.sealsCategory(pid, it.categoryId) }
+        }?.takeIf { !customize.sealsCategory(pid, it.categoryId) && (visibleIds == null || it.sourceId in visibleIds) }
     }
 
     /** Final startup/deep-entry visibility check, including profile source and Customize policy. */
@@ -2568,6 +2573,8 @@ class LiveViewModel(
         liveCountFlow(key, c.profileId, c.sourceIds, hiddenCats, channelDao, customCategoryDao, sealedCats)
 
     private companion object {
+        /** How long the start-up waits for the newly active profile's playlists before picking its last channel. */
+        const val PROFILE_CTX_WAIT_MS = 3_000L
         const val ENGINE_TAG = "LiveEngine"
 
         /** How long a channel must stay tuned before it counts as watched — see [recordLiveHistory]. */
