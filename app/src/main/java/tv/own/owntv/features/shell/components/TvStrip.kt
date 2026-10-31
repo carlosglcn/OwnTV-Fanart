@@ -139,6 +139,10 @@ private fun stripTitle(g: LiveViewModel.StripGroup): String = when (g.kind) {
     LiveViewModel.StripKind.GROUP -> g.title.orEmpty()
     LiveViewModel.StripKind.RECENT -> stringResource(R.string.content_category_recently_watched)
     LiveViewModel.StripKind.ALL -> stringResource(R.string.content_category_all_channels)
+    LiveViewModel.StripKind.STARTING -> stringResource(R.string.glcn_tvhome_starting)
+    LiveViewModel.StripKind.FILMS -> stringResource(R.string.glcn_tvhome_films)
+    LiveViewModel.StripKind.SPORTS -> stringResource(R.string.glcn_tvhome_sports)
+    LiveViewModel.StripKind.TONIGHT -> stringResource(R.string.glcn_tvhome_tonight)
 }
 
 private const val STRIP_ENTER_MS = 420

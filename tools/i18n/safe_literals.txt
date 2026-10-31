@@ -198,14 +198,19 @@
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveStage.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveStage.kt	· $left
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveStage.kt	▾
-6	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	\0
+7	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	#$it
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	LiveEngine
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	OwnTVHome
+1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	\\p{M}+
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up '${ch.name}' prog='${programme.title}' -> ${tv.own.owntv.core.network.HttpClient.redactUrl(url)}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	catch-up external '${ch.name}' prog='${programme.title}'
+1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	cine
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history profile=$pid channelId=${channel.id}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history record failed channelId=${channel.id} profile=$pid
+1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	film
+1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	movie
+1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	pelicula
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	stalker resolve failed channelId=${channel.id}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	tuneByNumber($number) failed
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	zap: tune wait ${delayMs}ms — ${zapWaitReason(lastZapPressMs, now, singleConnection)}

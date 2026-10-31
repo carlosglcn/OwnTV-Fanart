@@ -86,14 +86,23 @@ internal fun TvHome(
     previewEngine: tv.own.owntv.player.LivePreviewEngine? = null,
     /** Start [previewEngine] on a channel (muted or not as the Live preview is set). */
     playPreview: (ChannelEntity) -> Unit = {},
+    /** glcn: the guide-made rows (Starting now, Films, Sport, Tonight) for these channels. */
+    loadSmart: suspend (List<ChannelEntity>) -> List<LiveViewModel.StripGroup> = { emptyList() },
 ) {
     val groups by produceState<List<LiveViewModel.StripGroup>?>(null) {
-        value = runCatching { load() }.getOrDefault(emptyList())
+        val plain = runCatching { load() }.getOrDefault(emptyList())
             .map { it.copy(channels = oneCardPerChannel(it.channels)) }.filter { it.channels.isNotEmpty() }
+        value = plain
+        // glcn: then the rows that say something — Starting now, Films on air, Sport on air, Tonight — ahead of the groups.
+        val smart = runCatching { loadSmart(plain.flatMap { it.channels }) }.getOrDefault(emptyList())
+            .map { g -> g.copy(channels = oneCardPerChannel(g.channels)) }.filter { it.channels.isNotEmpty() }
+        if (smart.isNotEmpty()) value = smart + plain
     }
     var selected by remember { mutableIntStateOf(0) }
     val nowNext = remember { mutableStateMapOf<Long, Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>>() }
     var focusedChannel by remember { mutableStateOf<ChannelEntity?>(null) }
+    // glcn: the programme that put the focused card in its row (Tonight's 22:00 film), shown in the panel instead of now.
+    var focusedShow by remember { mutableStateOf<EpgProgrammeEntity?>(null) }
     var focusedArt by remember { mutableStateOf<String?>(null) }
     // The picture changes once the focus rests, so running along a row does not flash a picture per card.
     var shownArt by remember { mutableStateOf<String?>(null) }
@@ -150,7 +159,7 @@ internal fun TvHome(
 
         // The programme on the focused channel.
         val ch = focusedChannel
-        val (now, next) = ch?.let { nowNext[it.id] } ?: (null to null)
+        val (now, next) = focusedShow?.let { it to null } ?: ch?.let { nowNext[it.id] } ?: (null to null)
         if (ch != null) Column(
             Modifier.align(Alignment.TopStart).padding(start = contentStart, top = 170.mpx).widthIn(max = 1040.mpx)
                 // A panel of the page colour behind the text: readable in light and dark over any picture or video.
@@ -163,7 +172,10 @@ internal fun TvHome(
                         ch.displayLogoUrl, Modifier.size(88.mpx, 56.mpx).clip(RoundedCornerShape(10.mpx)),
                     ) { Text(ch.name.take(2), style = stageText(20, 800), color = StageColors.Text) }
                     Column {
-                        Text(stringResource(R.string.content_epg_now_short), style = stageText(16, 800), color = stageAccent.accent, maxLines = 1)
+                        Text(
+                            now?.takeIf { it.startMs > clock }?.let { timeFormat.format(java.util.Date(it.startMs)) } ?: stringResource(R.string.content_epg_now_short),
+                            style = stageText(16, 800), color = stageAccent.accent, maxLines = 1,
+                        )
                         Text(ch.name, style = stageText(22, 700), color = StageColors.Text.copy(alpha = 0.9f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
@@ -241,16 +253,18 @@ internal fun TvHome(
                     ) {
                         itemsIndexed(g.channels, key = { _, c -> c.id }) { i, c ->
                             LaunchedEffect(c.id) { if (c.id !in nowNext) nowNext[c.id] = runCatching { loadNow(c) }.getOrDefault(null to null) }
-                            val pair = nowNext[c.id]
+                            val pair = g.shows[c.id]?.let { it to null } ?: nowNext[c.id]
                             CompositionLocalProvider(LocalHomeFocusArt provides { art -> focusedArt = art }) {
                                 ArtLiveCard(
                                     channel = c,
                                     programme = pair?.first,
                                     now = clock,
+                                    // glcn: a programme still to come (Starting now, Tonight) says when it starts.
+                                    startLabel = pair?.first?.takeIf { it.startMs > clock }?.let { timeFormat.format(java.util.Date(it.startMs)) },
                                     onClick = { onTune(c, g.channels) },
                                     width = TV_CARD_WIDTH.mpx,
                                     modifier = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier)
-                                        .onFocusChanged { if (it.hasFocus) { focusedChannel = c; if (pair?.first == null) focusedArt = null } },
+                                        .onFocusChanged { if (it.hasFocus) { focusedChannel = c; focusedShow = g.shows[c.id]; if (pair?.first == null) focusedArt = null } },
                                 )
                             }
                         }
@@ -267,6 +281,10 @@ private fun tvHomeTitle(g: LiveViewModel.StripGroup): String = when (g.kind) {
     LiveViewModel.StripKind.GROUP -> g.title.orEmpty()
     LiveViewModel.StripKind.RECENT -> stringResource(R.string.content_category_recently_watched)
     LiveViewModel.StripKind.ALL -> stringResource(R.string.content_category_all_channels)
+    LiveViewModel.StripKind.STARTING -> stringResource(R.string.glcn_tvhome_starting)
+    LiveViewModel.StripKind.FILMS -> stringResource(R.string.glcn_tvhome_films)
+    LiveViewModel.StripKind.SPORTS -> stringResource(R.string.glcn_tvhome_sports)
+    LiveViewModel.StripKind.TONIGHT -> stringResource(R.string.glcn_tvhome_tonight)
 }
 
 /**

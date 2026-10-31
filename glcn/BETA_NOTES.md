@@ -249,3 +249,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 👤 Profiles: the glow behind the profile in focus fades out softly instead of ending in straight lines
 - 🔘 Light theme: the main button of a window (Save, Create…) is readable in pale accents such as turquoise or pink
 - 🖼️ Settings › Appearance: the live preview shows the background as the app really draws it — with Glass off, no picture behind
+- 📺 Home (TV layout): rows that say something, ahead of your groups — Starting now (begun up to ten minutes ago or starting in the next ten), Films on air (most left first), Sport on air (live first) and Tonight at 22:00; a programme still to come shows its time on the card and in the panel.

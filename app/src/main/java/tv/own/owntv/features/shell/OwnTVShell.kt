@@ -1631,6 +1631,7 @@ fun OwnTVShell(
                             // mode, and not under the player (OK promotes this same stream to full screen).
                             previewEngine = liveVm.previewEngine.takeIf { tvHomePreview && !tv.own.owntv.glcn.LowRam.on && playerMode == PlayerMode.NONE },
                             playPreview = { liveVm.playPreview(it) },
+                            loadSmart = { liveVm.tvSmartGroups(it) },
                         )
                         selectedSection == MainSection.HOME && homeLayout == 3 -> tv.own.owntv.features.home.LumenHome(
                             vm = homeVm,

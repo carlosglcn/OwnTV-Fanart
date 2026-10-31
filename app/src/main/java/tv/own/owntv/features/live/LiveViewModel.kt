@@ -2397,8 +2397,63 @@ class LiveViewModel(
     }
 
     /** glcn (TV profile): the TV strip's groups — favourites, each favourites group, the recent ones, then every channel. */
-    data class StripGroup(val title: String?, val kind: StripKind, val channels: List<ChannelEntity>)
-    enum class StripKind { FAVORITES, GROUP, RECENT, ALL }
+    data class StripGroup(
+        val title: String?,
+        val kind: StripKind,
+        val channels: List<ChannelEntity>,
+        /** glcn: the programme each card shows when it is not the one on air (Tonight), or the one that made the row. */
+        val shows: Map<Long, tv.own.owntv.core.database.entity.EpgProgrammeEntity> = emptyMap(),
+    )
+    enum class StripKind { FAVORITES, GROUP, RECENT, ALL, STARTING, FILMS, SPORTS, TONIGHT }
+
+    /**
+     * glcn (TV profile Home): rows that say something rather than list channels, read from the guide of [base] —
+     * what starts now (begun up to ten minutes ago or starting in the next ten), the films on air (most of them
+     * left first), the sport on air (live first) and tonight at 22:00 (until 22:30).
+     */
+    suspend fun tvSmartGroups(base: List<ChannelEntity>): List<StripGroup> {
+        val chans = base.distinctBy { it.id }.take(SMART_CHANNELS)
+        if (chans.isEmpty()) return emptyList()
+        val now = System.currentTimeMillis()
+        val tonight = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, TONIGHT_HOUR); set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val withTonight = now < tonight + TONIGHT_GRACE_MS
+        val slice = runCatching {
+            guideReader.slice(chans, custom.value, epgOffset.value, now - STARTING_WINDOW_MS, maxOf(now + STARTING_WINDOW_MS, if (withTonight) tonight + 1 else 0L))
+        }.getOrNull() ?: return emptyList()
+        val byId = chans.associateBy { it.id }
+        val starting = ArrayList<Pair<ChannelEntity, tv.own.owntv.core.database.entity.EpgProgrammeEntity>>()
+        val films = ArrayList<Pair<ChannelEntity, tv.own.owntv.core.database.entity.EpgProgrammeEntity>>()
+        val sport = ArrayList<Pair<ChannelEntity, tv.own.owntv.core.database.entity.EpgProgrammeEntity>>()
+        val evening = ArrayList<Pair<ChannelEntity, tv.own.owntv.core.database.entity.EpgProgrammeEntity>>()
+        for ((id, rows) in slice) {
+            val ch = byId[id] ?: continue
+            rows.firstOrNull { it.startMs in (now - STARTING_WINDOW_MS)..(now + STARTING_WINDOW_MS) }?.let { starting += ch to it }
+            rows.firstOrNull { now in it.startMs until it.stopMs }?.let { onAir ->
+                if (isFilm(onAir)) films += ch to onAir
+                if (tv.own.owntv.core.live.SportsNow.isSport(onAir)) sport += ch to onAir
+            }
+            if (withTonight) rows.firstOrNull { tonight in it.startMs until it.stopMs }?.let { evening += ch to it }
+        }
+        fun group(kind: StripKind, list: List<Pair<ChannelEntity, tv.own.owntv.core.database.entity.EpgProgrammeEntity>>) =
+            list.takeIf { it.isNotEmpty() }?.let { l -> StripGroup(null, kind, l.map { it.first }, l.associate { it.first.id to it.second }) }
+        return listOfNotNull(
+            group(StripKind.STARTING, starting.sortedBy { it.second.startMs }),
+            group(StripKind.FILMS, films.sortedByDescending { it.second.stopMs }),
+            group(StripKind.SPORTS, sport.sortedByDescending { tv.own.owntv.core.live.SportsNow.isLive(it.second) }),
+            group(StripKind.TONIGHT, evening.sortedBy { it.second.startMs }),
+        )
+    }
+
+    private fun isFilm(p: tv.own.owntv.core.database.entity.EpgProgrammeEntity): Boolean {
+        val cats = java.text.Normalizer.normalize(p.categories.orEmpty(), java.text.Normalizer.Form.NFD)
+            .replace(Regex("\\p{M}+"), "").lowercase()
+        if (FILM_WORDS.any { it in cats }) return true
+        val len = p.lengthMin ?: ((p.stopMs - p.startMs) / 60_000L).toInt()
+        return p.year != null && len >= FILM_MIN_MINUTES && p.episode.isNullOrBlank()
+    }
 
     suspend fun tvStripGroups(): List<StripGroup> {
         val pid = currentProfileId() ?: return emptyList()
@@ -2528,6 +2583,13 @@ class LiveViewModel(
         // The CH+/- timing constants (ZAP_TUNE_DELAY_MS, ZAP_ISOLATED_PRESS_MS) live in ZapTuneDelay.kt.
         const val HISTORY_LIST_LIMIT = 30
         const val STRIP_LIMIT = 200
+        /** glcn: how many channels the TV Home's smart rows read the guide of. */
+        const val SMART_CHANNELS = 600
+        const val TONIGHT_HOUR = 22
+        const val TONIGHT_GRACE_MS = 30 * 60_000L
+        const val STARTING_WINDOW_MS = 10 * 60_000L
+        const val FILM_MIN_MINUTES = 75
+        val FILM_WORDS = listOf("cine", "pelicula", "movie", "film")
         const val STRIP_ALL_LIMIT = 600
         val defaultRail = listOf(
             LiveRailItem(LiveKey.Favorites, icon = OwnTVIcon.FAVORITE),
