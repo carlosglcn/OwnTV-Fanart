@@ -231,8 +231,8 @@ open class MainActivity : ComponentActivity() {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         // glcn: the app went down last time — show what happened (and let it be shared) before anything else runs.
+        // (The application has already opened the report in its own process; this window steps aside.)
         if (tv.own.owntv.glcn.CrashScreen.pending(this)) {
-            startActivity(android.content.Intent(this, tv.own.owntv.glcn.CrashActivity::class.java))
             finish()
             return
         }

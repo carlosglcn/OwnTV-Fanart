@@ -96,6 +96,8 @@
         <!-- glcn: the last crash, shown at the next start before anything else runs. -->
         <activity
             android:name=".glcn.CrashActivity"
+            android:process=":crash"
+            android:excludeFromRecents="true"
             android:exported="false"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
         <activity

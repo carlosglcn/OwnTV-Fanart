@@ -90,6 +90,16 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
     }
 
     override fun onCreate() {
+        // glcn: the crash report runs in a process of its own and needs none of the app's start-up.
+        if (tv.own.owntv.glcn.CrashScreen.isCrashProcess(this)) { super.onCreate(); return }
+        // glcn: the app went down last time — open the report first, in that separate process, so it shows
+        // even when what broke is the start-up below.
+        if (tv.own.owntv.glcn.CrashScreen.pending(this)) runCatching {
+            startActivity(
+                android.content.Intent(this, tv.own.owntv.glcn.CrashActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
         tv.own.owntv.glcn.LowRam.detect(this)
         tv.own.owntv.glcn.DockPrefs.load(this)
         tv.own.owntv.glcn.RecentPins.load(this)
