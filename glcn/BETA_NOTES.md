@@ -234,3 +234,8 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Cinema player: with the side panel open, the film's fanart fills the room around the picture (dimmed), and shows through the panel.
 - 🔒 Beta: test builds are now published to a private repository, so only the beta can see them. Paste the read-only access token once in About › Beta access to keep updating from the app
 - 🔎 Settings search finds Auto trailers.
+- 💬 Live TV: teletext subtitles (page 888) — the way Movistar+, La 1, Antena 3, Telecinco and most Spanish channels send them — now show on the standard player, in the subtitle style you chose. The empty "CC" track those channels used to list is gone
+- 🔈 Live TV on mpv: always in stereo. Dolby 5.1 channels showed one frame and stopped; films on mpv keep their surround and passthrough
+- 🔁 Live TV on mpv: 1080i channels no longer reload a few seconds in (the double frame rate of the deinterlaced picture was taken for broken sound)
+- ☀️ Home (TV layout) with a light theme: the channel, programme title, times and "Up next" are readable — they were white on white
+- 🩺 More › Error log: a freeze now shows what the app was doing at that moment (the main thread), not just memory statistics

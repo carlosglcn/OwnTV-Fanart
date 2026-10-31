@@ -117,10 +117,10 @@ internal fun TvHome(
 
         // The hour, large, top right under the bar.
         Column(Modifier.align(Alignment.TopEnd).padding(top = 120.mpx, end = 72.mpx), horizontalAlignment = Alignment.End) {
-            Text(timeFormat.format(java.util.Date(clock)), style = stageText(72, 300), color = Color.White, maxLines = 1)
+            Text(timeFormat.format(java.util.Date(clock)), style = stageText(72, 300), color = StageColors.Text, maxLines = 1)
             Text(
                 java.text.DateFormat.getDateInstance(java.text.DateFormat.FULL).format(java.util.Date(clock)).replaceFirstChar { it.titlecase() },
-                style = stageText(20, 500), color = Color.White.copy(alpha = 0.75f), maxLines = 1,
+                style = stageText(20, 500), color = StageColors.Text.copy(alpha = 0.75f), maxLines = 1,
             )
         }
 
@@ -135,15 +135,15 @@ internal fun TvHome(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                     tv.own.owntv.ui.components.ChannelLogoTile(
                         ch.displayLogoUrl, Modifier.size(88.mpx, 56.mpx).clip(RoundedCornerShape(10.mpx)),
-                    ) { Text(ch.name.take(2), style = stageText(20, 800), color = Color.White) }
+                    ) { Text(ch.name.take(2), style = stageText(20, 800), color = StageColors.Text) }
                     Column {
                         Text(stringResource(R.string.content_epg_now_short), style = stageText(16, 800), color = stageAccent.accent, maxLines = 1)
-                        Text(ch.name, style = stageText(22, 700), color = Color.White.copy(alpha = 0.9f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(ch.name, style = stageText(22, 700), color = StageColors.Text.copy(alpha = 0.9f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Text(
                     now?.title?.let(SportsNow::displayTitle) ?: ch.name,
-                    style = stageText(64, 800), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    style = stageText(64, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
                 now?.let { p ->
                     val total = (p.stopMs - p.startMs).coerceAtLeast(1L)
@@ -152,12 +152,12 @@ internal fun TvHome(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                         Text(
                             timeFormat.format(java.util.Date(p.startMs)) + " – " + timeFormat.format(java.util.Date(p.stopMs)),
-                            style = stageText(20, 600), color = Color.White.copy(alpha = 0.85f), maxLines = 1,
+                            style = stageText(20, 600), color = StageColors.Text.copy(alpha = 0.85f), maxLines = 1,
                         )
                         StageProgress(done, Modifier.width(220.mpx))
                         Text(
                             stringResource(R.string.home_time_left, tv.own.owntv.features.shell.components.vodRuntime(leftMin * 60)),
-                            style = stageText(20, 600), color = Color.White.copy(alpha = 0.85f), maxLines = 1,
+                            style = stageText(20, 600), color = StageColors.Text.copy(alpha = 0.85f), maxLines = 1,
                         )
                     }
                     p.description?.takeIf { it.isNotBlank() }?.let {
@@ -167,7 +167,7 @@ internal fun TvHome(
                 next?.let { n ->
                     Text(
                         stringResource(R.string.content_live_next) + "  " + timeFormat.format(java.util.Date(n.startMs)) + "  " + SportsNow.displayTitle(n.title),
-                        style = stageText(19, 600), color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = stageText(19, 600), color = StageColors.Text.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
