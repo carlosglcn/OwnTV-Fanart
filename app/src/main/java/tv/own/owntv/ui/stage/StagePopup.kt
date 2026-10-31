@@ -329,8 +329,11 @@ fun StagePopupButton(
         idle = Modifier.background(if (primary) a.accent.copy(alpha = 0.2f) else StageColors.Ink.copy(alpha = 0.08f), shape),
         contentAlignment = Alignment.Center,
     ) { focused ->
+        val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
         val content = when {
             focused -> a.onAccent
+            // glcn: a pale accent (turquoise, pink…) as text on the light page all but vanished — darkened there.
+            primary && light -> androidx.compose.ui.graphics.lerp(a.accent, androidx.compose.ui.graphics.Color.Black, 0.35f)
             primary -> a.accent
             else -> StageColors.Text
         }

@@ -119,10 +119,12 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
                 stringResource(R.string.profiles_gate_title), style = tv.own.owntv.ui.theme.stageText(26, 600),
                 color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f), modifier = Modifier.staggerIn(60).padding(top = 6.dp),
             )
-            Spacer(Modifier.height(44.dp))
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(36.dp),
-                modifier = Modifier.focusGroup().padding(horizontal = 48.dp),
+                // glcn: room inside the row for the focused tile's glow — the list clips to its own bounds, and
+                // the glow used to stop there in straight lines above and beside the tile.
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 72.dp, vertical = 44.dp),
+                modifier = Modifier.focusGroup(),
             ) {
                 items(profiles, key = { it.id }) { p ->
                     val i = profiles.indexOf(p)
@@ -169,9 +171,9 @@ private fun ProfileTile(profile: ProfileEntity, continueTitle: String?, modifier
                     if (focused) drawCircle(
                         androidx.compose.ui.graphics.Brush.radialGradient(
                             0f to glow.copy(alpha = 0.55f), 1f to androidx.compose.ui.graphics.Color.Transparent,
-                            center = center, radius = size.minDimension * 0.95f,
+                            center = center, radius = size.minDimension * 0.8f,
                         ),
-                        radius = size.minDimension * 0.95f,
+                        radius = size.minDimension * 0.8f,
                     )
                 },
             focusDecor = false,
