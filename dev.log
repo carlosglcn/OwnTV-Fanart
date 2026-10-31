@@ -1,0 +1,17 @@
+run=41225626748 sha=2723a914d81278c0475030999b0526c4b347e1e5
+> Task :core-src:core:verifyI18nLiterals FAILED
+i18n literal inventory failed:
+
+--
+* What went wrong:
+Execution failed for task ':core-src:core:verifyI18nLiterals' (registered in build file 'core-src/core/build.gradle.kts').
+> Hardcoded text check failed — see the report above.
+
+--
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':core-src:core:verifyI18nLiterals' (registered in build file 'core-src/core/build.gradle.kts').
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:135)
+	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
+--
+BUILD FAILED in 24s
+29 actionable tasks: 21 executed, 8 from cache
+Configuration cache entry stored.
