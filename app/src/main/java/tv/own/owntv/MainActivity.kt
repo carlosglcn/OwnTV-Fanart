@@ -230,6 +230,12 @@ open class MainActivity : ComponentActivity() {
         // postSplashScreenTheme (Theme.OwnTV), so the activity ends up in the same theme as before.
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        // glcn: the app went down last time — show what happened (and let it be shared) before anything else runs.
+        if (tv.own.owntv.glcn.CrashScreen.pending(this)) {
+            startActivity(android.content.Intent(this, tv.own.owntv.glcn.CrashActivity::class.java))
+            finish()
+            return
+        }
         tv.own.owntv.glcn.UiSounds.init(this)
         // glcn: a long Back that did not close the player leaves a line in the playback report (see BackHold).
         tv.own.owntv.glcn.BackHold.note = { line -> tv.own.owntv.player.PlaybackErrorLog.report(applicationContext, "back-hold", true, null, line) }

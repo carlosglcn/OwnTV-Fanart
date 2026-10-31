@@ -93,6 +93,11 @@
              purpose: a script-family language switch still needs its one recreate (LocalizedContent).
              supportsPictureInPicture: Settings › Video player › Picture-in-picture when leaving the app;
              the window resizes the activity, which screenSize|smallestScreenSize|screenLayout keep alive. -->
+        <!-- glcn: the last crash, shown at the next start before anything else runs. -->
+        <activity
+            android:name=".glcn.CrashActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
         <activity
             android:name=".MainActivityPetrol"
             android:banner="@drawable/owntv_banner_petrol"

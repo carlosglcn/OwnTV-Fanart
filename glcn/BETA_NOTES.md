@@ -244,3 +244,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪟 Home (TV layout): the programme sits on a panel of its own, so the picture or the video behind it is shown whole — no more washed-out background in the light theme
 - 🔀 Home (TV layout): the same channel in HD and SD (La 1 HD / LA 1, M+ Estrenos / M+ Estrenos HD) shows as one card, the HD one
 - 👋 New profile screen: a greeting for the time of day, the clock, and a background that follows the profile in focus — a slow aurora in its colour and the fanart of what it watched last, with "Continue: …" under its name; the focused profile grows with a glow of its own colour.
+- 🧯 If the app closed because of an error, the next start shows the report first, with Share report and Open the app — so a crash at start-up can still be sent.
