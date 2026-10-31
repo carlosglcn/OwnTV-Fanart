@@ -302,7 +302,13 @@ fun StageSettingsPage(
                     content = toolbar,
                 )
             }
-            if (list != null) list(Modifier.padding(start = w * 50, top = rowsTop).width(w * 1060).fillMaxHeight())
+            // glcn: a page's own list (Sports and leagues, Customize) glides at the same brisk pace as the rows below, with
+            // the same sliding highlight; on the app's slower default a quick run of ▼ left the highlight off the screen.
+            if (list != null) CompositionLocalProvider(LocalBringIntoViewSpec provides settingsScrollSpec) {
+                tv.own.owntv.glcn.SlideFocusHost(stiffness = tv.own.owntv.glcn.SETTINGS_FOCUS_STIFFNESS) {
+                    list(Modifier.padding(start = w * 50, top = rowsTop).width(w * 1060).fillMaxHeight())
+                }
+            }
             else CompositionLocalProvider(LocalBringIntoViewSpec provides settingsScrollSpec) {
                 // glcn: one highlight that slides from row to row, at the list's own pace.
                 tv.own.owntv.glcn.SlideFocusHost(stiffness = tv.own.owntv.glcn.SETTINGS_FOCUS_STIFFNESS) {

@@ -1,6 +1,7 @@
 ## Beta
 
 Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
+- 🏎️ Settings: Sports and leagues and the Customize lists scroll as fast as the highlight moves — a quick run of ▼ no longer leaves it off the screen
 - 📐 Home (Panel): the featured billboard and the Sports scores now use the whole width ("Sports now" channel cards keep the side panel); the side panel slides in, and the rows make room for it, only when you go down to a row it describes
 - 📝 Home (Panel): "Tonight" cards show the programme's synopsis in the side panel
 - 🖼️ Home (Panel): the side panel always shows the picture of the card in focus — a card without one no longer shows the previous card's picture
