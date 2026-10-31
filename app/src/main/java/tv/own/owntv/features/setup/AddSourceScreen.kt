@@ -58,7 +58,7 @@ import tv.own.owntv.ui.components.BrowseMode
 import tv.own.owntv.ui.components.DayStepperDialog
 import tv.own.owntv.ui.components.StorageBrowser
 
-private enum class SourceKind { XTREAM, M3U, STALKER }
+private enum class SourceKind { XTREAM, M3U, STALKER, SMB }
 
 /** UI state of the Xtream "Test HLS support" probe. Local to this screen — the probe is one short
  *  request and saves nothing unless the source already exists. */
@@ -122,7 +122,7 @@ fun AddSourceScreen(
     var kind by remember {
         mutableStateOf(
             when (initial?.type) {
-                SourceType.M3U -> SourceKind.M3U
+                SourceType.M3U -> if (tv.own.owntv.core.netshare.NetShare.isNetworkFolder(initial?.url.orEmpty())) SourceKind.SMB else SourceKind.M3U
                 SourceType.STALKER -> SourceKind.STALKER
                 else -> SourceKind.XTREAM
             },
@@ -132,7 +132,40 @@ fun AddSourceScreen(
     var server by remember(initial) { mutableStateOf(if (initial != null && initial.type == SourceType.XTREAM) initial.url else "") }
     var username by remember(initial) { mutableStateOf(initial?.username ?: "") }
     var password by remember(initial) { mutableStateOf(initial?.password ?: "") }
-    var m3uUrl by remember(initial) { mutableStateOf(if (initial != null && initial.type == SourceType.M3U) initial.url else "") }
+    var m3uUrl by remember(initial) { mutableStateOf(if (initial != null && initial.type == SourceType.M3U && !tv.own.owntv.core.netshare.NetShare.isNetworkFolder(initial.url)) initial.url else "") }
+    // glcn: a folder shared on the home network (NAS): server, share, login and the films / series folders.
+    val initialShare = remember(initial) { initial?.url?.let { tv.own.owntv.core.netshare.NetShare.parse(it) } }
+    // glcn: SMB at home; WebDAV (http or https, said in the server field) also from outside.
+    // 0 = SMB, 1 = WebDAV, 2 = NFS.
+    var smbProto by remember(initial) {
+        mutableStateOf(when (initialShare?.scheme) { tv.own.owntv.core.netshare.NetShare.DAV, tv.own.owntv.core.netshare.NetShare.DAVS -> 1; tv.own.owntv.core.netshare.NetShare.NFS -> 2; else -> 0 })
+    }
+    val smbDav = smbProto == 1
+    val smbNfs = smbProto == 2
+    var smbHost by remember(initial) {
+        mutableStateOf(initialShare?.let { t ->
+            if (t.scheme == tv.own.owntv.core.netshare.NetShare.SCHEME) tv.own.owntv.core.netshare.NetShare.hostPort(t.host, t.port)
+            else if (t.scheme == tv.own.owntv.core.netshare.NetShare.NFS) t.host
+            else (if (t.scheme == tv.own.owntv.core.netshare.NetShare.DAVS) "https://" else "http://") + t.host + (if (t.port == tv.own.owntv.core.netshare.NetShare.defaultPort(t.scheme)) "" else ":" + t.port)
+        } ?: "")
+    }
+    var smbShare by remember(initial) { mutableStateOf(initialShare?.share ?: "") }
+    var smbUser by remember(initial) { mutableStateOf(initialShare?.let { if (it.domain.isNotBlank()) it.domain + "\\" + it.user else it.user } ?: "") }
+    var smbPassword by remember(initial) { mutableStateOf(initialShare?.password ?: "") }
+    var smbMovies by remember(initial) { mutableStateOf(initialShare?.movies ?: "") }
+    var smbSeries by remember(initial) { mutableStateOf(initialShare?.series ?: "") }
+    fun smbLink(): String {
+        val h = smbHost.trim()
+        val scheme = when {
+            smbNfs -> tv.own.owntv.core.netshare.NetShare.NFS
+            !smbDav -> tv.own.owntv.core.netshare.NetShare.SCHEME
+            h.startsWith("https://", ignoreCase = true) -> tv.own.owntv.core.netshare.NetShare.DAVS
+            h.startsWith("http://", ignoreCase = true) -> tv.own.owntv.core.netshare.NetShare.DAV
+            h.endsWith(":5006") || h.endsWith(":443") -> tv.own.owntv.core.netshare.NetShare.DAVS
+            else -> tv.own.owntv.core.netshare.NetShare.DAV
+        }
+        return tv.own.owntv.core.netshare.NetShare.link(h, smbShare, smbUser, if (smbNfs) "" else smbPassword, smbMovies, smbSeries, scheme)
+    }
     var portalUrl by remember(initial) { mutableStateOf(if (initial != null && initial.type == SourceType.STALKER) initial.url else "") }
     var mac by remember(initial) { mutableStateOf(initial?.mac ?: "") }
     var stalkerSerialNumber by remember(initial) { mutableStateOf(initial?.stalkerSerialNumber ?: "") }
@@ -226,6 +259,9 @@ fun AddSourceScreen(
             SourceKind.M3U -> SourceEntity(
                 id = initial?.id ?: 0L, name = name, type = SourceType.M3U,
                 url = m3uUrl.trim(), userAgent = ua, httpReferer = ref,
+            )
+            SourceKind.SMB -> SourceEntity(
+                id = initial?.id ?: 0L, name = name, type = SourceType.M3U, url = smbLink(),
             )
             SourceKind.STALKER -> SourceEntity(
                 id = initial?.id ?: 0L, name = name, type = SourceType.STALKER,
@@ -381,16 +417,19 @@ fun AddSourceScreen(
     val showContentToggles = kind == SourceKind.XTREAM || kind == SourceKind.STALKER
     val hasAnySectionOn = syncLive != SyncScopeChoice.Off || syncMovies != SyncScopeChoice.Off || syncSeries != SyncScopeChoice.Off
     val macValid = tv.own.owntv.core.stalker.StalkerClient.canonicalizeMac(mac) != null
+    val smbReady = smbHost.isNotBlank() && smbShare.isNotBlank() && (smbMovies.isNotBlank() || smbSeries.isNotBlank())
     val canStart = when (kind) {
         SourceKind.XTREAM -> server.isNotBlank() && username.isNotBlank() && password.isNotBlank() && hasAnySectionOn
         SourceKind.M3U -> m3uUrl.isNotBlank()
         SourceKind.STALKER -> tv.own.owntv.core.stalker.StalkerClient.isValidPortalUrl(portalUrl) && macValid && hasAnySectionOn
+        SourceKind.SMB -> smbReady
     }
 
     val canTest = when (kind) {
         SourceKind.XTREAM -> server.isNotBlank() && username.isNotBlank() && password.isNotBlank()
         SourceKind.M3U -> m3uUrl.isNotBlank() && !m3uUrl.startsWith("/")
         SourceKind.STALKER -> tv.own.owntv.core.stalker.StalkerClient.isValidPortalUrl(portalUrl) && macValid
+        SourceKind.SMB -> smbReady
     }
 
     // Every field is a row (label + value or placeholder, OK = keyboard); Start import sits in the
@@ -399,6 +438,7 @@ fun AddSourceScreen(
         when (kind) {
             SourceKind.XTREAM -> onStartXtream(name, server, username, password, userAgent, referer, epgUrl, autoRefresh, syncLive, syncMovies, syncSeries, isDefault, preferHls)
             SourceKind.M3U -> onStartM3u(name, m3uUrl, userAgent, referer, epgUrl, autoRefresh, isDefault)
+            SourceKind.SMB -> onStartM3u(name, smbLink(), "", "", "", autoRefresh, isDefault)
             SourceKind.STALKER -> onStartStalker?.invoke(
                 name, portalUrl, mac, stalkerSerialNumber, stalkerDeviceId, stalkerDeviceId2,
                 stalkerSignature, userAgent, referer, autoRefresh, isDefault, syncLive, syncMovies, syncSeries,
@@ -458,13 +498,14 @@ fun AddSourceScreen(
         settingsRoot = false,
     ) {
         // Type: locked while editing (a source can't change its type).
-        val kinds = listOfNotNull(SourceKind.XTREAM, SourceKind.M3U, SourceKind.STALKER.takeIf { onStartStalker != null })
+        val kinds = listOfNotNull(SourceKind.XTREAM, SourceKind.M3U, SourceKind.STALKER.takeIf { onStartStalker != null }, SourceKind.SMB)
         val kindLabels = kinds.map {
             stringResource(
                 when (it) {
                     SourceKind.XTREAM -> R.string.setup_xtream
                     SourceKind.M3U -> R.string.setup_m3u
                     SourceKind.STALKER -> R.string.setup_stalker_mac
+                    SourceKind.SMB -> R.string.glcn_setup_smb
                 },
             )
         }
@@ -508,6 +549,36 @@ fun AddSourceScreen(
                     help = help(fileTitle, stringResource(R.string.setup_local_file_choose), openKeys),
                 )
             }
+            SourceKind.SMB -> {
+                val protoTitle = stringResource(R.string.glcn_setup_net_protocol)
+                val protoLabels = listOf("SMB", "WebDAV", "NFS")
+                StageSettingRow(
+                    icon = OwnTVIcon.LAYERS,
+                    title = protoTitle,
+                    desc = stringResource(when (smbProto) { 1 -> R.string.glcn_setup_net_protocol_dav; 2 -> R.string.glcn_setup_net_protocol_nfs; else -> R.string.glcn_setup_net_protocol_smb }),
+                    value = SettingValue.Segmented(protoLabels, smbProto),
+                    onClick = { smbProto = (smbProto + 1) % protoLabels.size },
+                    onStep = { step -> smbProto = (smbProto + step).coerceIn(0, protoLabels.lastIndex) },
+                    help = help(protoTitle, stringResource(R.string.glcn_setup_net_protocol_help), listOf("◀ ▶" to stringResource(R.string.settings_key_change), back to parent)),
+                )
+                field(
+                    stringResource(R.string.glcn_setup_smb_server), smbHost, { smbHost = it },
+                    placeholder = stringResource(if (smbDav) R.string.glcn_setup_dav_server_example else R.string.glcn_setup_smb_server_example), keyboardType = KeyboardType.Uri,
+                    about = stringResource(R.string.glcn_setup_smb_help),
+                )
+                if (smbNfs) {
+                    // NFS: the export's path, and (optionally) the user id the NAS should see; no password.
+                    field(stringResource(R.string.glcn_setup_nfs_export), smbShare, { smbShare = it }, placeholder = stringResource(R.string.glcn_setup_nfs_export_example),
+                        about = stringResource(R.string.glcn_setup_nfs_help))
+                    field(stringResource(R.string.glcn_setup_nfs_uid), smbUser, { smbUser = it }, keyboardType = KeyboardType.Number)
+                } else {
+                    field(stringResource(R.string.glcn_setup_smb_share), smbShare, { smbShare = it }, placeholder = stringResource(R.string.glcn_setup_smb_share_example))
+                    field(stringResource(R.string.glcn_setup_smb_user), smbUser, { smbUser = it })
+                    field(stringResource(R.string.setup_password), smbPassword, { smbPassword = it }, password = true)
+                }
+                field(stringResource(R.string.glcn_setup_smb_movies), smbMovies, { smbMovies = it }, placeholder = stringResource(R.string.glcn_setup_smb_movies_example))
+                field(stringResource(R.string.glcn_setup_smb_series), smbSeries, { smbSeries = it }, placeholder = stringResource(R.string.glcn_setup_smb_series_example))
+            }
             SourceKind.STALKER -> {
                 field(stringResource(R.string.setup_portal_url), portalUrl, { portalUrl = it }, placeholder = stringResource(R.string.setup_portal_example), keyboardType = KeyboardType.Uri)
                 field(
@@ -534,8 +605,10 @@ fun AddSourceScreen(
         }
 
         StageSettingsHeading(stringResource(R.string.settings_form_optional), null)
-        field(stringResource(R.string.setup_user_agent_optional), userAgent, { userAgent = it }, placeholder = stringResource(R.string.setup_user_agent_example))
-        field(stringResource(R.string.setup_referer_optional), referer, { referer = it }, placeholder = stringResource(R.string.setup_referer_example))
+        if (kind != SourceKind.SMB) {
+            field(stringResource(R.string.setup_user_agent_optional), userAgent, { userAgent = it }, placeholder = stringResource(R.string.setup_user_agent_example))
+            field(stringResource(R.string.setup_referer_optional), referer, { referer = it }, placeholder = stringResource(R.string.setup_referer_example))
+        }
         val refreshTitle = stringResource(R.string.setup_auto_refresh)
         StageSettingRow(
             icon = OwnTVIcon.REFRESH,

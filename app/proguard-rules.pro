@@ -22,3 +22,8 @@
 #     EpgAutoRefresh, PlaylistAutoRefresh, ...) round-trip through Enum.name/valueOf.
 #     Renaming a constant would silently reset settings and break old backups. ---
 -keep enum tv.own.owntv.** { *; }
+
+# glcn: R8 emitted unverifiable bytecode for PlayerHud (VerifyError "register has type … but expected
+# Integer" in its ~90-parameter composable, on Android 11 — the app closed at start). Keep the file's
+# functions as written: names may still be shortened, but their signatures are not rewritten or merged.
+-keep,allowobfuscation class tv.own.owntv.player.PlayerHudKt { *; }

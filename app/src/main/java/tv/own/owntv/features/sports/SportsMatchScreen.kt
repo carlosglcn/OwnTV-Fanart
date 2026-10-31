@@ -1,6 +1,8 @@
 package tv.own.owntv.features.sports
 
+import tv.own.owntv.core.sports.model.isRace
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -75,7 +78,7 @@ import java.util.Locale
  * The match page's tabs. ESPN's summary carries no meetings, so in Head to head's place is
  * Form: each side's last five games.
  */
-private enum class MatchTab { TIMELINE, STATS, LINEUPS, TABLE, FORM, BROADCASTS }
+private enum class MatchTab { TIMELINE, STATS, LINEUPS, TABLE, DRAW, FORM, BROADCASTS }
 
 /** The tier colours of the reasons: guide green, event blue, your pick gold, likely muted. */
 internal val TierGuide = Color(0xFF9FE07E)
@@ -113,6 +116,10 @@ fun SportsMatchScreen(
     val state = page ?: return
     val m = state.match
     var tab by remember { mutableStateOf(MatchTab.TIMELINE) }
+    val liveOrder = m.sport.isRace && m.isLive && m.competitors.size > 3
+    // glcn: the tournament draw, read only once its tab is opened.
+    var draw by remember(m.key) { mutableStateOf<List<tv.own.owntv.core.sports.DrawRound>?>(null) }
+    LaunchedEffect(m.key, tab == MatchTab.DRAW) { if (tab == MatchTab.DRAW && draw == null) draw = vm.tennisDraw(m) }
     var revealed by remember(m.key) { mutableStateOf(false) }
     var focused by remember { mutableStateOf<WatchOption?>(null) }
     val firstRow = remember { FocusRequester() }
@@ -171,7 +178,8 @@ fun SportsMatchScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         val tabs = MatchTab.entries.filter {
-                            (it != MatchTab.TABLE || state.standings?.groups?.any { g -> g.rows.isNotEmpty() } == true || state.ranking?.groups?.isNotEmpty() == true) &&
+                            (it != MatchTab.TABLE || state.standings?.groups?.any { g -> g.rows.isNotEmpty() } == true || state.ranking?.groups?.isNotEmpty() == true || liveOrder) &&
+                                (it != MatchTab.DRAW || m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) &&
                                 (it != MatchTab.STATS || !state.summary?.stats.isNullOrEmpty()) &&
                                 (it != MatchTab.LINEUPS || !state.summary?.lineups.isNullOrEmpty()) && (it != MatchTab.FORM || !state.summary?.form.isNullOrEmpty())
                         }
@@ -193,7 +201,35 @@ fun SportsMatchScreen(
                     MatchTab.TIMELINE -> items((state.summary?.timeline ?: m.events).asReversed()) { e -> TimelineRow(e, m) }
                     MatchTab.STATS -> items(state.summary?.stats.orEmpty()) { s -> StatRow(s.label, s.home, s.away) }
                     MatchTab.LINEUPS -> item { Lineups(m, state.summary) }
-                    MatchTab.TABLE -> if (state.ranking != null && m.sport == tv.own.owntv.core.sports.model.Sport.RACING) item { RankingColumns(state.ranking) } else item { TablePreview(state.standings, m, onOpenLeague) }
+                    MatchTab.TABLE -> {
+                        // glcn: a tennis tour's ranking is one list of players, shown here in full (it used to fall
+                        // through to the league table, which tennis has none of, so the tab came up empty).
+                        val players = state.ranking?.groups?.firstOrNull { it.kind == tv.own.owntv.core.sports.model.RankingKind.PLAYERS }
+                        when {
+                            players != null && !m.sport.isRace -> {
+                                players.title?.let { t -> item { Text(t, style = stageText(18, 700), color = StageColors.Muted, modifier = Modifier.padding(top = 18.mpx, bottom = 6.mpx)) } }
+                                items(players.rows, key = { "rk" + it.rank + it.team.id }) { r -> PlayerRankLine(r) }
+                            }
+                            m.sport.isRace && (state.ranking != null || liveOrder) -> {
+                                // glcn: a session running — its live order first, the season's standings under it.
+                                if (liveOrder) {
+                                    item { Text(stringResource(R.string.glcn_race_live_order), style = stageText(18, 700), color = stageAccent.accent, modifier = Modifier.padding(top = 18.mpx, bottom = 6.mpx)) }
+                                    itemsIndexed(m.competitors, key = { _, c -> "lo" + c.team.id }) { i, c -> LiveOrderLine(i + 1, c) }
+                                }
+                                state.ranking?.let { r -> item { RankingColumns(r, Modifier.padding(top = if (liveOrder) 24.mpx else 0.mpx)) } }
+                            }
+                            else -> item { TablePreview(state.standings, m, onOpenLeague) }
+                        }
+                    }
+                    MatchTab.DRAW -> when (val d = draw) {
+                        null -> item { DrawNote(stringResource(R.string.glcn_sports_draw_loading)) }
+                        else -> if (d.isEmpty()) item { DrawNote(stringResource(R.string.glcn_sports_draw_empty)) } else d.forEach { round ->
+                            item(key = "dr" + round.name) {
+                                Text(round.name.ifBlank { leagueName(m) }, style = stageText(18, 700), color = stageAccent.accent, modifier = Modifier.padding(top = 21.mpx, bottom = 6.mpx))
+                            }
+                            items(round.matches, key = { "dm" + it.id }) { dm -> DrawMatchLine(dm) }
+                        }
+                    }
                     MatchTab.FORM -> item { Form(m, state.summary) }
                     MatchTab.BROADCASTS -> item { Broadcasts(m, (state.search as? ChannelSearch.Found)?.options) }
                 }
@@ -223,7 +259,7 @@ fun SportsMatchScreen(
                 val video = focused ?: shown.firstOrNull()
                 GuideVideo(
                     channel = video?.channel,
-                    channelLine = video?.channel?.let { listOfNotNull(it.number?.toString(), ProviderTags.parse(it.name).name).joinToString(sep) },
+                    channelLine = video?.channel?.let { listOfNotNull(it.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.toString(), ProviderTags.parse(it.name).name).joinToString(sep) },
                     nowTitle = video?.guideTitle,
                     previewEngine = liveVm.previewEngine,
                     showVideo = previewOn && focused != null,
@@ -284,6 +320,7 @@ private val MatchTab.label: Int get() = when (this) {
     MatchTab.STATS -> R.string.sports_tab_stats
     MatchTab.LINEUPS -> R.string.sports_tab_lineups
     MatchTab.TABLE -> R.string.sports_tab_table
+    MatchTab.DRAW -> R.string.glcn_sports_tab_draw
     MatchTab.FORM -> R.string.sports_table_form
     MatchTab.BROADCASTS -> R.string.sports_tab_broadcasts
 }
@@ -386,7 +423,7 @@ private fun ScoreHeader(m: Match, summary: MatchSummary?, hidden: Boolean, onRev
             .drawBehind { drawInnerRing(Color.White.copy(alpha = 0.06f), 1.mpx.toPx(), r.toPx()) },
     ) { _ ->
         Column(Modifier.fillMaxWidth().padding(horizontal = 33.mpx, vertical = 27.mpx)) {
-            if (m.sport == tv.own.owntv.core.sports.model.Sport.RACING) { RaceHeaderContent(m, hidden); return@Column }
+            if (m.sport.isRace) { RaceHeaderContent(m, hidden); return@Column }
             val home = m.home
             val away = m.away
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -649,5 +686,43 @@ private fun NoPlaylistNote(onAddPlaylist: () -> Unit) {
         Text(stringResource(R.string.sports_no_playlist_title), style = stageText(24, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(stringResource(R.string.sports_no_playlist_body), style = stageText(18, 400), color = StageColors.Muted, maxLines = 4, overflow = TextOverflow.Ellipsis)
         StageButton(stringResource(R.string.sports_add_playlist), onClick = onAddPlaylist, icon = OwnTVIcon.ADD, height = 56.mpx, textSize = 19)
+    }
+}
+
+@Composable
+private fun DrawNote(text: String) {
+    Text(text, style = stageText(18, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 24.mpx))
+}
+
+/** glcn: one match of a tennis draw: both players, their sets, the winner in bold; focusable so the list scrolls. */
+@Composable
+private fun DrawMatchLine(dm: Match) {
+    var on by remember { mutableStateOf(false) }
+    Column(
+        Modifier.fillMaxWidth().onFocusChanged { on = it.isFocused }.focusable()
+            .background(if (on) StageColors.Ink.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(10.mpx))
+            .padding(vertical = 6.mpx, horizontal = 10.mpx),
+        verticalArrangement = Arrangement.spacedBy(2.mpx),
+    ) {
+        dm.competitors.take(2).forEach { c ->
+            val won = c.winner == true
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                Text(
+                    c.team.name, style = stageText(19, if (won) 800 else 500),
+                    color = if (c.winner == false) StageColors.Muted else StageColors.Text,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                )
+                c.score?.periods?.forEach { p ->
+                    Text(
+                        p.value.toString() + (p.tiebreak?.let { tb -> "⁽" + tb + "⁾" } ?: ""),
+                        style = stageText(19, if (won) 800 else 500), color = if (c.winner == false) StageColors.Muted else StageColors.Text,
+                        textAlign = TextAlign.End, modifier = Modifier.width(44.mpx),
+                    )
+                }
+            }
+        }
+        if (dm.state != tv.own.owntv.core.sports.model.MatchState.POST) {
+            Text(dm.statusText, style = stageText(14, 600), color = if (dm.isLive) SportsLive else StageColors.Dim, maxLines = 1)
+        }
     }
 }

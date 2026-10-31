@@ -79,16 +79,37 @@ fun ProgrammeInfoScreen(
     }
     val rows = schedule.orEmpty()
     val cur = rows.firstOrNull { nowMs in it.startMs until it.stopMs }
-    val next = if (cur == null) emptyList() else rows.filter { it.startMs >= cur.stopMs }.take(2)
+    // glcn: what follows — the rest of the evening, not two lines.
+    val next = if (cur == null) emptyList() else rows.filter { it.startMs >= cur.stopMs }.take(NEXT_MAX)
 
     // The week, read after the screen is up; the repeats are the same title again later.
     val week by produceState<List<EpgProgrammeEntity>?>(null, channel.id) {
         value = runCatching { loadWeek(channel) }.getOrDefault(emptyList())
     }
+    // glcn: a daily show changes its title every night ("El hormiguero T21 · <guests>"), so a show is also
+    // found by its own name — the title without the episode, the season and what follows " · ". Never for
+    // sport (a league's name is the same for every match) nor for a name too short to tell shows apart:
+    // those still need the very same title.
     val again = remember(cur?.title, week) {
-        val t = cur?.title?.trim()?.lowercase()
-        if (cur == null || t == null) emptyList()
-        else week.orEmpty().filter { it.startMs >= cur.stopMs && it.title.trim().lowercase() == t }.take(7)
+        if (cur == null) return@remember emptyList<Pair<EpgProgrammeEntity, String?>>()
+        val exact = ProgrammeArtResolver.fold(cur.title)
+        val show = ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(cur.title))
+        val byShow = show.length >= 4 && show != exact && !tv.own.owntv.core.live.SportsNow.isSport(cur)
+        week.orEmpty()
+            .filter { it.startMs >= cur.stopMs }
+            .mapNotNull { p ->
+                val t = ProgrammeArtResolver.fold(p.title)
+                when {
+                    t == exact -> p to null
+                    byShow && !tv.own.owntv.core.live.SportsNow.isSport(p) &&
+                        ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(p.title)) == show ->
+                        // Another night of the show: say which one (its guests, its episode).
+                        p to p.title.substringAfter(" · ", "").trim().takeIf { it.isNotBlank() }
+                    else -> null
+                }
+            }
+            .distinctBy { it.first.startMs }
+            .take(7)
     }
 
     // The zap cache keeps programmes without their synopsis (it is heavy); this one is read on demand.
@@ -110,20 +131,28 @@ fun ProgrammeInfoScreen(
         val c = cur ?: return@produceState
         value = runCatching { resolver.logoFor(c.title, c.categories) }.getOrNull()
     }
-    var logoFailed by remember(titleLogo) { mutableStateOf(false) }
+    // glcn: a film on the channel, in full (TMDB): lettering, year, genres, rating, synopsis, cast and the wide picture.
+    // Warmed when the channel is tuned, so it is usually here at once.
+    val film by produceState<tv.own.owntv.core.metadata.MovieDetails?>(null, cur?.title, cur?.categories) {
+        val c = cur ?: return@produceState
+        value = runCatching { resolver.filmFor(c.title, c.categories) }.getOrNull()
+    }
+    val filmLogo = film?.logoPath?.let { tv.own.owntv.core.metadata.MetadataImages.logo(it) }
+    var logoFailed by remember(titleLogo, filmLogo) { mutableStateOf(false) }
 
     var showTech by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 
     Box(modifier.fillMaxSize().background(Color(0xFF06090A))) {
-        val art = lent?.backdropUrl ?: cur?.imageUrl?.takeIf { it.isNotBlank() }
+        val art = film?.backdropPath?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w1280") }
+            ?: lent?.backdropUrl ?: cur?.imageUrl?.takeIf { it.isNotBlank() }
         if (art != null) ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
         // The picture stays behind, never under the words: dark from the left and from the foot.
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color(0xF2050809), 0.55f to Color(0xB3050809), 1f to Color(0x4D050809))))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color(0xE6050809))))
 
-        Column(Modifier.padding(start = 96.mpx, top = 80.mpx, end = 96.mpx).width(1020.mpx)) {
+        Column(Modifier.padding(start = 96.mpx, top = 80.mpx, end = 96.mpx).width(1240.mpx)) {
             Row(Modifier.staggerIn(0), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
                 val logo = channel.displayLogoUrl?.takeIf { it.isNotBlank() }
                 if (logo != null) ChannelLogoTile(logoUrl = logo, modifier = Modifier.size(132.mpx, 80.mpx), fill = Color.Transparent, surfaceLuminance = 0.02f) { }
@@ -142,9 +171,10 @@ fun ProgrammeInfoScreen(
                     style = stageText(26, 600), color = Soft,
                 )
             } else {
-                if (!titleLogo.isNullOrBlank() && !logoFailed) {
+                val letterUrl = filmLogo ?: titleLogo
+                if (!letterUrl.isNullOrBlank() && !logoFailed) {
                     tv.own.owntv.ui.stage.StageTitleArt(
-                        url = titleLogo!!, contentDescription = cur.title,
+                        url = letterUrl, contentDescription = cur.title,
                         modifier = Modifier.staggerIn(80).width(640.mpx).height(150.mpx), alignment = Alignment.CenterStart,
                         onFailed = { logoFailed = true }, onDarkScreen = true,
                     )
@@ -153,7 +183,7 @@ fun ProgrammeInfoScreen(
                 }
                 val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
                 Text(
-                    if (remaining in 1..600) stringResource(R.string.content_live_time_remaining, timeFmt.format(java.util.Date(cur.stopMs)), remaining)
+                    if (remaining in 1..600) stringResource(R.string.glcn_pi_ends_left, timeFmt.format(java.util.Date(cur.stopMs)), remaining)
                     else stringResource(R.string.content_live_time_range, timeFmt.format(java.util.Date(cur.startMs)), timeFmt.format(java.util.Date(cur.stopMs))),
                     style = stageText(24, 600), color = Soft, modifier = Modifier.staggerIn(160).padding(top = 10.mpx), maxLines = 1,
                 )
@@ -163,24 +193,21 @@ fun ProgrammeInfoScreen(
                     Box(Modifier.fillMaxWidth(f).height(5.mpx).background(accent))
                 }
                 val facts = (
-                    cur.details.categoryList.take(3) + listOfNotNull(
-                        (cur.year ?: lent?.year)?.toString(),
+                    (film?.genres?.take(3)?.takeIf { it.isNotEmpty() } ?: cur.details.categoryList.take(3)) + listOfNotNull(
+                        (film?.year ?: cur.year ?: lent?.year)?.toString(),
                         cur.rating,
-                        lent?.rating?.let { "★ " + ProgrammeArtResolver.format(it) },
+                        (film?.rating?.takeIf { it > 0 } ?: lent?.rating)?.let { "★ " + ProgrammeArtResolver.format(it) },
                     )
                     ).filter { it.isNotBlank() }.joinToString("  ·  ")
                 if (facts.isNotEmpty()) Text(facts, style = stageText(20, 600), color = Dim, modifier = Modifier.staggerIn(250).padding(top = 16.mpx), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                (ownSynopsis ?: lent?.overview)?.let {
-                    DriftingSynopsis(it, modifier = Modifier.staggerIn(300).padding(top = 16.mpx).width(960.mpx), style = stageText(21, 400), color = Soft, lines = 6, fade = true)
+                // A film: TMDB's synopsis (in your language) before the guide's, which is often a list of credits.
+                ((film?.overview?.takeIf { it.isNotBlank() }) ?: ownSynopsis ?: lent?.overview)?.let {
+                    // glcn: as wide as the room up to the panels on the right, and a line more, so most synopses read whole
+                    // without drifting.
+                    DriftingSynopsis(it, modifier = Modifier.staggerIn(300).padding(top = 16.mpx).width(1220.mpx), style = stageText(21, 400), color = Soft, lines = if (film?.cast.isNullOrEmpty()) 7 else 5, fade = true)
                 }
-                if (next.isNotEmpty()) {
-                    Text(stringResource(R.string.glcn_pi_next), style = stageText(16, 800), color = accent, modifier = Modifier.staggerIn(380).padding(top = 22.mpx))
-                    next.forEachIndexed { ni, n ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), modifier = Modifier.staggerIn(420 + ni * 50).padding(top = 4.mpx)) {
-                            Text(timeFmt.format(java.util.Date(n.startMs)), style = stageText(19, 700), color = Dim, modifier = Modifier.width(84.mpx), maxLines = 1)
-                            Text(n.title, style = stageText(19, 500), color = Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
+                film?.cast?.takeIf { it.isNotEmpty() }?.let { cast ->
+                    tv.own.owntv.features.shell.components.VodCast(cast, 7, Modifier.staggerIn(360).padding(top = 20.mpx))
                 }
             }
         }
@@ -195,11 +222,27 @@ fun ProgrammeInfoScreen(
             when {
                 week == null -> Unit
                 again.isEmpty() -> Text(stringResource(R.string.glcn_pi_no_repeats), style = stageText(17, 500), color = Dim)
-                else -> again.forEach { a ->
+                else -> again.forEach { (a, episode) ->
                     Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
                         Text(dayFmt.format(java.util.Date(a.startMs)), style = stageText(19, 700), color = Ink, modifier = Modifier.width(110.mpx), maxLines = 1)
                         Text(timeFmt.format(java.util.Date(a.startMs)), style = stageText(19, 500), color = Soft, maxLines = 1)
+                        episode?.let { Text(it, style = stageText(17, 500), color = Dim, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
                     }
+                }
+            }
+        }
+
+        // glcn: what follows on the channel, the rest of the evening, under the repeats.
+        if (cur != null && next.isNotEmpty() && !showTech) Column(
+            Modifier.align(Alignment.BottomEnd).padding(end = 96.mpx, bottom = 56.mpx).staggerIn(400, fromRight = true).width(420.mpx)
+                .clip(RoundedCornerShape(20.mpx)).background(Color(0x990A1012)).padding(24.mpx),
+            verticalArrangement = Arrangement.spacedBy(8.mpx),
+        ) {
+            Text(stringResource(R.string.glcn_pi_next), style = stageText(18, 800), color = accent, maxLines = 1)
+            next.forEach { n ->
+                Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
+                    Text(timeFmt.format(java.util.Date(n.startMs)), style = stageText(19, 700), color = Ink, modifier = Modifier.width(84.mpx), maxLines = 1)
+                    Text(n.title, style = stageText(18, 500), color = Soft, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -217,4 +260,5 @@ fun ProgrammeInfoScreen(
     }
 }
 
-
+/** glcn: how many programmes "Up next" lists. */
+private const val NEXT_MAX = 6

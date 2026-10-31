@@ -38,13 +38,24 @@ import tv.own.owntv.core.settings.SettingsRepository
  */
 class FanartDream : DreamService() {
 
-    private data class Slide(val url: String, val title: String, val subtitle: String)
+    /** glcn (cartelera): a film or series also carries its poster, shown beside the picture, and its TMDB title logo. */
+    private data class Slide(
+        val url: String,
+        val title: String,
+        val subtitle: String,
+        val poster: String? = null,
+        val movie: tv.own.owntv.core.database.entity.MovieEntity? = null,
+        val series: tv.own.owntv.core.database.entity.SeriesEntity? = null,
+    )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var front: ImageView
     private lateinit var back: ImageView
     private lateinit var title: TextView
     private lateinit var subtitle: TextView
+    private lateinit var poster: ImageView
+    private lateinit var logo: ImageView
+    private var drift = 1f
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
@@ -73,6 +84,16 @@ class FanartDream : DreamService() {
             val pad = (resources.displayMetrics.density * 48).toInt()
             setPadding(pad, pad, pad, pad)
         }
+        val dp = resources.displayMetrics.density
+        // glcn (cartelera): the title's own lettering, when TMDB has it, stands in for the words.
+        logo = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.FIT_START
+            adjustViewBounds = true
+            maxHeight = (dp * 110).toInt()
+            maxWidth = (resources.displayMetrics.widthPixels * 0.42f).toInt()
+            visibility = View.GONE
+        }
+        text.addView(logo, LinearLayout.LayoutParams(-2, -2).apply { bottomMargin = (dp * 10).toInt() })
         title = TextView(this).apply {
             setTextColor(Color.WHITE)
             textSize = 28f
@@ -88,6 +109,19 @@ class FanartDream : DreamService() {
         text.addView(title)
         text.addView(subtitle)
         root.addView(text, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM or Gravity.START))
+        // glcn (cartelera): the film's poster, standing on the right like a cinema's billboard.
+        val posterW = (resources.displayMetrics.widthPixels * POSTER_WIDTH).toInt()
+        poster = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            alpha = 0f
+            background = GradientDrawable().apply { cornerRadius = dp * 14; setColor(Color.argb(60, 255, 255, 255)) }
+            clipToOutline = true
+            elevation = dp * 18
+        }
+        root.addView(
+            poster,
+            FrameLayout.LayoutParams(posterW, (posterW * 1.5f).toInt(), Gravity.CENTER_VERTICAL or Gravity.END).apply { rightMargin = (dp * 72).toInt() },
+        )
         // The time in the corner, as on an Apple TV's aerial screensaver.
         val pad = (resources.displayMetrics.density * 40).toInt()
         root.addView(
@@ -112,7 +146,10 @@ class FanartDream : DreamService() {
             while (true) {
                 val s = slides[i % slides.size]
                 val bmp = withContext(Dispatchers.IO) { load(s.url) }
-                if (bmp != null) show(bmp, s)
+                if (bmp != null) {
+                    val extra = withContext(Dispatchers.IO) { extras(s) }
+                    show(bmp, s, extra.first, extra.second)
+                }
                 i++
                 delay(SLIDE_MS)
             }
@@ -129,16 +166,53 @@ class FanartDream : DreamService() {
         super.onDetachedFromWindow()
     }
 
-    private fun show(bmp: Bitmap, s: Slide) {
+    private fun show(bmp: Bitmap, s: Slide, posterBmp: Bitmap?, logoBmp: Bitmap?) {
         back.setImageBitmap(bmp)
         back.animate().alpha(1f).setDuration(FADE_MS).start()
         front.animate().alpha(0f).setDuration(FADE_MS).start()
-        // A slow push-in on the incoming picture.
-        back.scaleX = 1.0f; back.scaleY = 1.0f
-        back.animate().scaleX(1.06f).scaleY(1.06f).setDuration(SLIDE_MS).start()
-        title.text = s.title
-        subtitle.text = s.subtitle
+        // glcn: Ken Burns — a slow, deeper push-in that drifts to one side, the side changing every slide.
+        drift = -drift
+        back.scaleX = 1.0f; back.scaleY = 1.0f; back.translationX = 0f
+        back.animate().scaleX(1f + ZOOM).scaleY(1f + ZOOM)
+            .translationX(drift * resources.displayMetrics.widthPixels * ZOOM * 0.4f)
+            .setDuration(SLIDE_MS + FADE_MS).setInterpolator(android.view.animation.LinearInterpolator()).start()
+        // The words leave and come back with the picture.
+        val words = listOf(logo, title, subtitle)
+        words.forEach { it.animate().alpha(0f).setDuration(FADE_MS / 3).start() }
+        title.postDelayed({
+            if (logoBmp != null) { logo.setImageBitmap(logoBmp); logo.visibility = View.VISIBLE; title.visibility = View.GONE }
+            else { logo.visibility = View.GONE; title.visibility = View.VISIBLE; title.text = s.title }
+            subtitle.text = s.subtitle
+            words.forEachIndexed { k, v ->
+                v.translationY = 18f * resources.displayMetrics.density
+                v.animate().alpha(1f).translationY(0f).setStartDelay(k * 140L).setDuration(FADE_MS / 2).start()
+            }
+        }, FADE_MS / 3)
+        // The billboard poster: slides in with its film, away for a channel's programme.
+        if (posterBmp != null) {
+            poster.animate().alpha(0f).setDuration(FADE_MS / 3).withEndAction {
+                poster.setImageBitmap(posterBmp)
+                poster.translationX = 40f * resources.displayMetrics.density
+                poster.animate().alpha(1f).translationX(0f).setDuration(FADE_MS).start()
+            }.start()
+        } else {
+            poster.animate().alpha(0f).setDuration(FADE_MS / 2).start()
+        }
         val t = front; front = back; back = t
+    }
+
+    /** glcn (cartelera): a film's or series' poster and TMDB title logo, read when its slide comes up. */
+    private suspend fun extras(s: Slide): Pair<Bitmap?, Bitmap?> {
+        if (s.movie == null && s.series == null) return null to null
+        val meta = kotlinx.coroutines.withTimeoutOrNull(META_MS) {
+            runCatching {
+                val repo = GlobalContext.get().get<tv.own.owntv.core.metadata.MetadataRepository>()
+                s.movie?.let { repo.resolveMovie(it) } ?: s.series?.let { repo.resolveSeries(it) }
+            }.getOrNull()
+        }
+        val posterUrl = s.poster ?: tv.own.owntv.core.metadata.MetadataImages.poster(meta?.posterPath)
+        val logoUrl = tv.own.owntv.core.metadata.MetadataImages.logo(meta?.logoPath)
+        return posterUrl?.let { load(it) } to logoUrl?.let { load(it) }
     }
 
     private suspend fun load(url: String): Bitmap? = runCatching {
@@ -172,12 +246,12 @@ class FanartDream : DreamService() {
         val movieIds = activeSourceIds(settings, sourceDao, pid, MediaType.MOVIE)
         if (movieIds.isNotEmpty()) movieDao.recentlyAdded(movieIds, 25).forEach { m ->
             val url = m.backdropUrl?.takeIf { it.isNotBlank() } ?: return@forEach
-            out += Slide(url, m.name, listOfNotNull(m.year?.toString(), m.rating?.let { "★ %.1f".format(it) }).joinToString(" · "))
+            out += Slide(url, m.name, listOfNotNull(m.year?.toString(), m.rating?.let { "★ %.1f".format(it) }).joinToString(" · "), m.posterUrl?.takeIf { it.isNotBlank() }, movie = m)
         }
         val seriesIds = activeSourceIds(settings, sourceDao, pid, MediaType.SERIES)
         if (seriesIds.isNotEmpty()) seriesDao.recentlyAdded(seriesIds, 15).forEach { s ->
             val url = s.backdropUrl?.takeIf { it.isNotBlank() } ?: return@forEach
-            out += Slide(url, s.name, "")
+            out += Slide(url, s.name, listOfNotNull(s.year?.toString(), s.rating?.let { "★ %.1f".format(it) }).joinToString(" · "), s.posterUrl?.takeIf { it.isNotBlank() }, series = s)
         }
         return out.shuffled()
     }
@@ -185,5 +259,8 @@ class FanartDream : DreamService() {
     private companion object {
         const val SLIDE_MS = 12_000L
         const val FADE_MS = 1_200L
+        const val ZOOM = 0.12f
+        const val META_MS = 2_500L
+        const val POSTER_WIDTH = 0.17f
     }
 }

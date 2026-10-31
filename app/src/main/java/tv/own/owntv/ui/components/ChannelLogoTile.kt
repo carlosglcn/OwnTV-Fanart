@@ -20,6 +20,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
+import coil3.request.transformations
 import coil3.request.allowHardware
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -85,7 +86,7 @@ fun ChannelLogoTile(
     // hardware config costs nothing and is what makes the ink measurement possible at all.
     val platformContext = LocalPlatformContext.current
     val request = remember(logoUrl, platformContext) {
-        ImageRequest.Builder(platformContext).data(logoUrl).allowHardware(false).build()
+        ImageRequest.Builder(platformContext).data(logoUrl).allowHardware(false).transformations(LogoTrim).build()
     }
 
     Box(modifier.background(background), contentAlignment = Alignment.Center) {

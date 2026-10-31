@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,7 +15,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import tv.own.owntv.ui.theme.dissolveEdges
+import tv.own.owntv.ui.theme.fadeEdgesInto
+import tv.own.owntv.glcn.topRightTrailerHole
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.key.key
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -30,6 +38,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -48,6 +58,7 @@ import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.database.entity.MovieEntity
+import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.core.database.entity.SeriesEntity
 import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.core.home.TrendingHomeItem
@@ -81,6 +92,14 @@ private class LumenItem(
     val crests: List<tv.own.owntv.core.sports.model.Team?>? = null,
     /** A channel's programme on air: its synopsis is not in the guide slice, so it is read when the card is focused. */
     val programmeId: Long? = null,
+    /** glcn: a channel's logo — whole and centred on the closed card (over its programme's picture, dimmed and softened). */
+    val logo: String? = null,
+    /** glcn: the film or series behind the card — its TMDB logo and trailer for the title above, "Details" opens it. */
+    val movie: MovieEntity? = null,
+    val series: SeriesEntity? = null,
+    /** glcn: the main button above the dock ("Play", "Resume", "Watch") and what it does. */
+    val playLabel: Int? = null,
+    val onPlay: (() -> Unit)? = null,
     val onClick: () -> Unit,
 )
 
@@ -100,6 +119,9 @@ fun LumenHome(
     onActivateTrending: (TrendingHomeItem, onUnavailable: () -> Unit) -> Unit,
     onOpenMovie: (MovieEntity) -> Unit,
     onOpenSeries: (SeriesEntity) -> Unit,
+    /** glcn: Keep watching opens the title's page (its Resume button plays); the card's own Resume still plays. */
+    onOpenContinueMovie: ((Long) -> Unit)? = null,
+    onOpenContinueSeries: ((Long) -> Unit)? = null,
     onOpenMatch: (Match) -> Unit,
     onChildFocused: () -> Unit,
     restoreFocus: Boolean,
@@ -118,7 +140,9 @@ fun LumenHome(
     val palette = LocalStagePalette.current
     val accent = stageAccent
 
-    val tabs = remember(state, matches) {
+    // glcn (TV profile): the Dock keeps to TV too — channels, sports, what is on tonight.
+    val tvOnly = tv.own.owntv.glcn.TvProfiles.activeIsTv
+    val tabs = remember(state, matches, tvOnly) {
         val now = System.currentTimeMillis()
         val timeFmt = android.text.format.DateFormat.getTimeFormat(context)
         fun channelItem(ch: ChannelEntity, guide: tv.own.owntv.core.home.GuideSliceState, all: List<ChannelEntity>): LumenItem {
@@ -129,24 +153,30 @@ fun LumenHome(
                 line = if (p != null) listOf(timeFmt.format(java.util.Date(p.startMs)) + " – " + timeFmt.format(java.util.Date(p.stopMs)), ch.name).joinToString("  ·  ") else ch.name,
                 plot = p?.description,
                 programmeId = p?.id,
-                art = p?.imageUrl?.takeIf { it.isNotBlank() } ?: ch.displayLogoUrl, backdrop = p?.imageUrl?.takeIf { it.isNotBlank() },
+                art = p?.imageUrl?.takeIf { it.isNotBlank() }, backdrop = p?.imageUrl?.takeIf { it.isNotBlank() },
                 progress = p?.let { (now - it.startMs).toFloat() / total!! }, landscape = true,
+                logo = ch.displayLogoUrl?.takeIf { it.isNotBlank() } ?: "",
+                playLabel = R.string.glcn_dock_watch, onPlay = { onPlayChannel(ch.id, all) },
                 onClick = { onPlayChannel(ch.id, all) },
             )
         }
         fun movieItem(m: MovieEntity) = LumenItem(
             key = "m" + m.id, title = m.name, line = listOfNotNull(m.year?.toString(), m.rating?.takeIf { it > 0 }?.let(::ratingOf)).joinToString("  ").ifBlank { null },
-            plot = m.plot, art = m.posterUrl, backdrop = m.backdropUrl, progress = null, landscape = false, onClick = { onOpenMovie(m) },
+            plot = m.plot, art = m.posterUrl, backdrop = m.backdropUrl, progress = null, landscape = false,
+            movie = m, playLabel = R.string.content_play, onPlay = { onPlayMovie(m.id, 0L) }, onClick = { onOpenMovie(m) },
         )
         fun seriesItem(s: SeriesEntity) = LumenItem(
             key = "s" + s.id, title = s.name, line = listOfNotNull(s.year?.toString(), s.rating?.takeIf { it > 0 }?.let(::ratingOf)).joinToString("  ").ifBlank { null },
-            plot = s.plot, art = s.posterUrl, backdrop = s.backdropUrl, progress = null, landscape = false, onClick = { onOpenSeries(s) },
+            plot = s.plot, art = s.posterUrl, backdrop = s.backdropUrl, progress = null, landscape = false,
+            series = s, onClick = { onOpenSeries(s) },
         )
         buildList {
             val keep = state.continueMovies.map { c ->
-                LumenItem("p" + c.stableKey, c.title, c.subtitle, c.plot, c.posterUrl, c.backdropUrl, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false) { onPlayMovie(c.sourceItemId, c.positionMs) }
+                LumenItem("p" + c.stableKey, c.title, c.subtitle, c.plot, c.posterUrl, c.backdropUrl, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false,
+                    playLabel = R.string.glcn_dock_resume, onPlay = { onPlayMovie(c.sourceItemId, c.positionMs) }) { onOpenContinueMovie?.invoke(c.sourceItemId) ?: onPlayMovie(c.sourceItemId, c.positionMs) }
             } + state.continueSeries.map { c ->
-                LumenItem("p" + c.stableKey, c.title, c.subtitle, c.plot, c.posterUrl, c.backdropUrl, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false) { onPlayEpisode(0L, c.targetItemId, c.positionMs) }
+                LumenItem("p" + c.stableKey, c.title, c.subtitle, c.plot, c.posterUrl, c.backdropUrl, c.durationMs.takeIf { it > 0 }?.let { c.positionMs.toFloat() / it }, false,
+                    playLabel = R.string.glcn_dock_resume, onPlay = { onPlayEpisode(0L, c.targetItemId, c.positionMs) }) { onOpenContinueSeries?.invoke(c.sourceItemId) ?: onPlayEpisode(0L, c.targetItemId, c.positionMs) }
             }
             if (keep.isNotEmpty() && order.any { it == HomeRow.HERO || it == HomeRow.CONTINUE_MOVIES || it == HomeRow.CONTINUE_SERIES }) add(LumenTab(HomeRow.HERO, keep))
             if (state.recentLive.isNotEmpty() && HomeRow.RECENT_CHANNELS in order) add(LumenTab(HomeRow.RECENT_CHANNELS, state.recentLive.map { channelItem(it, state.recentGuide, state.recentLive) }))
@@ -165,7 +195,8 @@ fun LumenHome(
                             is TrendingHomeItem.Movie -> TrendingFacts(t.movie.name, t.movie.posterUrl, t.movie.backdropUrl, t.movie.plot, t.movie.year)
                             is TrendingHomeItem.Series -> TrendingFacts(t.series.name, t.series.posterUrl, t.series.backdropUrl, t.series.plot, t.series.year)
                         }
-                        LumenItem("t" + t.stableKey, name, year?.toString(), plot, poster, back, null, false) { onActivateTrending(t) {} }
+                        LumenItem("t" + t.stableKey, name, year?.toString(), plot, poster, back, null, false,
+                            movie = (t as? TrendingHomeItem.Movie)?.movie, series = (t as? TrendingHomeItem.Series)?.series) { onActivateTrending(t) {} }
                     },
                 ),
             )
@@ -173,7 +204,7 @@ fun LumenHome(
             if (state.favoriteSeries.isNotEmpty() && HomeRow.FAVORITE_SERIES in order) add(LumenTab(HomeRow.FAVORITE_SERIES, state.favoriteSeries.map(::seriesItem)))
             if (state.recentMovies.isNotEmpty() && HomeRow.RECENT_MOVIES in order) add(LumenTab(HomeRow.RECENT_MOVIES, state.recentMovies.map(::movieItem)))
             if (state.recentSeries.isNotEmpty() && HomeRow.RECENT_SERIES in order) add(LumenTab(HomeRow.RECENT_SERIES, state.recentSeries.map(::seriesItem)))
-        }
+        }.filter { !tvOnly || it.row in TV_PROFILE_ROWS }
     }
 
     var selected by remember { mutableIntStateOf(0) }
@@ -192,7 +223,29 @@ fun LumenHome(
         if (!text.isNullOrBlank()) synopses[id] = text
     }
     val selectedTab = remember { FocusRequester() }
+    // glcn: after ▼ moved to the next tab, its first card takes the focus once it is laid out.
+    var pendingEntry by remember { mutableStateOf(false) }
+    LaunchedEffect(pendingEntry, selected) {
+        if (!pendingEntry) return@LaunchedEffect
+        androidx.compose.runtime.withFrameNanos { }
+        androidx.compose.runtime.withFrameNanos { }
+        runCatching { entry.requestFocus() }
+        pendingEntry = false
+    }
     var menuRow by remember { mutableStateOf<HomeRow?>(null) }
+    // glcn: TMDB for the film or series the focus rests on — its title logo and trailer.
+    val metaRepo: tv.own.owntv.core.metadata.MetadataRepository = org.koin.compose.koinInject()
+    val metas = remember { androidx.compose.runtime.mutableStateMapOf<String, tv.own.owntv.core.database.entity.MetadataCacheEntity>() }
+    val logoFailed = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    LaunchedEffect(shown?.key) {
+        val it0 = shown ?: return@LaunchedEffect
+        if (it0.key in metas || (it0.movie == null && it0.series == null)) return@LaunchedEffect
+        delay(220)
+        val meta = runCatching { it0.movie?.let { metaRepo.resolveMovie(it) } ?: it0.series?.let { metaRepo.resolveSeries(it) } }.getOrNull()
+        if (meta != null) metas[it0.key] = meta
+    }
+    var trailer by remember { mutableStateOf<Pair<String, String>?>(null) }
+    trailer?.let { (key, title) -> tv.own.owntv.ui.components.TrailerPlayerScreen(videoKey = key, title = title) { trailer = null } }
 
     DisposableEffect(onEntryHook, entry) {
         onEntryHook?.invoke { runCatching { entry.requestFocus() }.isSuccess }
@@ -207,7 +260,39 @@ fun LumenHome(
     }
     if (state.isLoading) return
 
-    Box(modifier.fillMaxSize()) {
+    // glcn: resting — after a few seconds the picture becomes the title's trailer (silent; not in light mode), and
+    // after twenty the words and the dock fade away, leaving the picture alone; the next key brings them back.
+    val lastKeyAt = remember { longArrayOf(android.os.SystemClock.uptimeMillis()) }
+    var resting by remember { mutableStateOf(false) }
+    var ambientKey by remember { mutableStateOf<String?>(null) }
+    var ambientStart by remember { mutableStateOf(false) }
+    val shownTrailer by androidx.compose.runtime.rememberUpdatedState(shown?.let { metas[it.key]?.trailerKey })
+    val animsOn by androidx.compose.runtime.rememberUpdatedState(tv.own.owntv.ui.theme.animationsOn)
+    val warmContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) { if (tv.own.owntv.glcn.DockPrefs.autoTrailers && !CinemaTrailer.blocked) tv.own.owntv.ui.components.TrailerPool.warm(warmContext) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(500)
+            val quiet = android.os.SystemClock.uptimeMillis() - lastKeyAt[0]
+            if (!resting && quiet >= DOCK_REST_MS) resting = true
+            // glcn: got ready unseen a little before, so it is already playing when its moment comes.
+            if (ambientKey == null && quiet >= DOCK_TRAILER_WARM_MS && !tv.own.owntv.glcn.LowRam.on && animsOn && tv.own.owntv.glcn.DockPrefs.autoTrailers && !CinemaTrailer.blocked) {
+                ambientKey = shownTrailer
+            }
+            if (ambientKey != null && !ambientStart && quiet >= DOCK_TRAILER_MS) ambientStart = true
+        }
+    }
+    LaunchedEffect(shown?.key) { ambientKey = null; ambientStart = false }
+    val chrome by androidx.compose.animation.core.animateFloatAsState(if (resting) 0f else 1f, androidx.compose.animation.core.tween(if (resting) 1200 else 250), label = "dockRest")
+
+    Box(
+        modifier.fillMaxSize().onPreviewKeyEvent { e ->
+            lastKeyAt[0] = android.os.SystemClock.uptimeMillis()
+            if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) { ambientKey = null; ambientStart = false }
+            // The first key after resting only wakes the page.
+            if (resting) { if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyUp) resting = false; true } else false
+        },
+    ) {
         // The focused card's wide picture, settled before it swaps; the page's own colour washes it out.
         var settled by remember { mutableStateOf<String?>(null) }
         val wanted = shown?.backdrop ?: shown?.art?.takeIf { shown.landscape.not() }
@@ -215,11 +300,42 @@ fun LumenHome(
         LaunchedEffect(wanted, shown?.crests == null) {
             if (wanted != null) { delay(150); settled = wanted } else if (shown?.crests != null) settled = null
         }
-        Crossfade(settled, modifier = Modifier.fillMaxSize(), label = "lumen-backdrop") { url ->
-            if (url != null) AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().alpha(1f))
+        // glcn: the trailer in a window up on the right, UNDER the picture and its veils: once it plays a soft hole opens
+        // there (see TrailerHole), so its edges are the picture itself — no hard box — and the video stays unveiled.
+        ambientKey?.let { key ->
+            Box(Modifier.align(Alignment.TopEnd).fillMaxWidth(TRAILER_WINDOW_WIDTH).height(DOCK_TRAILER_HEIGHT)) {
+                androidx.compose.runtime.key(key) {
+                    tv.own.owntv.ui.components.AmbientTrailer(
+                        key, Modifier.fillMaxSize(), start = ambientStart, muted = !CinemaTrailer.sound,
+                        onSecond = { CinemaTrailer.second = it },
+                        onPlaying = { CinemaTrailer.playing = key to shown?.title.orEmpty() },
+                    ) { ambientKey = null }
+                }
+                if (CinemaTrailer.playing?.first == key) TrailerSoundHint(Modifier.align(Alignment.TopEnd).padding(end = 56.mpx, top = TRAILER_HINT_TOP))
+            }
         }
-        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(palette.page.copy(alpha = 0.78f), palette.page.copy(alpha = 0.34f), palette.page.copy(alpha = 0f)))))
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to palette.page.copy(alpha = 0.95f))))
+        val dockHoleOpen = ambientKey != null && CinemaTrailer.playing?.first == ambientKey
+        val dockHole by androidx.compose.animation.core.animateFloatAsState(if (dockHoleOpen) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(TRAILER_HOLE_MS), label = "dockTrailerHole")
+        Box(Modifier.fillMaxSize().topRightTrailerHole(TRAILER_WINDOW_WIDTH, DOCK_TRAILER_HEIGHT, TRAILER_HOLE_SOFT) { dockHole }) {
+            Crossfade(settled, modifier = Modifier.fillMaxSize(), label = "lumen-backdrop") { url ->
+                if (url != null) {
+                    // glcn: each new picture drifts slowly closer (a Ken Burns push-in) instead of sitting flat.
+                    val drift = remember(url) { androidx.compose.animation.core.Animatable(1f) }
+                    // Still while a trailer plays: the picture then has a hole in it, and a moving picture would redraw it every frame.
+                val driftOn = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.ui.stage.GlcnMotion.subtle && tv.own.owntv.glcn.DeviceClass.richMotion && !dockHoleOpen
+                    LaunchedEffect(url, driftOn) {
+                        if (driftOn) drift.animateTo(DOCK_DRIFT_TO, androidx.compose.animation.core.tween(DOCK_DRIFT_MS, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                    }
+                    AsyncImage(
+                        model = url, contentDescription = null, contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = drift.value; scaleY = drift.value },
+                    )
+                }
+            }
+            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(palette.page.copy(alpha = 0.78f), palette.page.copy(alpha = 0.34f), palette.page.copy(alpha = 0f)))))
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to palette.page.copy(alpha = 0.95f))))
+        }
+        LaunchedEffect(ambientKey) { if (ambientKey == null) CinemaTrailer.playing = null }
 
         shown?.crests?.let { pair ->
             Row(Modifier.align(Alignment.TopEnd).padding(end = 140.mpx, top = 170.mpx), horizontalArrangement = Arrangement.spacedBy(48.mpx)) {
@@ -233,7 +349,7 @@ fun LumenHome(
             )
         }
         if (tab == null) return@Box
-        Column(Modifier.padding(start = contentStart + 24.mpx, top = 120.mpx).width(1240.mpx)) {
+        Column(Modifier.padding(start = contentStart + 24.mpx, top = 120.mpx).width(1240.mpx).graphicsLayer { alpha = chrome }) {
             Text(tab.row.displayTitle(), style = stageText(19, 700), color = accent.accent, maxLines = 1)
             Spacer(Modifier.height(14.mpx))
             // glcn: the words change with a short cross-fade, not a cut, as the focus moves.
@@ -252,24 +368,67 @@ fun LumenHome(
             ) { k ->
                 val it0 = tab.items.firstOrNull { x -> x.key == k }
                 Column {
-                    Text(it0?.title.orEmpty(), style = stageText(64f, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    it0?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
-                    (it0?.plot ?: it0?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(1040.mpx), style = stageText(20, 400), color = StageColors.Body, lines = 5, fade = true) }
+                    // glcn: the title's own lettering (TMDB logo) when it has one; the name in words otherwise.
+                    val logoUrl = k?.takeIf { it !in logoFailed }?.let { metas[it]?.logoPath }?.let { tv.own.owntv.core.metadata.MetadataImages.logo(it) }
+                    if (logoUrl != null) tv.own.owntv.ui.stage.StageTitleArt(
+                        url = logoUrl, contentDescription = it0?.title,
+                        modifier = Modifier.height(150.mpx).widthIn(max = 760.mpx),
+                        onFailed = { k?.let { logoFailed.add(it) } },
+                    ) else Text(it0?.title.orEmpty(), style = stageText(64f, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    // glcn: a film or series reads its facts as tags — the year, ★ the rating in the accent, its genres.
+                    val film = it0?.movie != null || it0?.series != null
+                    if (film) {
+                        val year = it0?.movie?.year ?: it0?.series?.year
+                        val rating = (it0?.movie?.rating ?: it0?.series?.rating)?.takeIf { it > 0 }
+                        val genres = remember(k, metas[k]?.genresJson) { dockJsonList(k?.let { metas[it]?.genresJson }) }
+                        Row(Modifier.padding(top = 14.mpx), horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
+                            rating?.let { DockChip(ratingOf(it), accent = true, star = true) }
+                            year?.let { DockChip(it.toString()) }
+                            genres.take(2).forEach { DockChip(it) }
+                        }
+                    } else it0?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
+                    // glcn: how far along — a film or episode left half-way, or the programme on air.
+                    it0?.progress?.takeIf { it > 0f }?.let { tv.own.owntv.ui.stage.StageProgress(it.coerceIn(0f, 1f), Modifier.padding(top = 14.mpx).width(440.mpx)) }
+                    (it0?.plot ?: it0?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(1040.mpx), style = stageText(20, 400), color = StageColors.Body, lines = if (tv.own.owntv.glcn.DockPrefs.doubleRow) 2 else 3, fade = true) }
+                }
+            }
+            // glcn: what to do with it without opening it — ▲ from the tabs reaches these.
+            shown?.let { it0 ->
+                val trailerKey = metas[it0.key]?.trailerKey?.let { tv.own.owntv.core.metadata.TrailerKeys.split(it).firstOrNull() }
+                val details = it0.movie != null || it0.series != null
+                if (it0.onPlay != null || details || trailerKey != null) Row(
+                    Modifier.padding(top = 18.mpx)
+                        // glcn: ▼ from the buttons goes back to the tab it came from, not to the nearest one (the first).
+                        .onPreviewKeyEvent { e ->
+                            if (e.key == androidx.compose.ui.input.key.Key.DirectionDown && e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                                runCatching { selectedTab.requestFocus() }.isSuccess
+                            } else false
+                        }
+                        .focusGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                    it0.onPlay?.let { play ->
+                        tv.own.owntv.ui.stage.StageButton(stringResource(it0.playLabel ?: R.string.content_play), onClick = play, icon = OwnTVIcon.PLAY, iconFilled = true, height = 52.mpx, textSize = 19)
+                    }
+                    if (details) tv.own.owntv.ui.stage.StageButton(stringResource(R.string.glcn_dock_details), onClick = it0.onClick, icon = OwnTVIcon.INFO, height = 52.mpx, textSize = 19)
+                    trailerKey?.let { key ->
+                        tv.own.owntv.ui.stage.StageButton(stringResource(R.string.glcn_dock_trailer), onClick = { trailer = key to it0.title }, icon = OwnTVIcon.VIDEO, height = 52.mpx, textSize = 19)
+                    }
                 }
             }
         }
 
         // glcn: no box — a gradient from clear to the page's own colour, so the dock grows out of the picture.
         Box(
-            Modifier.align(Alignment.BottomStart).fillMaxWidth().height(560.mpx)
+            Modifier.align(Alignment.BottomStart).fillMaxWidth().height(560.mpx).graphicsLayer { alpha = chrome }
                 .background(Brush.verticalGradient(0f to Color.Transparent, 0.3f to palette.page.copy(alpha = 0.7f), 1f to palette.page.copy(alpha = 0.96f))),
         )
         Column(
             Modifier
                 .align(Alignment.BottomStart)
+                .graphicsLayer { alpha = chrome }
                 .padding(start = contentStart, end = 56.mpx, bottom = 28.mpx)
                 .fillMaxWidth()
-                .height(452.mpx)
+                .height(if (tv.own.owntv.glcn.DockPrefs.doubleRow) 548.mpx else 452.mpx)
                 .padding(top = 20.mpx),
         ) {
             LazyRow(Modifier.padding(horizontal = 24.mpx).focusGroup(), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
@@ -305,8 +464,12 @@ fun LumenHome(
                     pos.animateTo(focusedAt.toFloat(), androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 140f))
                 }
             }
-            val narrow = remember(items) { items.map { x -> if (x.landscape) 250 else 187 } }
-            val openable = remember(items) { items.map { x -> x.crests == null && (x.backdrop ?: x.art.takeIf { x.landscape }) != null } }
+            // glcn: a little smaller with the double row, so the next tab's cards fit under it.
+            val ks = if (tv.own.owntv.glcn.DockPrefs.doubleRow) DOCK_DOUBLE_SCALE else 1f
+            val narrow = remember(items, ks) { items.map { x -> ((if (x.landscape) 250 else 187) * ks).toInt() } }
+            // glcn: every card opens when it has focus, also one with no wide picture (the last ones of a row were often
+            // such, and stayed narrow): its poster then stands whole in the middle of the open card, on a tint.
+            val openable = remember(items) { items.map { x -> x.crests == null } }
             fun wideness(i: Int, t: Float): Float = if (openable.getOrElse(i) { false }) (1f - kotlin.math.abs(i - t)).coerceIn(0f, 1f) else 0f
             val k by remember { androidx.compose.runtime.derivedStateOf { kotlin.math.floor(pos.value).toInt() } }
             val from = (minOf(k, focusedAt) - 1).coerceAtLeast(0)
@@ -321,12 +484,18 @@ fun LumenHome(
                             val m = Modifier
                                 .then(if (i == 0) Modifier.focusRequester(entry) else Modifier)
                                 .focusProperties { up = selectedTab }
+                                // glcn: ▼ with the double row: the tab underneath becomes the row.
+                                .onPreviewKeyEvent { e ->
+                                    if (tv.own.owntv.glcn.DockPrefs.doubleRow && e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown &&
+                                        androidx.compose.ui.input.key.Key.DirectionDown == e.key && selected < tabs.lastIndex
+                                    ) { selected += 1; focusedKey = null; pendingEntry = true; true } else false
+                                }
                                 .onFocusChanged { if (it.hasFocus) { focusedKey = item.key; onChildFocused() } }
                             val wideArt = item.backdrop ?: item.art.takeIf { item.landscape }
                             val near = kotlin.math.abs(i - focusedAt) <= 1 || kotlin.math.abs(i - k) <= 1
                             // The width is set by the row's layout; the numbers here are only the widest it can be.
                             StageStill(
-                                title = item.title, line = item.line, onClick = item.onClick, width = 500.mpx, height = 281.mpx,
+                                title = item.title, line = item.line, onClick = item.onClick, width = 500.mpx * ks, height = 281.mpx * ks,
                                 titleSize = 19, lineSize = 15, modifier = m, progress = item.progress,
                                 onLongClick = { menuRow = tab.row }, lift = false,
                             ) {
@@ -335,8 +504,33 @@ fun LumenHome(
                                     horizontalArrangement = Arrangement.spacedBy(20.mpx, Alignment.CenterHorizontally),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) { item.crests.forEach { tv.own.owntv.features.sports.Crest(it, 84) } }
+                                else if (item.logo != null) {
+                                    // glcn: a channel. Closed: its programme's picture dimmed (no GPU blur: it would be redrawn on every frame of the glide), the channel's logo whole in
+                                    // the middle (no picture: the logo on a tint). Opening: the picture comes up sharp as the logo fades.
+                                    val pic = item.art
+                                    if (pic != null) AsyncImage(
+                                        model = pic, contentDescription = null, contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize(),
+                                    ) else Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.16f)))
+                                    if (pic != null) Box(Modifier.fillMaxSize().graphicsLayer { alpha = 1f - wideness(i, pos.value) }.background(Color.Black.copy(alpha = 0.55f)))
+                                    if (near && pic != null) AsyncImage(
+                                        model = pic, contentDescription = null, contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = wideness(i, pos.value) },
+                                    )
+                                    if (item.logo.isNotEmpty()) AsyncImage(
+                                        model = item.logo, contentDescription = null, contentScale = ContentScale.Fit,
+                                        modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.62f).fillMaxHeight(0.42f)
+                                            .graphicsLayer { alpha = if (pic == null) 1f else 1f - wideness(i, pos.value) },
+                                    ) else if (pic == null) Text(
+                                        item.title.take(2).uppercase(), style = stageText(40, 800), color = StageColors.Text,
+                                        modifier = Modifier.align(Alignment.Center),
+                                    )
+                                }
                                 else {
-                                    if (item.art != null) AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                    if (item.art != null && wideArt == null && !item.landscape) {
+                                        Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.14f)))
+                                        AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                                    } else if (item.art != null) AsyncImage(model = item.art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                     else Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.18f)))
                                     // The wide picture dissolves in over the closed one as the card opens (drawn, never recomposed).
                                     if (near && wideArt != null && wideArt != item.art) AsyncImage(
@@ -353,7 +547,7 @@ fun LumenHome(
                 val kk = kotlin.math.floor(t).toInt()
                 val frac = t - kk
                 val gap = 12.mpx.roundToPx()
-                val wide = 500.mpx.roundToPx()
+                val wide = (500.mpx * ks).roundToPx()
                 val ws = IntArray(measurables.size) { j ->
                     val i = from + j
                     val n = narrow[i].mpx.roundToPx()
@@ -384,9 +578,38 @@ fun LumenHome(
                 }
             }
             }
+            // glcn: the next tab, peeking under the row — its name and its first cards, small; ▼ makes it the row.
+            if (tv.own.owntv.glcn.DockPrefs.doubleRow) tabs.getOrNull(selected + 1)?.let { next ->
+                Row(
+                    Modifier.padding(start = 30.mpx, top = 6.mpx).graphicsLayer { alpha = 0.72f },
+                    horizontalArrangement = Arrangement.spacedBy(10.mpx),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(next.row.displayTitle(), style = stageText(17, 700), color = StageColors.Muted, maxLines = 1, modifier = Modifier.width(220.mpx))
+                    next.items.take(DOCK_PEEK_CARDS).forEach { n ->
+                        val pic = n.backdrop ?: n.art
+                        val w = if (n.landscape || n.backdrop != null || n.crests != null || pic == null) 160.mpx else 66.mpx
+                        Box(Modifier.size(w, 92.mpx).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.mpx)).background(accent.accent.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                            when {
+                                // glcn: a match has no picture — its two crests, as on its card.
+                                n.crests != null -> Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
+                                    n.crests.forEach { tv.own.owntv.features.sports.Crest(it, 52) }
+                                }
+                                pic != null -> AsyncImage(model = pic, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                !n.logo.isNullOrEmpty() -> AsyncImage(model = n.logo, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding(14.mpx))
+                                else -> Text(n.title, style = stageText(14, 700), color = StageColors.Muted, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(8.mpx))
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
+/** glcn: the double row's cards are this much of their usual size, and this many of the next tab peek under them. */
+private const val DOCK_DOUBLE_SCALE = 0.84f
+private const val DOCK_PEEK_CARDS = 8
 
 private val NoBringIntoView = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
@@ -395,3 +618,39 @@ private val NoBringIntoView = object : androidx.compose.foundation.gestures.Brin
 private data class TrendingFacts(val name: String, val poster: String?, val backdrop: String?, val plot: String?, val year: Int?)
 
 private fun ratingOf(r: Double): String = String.format(java.util.Locale.getDefault(), "%.1f", r)
+
+/** glcn: one fact above the dock as a tag; the rating in the accent with its star. */
+@Composable
+private fun DockChip(text: String, accent: Boolean = false, star: Boolean = false) {
+    val a = stageAccent
+    val tint = if (accent) a.accent else StageColors.Text.copy(alpha = 0.9f)
+    Row(
+        Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.mpx))
+            .background(if (accent) a.accent.copy(alpha = 0.18f) else StageColors.Text.copy(alpha = 0.12f))
+            .padding(horizontal = 14.mpx, vertical = 6.mpx),
+        horizontalArrangement = Arrangement.spacedBy(6.mpx), verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (star) tv.own.owntv.ui.components.OwnTVIcon(tv.own.owntv.ui.components.OwnTVIcon.STAR, tint, Modifier.size(18.mpx))
+        Text(text, style = stageText(19, 700), color = tint, maxLines = 1)
+    }
+}
+
+private fun dockJsonList(json: String?): List<String> {
+    if (json.isNullOrBlank()) return emptyList()
+    return runCatching {
+        val arr = org.json.JSONArray(json)
+        (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { s -> s.isNotBlank() } }
+    }.getOrDefault(emptyList())
+}
+
+/** glcn: quiet this long and the title's trailer replaces its picture; this long and the words and dock fade away. */
+private const val DOCK_TRAILER_MS = 2_200L
+private const val DOCK_TRAILER_WARM_MS = 900L
+private const val DOCK_REST_MS = 20_000L
+
+/** glcn: the Dock backdrop's slow push-in — how close and over how long. */
+private const val DOCK_DRIFT_TO = 1.06f
+private const val DOCK_DRIFT_MS = 9_000
+
+/** glcn: the Dock's trailer window height. */
+private val DOCK_TRAILER_HEIGHT = 560.mpx

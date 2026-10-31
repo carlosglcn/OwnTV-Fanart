@@ -2,6 +2,7 @@
 
 package tv.own.owntv.features.movies
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.CompositionLocalProvider
@@ -12,6 +13,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.layout
+import tv.own.owntv.ui.components.onDpadLeft
+import tv.own.owntv.features.categorylock.focusListAfterSheet
 import tv.own.owntv.features.live.LiveCategories
 import tv.own.owntv.core.live.ProviderTags
 import tv.own.owntv.features.live.edgeScrollSpec
@@ -41,9 +44,7 @@ import tv.own.owntv.ui.stage.StagePoster
 import tv.own.owntv.ui.stage.StageSearchField
 import tv.own.owntv.ui.stage.StageSegmented
 import tv.own.owntv.ui.stage.StageTool
-import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.mpx
-import tv.own.owntv.ui.theme.stageText
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -94,11 +95,7 @@ import kotlinx.coroutines.launch
 import tv.own.owntv.features.live.LiveRailItem
 import tv.own.owntv.features.live.displayLabel
 import org.koin.androidx.compose.koinViewModel
-import androidx.tv.material3.Text
 import tv.own.owntv.R
-import tv.own.owntv.core.customize.categoryRestoreSummary
-import tv.own.owntv.core.customize.CategoryRestorePlan
-import androidx.compose.runtime.produceState
 import tv.own.owntv.core.customize.CustomizeKeys
 import tv.own.owntv.core.database.entity.ContentOrderEntity
 import tv.own.owntv.core.database.entity.MovieEntity
@@ -109,7 +106,7 @@ import tv.own.owntv.core.settings.PanelSection
 import tv.own.owntv.features.settings.data.computePanelWidths
 import tv.own.owntv.core.settings.SettingsRepository
 import tv.own.owntv.features.settings.rememberPanelShares
-import tv.own.owntv.features.shell.components.CategoryContextMenu
+import tv.own.owntv.features.shell.components.RailCategoryMenu
 import tv.own.owntv.features.shell.components.MediaDetailsScreen
 import tv.own.owntv.ui.components.MoveOrderOverlay
 import tv.own.owntv.ui.components.InAppToast
@@ -142,6 +139,7 @@ fun MoviesScreen(
     onEntryHook: (((() -> Boolean)?) -> Unit)? = null,
 ) {
     val vm: MovieViewModel = koinViewModel()
+    val lockVm: tv.own.owntv.features.categorylock.CategoryLockViewModel = koinViewModel()
     // Locking and unlocking are one pair: the pin belongs to this screen's lifetime, not to the view
     // model's. On the television that view model is a single instance shared with the browse section,
     // so a pin left behind froze its category rail. `DisposableEffect` (not `LaunchedEffect`) also
@@ -218,7 +216,9 @@ fun MoviesScreen(
     // Resume flow: AUTO continues silently, ASK prompts (≥10s saved), NEVER starts from zero.
     val scope = rememberCoroutineScope()
     var resumePrompt by remember { mutableStateOf<Pair<MovieEntity, Long>?>(null) }
-    val startMovie: (MovieEntity) -> Unit = { m ->
+    // glcn: "Page before watching" — choosing a film opens its page; Play there starts it as before.
+    var titleMovie by remember { mutableStateOf<MovieEntity?>(null) }
+    val playMovieNow: (MovieEntity) -> Unit = { m ->
         scope.launch {
             val pos = vm.savedPositionMs(m)
             when {
@@ -228,6 +228,7 @@ fun MoviesScreen(
             }
         }
     }
+    val startMovie: (MovieEntity) -> Unit = { m -> if (tv.own.owntv.glcn.DockPrefs.titlePage) titleMovie = m else playMovieNow(m) }
 
     val gridState = rememberLazyGridState()
     val listState = rememberLazyListState()
@@ -398,7 +399,7 @@ fun MoviesScreen(
         runCatching { selFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { contextFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
-    // From the categories to the titles: the remembered movie, else the first; the search field when empty.
+    // From the categories to the titles: the remembered movie, else the first; a locked one's Enter PIN button; else the search field.
     fun focusTitles() {
         val targetId = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: selectedMovie?.id else selectedMovie?.id
         scope.launch {
@@ -415,7 +416,7 @@ fun MoviesScreen(
                     }
                     withFrameNanos { }
                 }
-            } else {
+            } else if (!runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)) {
                 runCatching { listSearchFocus.requestFocus() }
             }
         }
@@ -437,7 +438,20 @@ fun MoviesScreen(
     val panelShares = rememberPanelShares(PanelSection.MOVIES, settingsVm)
     val cinematicSheetPct by settingsVm.cinematicSheetWidth(PanelSection.MOVIES).collectAsStateWithLifecycle()
     val selectedMeta = selectedMovieMeta?.takeIf { it.movieId == selectedMovie?.id }?.cache
-    val titleInfo = selectedMovie?.let { movieTitleInfo(it, selectedMeta, metadataMode.tmdbWins || it.id in overridden) }
+    val titleInfo = selectedMovie?.takeUnless { selectedItem?.sealed == true || movies.itemCount == 0 }?.let { movieTitleInfo(it, selectedMeta, metadataMode.tmdbWins || it.id in overridden) }
+    // glcn: once focus rests on a title, the backdrops of the titles around it are fetched and decoded ahead, so
+    // the next step shows its picture at once (details from the local cache only; TMDB is never asked here).
+    val prefetchContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(selectedMovie?.id) {
+        val id = selectedMovie?.id ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(180)
+        val items = movies.itemSnapshotList.items
+        val at = items.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: return@LaunchedEffect
+        val reach = tv.own.owntv.glcn.ArtPrefetch.reach
+        val around = ((1..reach).flatMap { listOf(at + it, at - it) }).mapNotNull { items.getOrNull(it) }
+        val metas = vm.cachedMetaFor(around)
+        tv.own.owntv.glcn.ArtPrefetch.backdrops(prefetchContext, around.map { movieTitleInfo(it, metas[it.id], metadataMode.tmdbWins || it.id in overridden).backdropUrl })
+    }
     LaunchedEffect(selectedMovie?.id, titleInfo?.backdropUrl) {
         val id = selectedMovie?.id ?: return@LaunchedEffect
         titleInfo?.backdropUrl?.takeIf { it.isNotBlank() }?.let { runwayBackdrops[id] = it }
@@ -445,8 +459,8 @@ fun MoviesScreen(
     val (categoryEntries, groupsHeading) = vodCategoryEntries(railItems, railCounts, playlistMarks, series = false)
     val headerLabel = if (selectedItem?.key is LiveKey.Folder || selectedItem?.key is LiveKey.Custom) ProviderTags.parse(selectedLabel).name else selectedLabel
 
-    // Back closes the sheet: one level out.
-    androidx.activity.compose.BackHandler(enabled = categoriesOpen) { categoriesOpen = false; focusCurrentTitle() }
+    // Back closes the sheet: one level out, to the current title (or the list's way in when a lock emptied it).
+    BackHandler(enabled = categoriesOpen) { categoriesOpen = false; focusListAfterSheet(scope, ::focusCurrentTitle, { gridPaneFocused }, ::focusTitles) }
     LaunchedEffect(categoriesOpen) {
         if (categoriesOpen) { withFrameNanos { }; runCatching { railFocus.requestFocus() } }
         // However the sheet closed (Back, a pick, ◀ to the rail), the next one starts fresh.
@@ -460,7 +474,7 @@ fun MoviesScreen(
             // The sheet closes when focus leaves it (◀ to the rail) — not while its own menus are open,
             // and not on the "unfocused" report every node gets when it first attaches.
             if (it.hasFocus) sheetHadFocus = true
-            else if (sheetHadFocus && categoriesOpen && contextCategory == null && categoryMoveState == null) {
+            else if (sheetHadFocus && categoriesOpen && contextCategory == null && categoryMoveState == null && !lockVm.prompting) {
                 sheetHadFocus = false
                 categoriesOpen = false
             }
@@ -475,8 +489,10 @@ fun MoviesScreen(
             onJumpToIndex = { idx -> catFocusIndex = idx; railFocusRow = idx },
         )
     val onCategorySelect: (Int) -> Unit = { idx ->
-        railItems.getOrNull(idx)?.let { vm.select(it.key) }
-        if (categoriesOpen) { categoriesOpen = false; focusTitles() }
+        val item = railItems.getOrNull(idx)
+        item?.let { vm.select(it.key) }
+        if (item?.sealed == true) lockVm.open(tv.own.owntv.core.model.MediaType.MOVIE, item.key)
+        else if (categoriesOpen) { categoriesOpen = false; focusTitles() }
     }
     val onCategoryLongSelect: (Int) -> Unit = { idx ->
         railItems.getOrNull(idx)?.let { item ->
@@ -567,7 +583,39 @@ fun MoviesScreen(
         // glcn: ◀ is not taken here — the shell moves it to the menu.
         e.key == Key.Unknown
     }
-    val emptyText = if (searchQuery.isNotBlank()) stringResource(R.string.content_no_movies_found, searchQuery.trim()) else stringResource(R.string.content_no_movies_here)
+    // glcn: the film's page — on this page itself under the Cinematic layout, so the picture and its trailer go on.
+    val favIds by vm.favoriteIds.collectAsStateWithLifecycle()
+    val titlePage: @Composable (MovieEntity, Boolean) -> Unit = { m, inPlace ->
+        val metaHere = selectedMovieMeta?.takeIf { it.movieId == m.id }?.cache
+        MovieTitlePage(
+            movie = m,
+            meta = metaHere,
+            info = movieTitleInfo(m, metaHere, metadataMode.tmdbWins || m.id in overridden),
+            favorite = m.id in favIds,
+            resumeMs = { vm.savedPositionMs(m) },
+            onPlay = { pos -> titleMovie = null; vm.play(m, pos); goFullscreen() },
+            loadVersions = { vm.versionsOf(m) },
+            onPlayVersion = { v -> titleMovie = null; playMovieNow(v) },
+            onToggleFavorite = { vm.toggleFavorite(m) },
+            onDismiss = { titleMovie = null },
+            loadRelated = { vm.relatedMoviesOf(m) },
+            onOpenRelated = { r -> titleMovie = r },
+            inPlace = inPlace,
+        )
+    }
+    val inPlaceTitle = cinematic && titleMovie != null && titleMovie?.id == selectedMovie?.id
+    // Back from the page drawn here: the focus goes back to the film it was opened from.
+    val wasInPlace = remember { booleanArrayOf(false) }
+    LaunchedEffect(inPlaceTitle) {
+        if (inPlaceTitle) wasInPlace[0] = true
+        else if (wasInPlace[0]) { wasInPlace[0] = false; withFrameNanos { }; focusCurrentTitle() }
+    }
+    val listAlpha by androidx.compose.animation.core.animateFloatAsState(if (inPlaceTitle) 0f else 1f, tv.own.owntv.ui.theme.ownTvTween(260), label = "titleListFade")
+    fun openCategories() { if (cinematic) categoriesOpen = true else runCatching { railFocus.requestFocus() } }
+    val listPin = tv.own.owntv.features.categorylock.rememberListPinFocus(movies.itemCount, firstItemFocus, { scrollToIndex(0) }) { focusTitles() }
+    val sealed = selectedItem?.sealed == true
+    val onEnterPin: () -> Unit = { selectedItem?.let { listPin.askedFromList(); lockVm.open(tv.own.owntv.core.model.MediaType.MOVIE, it.key) } }
+    val emptyText = if (sealed) stringResource(R.string.content_category_locked_placeholder) else if (searchQuery.isNotBlank()) stringResource(R.string.content_no_movies_found, searchQuery.trim()) else stringResource(R.string.content_no_movies_here)
 
     BoxWithConstraints(
         modifier = modifier
@@ -578,17 +626,24 @@ fun MoviesScreen(
         val screenW = maxWidth
         fun fx(px: Int) = screenW * (px / 1920f)
         if (cinematic) {
-            val heroH = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 464.mpx
-            val toolTop = 122.mpx + heroH
+            // glcn: with the menu on top the page is shorter by the bar's band: the header and hero move up into the room
+            // the clock no longer needs and the hero gives up the rest, so the posters' titles stay on screen.
+            val short = (1080.mpx - maxHeight).coerceAtLeast(0.mpx)
+            val lift = minOf(short, 56.mpx)
+            val heroTop = 122.mpx - lift
+            val heroH = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 464.mpx - (short - lift)
+            val toolTop = heroTop + heroH
             Box(Modifier.fillMaxSize().then(if (categoriesOpen) Modifier.graphicsLayer { alpha = 0.36f } else Modifier)) {
                 tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl, Modifier.matchParentSize())
-                VodCinematicBackdrop(titleInfo?.backdropUrl, series = false, Modifier.align(Alignment.TopEnd))
+                VodCinematicBackdrop(titleInfo?.backdropUrl, series = false, Modifier.align(Alignment.TopEnd), trailer = selectedMeta?.trailerKey.takeIf { metadataMode.enrich }, trailerTitle = selectedMovie?.name, focusKey = selectedMovie?.id)
                 VodHeader(
-                    section = stringResource(R.string.common_nav_movies), category = headerLabel, count = vodCount(false, count),
-                    showChevron = true, modifier = Modifier.padding(start = fx(84), top = 52.mpx).width(fx(900)),
+                    section = stringResource(R.string.common_nav_movies), category = headerLabel, count = vodCount(false, count).takeUnless { sealed },
+                    showChevron = true, modifier = Modifier.padding(start = fx(84), top = 52.mpx - lift * 0.7f).width(fx(900)).graphicsLayer { alpha = listAlpha },
                 )
-                titleInfo?.let { VodHero(it, Modifier.padding(start = fx(84), top = 122.mpx).width(fx(1000)).height(heroH)) }
-                Column(Modifier.padding(top = toolTop).fillMaxSize().then(paneModifier)) {
+                titleInfo?.let { VodHero(it, Modifier.padding(start = fx(84), top = heroTop).width(fx(1000)).height(heroH).graphicsLayer { alpha = listAlpha }) }
+                // glcn: the film's page, here over the same picture and trailer (the rest above has faded out).
+                if (inPlaceTitle) titleMovie?.let { titlePage(it, true) }
+                Column(Modifier.padding(top = toolTop).fillMaxSize().graphicsLayer { alpha = listAlpha }.then(paneModifier)) {
                     Row(
                         Modifier.padding(start = fx(68), end = fx(64)).fillMaxWidth()
                             // ▼ from the toolbar returns to the title the hero shows, not the poster below the tool.
@@ -610,7 +665,7 @@ fun MoviesScreen(
                         StageKeyHints(listOf(playHint, optionsHint))
                     }
                     if (movies.itemCount == 0) {
-                        Text(emptyText, style = stageText(20, 500), color = StageColors.Muted, modifier = Modifier.padding(start = fx(84), top = 60.mpx))
+                        tv.own.owntv.features.categorylock.CategoryEmptyState(emptyText, sealed, onEnterPin, firstItemFocus, Modifier.padding(start = fx(84), top = 60.mpx), onNavigateLeft = { openCategories() })
                     } else {
                         // The 196 × 294 posters, 26 apart, as many across as fit; the grid grows downwards
                         // (a grid, not a single row). Glow room on every side.
@@ -636,6 +691,7 @@ fun MoviesScreen(
                                     val done = prog?.let { vm.isMovieCompleted(it) } == true
                                     StagePoster(
                                         title = movie.name,
+                                        badges = androidx.compose.runtime.remember(movie.name, movie.qualityRank, movie.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(movie.name, movie.qualityRank, movie.advertisedCapabilities) },
                                         rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
                                         width = 196.mpx, height = 294.mpx, fillWidth = true,
                                         progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
@@ -681,6 +737,7 @@ fun MoviesScreen(
                                         val done = prog?.let { vm.isMovieCompleted(it) } == true
                                         StagePoster(
                                             title = movie.name,
+                                            badges = androidx.compose.runtime.remember(movie.name, movie.qualityRank, movie.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(movie.name, movie.qualityRank, movie.advertisedCapabilities) },
                                             rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
                                             width = 196.mpx, height = 294.mpx,
                                             progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
@@ -728,7 +785,7 @@ fun MoviesScreen(
             val top = if (locked) 0.mpx else 128.mpx
             if (!locked) {
                 VodHeader(
-                    section = stringResource(R.string.common_nav_movies), category = headerLabel, count = vodCount(false, count),
+                    section = stringResource(R.string.common_nav_movies), category = headerLabel, count = vodCount(false, count).takeUnless { sealed },
                     showChevron = false, modifier = Modifier.padding(start = fx(84), top = 52.mpx).width(fx(860)),
                 )
                 LiveCategories(
@@ -782,7 +839,7 @@ fun MoviesScreen(
                 }
                 if (movies.itemCount == 0) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(emptyText, style = stageText(20, 500), color = StageColors.Muted)
+                        tv.own.owntv.features.categorylock.CategoryEmptyState(emptyText, sealed, onEnterPin, firstItemFocus, horizontalAlignment = Alignment.CenterHorizontally, onNavigateLeft = { openCategories() }.takeIf { lockedKey == null })
                     }
                 } else if (viewMode == SettingsRepository.VodViewMode.LIST) {
                     Spacer(Modifier.height(20.mpx))
@@ -852,6 +909,7 @@ fun MoviesScreen(
                                     val done = prog?.let { vm.isMovieCompleted(it) } == true
                                     StagePoster(
                                         title = movie.name,
+                                        badges = androidx.compose.runtime.remember(movie.name, movie.qualityRank, movie.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(movie.name, movie.qualityRank, movie.advertisedCapabilities) },
                                         rating = movie.rating?.takeIf { it > 0 }?.let(::vodRating),
                                         width = posterW, height = posterW * 1.5f,
                                         compact = true,
@@ -952,6 +1010,13 @@ fun MoviesScreen(
         val inHistory by androidx.compose.runtime.produceState(selectedKey == LiveKey.History, m.id) { value = vm.isInHistory(m) }
         val canMove = selectedKey is LiveKey.Folder || selectedKey is LiveKey.Custom || selectedKey == LiveKey.Favorites
         val actions = buildList {
+            // glcn: the trailer playing behind the page — its sound, for remotes without Play/Pause.
+            if (tv.own.owntv.features.home.CinemaTrailer.playing != null) add(MenuAction(
+                "trailer_sound",
+                stringResource(if (tv.own.owntv.features.home.CinemaTrailer.sound) R.string.glcn_trailer_sound_off else R.string.glcn_trailer_sound_on),
+                if (tv.own.owntv.features.home.CinemaTrailer.sound) OwnTVIcon.VOLUME_MUTE else OwnTVIcon.VOLUME_HIGH,
+                group = 0,
+            ) { tv.own.owntv.features.home.CinemaTrailer.sound = !tv.own.owntv.features.home.CinemaTrailer.sound; contextMovie = null })
             add(MenuAction("play_trailer", stringResource(R.string.content_play_trailer), OwnTVIcon.PLAY_CIRCLE, group = VodGroupWatch) {
                 trailerKey?.let { contextMovie = null; trailerTitle = m.name; trailerVideoKey = it }
             })
@@ -1026,6 +1091,7 @@ fun MoviesScreen(
                 "tmdb_details".takeIf { !(metadataMode.enrich && cacheForM != null) },
                 "delete_subtitles".takeIf { contextMovieSubs.isEmpty() },
             ),
+            firstFocusKey = if (tv.own.owntv.features.home.CinemaTrailer.playing != null) "trailer_sound" else "favourite",
             onDismiss = { contextMovie = null },
         )
     }
@@ -1088,6 +1154,8 @@ fun MoviesScreen(
             runCatching { contextFocus.requestFocus() }
         }
     }
+
+    titleMovie?.let { m -> if (!inPlaceTitle) titlePage(m, false) }
 
     // Windowed TMDB details popup — read-only, Back exits.
     detailsMovie?.let { m ->
@@ -1170,20 +1238,21 @@ fun MoviesScreen(
     // Gone in the same frame the move list opens, so two popups never hold focus at once.
     LaunchedEffect(categoryMoveState != null) { if (categoryMoveState != null) contextCategory = null }
     contextCategory?.takeIf { categoryMoveState == null }?.let { item ->
-        val restorePlan by produceState<CategoryRestorePlan?>(null, item.key) { value = vm.categoryRestorePlan(item.key) }
-        CategoryContextMenu(
-            categoryName = item.displayLabel(R.string.content_category_all_movies),
-            canHide = item.key is LiveKey.Folder || item.key is LiveKey.Custom,
-            canMove = item.key is LiveKey.Folder || item.key is LiveKey.Custom,
-            onHide = { vm.hideCategory(item.key); contextCategory = null },
-            // The menu stays up until the move list is loaded, then hands over to it.
-            onMove = { vm.enterCategoryMoveMode(item.key) },
-            // Always offered: the plan is read in the background and only fills in the confirmation.
-            resetLabel = stringResource(if (item.key is LiveKey.Custom) R.string.content_category_restore_custom else R.string.content_category_restore_playlist),
-            resetLines = restorePlan?.let { categoryRestoreSummary(it, androidx.compose.ui.platform.LocalContext.current.resources) },
-            onReset = { vm.restoreCategory(item.key); contextCategory = null },
-            onDismiss = { contextCategory = null }
+        RailCategoryMenu(
+            item, item.displayLabel(R.string.content_category_all_movies), vm::categoryRestorePlan,
+            onHide = vm::hideCategory, onMove = vm::enterCategoryMoveMode, onRestore = vm::restoreCategory,
+            onToggleLock = { lockVm.toggleLock(tv.own.owntv.core.model.MediaType.MOVIE, it) },
+            onSealedAction = { key, action -> lockVm.open(tv.own.owntv.core.model.MediaType.MOVIE, key, action) },
+            onClose = { contextCategory = null },
         )
+    }
+    tv.own.owntv.features.categorylock.CategoryLockPrompts(
+        tv.own.owntv.core.model.MediaType.MOVIE,
+        onAction = { key, action -> action.run(key, vm::hideCategory, vm::enterCategoryMoveMode, vm::restoreCategory) },
+    ) { key, opened ->
+        if (listPin.takeClose(opened)) Unit
+        else if (opened && categoriesOpen) { categoriesOpen = false; focusTitles(); listPin.openedFromCategories() }
+        else railFocusRow = railItems.indexOfFirst { it.key == key }.takeIf { it >= 0 }
     }
 
     // Restore focus to the rail when the context menu or category move mode closes.
@@ -1251,6 +1320,7 @@ private fun buildMovieDetails(
         title = movie.name,
         backdropUrl = backdrop,
         logoUrl = tv.own.owntv.core.metadata.MetadataImages.logo(meta?.logoPath),
+        trailerKey = meta?.trailerKey,
         posterUrl = poster,
         metaLine = metaLine(movie, meta, tmdbWins),
         genres = jsonList(meta?.genresJson),
@@ -1283,8 +1353,11 @@ internal fun movieTitleInfo(
     return VodTitleInfo(
         title = movie.name,
         logoUrl = tv.own.owntv.core.metadata.MetadataImages.logo(meta?.logoPath),
-        backdropUrl = tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath, size = "w1280")
-            ?: movie.backdropUrl?.takeIf { it.isNotBlank() }
+        // glcn: one picture per title, chosen the same way every time: the playlist's own wide picture when it has one
+        // (it is there at once, so the hero never swaps it when TMDB answers a moment later), TMDB's only when the
+        // playlist has none — or first, when TMDB is set to win.
+        backdropUrl = (if (tmdbWins) tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath, size = "w1280") ?: movie.backdropUrl?.takeIf { it.isNotBlank() }
+            else movie.backdropUrl?.takeIf { it.isNotBlank() } ?: tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath, size = "w1280"))
             // glcn: no wide picture (yet) — the cover itself fills the hero, so the space is never empty.
             ?: providerPoster ?: tmdbPoster,
         posterUrl = if (tmdbWins) tmdbPoster ?: providerPoster else providerPoster ?: tmdbPoster,
@@ -1293,7 +1366,7 @@ internal fun movieTitleInfo(
         runtimeSecs = movie.durationSecs?.takeIf { it > 0 },
         rating = if (tmdbWins) meta?.rating?.takeIf { it > 0 } ?: movie.rating?.takeIf { it > 0 }
             else movie.rating?.takeIf { it > 0 } ?: meta?.rating?.takeIf { it > 0 },
-        tags = cinematicQualityBadges(movie.qualityRank, movie.advertisedCapabilities),
+        tags = tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.badges(movie.name).ifEmpty { cinematicQualityBadges(movie.qualityRank, movie.advertisedCapabilities) },
         plot = if (tmdbWins) meta?.overview ?: providerPlot else providerPlot ?: meta?.overview,
         cast = tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson),
         tmdbId = meta?.tmdbId,

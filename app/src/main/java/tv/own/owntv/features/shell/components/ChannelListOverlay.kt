@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import tv.own.owntv.core.epg.displayLogoUrl
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -105,16 +106,18 @@ fun ChannelListOverlay(
     /** glcn: ▶ steps the view — picture, schedule, posters — remembered for next time. */
     onCyclePanel: (() -> Unit)? = null,
 ) {
+    // glcn: what is on each channel, kept once read (the prefetch reads the rows around the cursor), so the panel
+    // beside the list shows the picture at once instead of reading it again when the row is reached.
+    val nowCache = remember { java.util.concurrent.ConcurrentHashMap<Long, Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>>() }
+    val cachedNow: (suspend (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>)? = remember(loadNow) {
+        loadNow?.let { raw -> { ch: ChannelEntity -> nowCache[ch.id] ?: raw(ch).also { nowCache[ch.id] = it } } }
+    }
     val layoutDirection = LocalLayoutDirection.current
     val dismissDirection = if (alignEnd) HorizontalDirection.END else HorizontalDirection.START
     val history = watchedAt != null
     val playingIndex = remember(channels, currentId) { channels.indexOfFirst { it.id == currentId } }
-    val currentIndex = remember(channels, playingIndex, history) {
-        when {
-            history && playingIndex == 0 && channels.size > 1 -> 1
-            else -> playingIndex.coerceAtLeast(0)
-        }
-    }
+    // glcn: Recent opens on the channel playing (the top one), as every list does — it used to jump to the one before.
+    val currentIndex = remember(channels, playingIndex) { playingIndex.coerceAtLeast(0) }
     // glcn: opens already on the current channel — scrolling there after the first frame showed the top for a blink.
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = currentIndex)
     val focusTarget = remember { FocusRequester() }
@@ -135,9 +138,15 @@ fun ChannelListOverlay(
 
     val accent = stageAccent.accent
     val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
+    // glcn: the list glides in from its own side and the shade fades up with it (not in light mode).
+    val enterAnim = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
+    val enterSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(OVERLAY_ENTER_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
+    androidx.compose.runtime.LaunchedEffect(Unit) { enterAnim.animateTo(1f, enterSpec) }
     Box(
         modifier = modifier
             .fillMaxSize()
+            .okAfterFreshPress()
+            .graphicsLayer { alpha = 0.2f + 0.8f * enterAnim.value }
             // Darken only the side the sheet is on, so the picture stays visible beside it.
             .gradientWash(
                 vertical = false,
@@ -150,15 +159,16 @@ fun ChannelListOverlay(
         Row(
             Modifier
                 .align(if (alignEnd) Alignment.CenterEnd else Alignment.CenterStart)
+                .graphicsLayer { translationX = (1f - enterAnim.value) * OVERLAY_ENTER_PX.mpx.toPx() * (if (alignEnd) 1f else -1f) }
                 .padding(horizontal = 14.mpx, vertical = 8.mpx)
                 .fillMaxHeight()
-                .then(if (unified) Modifier.stageGlass(StageRadii.Sheet, overContent = true) else Modifier),
+                .then(if (unified) Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS) else Modifier),
         ) {
         Column(
             modifier = Modifier
                 .fillMaxHeight()
                 .width(if (history) 760.mpx else 720.mpx)
-                .then(if (unified) Modifier else Modifier.stageGlass(StageRadii.Sheet, overContent = true))
+                .then(if (unified) Modifier else Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS))
                 .onPreviewKeyEvent { e ->
                     if (onCyclePanel != null && !alignEnd && e.type == KeyEventType.KeyDown &&
                         e.key.horizontalDirection(layoutDirection) == HorizontalDirection.END
@@ -297,7 +307,7 @@ fun ChannelListOverlay(
                 modifier = Modifier.padding(start = 14.mpx, top = 14.mpx),
             )
         }
-        if (loadNow != null) NeighbourArtPrefetch(channels, focusedIndex, loadNow)
+        if (loadNow != null) NeighbourArtPrefetch(channels, focusedIndex, cachedNow!!)
         // glcn: the schedules of the channels around the cursor are read ahead, so the column beside the list is not late.
         if (loadSchedule != null) {
             LaunchedEffect(focusedIndex, channels.size) {
@@ -311,7 +321,7 @@ fun ChannelListOverlay(
             ZapSchedulePanel(
                 channel = channels.getOrNull(focusedIndex),
                 loadSchedule = loadSchedule,
-                loadNow = loadNow,
+                loadNow = cachedNow, peek = { nowCache[it.id] },
                 joined = true,
                 modifier = Modifier,
             )
@@ -333,7 +343,7 @@ fun ChannelListOverlay(
             // The joined schedule view carries its own programme card; a second one would double it.
             ZapPreviewPanel(
                 channel = channels.getOrNull(focusedIndex),
-                loadNow = loadNow,
+                loadNow = cachedNow!!, peek = { nowCache[it.id] },
                 modifier = Modifier
                     .align(if (alignEnd) Alignment.CenterStart else Alignment.CenterEnd)
                     .padding(horizontal = 40.mpx),
@@ -348,54 +358,43 @@ fun ChannelListOverlay(
  * still moving so a fast scroll does not fetch every row.
  */
 @Composable
-private fun ZapPreviewPanel(
+internal fun ZapPreviewPanel(
     channel: ChannelEntity?,
     loadNow: suspend (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>,
     modifier: Modifier = Modifier,
     /** glcn: false inside the joined panel — no glass or width of its own, a wider, shorter picture. */
     framed: Boolean = true,
+    /** glcn: the picture's shape when not framed (the zap deck keeps 16:9). */
+    bareAspect: Float = 21f / 9f,
+    /** glcn: synopsis lines when not framed. */
+    bareLines: Int = 2,
+    /** glcn: an already-read programme for the channel, shown in the same frame instead of after a read. */
+    peek: ((ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?)? = null,
+    /** glcn: a coming programme (and the one after it) picked in the schedule, shown instead of what is on. */
+    showing: Pair<EpgProgrammeEntity, EpgProgrammeEntity?>? = null,
 ) {
-    var programme by remember { mutableStateOf<Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?>(null) }
+    // glcn: the previous channel's programme goes at once — a stale poster for seconds was worse than none.
+    var programme by remember(channel?.id) { mutableStateOf(channel?.let { peek?.invoke(it) }) }
     LaunchedEffect(channel?.id) {
-        // glcn: the previous channel's programme goes at once — a stale poster for seconds was worse than none.
-        programme = null
-        if (channel == null) return@LaunchedEffect
+        if (channel == null || programme != null) return@LaunchedEffect
         programme = runCatching { loadNow(channel) }.getOrNull()
     }
-    val p = programme?.first ?: return
-    val next = programme?.second
+    val p = showing?.first ?: programme?.first ?: return
+    val next = if (showing != null) showing.second else programme?.second
     val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
     Column(
         modifier
-            .then(if (framed) Modifier.width(620.mpx).stageGlass(StageRadii.Sheet, overContent = true).padding(18.mpx) else Modifier),
+            .then(if (framed) Modifier.width(620.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS).padding(18.mpx) else Modifier),
         verticalArrangement = Arrangement.spacedBy(8.mpx),
     ) {
         val logo = channel?.displayLogoUrl?.takeIf { it.isNotBlank() }
-        val art = p.imageUrl?.takeIf { it.isNotBlank() }
-        if (art != null) {
-            tv.own.owntv.ui.components.ProgrammeArt(
-                url = art,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(if (framed) 16f / 9f else 21f / 9f)
-                    .clip(RoundedCornerShape(StageRadii.Sheet)),
-            )
-        } else if (logo != null) {
-            // glcn: no picture for the programme → the channel's logo; no logo either → the words alone.
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(if (framed) 120.mpx else 90.mpx)
-                    .clip(RoundedCornerShape(StageRadii.Sheet))
-                    .background(StageColors.Ink.copy(alpha = 0.06f)),
-            ) {
-                tv.own.owntv.ui.components.ChannelLogoTile(
-                    logoUrl = logo,
-                    modifier = Modifier.align(Alignment.Center).size(180.mpx, 80.mpx),
-                    fill = Color.Transparent,
-                ) { }
-            }
-        }
+        val art = tv.own.owntv.ui.components.programmeArtOrTmdb(p)
+        // glcn: the programme's picture; a "picture" that is really a logo (squarish, small, or the channel's own logo),
+        // and a channel with no picture at all, show the logo whole and sharp in the middle of the same frame —
+        // not cropped into a blurred strip, nor floating faint in a short box.
+        val shape = if (framed) 16f / 9f else bareAspect
+        val pic = art ?: logo
+        if (pic != null) PreviewPicture(url = pic, logoLike = art == null || art == logo, aspect = shape)
         Text(p.title, style = stageText(24, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(
             fmt.format(java.util.Date(p.startMs)) + " – " + fmt.format(java.util.Date(p.stopMs)),
@@ -408,7 +407,7 @@ private fun ZapPreviewPanel(
             Box(Modifier.fillMaxWidth(f).height(4.mpx).background(stageAccent.accent))
         }
         p.description?.takeIf { it.isNotBlank() }?.let {
-            DriftingSynopsis(it, style = stageText(16, 400), color = StageColors.Dim, lines = if (framed) 4 else 2)
+            DriftingSynopsis(it, style = stageText(16, 400), color = StageColors.Body, lines = if (framed) 4 else bareLines)
         }
         // glcn: and what follows it.
         next?.let { n ->
@@ -426,7 +425,7 @@ private fun ZapPreviewPanel(
  * hours — so browsing reads like a small guide. Waits a moment while the D-pad is still moving.
  */
 @Composable
-private fun ZapSchedulePanel(
+internal fun ZapSchedulePanel(
     channel: ChannelEntity?,
     loadSchedule: suspend (ChannelEntity) -> List<EpgProgrammeEntity>,
     modifier: Modifier = Modifier,
@@ -434,11 +433,18 @@ private fun ZapSchedulePanel(
     loadNow: (suspend (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>)? = null,
     /** glcn: part of the list's own glass, not a panel of its own: a thin line on its left, no box. */
     joined: Boolean = false,
+    /** glcn: an already-read programme for the card under the schedule (see [ZapPreviewPanel]). */
+    peek: ((ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?)? = null,
+    /** glcn: the coming programme picked with the D-pad (-1 = none): lit, and shown in the card below. */
+    selected: Int = -1,
+    /** glcn: told how many programmes the schedule holds, so the picker stays inside it. */
+    onRowCount: (Int) -> Unit = {},
 ) {
     var rows by remember { mutableStateOf<List<EpgProgrammeEntity>>(emptyList()) }
     LaunchedEffect(channel?.id) {
-        if (channel == null) { rows = emptyList(); return@LaunchedEffect }
+        if (channel == null) { rows = emptyList(); onRowCount(0); return@LaunchedEffect }
         rows = runCatching { loadSchedule(channel) }.getOrDefault(emptyList())
+        onRowCount(rows.size)
     }
     val ch = channel ?: return
     if (rows.isEmpty()) return
@@ -454,7 +460,7 @@ private fun ZapSchedulePanel(
                 if (joined) Modifier.drawBehind {
                     val inset = 26.mpx.toPx()
                     drawLine(line, androidx.compose.ui.geometry.Offset(0f, inset), androidx.compose.ui.geometry.Offset(0f, size.height - inset), strokeWidth = 1.mpx.toPx())
-                } else Modifier.stageGlass(StageRadii.Sheet, overContent = true),
+                } else Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS),
             )
             .padding(horizontal = 22.mpx, vertical = 20.mpx),
         verticalArrangement = Arrangement.spacedBy(5.mpx),
@@ -467,24 +473,28 @@ private fun ZapSchedulePanel(
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             // Only as many rows as fit above the programme card, so none is cut in half.
             val fit = if (joined) ((maxHeight - 180.mpx) / 56.mpx).toInt().coerceAtLeast(3) else rows.size
+            // glcn: the window follows the picked programme down the evening.
+            val start = if (selected >= fit) selected - fit + 1 else 0
             Column(verticalArrangement = Arrangement.spacedBy(5.mpx)) {
-            rows.take(fit).forEach { p ->
+            rows.drop(start).take(fit).forEachIndexed { k, p ->
             val onAir = now in p.startMs until p.stopMs
+            val picked = start + k == selected
+            val onAccent = stageAccent.onAccent
             Row(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.mpx))
-                    .background(if (onAir) accent.copy(alpha = 0.16f) else Color.Transparent)
+                    .background(if (picked) accent else if (onAir) accent.copy(alpha = 0.16f) else Color.Transparent)
                     .padding(horizontal = 12.mpx, vertical = 13.mpx),
                 horizontalArrangement = Arrangement.spacedBy(14.mpx),
             ) {
                 Text(
                     fmt.format(java.util.Date(p.startMs)),
-                    style = stageText(19, 700), color = if (onAir) accent else StageColors.Muted, maxLines = 1,
+                    style = stageText(19, 700), color = if (picked) onAccent else if (onAir) accent else StageColors.Muted, maxLines = 1,
                     modifier = Modifier.width(78.mpx),
                 )
                 Column(Modifier.weight(1f)) {
-                    Text(p.title, style = stageText(20, if (onAir) 800 else 600), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(p.title, style = stageText(20, if (onAir || picked) 800 else 600), color = if (picked) onAccent else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (onAir && !joined) {
                         val span = (p.stopMs - p.startMs).coerceAtLeast(1L)
                         val f = ((now - p.startMs).toFloat() / span).coerceIn(0f, 1f)
@@ -501,7 +511,11 @@ private fun ZapSchedulePanel(
             }
         }
         if (joined && loadNow != null) {
-            ZapPreviewPanel(channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 46.mpx), framed = false)
+            val pick = rows.getOrNull(selected)
+            ZapPreviewPanel(
+                channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 46.mpx), framed = false, peek = peek,
+                showing = pick?.let { it to rows.getOrNull(selected + 1) },
+            )
         }
     }
 }
@@ -511,7 +525,7 @@ private fun ZapSchedulePanel(
  * one (programme on air), so stepping to them shows the picture at once instead of after a fetch.
  */
 @Composable
-private fun NeighbourArtPrefetch(
+internal fun NeighbourArtPrefetch(
     channels: List<ChannelEntity>,
     focusedIndex: Int,
     loadNow: suspend (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>,
@@ -527,9 +541,55 @@ private fun NeighbourArtPrefetch(
             val url = runCatching { loadNow(ch).first?.imageUrl }.getOrNull()?.takeIf { it.isNotBlank() } ?: continue
             loader.enqueue(
                 coil3.request.ImageRequest.Builder(ctx).data(url)
-                    .size(coil3.size.Size(960, 540)).build(),
+                    // glcn: the size the panels draw it at (about 620 wide), not twice that: twenty-eight neighbours at
+                    // 960 × 540 held ~60 MB of pictures in memory for one list.
+                    .size(coil3.size.Size(640, 360)).build(),
             )
             kotlinx.coroutines.delay(25)
         }
     }
 }
+
+/** glcn: the preview's picture — a wide picture fills its frame; a logo-like one stands whole, sharp, on a soft tile. */
+@Composable
+private fun PreviewPicture(url: String, logoLike: Boolean, aspect: Float) {
+    var asLogo by remember(url) { mutableStateOf(logoLike || (PreviewShapes.logoLike[url] ?: false)) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    Box(
+        Modifier.fillMaxWidth().aspectRatio(aspect).clip(RoundedCornerShape(StageRadii.Sheet))
+            .then(if (asLogo) Modifier.background(StageColors.Ink.copy(alpha = 0.06f)) else Modifier),
+    ) {
+        coil3.compose.AsyncImage(
+            model = remember(url, asLogo) {
+                coil3.request.ImageRequest.Builder(ctx).data(url)
+                    // A logo is small: read it whole, so it is not scaled up from a thumbnail.
+                    .apply { if (asLogo) size(coil3.size.Size.ORIGINAL) }
+                    .build()
+            },
+            contentDescription = null,
+            contentScale = if (asLogo) androidx.compose.ui.layout.ContentScale.Fit else androidx.compose.ui.layout.ContentScale.Crop,
+            onSuccess = { st ->
+                val img = st.result.image
+                if (!asLogo && img.height > 0) {
+                    val r = img.width.toFloat() / img.height
+                    // glcn: a logo is squarish or drawn on a transparent background (the guides that give a
+                    // channel's logo as the programme's picture send a wide transparent PNG — cropped, it lost the logo).
+                    val transparent = (img as? coil3.BitmapImage)?.bitmap?.hasAlpha() == true
+                    // The size is NOT a sign: the picture is read at the size it is drawn at, so a wide photo of a news set
+                    // came back under 480 wide and stood as a small logo in the middle of an empty frame.
+                    if (r < 1.25f || transparent) { asLogo = true; PreviewShapes.logoLike[url] = true }
+                }
+            },
+            modifier = if (asLogo) Modifier.align(Alignment.Center).fillMaxWidth(0.56f).fillMaxHeight(0.56f) else Modifier.fillMaxSize(),
+        )
+    }
+}
+
+private object PreviewShapes {
+    /** Pictures found to be logos, so the next time they open as such straight away. */
+    val logoLike = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+}
+
+/** glcn: the channel list's entrance — how long, and from how far to the side. */
+private const val OVERLAY_ENTER_MS = 380
+private const val OVERLAY_ENTER_PX = 120

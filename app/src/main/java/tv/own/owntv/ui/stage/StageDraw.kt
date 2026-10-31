@@ -173,7 +173,7 @@ private fun DrawScope.light(color: Color, alpha: Float, center: Offset, rx: Floa
  * words behind it are never readable through it; above that the user's opacity applies.
  */
 @Composable
-fun Modifier.stageGlass(radius: Dp, overContent: Boolean = false): Modifier {
+fun Modifier.stageGlass(radius: Dp, overContent: Boolean = false, share: Float = 1f): Modifier {
     val config = LocalGlass.current
     val on = config.enabled
     // Over content (sheets, the rail, menus) the opacity is scaled into 55-100% rather than floored at 80%:
@@ -182,14 +182,22 @@ fun Modifier.stageGlass(radius: Dp, overContent: Boolean = false): Modifier {
     val palette = LocalStagePalette.current
     // Light glass is white 74% at the 56% default, so the flat opacity is lifted (0.3 + 0.8 x).
     val flat = if (palette.isLight) (0.3f + 0.8f * config.alpha).coerceIn(0f, 1f) else config.alpha
-    val fill = if (on) palette.glassTint.copy(alpha = if (overContent) 0.55f + 0.45f * config.alpha.coerceIn(0f, 1f) else flat) else palette.glassOff
+    // glcn: over content the scale starts higher (80-100%, 90% at the default): at 78% a menu over a row of
+    // cards still showed the words behind it.
+    val fill0 = if (on) palette.glassTint.copy(alpha = if (overContent) 0.80f + 0.20f * config.alpha.coerceIn(0f, 1f) else flat) else palette.glassOff
+    // glcn: [share] < 1 — a panel over the picture (the player's sheets) lets the video show through: a share of the
+    // fill, no frosted slice behind it, a lighter shadow.
+    val fill = if (share < 1f) fill0.copy(alpha = fill0.alpha * share) else fill0
     // `.mine.light .glass`: highlight white 90%, rim ink 7% (8% glass off), shadow rgb(20,40,32) 16% (14% off, 0 20 50).
-    val shadow = if (palette.isLight) Color(20, 40, 32).copy(alpha = if (on) 0.16f else 0.14f) else Color.Black.copy(alpha = if (on) 0.45f else 0.5f)
+    val shadow = (if (palette.isLight) Color(20, 40, 32).copy(alpha = if (on) 0.16f else 0.14f) else Color.Black.copy(alpha = if (on) 0.45f else 0.5f))
+        .let { if (share < 1f) it.copy(alpha = it.alpha * share * 0.6f) else it }
     val shadowBlur = if (palette.isLight && !on) 50 else 60
     val shadowDy = if (palette.isLight && !on) 20 else 24
     val highlight = Color.White.copy(alpha = if (palette.isLight) 0.9f else 0.10f)
     val rim = palette.ink.copy(alpha = if (palette.isLight) (if (on) 0.07f else 0.08f) else (if (on) 0.07f else 0.05f))
-    val blurred = if (on && LocalBackground.current.showsPicture) LocalBlurredBackdrop.current else null
+    // glcn: chrome over content does not frost the background picture: it sits over the page's words and
+    // cards, not over the picture, and the picture's tint (a light photo turned menus grey-teal) made it hard to read.
+    val blurred = if (on && share >= 1f && !overContent && LocalBackground.current.showsPicture) LocalBlurredBackdrop.current else null
     val frost = blurred?.frostFor(0.9f)
     val position = if (frost != null) remember { GlassPositionState() } else null
     return (if (position != null) this.then(GlassPositionElement(position)) else this).drawWithCache {

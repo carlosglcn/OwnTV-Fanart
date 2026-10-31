@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -43,6 +44,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -94,6 +98,7 @@ import tv.own.owntv.ui.stage.drawInnerRing
 import tv.own.owntv.ui.stage.stageGlass
 import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.dissolveEdges
+import tv.own.owntv.ui.theme.fadeEdgesInto
 import tv.own.owntv.ui.theme.gradientWash
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.mpxSp
@@ -145,6 +150,26 @@ internal fun vodRuntime(secs: Int): String {
  * "•"-joined list of HDR and audio markers. They are technical tokens, not prose — "4K" is "4K" in
  * every language — so nothing here is translated.
  */
+/**
+ * glcn: a poster's quality marks — from its name, else from what its source said outright (Emby's streams, a share's
+ * file): one picture mark (DV, HDR10+, HDR10, HDR, else 8K / 4K) and REMUX.
+ */
+fun posterQualityBadges(name: String, qualityRank: Int, advertisedCapabilities: String?): List<String> {
+    val named = tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.posterBadges(name)
+    if (named.isNotEmpty() || (qualityRank == 0 && advertisedCapabilities == null)) return named
+    val caps = advertisedCapabilities.orEmpty()
+    val picture = when {
+        "Dolby Vision" in caps -> "DV"
+        "HDR10+" in caps -> "HDR10+"
+        "HDR10" in caps -> "HDR10"
+        "HDR" in caps -> "HDR"
+        qualityRank >= 5 -> "8K"
+        qualityRank == 4 -> "4K"
+        else -> null
+    }
+    return listOfNotNull(picture, "REMUX".takeIf { "REMUX" in caps })
+}
+
 fun cinematicQualityBadges(qualityRank: Int, advertisedCapabilities: String?): List<String> = buildList {
     when (qualityRank) {
         5 -> add("8K")
@@ -158,7 +183,7 @@ fun cinematicQualityBadges(qualityRank: Int, advertisedCapabilities: String?): L
 
 /** "Movies" 46/800, then the crumb "‹ **Disney+ Kids Movies** · 136 titles" (no ‹ when the column is on screen). */
 @Composable
-internal fun VodHeader(section: String, category: String, count: String, showChevron: Boolean, modifier: Modifier = Modifier) {
+internal fun VodHeader(section: String, category: String, count: String?, showChevron: Boolean, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(22.mpx), verticalAlignment = Alignment.Bottom) {
         Text(section, style = stageText(46, 800, (-1).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(
@@ -171,9 +196,53 @@ internal fun VodHeader(section: String, category: String, count: String, showChe
                 category, style = stageText(20, 700), color = stageAccent.accent,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
             )
-            Text("· $count", style = stageText(20, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (count != null) Text("· $count", style = stageText(20, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
+}
+
+/** glcn: how long the hole in the picture takes to open over a starting trailer. */
+private const val TRAILER_HOLE_MS = 600
+
+/** glcn: where the trailer starts inside its window (shares from the left and from the bottom). */
+private const val TRAILER_VIDEO_START = 0.14f
+private const val TRAILER_VIDEO_BOTTOM = 0.16f
+/** glcn: the picture's melting edge moves in steps of this share, so each step's mask is made once and kept. */
+private const val EDGE_STEP = 0.02f
+
+/** glcn: past the picture's own melting edge, how far the picture still covers the video, melting into it. */
+private const val TRAILER_BLEND = 0.14f
+
+/**
+ * glcn: the hole the trailer shows through — none at the window's left and bottom (where the picture melts into the
+ * page), opening softly past [start] and above [bottom] to the full middle. A small mask, drawn stretched.
+ */
+private fun trailerHoleMask(start: Float, bottom: Float): androidx.compose.ui.graphics.ImageBitmap {
+    val w = 160
+    val h = 80
+    fun smooth(t: Float): Float { val x = t.coerceIn(0f, 1f); return x * x * (3f - 2f * x) }
+    val px = IntArray(w * h)
+    for (y in 0 until h) {
+        val fy = (y + 0.5f) / h
+        val vy = smooth(((1f - bottom) - fy) / TRAILER_BLEND)
+        for (x in 0 until w) {
+            val fx = (x + 0.5f) / w
+            val vx = smooth((fx - start) / TRAILER_BLEND)
+            val a = (vx * vy * 255f).toInt().coerceIn(0, 255)
+            px[y * w + x] = a shl 24
+        }
+    }
+    return android.graphics.Bitmap.createBitmap(px, w, h, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
+}
+
+/** glcn: lays the content out in the window minus a [start] share on the left and a [bottom] share below. */
+private fun Modifier.insetFraction(start: Float, bottom: Float): Modifier = this.layout { m, c ->
+    val w = c.maxWidth
+    val h = c.maxHeight
+    val l = (w * start).toInt()
+    val b = (h * bottom).toInt()
+    val p = m.measure(androidx.compose.ui.unit.Constraints.fixed((w - l).coerceAtLeast(1), (h - b).coerceAtLeast(1)))
+    layout(w, h) { p.placeRelative(l, 0) }
 }
 
 /** "136 titles" / "32 series" for the crumb. */
@@ -189,7 +258,13 @@ private const val BACKDROP_SETTLE_MS = 260L
  * the page on its left (34%) and bottom (38%), under the left and bottom washes so the hero always reads.
  */
 @Composable
-internal fun VodCinematicBackdrop(url: String?, series: Boolean, modifier: Modifier = Modifier) {
+internal fun VodCinematicBackdrop(
+    url: String?, series: Boolean, modifier: Modifier = Modifier,
+    /** glcn: the title's trailer — silent in the picture after a few calm seconds, or at once when carried over from Home. */
+    trailer: String? = null, trailerTitle: String? = null, focusKey: Any? = null,
+    /** glcn: 0 = the window at the top right; 1 = edge to edge (a title's page), the trailer going on as it grows. */
+    expand: Float = 0f,
+) {
     var settled by remember { mutableStateOf(url) }
     // Art already shown once is in the image cache: it swaps at once; only new art waits the settle.
     val seen = remember { HashSet<String>() }
@@ -208,14 +283,48 @@ internal fun VodCinematicBackdrop(url: String?, series: Boolean, modifier: Modif
     val wash = StageColors.Wash
     // object-position 30% 40% (Movies) / 100% 40% (Series), as drawn.
     val focus = BiasAlignment(if (series) 1f else -0.4f, -0.2f)
-    Box(modifier.fillMaxWidth(1400f / 1920f).aspectRatio(1400f / 720f).dissolveEdges(start = 0.34f, bottom = 0.38f)) {
-        Box(Modifier.fillMaxSize().graphicsLayer { alpha = hold }) {
+    val sized = if (expand <= 0f) modifier.fillMaxWidth(1400f / 1920f).aspectRatio(1400f / 720f)
+        else modifier.fillMaxWidth(1400f / 1920f + (1f - 1400f / 1920f) * expand).fillMaxHeight(720f / 1080f + (1f - 720f / 1080f) * expand)
+    val edgeStart = (0.34f * (1f - expand)).coerceAtLeast(0.02f)
+    val edgeBottom = (0.38f * (1f - expand)).coerceAtLeast(0.02f)
+    // glcn: the trailer plays UNDER the still picture, in the part of the window where the picture is solid; once it
+    // runs, a soft hole opens in the picture's middle and the video shows through. So the window's edges are always
+    // the picture melting into the real page (tint and light included) — a painted fade into a flat page colour left
+    // a hard line wherever the page behind was tinted. Both masks are on still layers: no video frame redraws them.
+    val playingNow = trailer != null && tv.own.owntv.features.home.CinemaTrailer.playing?.first == trailer
+    val holeSpec = ownTvTween<Float>(TRAILER_HOLE_MS)
+    val hole by androidx.compose.animation.core.animateFloatAsState(if (playingNow) 1f else 0f, holeSpec, label = "vodTrailerHole")
+    // glcn: the video takes most of the window: it starts well inside the picture's melting edge, and while it plays
+    // that edge tightens to match (in a few steps, each a cached mask), so the picture still covers the video's border.
+    val vidStart = minOf(edgeStart, TRAILER_VIDEO_START)
+    val vidBottom = minOf(edgeBottom, TRAILER_VIDEO_BOTTOM)
+    val holeMask = remember(vidStart, vidBottom) { trailerHoleMask(vidStart, vidBottom) }
+    fun stepped(v: Float) = (kotlin.math.round(v / EDGE_STEP) * EDGE_STEP).coerceAtLeast(0.02f)
+    val imageStart = stepped(edgeStart + (vidStart - edgeStart) * hole)
+    val imageBottom = stepped(edgeBottom + (vidBottom - edgeBottom) * hole)
+    Box(sized) {
+        tv.own.owntv.features.home.FocusTrailer(
+            trailer, trailerTitle, focusKey, Modifier.fillMaxSize().insetFraction(vidStart, vidBottom), dissolve = false,
+        )
+        Box(
+            Modifier.fillMaxSize().dissolveEdges(start = imageStart, bottom = imageBottom)
+                .drawWithContent {
+                    drawContent()
+                    val h = hole
+                    if (h > 0.001f) drawImage(
+                        holeMask, dstSize = androidx.compose.ui.unit.IntSize(kotlin.math.ceil(size.width).toInt(), kotlin.math.ceil(size.height).toInt()),
+                        alpha = h, blendMode = androidx.compose.ui.graphics.BlendMode.DstOut,
+                    )
+                }
+                .graphicsLayer { alpha = hold },
+        ) {
             Crossfade(targetState = settled, animationSpec = ownTvTween(420), label = "vodBackdrop") { u ->
                 if (!u.isNullOrBlank()) {
                     AsyncImage(model = u, contentDescription = null, contentScale = ContentScale.Crop, alignment = focus, modifier = Modifier.fillMaxSize())
                 }
             }
         }
+        Box(Modifier.fillMaxSize().dissolveEdges(start = edgeStart, bottom = edgeBottom)) {
         Box(
             Modifier.fillMaxSize().backdropLeftWash(0f to 0.85f, 0.34f to 0.35f, 0.64f to 0f, 1f to 0f),
         )
@@ -228,6 +337,7 @@ internal fun VodCinematicBackdrop(url: String?, series: Boolean, modifier: Modif
                 1f to wash.copy(alpha = 0.9f),
             ),
         )
+        }
     }
 }
 
@@ -237,7 +347,7 @@ internal fun VodCinematicBackdrop(url: String?, series: Boolean, modifier: Modif
  * leaves the poster row.
  */
 @Composable
-internal fun VodHero(info: VodTitleInfo, modifier: Modifier = Modifier) {
+internal fun VodHero(info: VodTitleInfo, modifier: Modifier = Modifier, showCast: Boolean = true, plotLines: Int = 2) {
     Column(modifier.clipToBounds()) {
         var logoFailed by remember(info.logoUrl) { mutableStateOf(false) }
         Box(Modifier.fillMaxWidth().height(170.mpx), contentAlignment = Alignment.BottomStart) {
@@ -261,10 +371,10 @@ internal fun VodHero(info: VodTitleInfo, modifier: Modifier = Modifier) {
         info.plot?.takeIf { it.isNotBlank() }?.let {
             Text(
                 it, style = stageText(19.5f, 400).copy(lineHeight = (19.5f * 1.55f).mpxSp), color = StageColors.Body,
-                maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 860.mpx),
+                maxLines = plotLines, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 860.mpx),
             )
         }
-        if (info.cast.isNotEmpty()) VodCast(info.cast, 6, Modifier.padding(top = 20.mpx))
+        if (showCast && info.cast.isNotEmpty()) VodCast(info.cast, 6, Modifier.padding(top = 20.mpx))
     }
 }
 
@@ -648,9 +758,9 @@ internal fun vodCategoryEntries(
                 LiveKey.Favorites -> OwnTVIcon.FAVORITE
                 LiveKey.History -> OwnTVIcon.HISTORY
                 LiveKey.All -> if (series) OwnTVIcon.SERIES else OwnTVIcon.MOVIES
-                else -> null
+                else -> if (item.locked) OwnTVIcon.LOCK else null
             },
-            count = counts[item.key],
+            count = if (item.sealed) null else counts[item.key],
             mark = item.sourceId?.let(marks::get),
         )
     }

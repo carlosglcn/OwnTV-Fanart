@@ -78,6 +78,10 @@ fun ZapPosterOverlay(
     onListView: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: hold OK on a card → the channel's options. */
+    onLongPress: ((ChannelEntity) -> Unit)? = null,
+    /** glcn: a programme's synopsis (the strip's rows are read without it, to stay light). */
+    loadDescription: (suspend (Long) -> String?)? = null,
 ) {
     val start = remember(channels, currentId) { channels.indexOfFirst { it.id == currentId }.coerceAtLeast(0) }
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (start - 1).coerceAtLeast(0))
@@ -192,6 +196,7 @@ fun ZapPosterOverlay(
                         programme = programmes[ch.id],
                         now = now,
                         onClick = { onSelect(ch) },
+                        onLongClick = onLongPress?.let { lp -> { lp(ch) } },
                         width = 360.mpx,
                         modifier = Modifier.focusRequester(cardFocus.getOrPut(index) { FocusRequester() }).then(if (index == start) Modifier.focusRequester(first) else Modifier),
                     )
@@ -211,6 +216,7 @@ fun ZapPosterOverlay(
             programmes = programmes,
             loadSchedule = loadSchedule,
             cache = scheduleCache,
+            loadDescription = loadDescription,
             modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.mpx, bottom = if (showNext) 530.mpx else 392.mpx).staggerIn(260, fromRight = true),
         )
     }
@@ -236,6 +242,7 @@ private fun ZapPosterInfo(
     programmes: Map<Long, EpgProgrammeEntity?>,
     loadSchedule: suspend (ChannelEntity) -> List<EpgProgrammeEntity>,
     cache: MutableMap<Long, List<EpgProgrammeEntity>>,
+    loadDescription: (suspend (Long) -> String?)? = null,
     modifier: Modifier = Modifier,
 ) {
     // From the cache at once; a channel not read yet is read now, with nothing waited for.
@@ -262,12 +269,23 @@ private fun ZapPosterInfo(
         kotlinx.coroutines.delay(120)
         value = runCatching { resolver.detailsFor(cur.title, cur.categories) }.getOrNull()
     }
+    // glcn: the guide's own synopsis, read for the programme in the card (the rows above carry none).
+    val synopsis by androidx.compose.runtime.produceState<String?>(null, cur.id) {
+        value = cur.description?.takeIf { it.isNotBlank() } ?: card?.description?.takeIf { it.isNotBlank() }
+        if (value == null && loadDescription != null && cur.id > 0) value = runCatching { loadDescription(cur.id) }.getOrNull()?.takeIf { it.isNotBlank() }
+    }
     val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
     val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
     val logo = ch.displayLogoUrl?.takeIf { it.isNotBlank() }
     val accent = stageAccent.accent
+    // glcn: in the light theme the card's white glass over a bright picture left grey words unreadable — more glass
+    // there, and the secondary words a step darker.
+    val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    // glcn: over a dark picture the dark glass vanished and grey words sank into it — the same denser glass and
+    // brighter secondary words in the dark theme too.
+    val quiet = StageColors.Body
     Column(
-        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true).padding(18.mpx),
+        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = if (light) LIGHT_CARD_GLASS else DARK_CARD_GLASS).padding(18.mpx),
         verticalArrangement = Arrangement.spacedBy(8.mpx),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
@@ -283,7 +301,7 @@ private fun ZapPosterInfo(
                     tv.own.owntv.core.live.ProviderTags.parse(ch.name).name + " · " +
                         if (remaining in 1..600) stringResource(R.string.content_live_time_remaining, fmt.format(java.util.Date(cur.stopMs)), remaining)
                         else stringResource(R.string.content_live_time_range, fmt.format(java.util.Date(cur.startMs)), fmt.format(java.util.Date(cur.stopMs))),
-                    style = stageText(16, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = stageText(16, 500), color = quiet, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -300,11 +318,8 @@ private fun ZapPosterInfo(
                     cur.rating ?: lent?.rating?.let { "★ " + tv.own.owntv.core.metadata.ProgrammeArtResolver.format(it) },
                 )
             ).filter { it.isNotBlank() }.joinToString(" · ")
-        if (facts.isNotEmpty()) Text(facts, style = stageText(15, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        (cur.description ?: card?.description)?.takeIf { it.isNotBlank() }
-            ?.let { it }
-            .let { it ?: lent?.overview }
-            ?.let { DriftingSynopsis(it) }
+        if (facts.isNotEmpty()) Text(facts, style = stageText(15, 600), color = quiet, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        (synopsis ?: lent?.overview)?.let { DriftingSynopsis(it, color = StageColors.Body) }
         if (next.isNotEmpty()) {
             Text(
                 stringResource(R.string.content_live_next), style = stageText(15, 700), color = accent,
@@ -312,7 +327,7 @@ private fun ZapPosterInfo(
             )
             next.forEach { n ->
                 Row(horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
-                    Text(fmt.format(java.util.Date(n.startMs)), style = stageText(16, 700), color = StageColors.Muted, maxLines = 1, modifier = Modifier.width(76.mpx))
+                    Text(fmt.format(java.util.Date(n.startMs)), style = stageText(16, 700), color = quiet, maxLines = 1, modifier = Modifier.width(76.mpx))
                     Text(n.title, style = stageText(16, 500), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 }
             }
@@ -333,31 +348,45 @@ internal fun DriftingSynopsis(
     color: Color = StageColors.Dim,
     lines: Int = 3,
     /** glcn: a long text fades out at its foot instead of being cut through a line. */
-    fade: Boolean = false,
+    fade: Boolean = true,
 ) {
-    val lineH = with(androidx.compose.ui.platform.LocalDensity.current) { style.fontSize.toDp() } * 1.4f
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val lineH = with(density) { style.fontSize.toDp() } * 1.4f
+    val linePx = with(density) { lineH.toPx() }
     val scroll = androidx.compose.foundation.rememberScrollState()
     LaunchedEffect(text, scroll.maxValue) {
         scroll.scrollTo(0)
         if (scroll.maxValue <= 0 || tv.own.owntv.glcn.LowRam.on) return@LaunchedEffect // light mode: no animation
         while (true) {
             kotlinx.coroutines.delay(tv.own.owntv.glcn.DriftPace.START_MS.toLong())
-            scroll.animateScrollTo(scroll.maxValue, androidx.compose.animation.core.tween(scroll.maxValue * tv.own.owntv.glcn.DriftPace.MS_PER_PX, easing = androidx.compose.animation.core.LinearEasing))
-            kotlinx.coroutines.delay(3_000)
-            scroll.scrollTo(0)
+            // glcn: a line at a time, and a pause on each — while it rests every line shown is whole; a steady drift
+            // always left one cut in half at the top and the bottom.
+            while (scroll.value < scroll.maxValue) {
+                val next = minOf(scroll.maxValue, (((scroll.value + 1) / linePx).toInt() + 1).let { k -> (k * linePx).toInt() })
+                scroll.animateScrollTo(next, androidx.compose.animation.core.tween(LINE_STEP_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                kotlinx.coroutines.delay(LINE_REST_MS)
+            }
+            kotlinx.coroutines.delay(1_500)
+            // glcn: back to the start gently, not in one jump.
+            scroll.animateScrollTo(0, androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing))
         }
     }
     // A little room under the last line, so its descenders are not cut where the drift ends.
     val soft = fade && scroll.maxValue > 0
     Box(
-        modifier.fillMaxWidth().heightIn(max = lineH * lines + 6.dp).clip(androidx.compose.ui.graphics.RectangleShape)
+        modifier.fillMaxWidth().heightIn(max = lineH * lines + 2.dp).clip(androidx.compose.ui.graphics.RectangleShape)
             .then(
                 if (soft) Modifier
                     .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
                     .drawWithContent {
                         drawContent()
+                        // glcn: once the words have drifted up, the line leaving at the top fades out too, never cut in half.
+                        // Only a sliver at the top while a line moves; at rest the lines are whole.
+                        val top = if (scroll.value > 0 && scroll.isScrollInProgress) (lineH.toPx() * 0.35f / size.height).coerceIn(0f, 0.15f) else 0f
                         drawRect(
-                            Brush.verticalGradient(0.86f to Color.Black, 1f to Color.Transparent),
+                            if (top > 0f) Brush.verticalGradient(0f to Color.Transparent, top to Color.Black, 0.86f to Color.Black, 1f to Color.Transparent)
+                            else if (scroll.value < scroll.maxValue) Brush.verticalGradient(0.86f to Color.Black, 1f to Color.Transparent)
+                            else Brush.verticalGradient(0f to Color.Black, 1f to Color.Black),
                             blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
                         )
                     }
@@ -370,3 +399,9 @@ internal fun DriftingSynopsis(
         )
     }
 }
+
+/** glcn: the floating card's glass in the light theme — enough that its words read over a bright picture. */
+private const val LIGHT_CARD_GLASS = 0.94f
+private const val LINE_STEP_MS = 520
+private const val LINE_REST_MS = 2_600L
+private const val DARK_CARD_GLASS = 0.92f

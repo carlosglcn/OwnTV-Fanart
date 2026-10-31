@@ -76,6 +76,8 @@ data class MediaDetailsUi(
     val cast: List<tv.own.owntv.core.metadata.CastMember> = emptyList(),
     /** glcn: "Related" — other titles of the same category; filled in by the caller once loaded. */
     val related: List<RelatedUi> = emptyList(),
+    /** glcn: the title's trailer (YouTube keys as stored) — it plays silently over the backdrop after a few seconds. */
+    val trailerKey: String? = null,
 )
 
 /** glcn: one related title on the details page. */
@@ -128,6 +130,13 @@ fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Mo
                     },
                 )
             }
+            // glcn: the trailer, silent, over the picture after a few seconds on the page (not in light mode, not with
+            // animations off); it goes once the page is scrolled down or the trailer ends.
+            // glcn: the shared trailer (sound with Play/Pause, carried on from Home when it was playing there); it goes
+            // once the page is scrolled down.
+            if (scroll.value == 0) tv.own.owntv.features.home.FocusTrailer(
+                details.trailerKey, details.title, details.title, Modifier.fillMaxWidth().aspectRatio(16f / 9f), dissolve = false,
+            )
                         // A light picture still has to carry white text: a general dim, then the fade into the page.
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(page.copy(alpha = 0.35f)))
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).gradientWash(vertical = true, 0.2f to Color.Transparent, 0.8f to page))
@@ -256,4 +265,5 @@ private fun CastGrid(cast: List<tv.own.owntv.core.metadata.CastMember>) {
         }
     }
 }
+
 

@@ -324,7 +324,7 @@ private fun GlassBackgroundPreview() {
                             horizontalArrangement = Arrangement.spacedBy(18.mpx),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text((ch.number ?: (i + 1)).toString(), style = stageText(21, 700), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(52.mpx))
+                            if (tv.own.owntv.glcn.LocalShowChannelNumbers.current) Text((ch.number ?: (i + 1)).toString(), style = stageText(21, 700), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(52.mpx))
                             LivePlate(ch.logoUrl, 78.mpx, 54.mpx)
                             Text(ch.name, style = stageText(22, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }

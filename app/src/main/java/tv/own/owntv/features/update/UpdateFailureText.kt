@@ -10,6 +10,7 @@ import tv.own.owntv.core.update.UpdateManager
 @Composable
 internal fun updateFailureText(failure: UpdateManager.Failure): String = when (failure) {
     is UpdateManager.Failure.CheckHttp -> stringResource(R.string.update_failed_check_http, failure.code.toString())
+    is UpdateManager.Failure.TokenNeeded -> stringResource(if (failure.rejected) R.string.update_token_rejected else R.string.update_token_needed)
     UpdateManager.Failure.NoCompatibleApk -> stringResource(R.string.update_no_compatible_apk)
     UpdateManager.Failure.InvalidReleaseResponse -> stringResource(R.string.update_invalid_release_response)
     UpdateManager.Failure.CheckNetwork -> stringResource(R.string.update_failed_check)

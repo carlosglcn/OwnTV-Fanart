@@ -110,7 +110,7 @@ private val Tabular = "tnum"
 
 /** "Live TV" 46/800, then the crumb: "‹ **Sky Cinema** · 9 channels" (no ‹ when the column is on screen). */
 @Composable
-internal fun LiveHeader(category: String, count: Int, showChevron: Boolean, modifier: Modifier = Modifier) {
+internal fun LiveHeader(category: String, count: Int?, showChevron: Boolean, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(22.mpx), verticalAlignment = Alignment.Bottom) {
         Text(stringResource(R.string.common_nav_live_tv), style = stageText(46, 800, (-1).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(
@@ -123,7 +123,7 @@ internal fun LiveHeader(category: String, count: Int, showChevron: Boolean, modi
                 category, style = stageText(20, 700), color = stageAccent.accent,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
             )
-            Text(
+            if (count != null) Text(
                 "· " + pluralStringResource(R.plurals.content_live_channel_count, count, count),
                 style = stageText(20, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
@@ -212,7 +212,9 @@ internal fun LivePlate(
     radius: androidx.compose.ui.unit.Dp = StageRadii.Plate,
 ) {
     Box(Modifier.size(width, height).clip(RoundedCornerShape(radius))) {
-        ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize(), fill = StageColors.ControlFill) {
+        // glcn: the page's own lightness, so a white logo gets a dark plate in the light theme (it vanished there).
+        val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+        ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize(), fill = StageColors.ControlFill, surfaceLuminance = if (light) 0.9f else 0.02f) {
             OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.align(Alignment.Center).size(height * 0.5f))
         }
     }
@@ -307,7 +309,7 @@ internal fun LiveStagePane(
                     horizontalArrangement = Arrangement.spacedBy(14.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    channel.number?.let { Text(it.toString(), style = stageText(30, 800), color = stageAccent.accent, maxLines = 1) }
+                    channel.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.let { Text(it.toString(), style = stageText(30, 800), color = stageAccent.accent, maxLines = 1) }
                     Text(channelName.orEmpty(), style = stageText(24, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -466,7 +468,7 @@ internal fun liveCategoryEntries(railItems: List<LiveRailItem>, railCounts: Map<
     val recentLabel = stringResource(R.string.content_category_recently_watched)
     val entries = railItems.map { item ->
         val label = if (item.key == tv.own.owntv.core.live.LiveKey.History) recentLabel else item.displayLabel()
-        val parsed = if (item.key is tv.own.owntv.core.live.LiveKey.Folder || item.key is tv.own.owntv.core.live.LiveKey.Custom) ProviderTags.parse(label) else null
+        val parsed = if (!item.nested && (item.key is tv.own.owntv.core.live.LiveKey.Folder || item.key is tv.own.owntv.core.live.LiveKey.Custom)) ProviderTags.parse(label) else null
         LiveCategoryEntry(
             item = item,
             label = parsed?.name ?: label,
@@ -476,9 +478,10 @@ internal fun liveCategoryEntries(railItems: List<LiveRailItem>, railCounts: Map<
                 tv.own.owntv.core.live.LiveKey.History -> OwnTVIcon.HISTORY
                 tv.own.owntv.core.live.LiveKey.Catchup -> OwnTVIcon.REWIND
                 tv.own.owntv.core.live.LiveKey.All -> OwnTVIcon.LIVE_TV
-                else -> null
+                // glcn: a group inside Favourites — a folder, set in under it; a locked category shows its lock.
+                else -> if (item.locked) OwnTVIcon.LOCK else if (item.nested) OwnTVIcon.FOLDER else null
             },
-            count = railCounts[item.key],
+            count = if (item.sealed) null else railCounts[item.key],
             mark = null,
         )
     }
@@ -529,6 +532,8 @@ internal fun LiveCategories(
     onSearchEditingChange: (Boolean) -> Unit = {},
     /** glcn: list the playlists (when there are several) with the active one opened onto its categories. */
     showPlaylists: Boolean = false,
+    /** glcn: the share of glass a sheet draws (below 1 over the player, so the picture shows through). */
+    sheetGlass: Float = 1f,
 ) {
     var localQuery by remember { mutableStateOf("") }
     val query = searchQuery ?: localQuery
@@ -600,7 +605,7 @@ internal fun LiveCategories(
     // was not composed yet, focus was lost, and coming back in landed on the selected category far away — the list
     // went off to a group and returned. Scroll just enough, wait a frame, then focus the row; the newest press wins.
     // Where the fixed entries end and the provider groups begin (the "GROUPS · DE" heading).
-    val firstGroup = entries.indexOfFirst { it.item.key is tv.own.owntv.core.live.LiveKey.Folder || it.item.key is tv.own.owntv.core.live.LiveKey.Custom }
+    val firstGroup = entries.indexOfFirst { !it.item.nested && (it.item.key is tv.own.owntv.core.live.LiveKey.Folder || it.item.key is tv.own.owntv.core.live.LiveKey.Custom) }
     var stepTarget by remember { mutableStateOf<Int?>(null) }
     var stepJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun lazyIndexOf(pos: Int): Int {
@@ -695,7 +700,7 @@ internal fun LiveCategories(
     }
     Column(
         modifier
-            .then(if (sheet) Modifier.stageGlass(StageRadii.Sheet, overContent = true).padding(horizontal = 16.mpx, vertical = 26.mpx) else Modifier),
+            .then(if (sheet) Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = sheetGlass).padding(horizontal = 16.mpx, vertical = 26.mpx) else Modifier),
     ) {
         if (sheet) {
             Row(
@@ -788,7 +793,7 @@ internal fun LiveCategories(
                     }
                 }
                 item(key = entry.item.key.toString()) {
-                    val rowModifier = Modifier.focusRequester(rowFocusers[pos]).then(rightKey)
+                    val baseRow = Modifier.focusRequester(rowFocusers[pos]).then(rightKey)
                         .onFocusChanged { if (it.hasFocus) onRowFocus(index) }
                         .onPreviewKeyEvent { e ->
                             val down = e.key == Key.DirectionDown
@@ -801,6 +806,8 @@ internal fun LiveCategories(
                             }
                         }
                     val selected = index == selectedIndex
+                    // glcn: Favourites' groups sit in under it.
+                    val rowModifier = if (entry.item.nested) baseRow.padding(start = NESTED_INDENT) else baseRow
                     if (sheet) {
                         StageSheetItem(
                             text = entry.label,
@@ -880,3 +887,9 @@ private fun LiveColumnItem(
         }
     }
 }
+
+/** glcn: the share of the glass the categories sheet draws over the player, so the picture shows through. */
+internal const val PLAYER_SHEET_GLASS = 0.78f
+
+/** glcn: how far a group inside Favourites sits in under it. */
+private val NESTED_INDENT = 28.mpx

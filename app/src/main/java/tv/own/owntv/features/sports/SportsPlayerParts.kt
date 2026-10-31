@@ -1,6 +1,9 @@
 package tv.own.owntv.features.sports
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxWidth
+import tv.own.owntv.ui.stage.stageGlass
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -82,8 +85,10 @@ fun MatchScoreLine(playback: SportsPlayback, match: Match, spoilerFree: Boolean)
 private const val ESPN = "ESPN"
 
 /**
- * The other channels showing the match, as a side panel over the picture — the backup when a
- * stream stalls. The playing one is marked and dimmed; OK switches, Back closes.
+ * The other channels showing the match, as a side panel over the picture — the backup when a stream stalls.
+ * glcn: a sheet of the stage glass that slides in from the right (see-through, readable in light and dark), with the
+ * match at its head — both crests, the teams, the competition — then the channels; the playing one is marked.
+ * OK switches, Back closes.
  */
 @Composable
 fun OtherChannelsPanel(session: SportsSession, playingId: Long?, onSwitch: (SportsSession, Int) -> Unit, onDismiss: () -> Unit) {
@@ -91,50 +96,76 @@ fun OtherChannelsPanel(session: SportsSession, playingId: Long?, onSwitch: (Spor
     LaunchedEffect(Unit) { kotlinx.coroutines.delay(60); runCatching { first.requestFocus() } }
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
+    val enter = remember { androidx.compose.animation.core.Animatable(0f) }
+    val enterSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(300)
+    LaunchedEffect(Unit) { enter.animateTo(1f, enterSpec) }
+    val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
+    val m = session.match
     OwnTVPopup(onDismissRequest = onDismiss, stageLayout = true) {
-        Box(Modifier.fillMaxSize()) {
-            Column(
-                Modifier
-                    .align(Alignment.CenterEnd)
-                    .width(630.mpx)
-                    .fillMaxHeight()
-                    .background(Color(0xF00A0F12))
-                    .padding(horizontal = 36.mpx, vertical = 42.mpx)
-                    .trapAllFocusExit()
-                    .focusGroup(),
+        Box(
+            Modifier.fillMaxSize()
+                .graphicsLayer { alpha = enter.value }
+                .background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to Color.Transparent, 0.5f to Color.Transparent, 1f to shade.copy(alpha = 0.7f))),
+        ) {
+            Box(
+                Modifier.align(Alignment.CenterEnd)
+                    .padding(end = 48.mpx, top = 40.mpx, bottom = 40.mpx)
+                    .width(620.mpx).fillMaxHeight()
+                    .graphicsLayer { translationX = (1f - enter.value) * 80.mpx.toPx() },
             ) {
-                Text(
-                    stringResource(R.string.sports_other_channels_title).uppercase(locale),
-                    style = stageText(16.5f, 700, 0.12.em), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-                Text(MatchNotifications.pair(context, session.match), style = stageText(28.5f, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.mpx))
-                val langs = session.options.mapNotNull { it.facets.language }.distinct().take(3).map { languageName(it) }
-                if (langs.isNotEmpty()) {
-                    Row(Modifier.padding(top = 15.mpx)) { StageTag(langs.joinToString(", ")) }
-                }
-                LazyColumn(Modifier.weight(1f).padding(top = 15.mpx)) {
-                    items(session.options.size) { i ->
-                        val o = session.options[i]
-                        val playing = o.channel.id == playingId
-                        ChannelRow(
-                            o, session.match,
-                            onClick = { if (!playing) onSwitch(session, i) else onDismiss() },
-                            onHold = null,
-                            playing = playing,
-                            modifier = Modifier
-                                .then(if (i == (session.options.indexOfFirst { it.channel.id != playingId }.takeIf { it >= 0 } ?: 0)) Modifier.focusRequester(first) else Modifier)
-                                .then(if (playing) Modifier.alpha(0.6f) else Modifier),
-                        )
+                Box(Modifier.matchParentSize().graphicsLayer { alpha = 0.88f }.stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true))
+                Column(
+                    Modifier.fillMaxSize().padding(horizontal = 26.mpx, vertical = 26.mpx).trapAllFocusExit().focusGroup(),
+                ) {
+                    Text(
+                        stringResource(R.string.sports_other_channels_title).uppercase(locale),
+                        style = stageText(15, 700, 0.12.em), color = tv.own.owntv.ui.theme.stageAccent.accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                    // The match: both crests and the teams, the competition under them.
+                    Row(
+                        Modifier.padding(top = 14.mpx).fillMaxWidth()
+                            .background(StageColors.Ink.copy(alpha = 0.05f), RoundedCornerShape(16.mpx))
+                            .padding(horizontal = 16.mpx, vertical = 14.mpx),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.mpx),
+                    ) {
+                        if (m.home != null && m.away != null) {
+                            Crest(m.home!!.team, 52)
+                            Crest(m.away!!.team, 52)
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(MatchNotifications.pair(context, m), style = stageText(23, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(m.leagueName, style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
+                    val langs = session.options.mapNotNull { it.facets.language }.distinct().take(3).map { languageName(it) }
+                    if (langs.isNotEmpty()) {
+                        Row(Modifier.padding(top = 12.mpx)) { StageTag(langs.joinToString(", ")) }
+                    }
+                    LazyColumn(Modifier.weight(1f).padding(top = 12.mpx)) {
+                        items(session.options.size) { i ->
+                            val o = session.options.getOrNull(i) ?: return@items
+                            val playing = o.channel.id == playingId
+                            ChannelRow(
+                                o, m,
+                                onClick = { if (!playing) onSwitch(session, i) else onDismiss() },
+                                onHold = null,
+                                playing = playing,
+                                modifier = Modifier
+                                    .then(if (i == (session.options.indexOfFirst { it.channel.id != playingId }.takeIf { it >= 0 } ?: 0)) Modifier.focusRequester(first) else Modifier)
+                                    .then(if (playing) Modifier.alpha(0.7f) else Modifier),
+                            )
+                        }
+                    }
+                    StageKeyHints(
+                        listOf(
+                            stringResource(R.string.common_ok) to stringResource(R.string.sports_switch_channel),
+                            stringResource(R.string.common_back) to stringResource(R.string.content_close),
+                        ),
+                        Modifier.padding(top = 14.mpx),
+                        textSize = 16,
+                    )
                 }
-                StageKeyHints(
-                    listOf(
-                        stringResource(R.string.common_ok) to stringResource(R.string.sports_switch_channel),
-                        stringResource(R.string.common_back) to stringResource(R.string.content_close),
-                    ),
-                    Modifier.padding(top = 18.mpx),
-                    textSize = 18,
-                )
             }
         }
     }

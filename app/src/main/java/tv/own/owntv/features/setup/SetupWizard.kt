@@ -1,5 +1,6 @@
 package tv.own.owntv.features.setup
 
+import android.icu.text.ListFormatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -699,6 +701,9 @@ private fun ImportProgressStep(
                 state.counts?.summaryText(includeEpg = true),
                 state.restoredItems?.let { pluralStringResource(R.plurals.setup_restored_items, it, it) },
                 if (state.passwordsOmitted) stringResource(R.string.setup_passwords_omitted) else null,
+                state.needPassword.takeIf { it.isNotEmpty() }?.let {
+                    stringResource(R.string.setup_need_password, ListFormatter.getInstance(LocalConfiguration.current.locales[0]).format(it))
+                },
                 state.skippedSources.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.setup_skipped_sources, it, it) },
                 if (state.invalidLocale) stringResource(R.string.setup_invalid_locale) else null,
                 state.warnings.warningText(),

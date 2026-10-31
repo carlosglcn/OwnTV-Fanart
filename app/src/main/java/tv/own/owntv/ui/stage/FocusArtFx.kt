@@ -34,16 +34,44 @@ object GlcnMotion {
     var subtle by androidx.compose.runtime.mutableStateOf(false)
 }
 
+/** glcn: the way the last arrow went (-1, 0, 1 across and down), set from the window's keys — the focused card leans from it. */
+object FocusMotion {
+    @Volatile var dx = 0f
+    @Volatile var dy = 0f
+
+    fun onKey(event: android.view.KeyEvent) {
+        if (event.action != android.view.KeyEvent.ACTION_DOWN) return
+        when (event.keyCode) {
+            android.view.KeyEvent.KEYCODE_DPAD_LEFT -> { dx = -1f; dy = 0f }
+            android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> { dx = 1f; dy = 0f }
+            android.view.KeyEvent.KEYCODE_DPAD_UP -> { dx = 0f; dy = -1f }
+            android.view.KeyEvent.KEYCODE_DPAD_DOWN -> { dx = 0f; dy = 1f }
+        }
+    }
+}
+
+/** glcn: the focused card's lean, shared with its picture (only one card is focused at a time) for the depth effect. */
+internal class TiltAnims(val amp: Animatable<Float, *>, val phase: Animatable<Float, *>, val kickX: Animatable<Float, *>, val kickY: Animatable<Float, *>) {
+    val rotY: Float get() = kotlin.math.sin(phase.value) * SWAY_Y * amp.value + kickY.value
+    val rotX: Float get() = kotlin.math.cos(phase.value) * SWAY_X * amp.value + kickX.value
+}
+
+internal object FocusTilt {
+    var active by androidx.compose.runtime.mutableStateOf<TiltAnims?>(null)
+}
+
 @Composable
 internal fun BoxScope.FocusArtFx(focused: Boolean, content: @Composable BoxScope.() -> Unit) {
     val animate = tv.own.owntv.ui.theme.animationsOn
+    // glcn: the slow push-in redraws the card for six seconds — not on a modest box.
+    val zoomOn = animate && tv.own.owntv.glcn.DeviceClass.richMotion
     val zoom by animateFloatAsState(
-        targetValue = if (focused && animate) (if (GlcnMotion.subtle) 1.03f else 1.08f) else 1f,
+        targetValue = if (focused && zoomOn) (if (GlcnMotion.subtle) 1.03f else 1.08f) else 1f,
         animationSpec = tween(if (focused) 6_000 else 400, easing = LinearOutSlowInEasing),
         label = "artZoom",
     )
     val shine = remember { Animatable(-1f) }
-    val sweep = animate && !GlcnMotion.subtle
+    val sweep = animate && !GlcnMotion.subtle && !tv.own.owntv.glcn.LowRam.on
     LaunchedEffect(focused, sweep) {
         if (focused && sweep) {
             shine.snapTo(-0.6f)
@@ -78,33 +106,61 @@ internal fun BoxScope.FocusArtFx(focused: Boolean, content: @Composable BoxScope
  * recomposes the card. Still with animations off.
  */
 @Composable
-internal fun Modifier.stageTilt(focused: Boolean): Modifier {
-    if (!tv.own.owntv.ui.theme.animationsOn) return this
+internal fun Modifier.stageTilt(focused: Boolean, delayMs: Long = 0L): Modifier {
+    if (!tv.own.owntv.ui.theme.animationsOn || tv.own.owntv.glcn.LowRam.on) return this
     val amp = remember { Animatable(0f) }
     val phase = remember { Animatable(0f) }
+    val kickX = remember { Animatable(0f) }
+    val kickY = remember { Animatable(0f) }
+    val anims = remember { TiltAnims(amp, phase, kickX, kickY) }
     LaunchedEffect(focused) {
         if (focused) {
+            if (delayMs > 0) kotlinx.coroutines.delay(delayMs)
+            FocusTilt.active = anims
+            // glcn: momentum — on arrival the card tips the way the focus travelled and springs back, then rests
+            // (no endless sway: the person preferred the still card with its slow zoom).
+            kickY.snapTo(FocusMotion.dx * KICK_DEG)
+            kickX.snapTo(-FocusMotion.dy * KICK_DEG * 0.8f)
             kotlinx.coroutines.coroutineScope {
-                launch { amp.animateTo(1f, tween(600, easing = FastOutSlowInEasing)) }
-                launch {
-                    while (true) {
-                        phase.animateTo(phase.value + TWO_PI, tween(7_000, easing = androidx.compose.animation.core.LinearEasing))
-                        phase.snapTo(phase.value % TWO_PI)
-                    }
-                }
+                launch { kickY.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = KICK_DAMPING, stiffness = KICK_STIFFNESS)) }
+                launch { kickX.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = KICK_DAMPING, stiffness = KICK_STIFFNESS)) }
             }
         } else {
+            if (FocusTilt.active === anims) FocusTilt.active = null
+            kickX.snapTo(0f); kickY.snapTo(0f)
             amp.animateTo(0f, tween(300))
         }
     }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { if (FocusTilt.active === anims) FocusTilt.active = null } }
     return this.graphicsLayer {
-        val a = amp.value
-        if (a > 0f) {
+        val ry = anims.rotY
+        val rx = anims.rotX
+        if (ry != 0f || rx != 0f) {
             cameraDistance = 14f * density
-            rotationY = kotlin.math.sin(phase.value) * 3.2f * a
-            rotationX = kotlin.math.cos(phase.value) * 2.2f * a
+            rotationY = ry
+            rotationX = rx
         }
     }
 }
 
 private const val TWO_PI = (2 * Math.PI).toFloat()
+private const val SWAY_Y = 3.2f
+private const val SWAY_X = 2.2f
+private const val KICK_DEG = 7f
+private const val KICK_DAMPING = 0.42f
+private const val KICK_STIFFNESS = 240f
+
+/** glcn: OK pressed on a card or a button: it sinks a touch and springs back, so the press is felt. */
+@Composable
+internal fun Modifier.pressSink(pressed: Boolean): Modifier {
+    if (!tv.own.owntv.ui.theme.animationsOn || tv.own.owntv.glcn.LowRam.on) return this
+    val s by animateFloatAsState(
+        if (pressed) PRESS_SCALE else 1f,
+        if (pressed) tween(PRESS_IN_MS) else androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 520f),
+        label = "pressSink",
+    )
+    return this.graphicsLayer { scaleX = s; scaleY = s }
+}
+
+private const val PRESS_SCALE = 0.95f
+private const val PRESS_IN_MS = 90

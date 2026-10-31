@@ -32,6 +32,7 @@ import tv.own.owntv.ui.components.trapAllFocusExit
  * The Stage playlist switcher: the options-menu style, 520 wide under the playlist pill, over
  * the Stage scrim with the pill itself redrawn above it, lit, at [pillBounds]. Rows: "All playlists"
  * with the layers icon, then each playlist with its mark and channel count; a ✓ marks the current one.
+ * Under the list, outside its scroll, "Resync now" for the current choice (one playlist, or all).
  */
 @Composable
 fun StagePlaylistMenu(
@@ -42,7 +43,10 @@ fun StagePlaylistMenu(
     pillLabel: String,
     pillBounds: androidx.compose.ui.geometry.Rect?,
     onSelect: (Long) -> Unit,
+    onResync: () -> Unit,
     onDismiss: () -> Unit,
+    /** glcn: read the guides again without re-reading the playlists. */
+    onRefreshGuide: (() -> Unit)? = null,
 ) {
     val channelDao = org.koin.compose.koinInject<tv.own.owntv.core.database.dao.ChannelDao>()
     val counts by androidx.compose.runtime.produceState(emptyMap<Long, Int>(), playlists) {
@@ -115,6 +119,17 @@ fun StagePlaylistMenu(
                     )
                 }
             }
+            tv.own.owntv.ui.stage.StageMenuItem(
+                text = stringResource(R.string.settings_sources_resync_now_full),
+                icon = tv.own.owntv.ui.components.OwnTVIcon.REFRESH,
+                value = playlists.firstOrNull { it.id == activeId }?.name ?: stringResource(R.string.content_all_playlists),
+                onClick = { onResync(); onDismiss() },
+            )
+            if (onRefreshGuide != null) tv.own.owntv.ui.stage.StageMenuItem(
+                text = stringResource(R.string.glcn_refresh_guide),
+                icon = tv.own.owntv.ui.components.OwnTVIcon.EPG,
+                onClick = { onRefreshGuide(); onDismiss() },
+            )
         }
     }
 }

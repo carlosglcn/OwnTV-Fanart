@@ -1,5 +1,6 @@
 package tv.own.owntv.features.settings
 
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -76,6 +77,20 @@ internal fun ProfileSettingsRows() {
         ),
     )
     val sep = stringResource(R.string.content_epg_bits_separator)
+    // glcn: a TV profile starts on the last channel; turning it on sets that for the profile.
+    val tvCtx = androidx.compose.ui.platform.LocalContext.current
+    val tvSettings = org.koin.compose.koinInject<tv.own.owntv.core.settings.SettingsRepository>()
+    val tvScope = androidx.compose.runtime.rememberCoroutineScope()
+    fun applyTv(id: Long, on: Boolean) {
+        val was = tv.own.owntv.glcn.TvProfiles.isTv(id)
+        tv.own.owntv.glcn.TvProfiles.set(tvCtx, id, on)
+        if (on && !was) tvScope.launch { runCatching { tvSettings.setStartupMode(id, tv.own.owntv.core.settings.StartupMode.LAST_CHANNEL) } }
+    }
+    // A profile just created as a TV profile: its id is known once it appears in the list.
+    androidx.compose.runtime.LaunchedEffect(profiles) {
+        val name = tv.own.owntv.glcn.TvProfiles.pendingName ?: return@LaunchedEffect
+        profiles.firstOrNull { it.name.trim().equals(name, ignoreCase = true) }?.let { applyTv(it.id, true); tv.own.owntv.glcn.TvProfiles.pendingName = null }
+    }
     profiles.forEach { p ->
         val inUse = p.id == activeProfileId
         val line = listOfNotNull(
@@ -85,6 +100,7 @@ internal fun ProfileSettingsRows() {
         ).joinToString(sep)
         val inUseTag = stringResource(R.string.settings_profile_in_use).uppercase()
         val kidsTag = stringResource(R.string.profiles_kids_tag).uppercase()
+        val tvTag = stringResource(R.string.glcn_profile_tv_tag).uppercase()
         val pinTag = stringResource(R.string.profiles_pin).uppercase()
         val accent = stageAccent.accent
         StageSettingRow(
@@ -94,6 +110,7 @@ internal fun ProfileSettingsRows() {
             value = SettingValue.Custom {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
                     if (inUse) StageTag(inUseTag, tint = accent)
+                    if (tv.own.owntv.glcn.TvProfiles.isTv(p.id)) StageTag(tvTag, tint = accent)
                     if (p.isKids) StageTag(kidsTag)
                     if (p.pinHash != null) StageTag(pinTag)
                     if (!inUse) OwnTVIcon(OwnTVIcon.CHEVRON, StageColors.Muted, Modifier.size(20.mpx))
@@ -119,6 +136,7 @@ internal fun ProfileSettingsRows() {
         ProfileEditorDialog(
             initial = null,
             onConfirm = { name, avatarId, isKids, pin, picture -> vm.create(name, avatarId, isKids, pin, defaultProfileName, picture); creating = false },
+            onTv = { name, on -> tv.own.owntv.glcn.TvProfiles.pendingName = name.takeIf { on } },
             onDismiss = { creating = false },
             // Names must stay unique (backup restore matches profiles by name).
             takenNames = profiles.map { it.name.trim().lowercase() }.toSet(),
@@ -128,6 +146,8 @@ internal fun ProfileSettingsRows() {
         ProfileEditorDialog(
             initial = p,
             onConfirm = { name, avatarId, isKids, pin, _ -> vm.edit(p, name, avatarId, isKids, pin); editing = null },
+            initialTv = tv.own.owntv.glcn.TvProfiles.isTv(p.id),
+            onTv = { _, on -> applyTv(p.id, on) },
             onDismiss = { editing = null },
             takenNames = profiles.filter { it.id != p.id }.map { it.name.trim().lowercase() }.toSet(),
             // From the live list, not [p]: [p] is the row as it was when the dialog opened, and a

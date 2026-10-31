@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -75,6 +76,7 @@ import tv.own.owntv.features.shell.components.ClearHistoryDialog
 import tv.own.owntv.features.shell.components.GITHUB_REPO
 import tv.own.owntv.features.shell.components.GLCN_REPO
 import tv.own.owntv.features.shell.components.TELEGRAM_LINK
+import tv.own.owntv.features.shell.components.GLCN_TELEGRAM_LINK
 import tv.own.owntv.features.shell.components.playbackDisplayName
 import tv.own.owntv.features.update.UpdateDialog
 import tv.own.owntv.player.PlaybackErrorLog
@@ -648,6 +650,26 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
     val exportFocus = remember { FocusRequester() }
     val firstRow = remember { FocusRequester() }
     val sep = stringResource(R.string.content_epg_bits_separator)
+    val companion: tv.own.owntv.core.companion.CompanionController = org.koin.compose.koinInject()
+    var sharing by remember { mutableStateOf(false) }
+    if (sharing) {
+        val st by companion.state.collectAsStateWithLifecycle()
+        val done = remember { FocusRequester() }
+        // glcn: the popup opens while OK (on Share) is still down; its release must not press Done at once, which
+        // closed the popup before it was seen. Done takes focus, and works, a moment later.
+        var armed by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { kotlinx.coroutines.delay(600); armed = true; runCatching { done.requestFocus() } }
+        DisposableEffect(Unit) { onDispose { companion.stop() } }
+        tv.own.owntv.ui.stage.StagePopup(
+            onDismiss = { if (armed) sharing = false },
+            title = stringResource(R.string.glcn_share_log_title),
+            body = stringResource(R.string.glcn_share_log_body),
+            width = 820.mpx,
+            buttons = {
+                tv.own.owntv.ui.stage.StageButton(stringResource(R.string.common_done), onClick = { if (armed) sharing = false }, height = 56.mpx, textSize = 19, modifier = Modifier.focusRequester(done))
+            },
+        ) { tv.own.owntv.ui.components.StageCompanionStatus(st) }
+    }
 
     Column(Modifier.fillMaxSize().focusGroup()) {
         PageHead(stringResource(R.string.settings_playback_error_log)) {
@@ -661,21 +683,21 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
                     exportFailed = path == null
                 }
             })
-            // glcn: Share exports the same file and offers it to whatever can take it (mail, a chat, a nearby phone).
+            // glcn: Share puts the report on the phone: a TV box rarely has an app to share with (the system sheet did
+            // nothing on a SHIELD), so the TV serves it on the home Wi-Fi — scan the QR, type the PIN, read or save it.
             StageTool(stringResource(R.string.glcn_share_log), icon = OwnTVIcon.SHARE, onClick = {
                 scope.launch {
-                    val path = withContext(Dispatchers.IO) { PlaybackErrorLog.export(context) }
-                    exportPath = path
-                    exportFailed = path == null
-                    if (path != null) {
+                    // glcn: the phone reads the report from the app's own cache — the exported copy sits in the public
+                    // Download folder, which the app could not always read back, and the phone got an empty page.
+                    val file = withContext(Dispatchers.IO) {
                         runCatching {
-                            val uri = androidx.core.content.FileProvider.getUriForFile(context, context.packageName + ".fileprovider", java.io.File(path))
-                            val send = android.content.Intent(android.content.Intent.ACTION_SEND)
-                                .setType("text/plain")
-                                .putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            context.startActivity(android.content.Intent.createChooser(send, null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-                        } // nothing to share with on this box: the saved-to line above still says where the file is
+                            java.io.File(context.cacheDir, "owntv-playback-report.txt").apply { writeText(PlaybackErrorLog.reportText(context)) }
+                        }.getOrNull()
+                    }
+                    exportFailed = file == null
+                    if (file != null) {
+                        companion.startForLogDownload(tv.own.owntv.core.companion.CompanionLink.DEFAULT_PORT, file)
+                        sharing = true
                     }
                 }
             })
@@ -771,6 +793,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
     val updateState by manager.state.collectAsStateWithLifecycle()
     val checkedAt by vm.lastUpdateCheckAt.collectAsStateWithLifecycle()
     var showUpdate by remember { mutableStateOf(false) }
+    var showToken by remember { mutableStateOf(false) }
     val updateFocus = remember { FocusRequester() }
     var updateWasOpen by remember { mutableStateOf(false) }
     LaunchedEffect(showUpdate) { if (showUpdate) updateWasOpen = true else if (updateWasOpen) { updateWasOpen = false; withFrameNanos { }; runCatching { updateFocus.requestFocus() } } }
@@ -814,17 +837,35 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
         // glcn: what this version is, whose work it builds on, and where its own problems go.
         Text(stringResource(R.string.glcn_about_fork), style = stageText(17, 500).copy(lineHeight = 27.mpxSp), color = StageColors.Muted,
             modifier = Modifier.padding(top = 12.mpx, bottom = 24.mpx).widthIn(max = 1000.mpx))
-        StageTile(Modifier.width(640.mpx)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(R.drawable.telegram_qr),
-                    contentDescription = stringResource(R.string.settings_telegram_qr),
-                    modifier = Modifier.size(150.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
-                )
-                Column {
-                    Text(stringResource(R.string.glcn_about_community), style = stageText(20, 800), color = StageColors.Text)
-                    Text(TELEGRAM_LINK, style = stageText(17, 500), color = accent, modifier = Modifier.padding(top = 4.mpx))
-                    Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
+        // glcn: this version's own Telegram group first, then the original project's — the same tile for both.
+        Row(horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
+            StageTile(Modifier.width(620.mpx)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
+                    // glcn: drawn like Telegram's own group codes (rounded dots, the plane in the middle, the name below).
+                    Image(
+                        painter = painterResource(R.drawable.telegram_qr_fanart),
+                        contentDescription = stringResource(R.string.settings_telegram_qr),
+                        modifier = Modifier.size(150.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
+                    )
+                    Column {
+                        Text(stringResource(R.string.glcn_about_community_fanart), style = stageText(20, 800), color = StageColors.Text)
+                        Text(GLCN_TELEGRAM_LINK, style = stageText(17, 500), color = accent, modifier = Modifier.padding(top = 4.mpx))
+                        Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
+                    }
+                }
+            }
+            StageTile(Modifier.width(620.mpx)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(R.drawable.telegram_qr),
+                        contentDescription = stringResource(R.string.settings_telegram_qr),
+                        modifier = Modifier.size(150.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
+                    )
+                    Column {
+                        Text(stringResource(R.string.glcn_about_community), style = stageText(20, 800), color = StageColors.Text)
+                        Text(TELEGRAM_LINK, style = stageText(17, 500), color = accent, modifier = Modifier.padding(top = 4.mpx))
+                        Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
+                    }
                 }
             }
         }
@@ -848,9 +889,23 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
             val languages = SupportedLocales.all.count { it.packaged }
             StageTool(pluralStringResource(R.plurals.more_about_languages, languages, languages), onClick = onOpenLanguage, icon = OwnTVIcon.LIST, boxed = true, modifier = Modifier.focusRequester(entry))
             StageTool(stringResource(R.string.settings_check_updates), onClick = { showUpdate = true }, icon = OwnTVIcon.REFRESH, boxed = true, modifier = Modifier.focusRequester(updateFocus))
+            // glcn: the beta's updates come from a private repository; its token is pasted here once.
+            if (BuildConfig.GLCN_BETA) {
+                StageTool(stringResource(R.string.glcn_beta_token), onClick = { showToken = true }, icon = OwnTVIcon.PENCIL, boxed = true,
+                    value = if (manager.accessToken != null) stringResource(R.string.glcn_beta_token_saved) else null)
+            }
         }
     }
     if (showUpdate) {
         UpdateDialog(onDismiss = { showUpdate = false }, checkOnOpen = true)
+    }
+    if (showToken) {
+        tv.own.owntv.ui.components.TextInputDialog(
+            title = stringResource(R.string.glcn_beta_token_title),
+            label = stringResource(R.string.glcn_beta_token_label),
+            hint = stringResource(R.string.glcn_beta_token_hint),
+            onConfirm = { manager.accessToken = it; showToken = false; showUpdate = true },
+            onDismiss = { showToken = false },
+        )
     }
 }

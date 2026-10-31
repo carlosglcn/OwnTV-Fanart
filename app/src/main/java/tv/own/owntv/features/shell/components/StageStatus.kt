@@ -14,6 +14,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.geometry.Offset
@@ -50,7 +53,11 @@ import tv.own.owntv.ui.theme.stageText
 import java.util.Date
 
 /** The Continue pill's content: the icon, the small action label ("Resume") and the title. */
-data class ContinuePill(val icon: OwnTVIcon, val iconFilled: Boolean, val action: String, val title: String, val onClick: () -> Unit)
+data class ContinuePill(
+    val icon: OwnTVIcon, val iconFilled: Boolean, val action: String, val title: String, val onClick: () -> Unit,
+    /** glcn: ▼ on the pill — the recent channels drop-down (null: nothing below it). */
+    val onDown: (() -> Unit)? = null,
+)
 
 /**
  * The top-right cluster on every screen: the Continue pill —
@@ -94,8 +101,14 @@ fun StageStatusCluster(
                     icon = continuePill.icon,
                     iconFilled = continuePill.iconFilled,
                     onClick = continuePill.onClick,
+                    trailingIcon = if (continuePill.onDown != null) OwnTVIcon.CHEVRON_DOWN else null,
                     modifier = (if (continueMaxWidth != null) Modifier.widthIn(max = continueMaxWidth) else Modifier)
-                        .focusProperties { canFocus = pillsFocusable },
+                        .focusProperties { canFocus = pillsFocusable }
+                        .then(continuePill.onDown?.let { down ->
+                            Modifier.onPreviewKeyEvent { e ->
+                                if (e.key == androidx.compose.ui.input.key.Key.DirectionDown && e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) { down(); true } else false
+                            }
+                        } ?: Modifier),
                 )
             }
             StagePill(
@@ -134,8 +147,10 @@ fun clockColor(stored: String, default: Color): Color = when (stored) {
 @Composable
 fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColors) {
     val timeColor = clockColor(colors.time, StageColors.Text)
-    val dateColor = clockColor(colors.date, StageColors.Muted)
-    val weatherColor = clockColor(colors.weather, StageColors.Muted)
+    // glcn: the date and weather default to near-white in the dark theme — grey 400 vanished over a bright backdrop.
+    val subDefault = if (LocalStagePalette.current.isLight) StageColors.Muted else StageColors.Text.copy(alpha = CLOCK_SUB_ALPHA)
+    val dateColor = clockColor(colors.date, subDefault)
+    val weatherColor = clockColor(colors.weather, subDefault)
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -163,7 +178,7 @@ fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColo
                 val cr = androidx.compose.ui.geometry.CornerRadius(18.mpx.toPx())
                 val tl = Offset(-dx, -dy)
                 val sz = androidx.compose.ui.geometry.Size(size.width + 2 * dx, size.height + 2 * dy)
-                drawRoundRect(Color.White.copy(alpha = 0.74f), tl, sz, cr)
+                drawRoundRect(Color.White.copy(alpha = CLOCK_CHIP_ALPHA), tl, sz, cr)
                 drawRoundRect(rim, tl, sz, cr, style = androidx.compose.ui.graphics.drawscope.Stroke(1.mpx.toPx()))
                 return@drawBehind
             }
@@ -172,8 +187,8 @@ fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColo
             scale(scaleX = (size.width * 0.8f) / r, scaleY = 1f, pivot = center) {
                 drawCircle(
                     Brush.radialGradient(
-                        0f to Color.Black.copy(alpha = 0.34f),
-                        0.55f to Color.Black.copy(alpha = 0.16f),
+                        0f to Color.Black.copy(alpha = 0.5f),
+                        0.55f to Color.Black.copy(alpha = 0.26f),
                         1f to Color.Transparent,
                         center = center,
                         radius = r,
@@ -196,7 +211,7 @@ fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColo
             horizontalArrangement = Arrangement.spacedBy(10.mpx),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val sub: TextStyle = stageText(17, 400).copy(shadow = shadow)
+            val sub: TextStyle = stageText(17, if (light) 400 else 500).copy(shadow = shadow)
             Text(date, style = sub, color = dateColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (weatherInfo != null) {
                 Text("·", style = sub, color = StageColors.Muted.copy(alpha = 0.5f), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -217,3 +232,8 @@ fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColo
         }
     }
 }
+
+/** glcn: how bright the date and weather under the clock are in the dark theme. */
+private const val CLOCK_SUB_ALPHA = 0.88f
+/** glcn: the light theme's chip behind the clock — nearly solid, so a bright picture or a video's own text behind never shows through. */
+private const val CLOCK_CHIP_ALPHA = 0.94f

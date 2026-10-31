@@ -69,6 +69,14 @@ class SportsSettingsViewModel(
         settings.setNavMenuHidden(if (on) hidden - MainSection.SPORTS.name else hidden + MainSection.SPORTS.name)
     }
 
+    /** glcn: follow what is usually followed in [country] (adds only), then fetch the board again. */
+    fun applyPreset(country: String) = viewModelScope.launch {
+        val preset = tv.own.owntv.core.sports.SportsPresets.leaguesFor(country)
+        if (preset.isEmpty()) return@launch
+        settings.updateSportsConfig(settings.activeProfileIdNow()) { c -> c.copy(leagues = c.leagues + preset.filter { it !in c.leagues }) }
+        repository.rebuild()
+    }
+
     fun toggleLeague(key: String) = update { c ->
         val now = c.leagues
         c.copy(leagues = if (key in now) now - key else now + key)
@@ -102,7 +110,7 @@ class SportsSettingsViewModel(
 
     private suspend fun indexOf(keys: Collection<String>): List<Pair<FollowedTeam, String>> {
         val sports = tv.own.owntv.core.sports.model.Sport.values().filter {
-            it != tv.own.owntv.core.sports.model.Sport.TENNIS && it != tv.own.owntv.core.sports.model.Sport.RACING &&
+            it != tv.own.owntv.core.sports.model.Sport.TENNIS && it != tv.own.owntv.core.sports.model.Sport.RACING && it != tv.own.owntv.core.sports.model.Sport.CYCLING &&
                 it != tv.own.owntv.core.sports.model.Sport.MMA && it != tv.own.owntv.core.sports.model.Sport.CRICKET
         }.toSet()
         val leagues = keys.mapNotNull { SportsCatalog.league(it) }.filter { it.sport in sports }

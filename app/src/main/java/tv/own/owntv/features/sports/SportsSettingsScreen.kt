@@ -131,7 +131,7 @@ private fun Row(icon: OwnTVIcon, title: String, desc: String?, value: SettingVal
 }
 
 /** Rows on the main page (the "N settings" beside its title): 5 + 6 + 3 + 2 + 4. */
-private const val MAIN_ROWS = 20
+private const val MAIN_ROWS = 21
 
 /** The main page: What to show · Watching · While watching · Channels · Data. */
 @Composable
@@ -140,13 +140,18 @@ private fun MainRows(vm: SportsSettingsViewModel, c: SportsConfig, shown: Boolea
     val leagues = c.leagues
     val sports = SportsCatalog.sports.filter { s -> leagues.any { SportsCatalog.league(it)?.sport == s } }
 
-    StageSettingsHeading(stringResource(R.string.sports_settings_what), 5, first = true)
+    StageSettingsHeading(stringResource(R.string.sports_settings_what), 6, first = true)
     Row(OwnTVIcon.TILES, stringResource(R.string.sports_show_in_menu), stringResource(R.string.sports_show_in_menu_description), SettingValue.Switch(shown)) { vm.setShownInMenu(!shown) }
     Row(
         OwnTVIcon.LAYERS, stringResource(R.string.sports_leagues),
         (sports.take(4).map { sportLabel(it) } + pluralStringResource(R.plurals.sports_league_count, leagues.size, leagues.size)).joinToString(sep),
         SettingValue.Opens(stringResource(R.string.common_edit)),
     ) { open(SportsSettingsPage.LEAGUES) }
+    // glcn: one press adds what is usually followed in a country.
+    var picking by remember { mutableStateOf(false) }
+    if (picking) CountryPresetPicker(onPick = { vm.applyPreset(it); picking = false }, onDismiss = { picking = false })
+    Row(OwnTVIcon.NETWORK, stringResource(R.string.glcn_sports_preset_title), stringResource(R.string.glcn_sports_preset_desc),
+        SettingValue.Opens(java.util.Locale.getDefault().displayCountry)) { picking = true }
     val buttons = listOf(stringResource(R.string.sports_sport_buttons_mine), stringResource(R.string.sports_sport_buttons_all))
     val toggleAll: (Int) -> Unit = { vm.update { s -> s.copy(allSports = !s.allSports) } }
     Row(OwnTVIcon.TILES, stringResource(R.string.sports_sport_buttons), stringResource(R.string.sports_sport_buttons_description),

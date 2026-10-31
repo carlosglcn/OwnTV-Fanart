@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -63,6 +64,7 @@ import tv.own.owntv.core.sports.WatchOption
 import tv.own.owntv.core.sports.model.Match
 import tv.own.owntv.core.sports.model.MatchState
 import tv.own.owntv.core.sports.model.Sport
+import tv.own.owntv.core.sports.model.isRace
 import tv.own.owntv.ui.components.ChannelLogoTile
 import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.components.OwnTVPopup
@@ -92,7 +94,7 @@ internal sealed interface HubChip {
 }
 
 /** Sports whose score is a line (sets, innings), not one number a side. */
-private val LINE_SCORE_SPORTS = setOf(Sport.TENNIS, Sport.CRICKET, Sport.GOLF, Sport.RACING)
+private val LINE_SCORE_SPORTS = setOf(Sport.TENNIS, Sport.CRICKET, Sport.GOLF, Sport.RACING, Sport.CYCLING)
 
 /** Chips shown before "+N": eight sports. */
 private const val SPORT_CHIPS = 8
@@ -230,7 +232,7 @@ fun SportsHubScreen(
 
             val nothing = live.isEmpty() && soon.isEmpty() && onNow.isEmpty()
             if (config.followedLeagues().isEmpty()) {
-                item(key = "none") { NothingFollowedNote(Modifier.padding(start = contentStart, top = 80.mpx, end = 360.mpx)) }
+                item(key = "none") { NothingFollowedNote(Modifier.padding(start = contentStart, top = 80.mpx, end = 360.mpx), onPreset = vm::applyPreset) }
             } else if (nothing && !state.rebuilding) {
                 item(key = "empty") {
                     val unreachable = state.board.failing.isNotEmpty() && state.board.today.isEmpty()
@@ -246,7 +248,7 @@ fun SportsHubScreen(
                 item(key = "live") {
                     Column {
                         RowHeader(contentStart, stringResource(R.string.sports_live_now), null, live = true)
-                        LazyRow(
+                        tv.own.owntv.features.home.HomeLazyRow(
                             Modifier.focusRestorer().focusGroup(),
                             contentPadding = PaddingValues(start = contentStart, end = 64.mpx, top = 6.mpx, bottom = 6.mpx),
                             horizontalArrangement = Arrangement.spacedBy(18.mpx),
@@ -292,7 +294,7 @@ fun SportsHubScreen(
                         // A new filter starts the row at its first card, not where the old list was scrolled.
                         val soonState = androidx.compose.foundation.lazy.rememberLazyListState()
                         androidx.compose.runtime.LaunchedEffect(chips, leagues) { soonState.scrollToItem(0) }
-                        LazyRow(
+                        tv.own.owntv.features.home.HomeLazyRow(
                             state = soonState,
                             modifier = Modifier.focusRestorer().focusGroup(),
                             contentPadding = PaddingValues(start = contentStart, end = 64.mpx, top = 6.mpx, bottom = 6.mpx),
@@ -358,11 +360,54 @@ private fun HubSubtitle(today: List<Match>) {
 
 /** The hub with nothing followed (new users follow nothing): what to do, where, and why to choose with care. */
 @Composable
-private fun NothingFollowedNote(modifier: Modifier) {
+private fun NothingFollowedNote(modifier: Modifier, onPreset: (String) -> Unit) {
+    // glcn: one press follows what is usual in the viewer's country (or another, from a list).
+    val home = java.util.Locale.getDefault().country.takeIf { tv.own.owntv.core.sports.SportsPresets.hasPreset(it) }
+    var picking by remember { mutableStateOf(false) }
+    if (picking) CountryPresetPicker(onPick = { onPreset(it); picking = false }, onDismiss = { picking = false })
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.mpx)) {
         Text(stringResource(R.string.sports_empty_nothing_followed), style = stageText(30, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(stringResource(R.string.sports_empty_choose_in), style = stageText(22, 600), color = StageColors.Body, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Row(Modifier.padding(vertical = 10.mpx), horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
+            if (home != null) tv.own.owntv.ui.stage.StageButton(
+                text = stringResource(R.string.glcn_sports_preset_button, java.util.Locale("", home).displayCountry),
+                icon = OwnTVIcon.SPORTS, onClick = { onPreset(home) },
+            )
+            tv.own.owntv.ui.stage.StageButton(
+                text = stringResource(if (home != null) R.string.glcn_sports_preset_other else R.string.glcn_sports_preset_title),
+                icon = OwnTVIcon.SEARCH, onClick = { picking = true },
+            )
+        }
         Text(stringResource(R.string.sports_load_time_warning), style = stageText(19, 400), color = StageColors.Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** glcn: the countries with a preset, by name in the viewer's language, the device's own country first. */
+@Composable
+internal fun CountryPresetPicker(onPick: (String) -> Unit, onDismiss: () -> Unit) {
+    androidx.activity.compose.BackHandler { onDismiss() }
+    val first = remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(Unit) { androidx.compose.runtime.withFrameNanos { }; runCatching { first.requestFocus() } }
+    val home = java.util.Locale.getDefault().country
+    val countries = remember {
+        tv.own.owntv.core.sports.SportsPresets.countries
+            .map { it to java.util.Locale("", it).displayCountry }
+            .sortedWith(compareBy<Pair<String, String>> { it.first != home }.thenBy { it.second })
+    }
+    tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onDismiss, stageLayout = true) {
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.55f)), contentAlignment = Alignment.Center) {
+            tv.own.owntv.ui.stage.StageMenu(Modifier.width(620.mpx)) {
+                tv.own.owntv.ui.stage.StageMenuHeader(title = stringResource(R.string.glcn_sports_preset_title), subtitle = stringResource(R.string.glcn_sports_preset_desc))
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 620.mpx)) {
+                    itemsIndexed(countries) { i, (code, name) ->
+                        tv.own.owntv.ui.stage.StageMenuItem(
+                            name, onClick = { onPick(code) },
+                            modifier = if (i == 0) Modifier.focusRequester(first) else Modifier,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -461,7 +506,7 @@ internal fun MatchCard(
             // League line · minute (red while live) or kick-off.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val day = if (m.isLive) null else dayOf(m.startMs, locale)
-                val league = listOfNotNull(leagueName(m), m.subtitle?.takeIf { featured && m.sport != tv.own.owntv.core.sports.model.Sport.RACING }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
+                val league = listOfNotNull(leagueName(m), m.subtitle?.takeIf { featured && !m.sport.isRace }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
                 Text(league, style = stageText(16.5f, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 val right = when {
                     m.off -> m.statusText
@@ -485,7 +530,7 @@ internal fun MatchCard(
 /** Two sides, each a 42 px crest, the name and the score; the losing side in muted grey. */
 @Composable
 private fun Sides(m: Match, spoiler: Boolean) {
-    if (m.competitors.size < 2 || m.sport == tv.own.owntv.core.sports.model.Sport.RACING) {
+    if (m.competitors.size < 2 || m.sport.isRace) {
         // Racing, a card: the session by its kind, the Grand Prix under it.
         Spacer(Modifier.height(12.mpx))
         val session = if (m.sport == tv.own.owntv.core.sports.model.Sport.RACING) raceSessionLabel(m) else null
@@ -580,7 +625,7 @@ private fun FollowRemindMenu(
         Box(Modifier.fillMaxSize().background(StageColors.Scrim).longPressMenuGuard(), contentAlignment = Alignment.Center) {
             StageMenu(Modifier.width(560.mpx).trapAllFocusExit().focusGroup()) {
                 StageMenuHeader(MatchNotifications.pair(LocalContext.current, match), leagueName(match))
-                match.competitors.forEachIndexed { i, c ->
+                (if (match.sport.isRace) match.competitors.take(3) else match.competitors).forEachIndexed { i, c ->
                     val team = FollowedTeam(match.sport, c.team.id, c.team.name, c.team.abbreviation)
                     val following = config.teams.any { it.key == team.key }
                     StageMenuItem(

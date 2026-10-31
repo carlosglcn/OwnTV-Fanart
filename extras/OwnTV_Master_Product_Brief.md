@@ -157,6 +157,8 @@ series jumps to the last-watched episode.
 
 The **mini-player** docks a film, episode or channel to a corner and keeps playing across the whole
 app; selecting another channel updates it in place. Size and position are one popup in Settings.
+With **Picture-in-picture when leaving the app** on (off by default, only on TVs that offer it), Home
+keeps a playing video going in the system's small window; a screen OwnTV opens itself never does.
 
 ### 2.8 Robustness
 
@@ -300,9 +302,10 @@ hiding a provider category no longer empties custom categories. Custom categorie
 player's channel list and the Multiview picker. A typed category search is kept while a channel plays;
 Back in the list clears it.
 
-Search covers Live, Movies and Series together (3.2). Live TV
-reopens on the category you last used, with focus on the last channel. **App startup** is per
-profile: Home, last channel, Live Favorites, or one chosen channel.
+Search covers Live, Movies and Series together (3.2), with voice search where the device has a speech
+recogniser. Live TV reopens on the category you last used, with focus on the last channel. **App
+startup** is per profile: Home, last channel, the last channel in the TV Guide or Live TV, Live
+Favorites, or one chosen channel.
 
 ---
 
@@ -319,7 +322,7 @@ profile: Home, last channel, Live Favorites, or one chosen channel.
   30-minute steps. Every programme action (Remind me / Watch from start, Record, Watch channel…) is in
   the Hold-OK menu.
 - Order by Provider, A–Z, Catch-up first or Favourites first; the category filter is Live TV's own
-  list; *Show → Channels without guide* and *Show → Video preview* (off shows the channel's logo
+  list, and Provider/A–Z follow Live TV's order with moved channels in their place; *Show → Channels without guide* and *Show → Video preview* (off shows the channel's logo
   instead of playing it; kept in backups).
 - **Programme reminders** — at the chosen lead time (5 min by default) OwnTV asks to switch, over any
   screen including the player, or switches, or only notifies.
@@ -338,6 +341,8 @@ profile: Home, last channel, Live Favorites, or one chosen channel.
   playlist(s) the guide is showing (a 400-channel playlist in about 3 s); confident matches
   apply automatically and the rest go to a review list. Matches are per profile and survive re-syncs.
   A **guide time offset** corrects a feed published in another time zone, globally or per channel.
+- **Several XMLTV feeds:** the order in EPG Sources is the guide priority — where two feeds list one
+  channel, the higher one is drawn and a lower one only fills its gaps.
 - **Multiple XMLTV feeds** merge into one guide. Opt-in: importing a playlist does not auto-download
   its guide. Each feed can use its own channel logos and has its own auto-refresh interval.
 - **Performance** — pre-loaded in the background; only your channels' programmes are stored; a
@@ -425,7 +430,7 @@ their group.
 | **Picture** | Hardware decoding, Prefer SDR, Maximum video quality, Tunneled playback, Default zoom, saved zoom · Auto frame rate, Pause during the switch, Match resolution |
 | **Sound & subtitles** | Default volume, Surround, Dolby/DTS passthrough, Night mode, Volume leveling, Audio sync (+ saved) · Preferred audio / subtitle language, Subtitle appearance |
 | **Live TV** | Channel numbers, Live preview, Preview audio, Pause and rewind live TV, Rewind length, Resume a saved channel, Left and right rewind · Live latency, Pre-buffer, Give up after (each + per playlist) |
-| **Watching & recording** | Seek step, Live rewind step, Resume playback, Auto-play next episode · Multiview, Max tiles, Mini-player · Recording: keep one stream free, record what I'm watching, start early, keep going after the end |
+| **Watching & recording** | Seek step, Live rewind step, Resume playback, Auto-play next episode · Multiview, Max tiles, Mini-player, Picture-in-picture when leaving the app · Recording: keep one stream free, record what I'm watching, start early, keep going after the end |
 | **App** | Language, App icon, Accent-colored logo, App startup, Check for updates (+ on startup) · Proxy, DNS · Measured stream stats, Detailed playback logging |
 
 - **Appearance** — any accent colour (presets, hex, a saturation square and hue bar as separate focus
@@ -444,6 +449,8 @@ their group.
   with the explicit Dark theme while Glass is off.
 - **Remote Shortcuts** — short and long presses of spare colour, number, channel and media keys
   mapped to 26 actions. Essential keys stay protected; the shipped CH+/− paging remains the default.
+  **Player buttons** on the same page: what holding or pressing OK opens in the full-screen player,
+  swapped channel up/down, and number keys on or off; every default is the player's own behaviour.
 - **Stage defaults** are written once at the first start of v5.1.0 (core `applyStageDefaults`); a
   value the user already stored is kept.
 - **Developer** (dev-tools builds only) lives under More, not Settings.
@@ -536,7 +543,12 @@ same version.
 
 M3U playlists are line-streamed and Xtream `player_api` JSON is read with `android.util.JsonReader`,
 so a huge provider payload is never fully buffered. Typed M3U import routes `type=` / `tvg-type=`
-entries into Movies and Series. `SyncManager` inserts in chunked transactions with progress and
+entries into Movies and Series; an untagged entry whose link is a single video file (`.mp4`, `.mkv`…)
+goes to Movies, and an entry later re-tagged as a film or series leaves Live TV. A playlist that numbers
+none of its channels is numbered 1, 2, 3… in file order. A per-playlist **Clean channel names** option
+tidies country prefixes and trailing quality tags at sync time, while guide matching keeps using the
+provider's own names. Re-syncs diff by content hash and keep the provider's order without rewriting
+unchanged rows, so an unchanged re-sync writes almost nothing. `SyncManager` inserts in chunked transactions with progress and
 cancellation, with the database write on its own coroutine fed over a rendezvous channel — so
 downloading and parsing overlap with writing the previous batch. A truncated bulk list (HTTP 512)
 falls back to per-category fetching.

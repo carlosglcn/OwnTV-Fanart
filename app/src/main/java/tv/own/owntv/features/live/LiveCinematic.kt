@@ -35,7 +35,10 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -164,9 +167,14 @@ internal fun LiveCinematicPane(
 
     val focusedProgrammes = previewChannel?.let { programmes[it.id] }.orEmpty()
     val heroArt = nowNext?.nowDetails?.imageUrl
-        ?: focusedProgrammes.firstOrNull { now in it.startMs until it.stopMs }?.imageUrl
+        ?: tv.own.owntv.ui.components.programmeArtOrTmdb(focusedProgrammes.filter { now in it.startMs until it.stopMs }.maxByOrNull { it.startMs })
 
-    Box(modifier.fillMaxSize()) {
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize()) {
+        // glcn: with the menu on top the page is shorter (the bar takes its band): the hero moves up into the room
+        // the chips no longer need, and the rows with it, so "You may like" is whole at the bottom.
+        val short = (1080.mpx - maxHeight).coerceAtLeast(0.mpx)
+        val heroTop = (100.mpx - short).coerceAtLeast(16.mpx)
+        val rowsTop = 450.mpx - (100.mpx - heroTop)
         // The picture fills the top right and dissolves into the page, as Movies' Cinematic does.
         tv.own.owntv.ui.components.ArtTint(heroArt, Modifier.matchParentSize())
         VodCinematicBackdrop(heroArt, series = true, Modifier.align(Alignment.TopEnd))
@@ -179,10 +187,10 @@ internal fun LiveCinematicPane(
             showVideo = showVideo,
             singleSessionBlocked = singleSessionBlocked,
             // glcn: low enough to clear the top bar's chips ("Last channel", the playlist picker).
-            modifier = Modifier.padding(start = 64.mpx, top = 100.mpx, end = 64.mpx),
+            modifier = Modifier.padding(start = 64.mpx, top = heroTop, end = 64.mpx),
         )
 
-        Column(Modifier.padding(top = 450.mpx)) {
+        Column(Modifier.padding(top = rowsTop)) {
             Box(Modifier.padding(start = 64.mpx, end = 64.mpx)) { header() }
             Spacer(Modifier.height(18.mpx))
             if (channels.itemCount == 0) {
@@ -208,7 +216,7 @@ internal fun LiveCinematicPane(
                             val channel = channels[index]
                             if (channel != null) {
                                 val rows = programmes[channel.id].orEmpty()
-                                val current = rows.firstOrNull { now in it.startMs until it.stopMs }
+                                val current = rows.filter { now in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
                                 val next = rows.filter { it.startMs >= (current?.stopMs ?: now) }.take(1)
                                 Column(Modifier.staggerAt(index, cardsGate, step = 70, cap = 7).width(CARD_W.mpx)) {
                                     LiveChannelCard(
@@ -223,10 +231,14 @@ internal fun LiveCinematicPane(
                                             .then(cardModifier(index, channel))
                                             .onFocusChanged { if (it.hasFocus) onFocus(channel) },
                                     )
-                                    Spacer(Modifier.height(10.mpx))
-                                    next.forEach { p ->
-                                        UpNextBox(p)
-                                        Spacer(Modifier.height(4.mpx))
+                                    // glcn: with the menu on top there is no room for both: what comes next gives way, so
+                                    // "You may like" keeps its whole pictures.
+                                    if (short <= 0.mpx) {
+                                        Spacer(Modifier.height(10.mpx))
+                                        next.forEach { p ->
+                                            UpNextBox(p)
+                                            Spacer(Modifier.height(4.mpx))
+                                        }
                                     }
                                 }
                             }
@@ -236,12 +248,13 @@ internal fun LiveCinematicPane(
                 if (similar.isNotEmpty()) {
                     Text(
                         stringResource(R.string.glcn_similar_title), style = stageText(20, 700), color = StageColors.Text,
-                        modifier = Modifier.padding(start = 64.mpx, top = 2.mpx),
+                        // glcn: clear of the focused card above, which grows when it takes focus.
+                        modifier = Modifier.padding(start = 64.mpx, top = 26.mpx),
                     )
                     LazyRow(
                         state = similarState,
                         horizontalArrangement = Arrangement.spacedBy(18.mpx),
-                        contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 6.mpx, bottom = 40.mpx),
+                        contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 6.mpx, bottom = 24.mpx),
                         modifier = Modifier.fillMaxWidth().focusGroup(),
                     ) {
                         items(count = similar.size, key = { similar[it].programme.id }) { i ->
@@ -349,7 +362,29 @@ private fun LiveCinematicHero(
             )
         }
         val now = nowNext?.now
-        Column(Modifier.width(if (showVideo) 1000.mpx else 1100.mpx).padding(top = 6.mpx)) {
+        // glcn: a soft wash of the page colour behind the words, strongest where they start and gone past their end,
+        // so title and synopsis read over a bright picture (the picture itself fades in only further right).
+        val wash = StageColors.Wash
+        Column(
+            Modifier.width(if (showVideo) 1000.mpx else 1100.mpx).padding(top = 6.mpx)
+                .drawBehind {
+                    // glcn: a soft oval of the page colour, no edges anywhere: strongest behind the words, fading out
+                    // well past them on every side (a radial glow stretched to the text's shape).
+                    val cx = size.width * 0.42f
+                    val cy = size.height * 0.5f
+                    val rx = size.width * 0.78f
+                    val ry = size.height * 0.95f
+                    scale(scaleX = rx / ry, scaleY = 1f, pivot = androidx.compose.ui.geometry.Offset(cx, cy)) {
+                        drawCircle(
+                            Brush.radialGradient(
+                                0f to wash.copy(alpha = 0.80f), 0.55f to wash.copy(alpha = 0.6f), 1f to wash.copy(alpha = 0f),
+                                center = androidx.compose.ui.geometry.Offset(cx, cy), radius = ry,
+                            ),
+                            radius = ry, center = androidx.compose.ui.geometry.Offset(cx, cy),
+                        )
+                    }
+                },
+        ) {
             if (channel != null) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
                     LivePlate(channel.displayLogoUrl, 72.mpx, 52.mpx)
@@ -358,9 +393,6 @@ private fun LiveCinematicHero(
                             ProviderTags.parse(channel.name).name, style = stageText(22, 700), color = StageColors.Text,
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
-                        channel.number?.let {
-                            Text(it.toString(), style = stageText(16, 600), color = StageColors.Muted, maxLines = 1)
-                        }
                     }
                 }
                 Spacer(Modifier.height(16.mpx))
@@ -384,9 +416,9 @@ private fun LiveCinematicHero(
                 }
                 now.description?.takeIf { it.isNotBlank() }?.let {
                     Text(
-                        it, style = stageText(19, 400).copy(lineHeight = (19 * 1.5f).mpxSp), color = StageColors.Body,
+                        it, style = stageText(19, 400).copy(lineHeight = (19 * 1.5f).mpxSp), color = StageColors.Text,
                         maxLines = 4, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 16.mpx),
+                        modifier = Modifier.padding(top = 16.mpx).widthIn(max = 820.mpx),
                     )
                 }
             }
@@ -459,7 +491,7 @@ internal fun LiveChannelCard(
         contentAlignment = Alignment.TopStart,
     ) { focused ->
         Box(Modifier.fillMaxSize().clip(shape).background(Color(0xFF15191C))) {
-            val art = programme?.imageUrl
+            val art = tv.own.owntv.ui.components.programmeArtOrTmdb(programme)
             if (!art.isNullOrBlank()) {
                 tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
             } else {

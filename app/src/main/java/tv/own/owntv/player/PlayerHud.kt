@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -43,6 +44,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.offset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
@@ -52,6 +54,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import tv.own.owntv.R
 import tv.own.owntv.core.i18n.HorizontalDirection
 import tv.own.owntv.core.i18n.horizontalDirection
+import tv.own.owntv.core.settings.PlayerRemoteOptions
 import tv.own.owntv.core.settings.RemoteShortcutAction
 import tv.own.owntv.core.settings.RemoteShortcutPress
 import tv.own.owntv.ui.components.LocalRemoteShortcuts
@@ -66,35 +69,6 @@ import tv.own.owntv.ui.theme.gradientWash
  * sibling files: [PlayerHudChrome] (top bar, OSD cards, transport, bottom bar), [PlayerHudControls]
  * (buttons, seek bars, shared formatters) and [PlayerHudDialogs] (every dialog the HUD opens).
  */
-
-@Composable
-internal fun MediaSpec.displayText(): String {
-    val decoderText = decoder?.let {
-        when (it) {
-            is DecoderSpec.Hardware -> buildList {
-                add(stringResource(R.string.player_decoder_hardware))
-                if (it.direct) add(stringResource(R.string.player_decoder_direct))
-            }.joinToString(stringResource(R.string.player_metadata_separator))
-            is DecoderSpec.Software -> buildList {
-                add(stringResource(R.string.player_decoder_software))
-                if (it.gpu) add(stringResource(R.string.player_decoder_gpu))
-            }.joinToString(stringResource(R.string.player_metadata_separator))
-            is DecoderSpec.Named -> buildList {
-                add(
-                    when (it.value.lowercase()) {
-                        "exoplayer" -> stringResource(R.string.settings_player_exoplayer)
-                        "mpv" -> stringResource(R.string.settings_player_mpv)
-                        else -> it.value
-                    },
-                )
-                if (it.hardware) add(stringResource(R.string.player_decoder_hardware))
-                if (it.direct) add(stringResource(R.string.player_decoder_direct))
-            }.joinToString(stringResource(R.string.player_metadata_separator))
-        }
-    }
-    return listOfNotNull(codec, resolution, decoderText)
-        .joinToString(stringResource(R.string.player_metadata_separator))
-}
 
 @Composable
 private fun PlaybackFailure.displayText(): String {
@@ -156,6 +130,8 @@ fun PlayerHud(
     onChannelDown: (() -> Unit)? = null,
     // Live: open the channel-list overlay (Left while the controls are hidden). Null = not a live channel.
     onOpenChannelList: (() -> Unit)? = null,
+    /** glcn: held OK — the quick guide (the channel list with its picture, schedule and posters views). ◀ keeps the zap deck. */
+    onOpenQuickGuide: (() -> Unit)? = null,
     // Live: open the watch-history list (Right while the controls are hidden) — jump straight back to a
     // recent channel without leaving full-screen. Null = not a live channel.
     onOpenHistoryList: (() -> Unit)? = null,
@@ -178,6 +154,8 @@ fun PlayerHud(
     onJumpBack: ((Int) -> Unit)? = null,
     // Back to the channel watched before this one. Null hides the button (no previous channel yet).
     onPreviousChannel: (() -> Unit)? = null,
+    /** glcn (TV profile): ▼ with the controls hidden raises the TV strip instead of zapping. */
+    onOpenStrip: (() -> Unit)? = null,
     // Archive depth of the current channel, for the exact-time picker's day/HH:MM bounds.
     jumpBackWindowSec: (() -> Int)? = null,
     // Read as a lambda, not a value: the offset ticks once a second, and taking it as a plain Int?
@@ -188,6 +166,7 @@ fun PlayerHud(
     onTuneToNumber: (suspend (Int) -> DirectTuneResult)? = null,
     // Channel identity key for direct tune: changing this cancels any in-flight submission.
     directTuneContextKey: Long = 0L,
+    remoteOptions: PlayerRemoteOptions = PlayerRemoteOptions(), // Settings › Remote shortcuts › Player buttons
     // Live "compatibility mode": pin this channel to the mpv engine (fixes UHD artifacts / undecodable
     // streams ExoPlayer can't handle). null = not a live channel; true = currently pinned to mpv.
     compatMode: Boolean? = null,
@@ -212,6 +191,9 @@ fun PlayerHud(
     liveEpgCard: (@Composable () -> Unit)? = null,
     // Now/next lines for the channel-change banner (the playing channel's guide). Null = name only.
     zapGuide: (@Composable () -> Unit)? = null,
+    // The channel a CH+/- step moved to. The banner names it at once; the engine's metadata still
+    // names the previous channel until the new stream opens, next to [zapGuide]'s new programme.
+    zapChannel: DirectTuneChannelInfo? = null,
     // The archive's own wall-clock instant while catch-up/rewind is playing; null means the picture is
     // the present, and only the real clock shows. Drives the second, framed clock at top centre.
     // Lambda for the same reason as [timeshiftOffsetSec]: this instant advances every second too.
@@ -236,6 +218,12 @@ fun PlayerHud(
     // The match page.
     // A goal toast for another followed match is up: OK switches to it instead of showing the controls.
     onToastOk: (() -> Unit)? = null,
+    /** glcn: films and episodes — the cinema chrome (banner + side panel). Null keeps the classic bar. */
+    cinema: tv.own.owntv.glcn.CinemaInfo? = null,
+    /** glcn: the season playing (Episodes tab) and which one is on. */
+    cinemaEpisodes: List<tv.own.owntv.glcn.CinemaEpisode> = emptyList(),
+    cinemaEpisodeIndex: Int = -1,
+    onPlayEpisode: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     // Nothing that ticks is read in this root scope: with the controls hidden it used to recompose
@@ -299,11 +287,21 @@ fun PlayerHud(
     // Used only by "Report this stream", which writes the current readout into the playback log.
     val reportContext = androidx.compose.ui.platform.LocalContext.current
     var wakeTick by remember { mutableIntStateOf(0) }
-    val forceShow = error != null || dialog != HudDialog.NONE
+    // glcn: the cinema chrome — films and episodes only; its side panel, while open, keeps the controls up.
+    val cinemaMode = !isLive && cinema != null
+    var cinemaTab by remember { mutableStateOf<CinemaTab?>(null) }
+    val panelFocus = remember { FocusRequester() }
+    androidx.compose.runtime.DisposableEffect(cinemaTab) {
+        tv.own.owntv.glcn.CinemaStage.panelOpen = cinemaTab != null
+        onDispose { tv.own.owntv.glcn.CinemaStage.panelOpen = false }
+    }
+    val forceShow = error != null || dialog != HudDialog.NONE || cinemaTab != null
     // First Back hides the controls (instead of leaving the channel); with the controls already hidden
     // this handler is disabled, so Back falls through to the shell, which exits the player. Also disabled
     // while an error/dialog is up (a dialog handles its own Back; an error should exit).
     BackHandler(enabled = controlsVisible && !forceShow) { controlsVisible = false }
+    // glcn: Back closes the cinema side panel first (registered after, so it wins while enabled).
+    BackHandler(enabled = cinemaTab != null && dialog == HudDialog.NONE) { cinemaTab = null }
     // Channel zap (live only): a brief "now watching" card on up/down without revealing the full HUD.
     val canZap = onChannelUp != null && onChannelDown != null
     var channelFlash by remember { mutableIntStateOf(0) }
@@ -458,10 +456,16 @@ fun PlayerHud(
         val hideAfter = tv.own.owntv.core.settings.OsdRules.controlsMs(osdSetting)
         if (controlsVisible && !forceShow && !inert && hideAfter != null) { delay(hideAfter); controlsVisible = false }
     }
-    LaunchedEffect(controlsVisible, error, dialog, inert, showNextCard) {
+    LaunchedEffect(controlsVisible, error, dialog, inert, showNextCard, cinemaTab) {
         // Never steal focus while a dialog is open (its rows own it) or while a shell overlay is up
         // (inert — the overlay owns the D-pad); when either closes this re-runs and hands focus back.
         if (dialog != HudDialog.NONE || inert) return@LaunchedEffect
+        // glcn: the cinema panel owns focus while it is open (its selected tab).
+        if (cinemaTab != null && error == null) {
+            kotlinx.coroutines.delay(16)
+            runCatching { panelFocus.requestFocus() }
+            return@LaunchedEffect
+        }
         // The next-episode countdown card owns focus while it's up so Play now / Cancel are reachable.
         if (showNextCard) { runCatching { nextFocus.requestFocus() }; return@LaunchedEffect }
         if (controlsVisible) {
@@ -483,7 +487,12 @@ fun PlayerHud(
     var shortcutPressedAt by remember { mutableStateOf(0L) }
     // glcn: a held shortcut acts once it has been held long enough, not only on release.
     var shortcutLongFired by remember { mutableStateOf(false) }
-    var okHeldOpened by remember { mutableStateOf(false) }
+    val okPress = remember { PlayerOkPressTracker() }
+    val okHoldScope = androidx.compose.runtime.rememberCoroutineScope()
+    val okHoldJob = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
+    // glcn: ▼ held for the previous channel — 0 idle, 1 down, 2 the hold fired.
+    val downHold = remember { IntArray(1) }
+    val downHoldJob = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
     val dispatchPlayerShortcut: (RemoteShortcutAction) -> Unit = { action ->
         when (action) {
             RemoteShortcutAction.OPEN_SUBTITLE_CONTROLS -> { controlsVisible = true; dialog = HudDialog.SUBS }
@@ -559,8 +568,9 @@ fun PlayerHud(
             // before configurable browse shortcuts so an OSD button, an engine handoff, or a paging binding
             // cannot temporarily claim it. KeyUp is swallowed too, keeping the complete press inside the HUD.
             if (canZap && (e.key == Key.ChannelUp || e.key == Key.ChannelDown)) {
+                // glcn: one channel per press — a held key used to run through the list.
                 if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) {
-                    zap(if (e.key == Key.ChannelUp) 1 else -1)
+                    zap(zapDirection(up = e.key == Key.ChannelUp, remoteOptions))
                 }
                 return@onPreviewKeyEvent true
             }
@@ -610,26 +620,53 @@ fun PlayerHud(
                     }
                 }
             }
-            // ---- glcn: hold OK on a live channel (controls hidden) → the channel list over the video.
-            // A short press still brings the controls up, on release. Only OK, Back and the arrows reach
-            // the box from a TV's own remote over HDMI-CEC, so this is the one gesture always available.
-            if (isLive && onOpenChannelList != null && !controlsVisible && dialog == HudDialog.NONE &&
-                (e.key == Key.DirectionCenter || e.key == Key.Enter)
-            ) {
-                val native = e.nativeKeyEvent
-                if (e.type == KeyEventType.KeyDown) {
-                    if (native.repeatCount == 0) { okHeldOpened = false; return@onPreviewKeyEvent true }
-                    if (!okHeldOpened && (native.isLongPress || native.repeatCount >= 3)) {
-                        okHeldOpened = true
-                        onOpenChannelList()
+            // Player buttons: OK with the controls hidden. No plan (the default) leaves OK to the code below.
+            if (isPlayerOkKey(e.key) && e.type != KeyEventType.Unknown) {
+                val okPlan = if (controlsVisible || showNextCard || inert || dialog != HudDialog.NONE || digitsActive || onToastOk != null) null
+                    else playerOkPlan(remoteOptions, PlayerOkTargets(channelList = onOpenChannelList != null, guide = isLive, programmeInfo = isLive))
+                val ok = okPress.onKey(e.type == KeyEventType.KeyDown, e.nativeKeyEvent.repeatCount, e.nativeKeyEvent.eventTime, okPlan)
+                val doOk: (PlayerOkOutcome) -> Unit = { outcome ->
+                    when (outcome) {
+                        PlayerOkOutcome.SHOW_CONTROLS -> controlsVisible = true
+                        PlayerOkOutcome.CHANNEL_LIST -> (onOpenQuickGuide ?: onOpenChannelList)?.invoke()
+                        PlayerOkOutcome.GUIDE -> dispatchPlayerShortcut(RemoteShortcutAction.OPEN_GUIDE)
+                        PlayerOkOutcome.PROGRAMME_INFO -> channelFlash++
                     }
-                    return@onPreviewKeyEvent true
                 }
-                if (e.type == KeyEventType.KeyUp) {
-                    if (!okHeldOpened) controlsVisible = true
-                    okHeldOpened = false
-                    return@onPreviewKeyEvent true
+                // glcn: the hold is timed from the first KeyDown, not left to the remote's key repeat.
+                if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0 && okPlan?.hold != null) {
+                    okHoldJob[0]?.cancel()
+                    okHoldJob[0] = okHoldScope.launch {
+                        kotlinx.coroutines.delay(PLAYER_OK_HOLD_MS)
+                        okPress.holdDue(android.os.SystemClock.uptimeMillis())?.let(doOk)
+                    }
+                } else if (e.type == KeyEventType.KeyUp) {
+                    okHoldJob[0]?.cancel(); okHoldJob[0] = null
                 }
+                if (ok is PlayerOkResult.Fire) doOk(ok.outcome)
+                if (ok != PlayerOkResult.Pass) return@onPreviewKeyEvent true
+            }
+            // glcn: ▼ with the controls hidden — a tap zaps down as before (on release), holding it goes back to the
+            // previous channel (and holding again returns), the "last channel" key of a set-top box.
+            if (e.key == Key.DirectionDown && canZap && isLive && !controlsVisible && onPreviousChannel != null) {
+                when (e.type) {
+                    KeyEventType.KeyDown -> if (e.nativeKeyEvent.repeatCount == 0) {
+                        downHold[0] = 1
+                        downHoldJob[0]?.cancel()
+                        downHoldJob[0] = okHoldScope.launch {
+                            kotlinx.coroutines.delay(PLAYER_OK_HOLD_MS)
+                            if (downHold[0] == 1) { downHold[0] = 2; onPreviousChannel() }
+                        }
+                    }
+                    KeyEventType.KeyUp -> {
+                        downHoldJob[0]?.cancel(); downHoldJob[0] = null
+                        // glcn (TV profile): a tap raises the TV strip instead of zapping (CH± still zap).
+                        if (downHold[0] == 1) { if (onOpenStrip != null) onOpenStrip() else zap(zapDirection(up = false, remoteOptions)) }
+                        downHold[0] = 0
+                    }
+                    else -> Unit
+                }
+                return@onPreviewKeyEvent true
             }
             // ---- Existing key handling (unchanged, but skip for digit KeyUp already consumed above) ----
             if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -640,16 +677,16 @@ fun PlayerHud(
                 // this is the only way to change channels on remotes without CH keys (e.g. Fire TV).
                 //
                 // Direction is channel-number order, not list-position order: "up" (CH+, D-pad Up) is
-                // always the NEXT channel — further down an ascending list, delta +1 — matching the
-                // de facto TV convention (Live Channels, YouTube TV, Pluto TV). All of these keys move
-                // the same way; there is deliberately no split between CH+ and D-pad Up. Wrapping is
+                // the NEXT channel — further down an ascending list, delta +1 — matching the
+                // de facto TV convention (Live Channels, YouTube TV, Pluto TV). CH and D-pad keys move together:
+                // Swap channel up/down flips both (see zapDirection), never the media keys. Wrapping is
                 // intended: CH-/Down from the first channel lands on the last, and vice versa.
                 // glcn: a held key changes one channel, not one per key repeat (it ran through the list).
                 canZap && e.key == Key.MediaNext -> { if (e.nativeKeyEvent.repeatCount == 0) zap(1); true }
                 canZap && e.key == Key.MediaPrevious -> { if (e.nativeKeyEvent.repeatCount == 0) zap(-1); true }
-                canZap && isLive && !controlsVisible && e.key == Key.DirectionUp -> { if (e.nativeKeyEvent.repeatCount == 0) zap(1); true }
-                canZap && isLive && !controlsVisible && e.key == Key.DirectionDown -> { if (e.nativeKeyEvent.repeatCount == 0) zap(-1); true }
-                // N6 — Left/Right with the controls hidden: reveal them on the timeline and take the first
+                canZap && isLive && !controlsVisible && e.key == Key.DirectionUp -> { if (e.nativeKeyEvent.repeatCount == 0) zap(zapDirection(up = true, remoteOptions)); true }
+                canZap && isLive && !controlsVisible && e.key == Key.DirectionDown -> { if (e.nativeKeyEvent.repeatCount == 0) { if (onOpenStrip != null) onOpenStrip() else zap(zapDirection(up = false, remoteOptions)) }; true }
+                // Left/Right with the controls hidden: reveal them on the timeline and take the first
                 // step, so the jump is seen and holding the key goes on scrubbing the bar itself. Physical
                 // keys, like the bars: left is back in time in every locale. A film always does this; a
                 // live channel only with its archive and the setting on — otherwise the lists below.
@@ -657,6 +694,8 @@ fun PlayerHud(
                 // even while rewound (when the engine is playing a file and calls it not live), so that
                 // is what the keys scrub; only without one does a film's seek bar apply.
                 !controlsVisible && error == null && (e.key == Key.DirectionLeft || e.key == Key.DirectionRight) &&
+                    // glcn: on a live channel ◀ always opens the zap deck; rewinding is OK, then ◀ on the bar (or ⏪).
+                    !(isLive && onOpenChannelList != null && e.key == Key.DirectionLeft) &&
                     (if (onScrubLive != null) liveLeftRightRewinds else !isLive && duration > 0L) -> {
                     val back = e.key == Key.DirectionLeft
                     if (onScrubLive != null) {
@@ -709,8 +748,9 @@ fun PlayerHud(
             if (isLive && (tuned != null || (showFlash && !controlsVisible))) {
                 // A fresh tune drives the card from the lookup result, not player metadata: the Stalker and
                 // mpv paths publish their metadata after an async resolve, which would show the old channel.
-                if (tuned != null) {
-                    ChannelOsdCard(title = tuned.name, subtitle = tuned.number?.let { stringResource(R.string.player_channel_number, it) }, logoUrl = tuned.logoUrl, guide = zapGuide)
+                val named = tuned ?: zapChannel
+                if (named != null) {
+                    ChannelOsdCard(title = named.name, subtitle = named.number?.let { stringResource(R.string.player_channel_number, it) }, logoUrl = named.logoUrl, guide = zapGuide)
                 } else {
                     ChannelCard(player, guide = zapGuide)
                 }
@@ -731,7 +771,46 @@ fun PlayerHud(
         // stop button one stray D-pad press from the middle of a programme is not a kindness.
         RecordingBadge(modifier = Modifier.align(Alignment.TopEnd))
 
-        if (controlsVisible) {
+        if (controlsVisible && cinemaMode && error == null && cinema != null) {
+            // glcn: films and episodes — the cinema banner, or the side panel with the picture slid left.
+            val tech = rememberCinemaTech(player)
+            val openTab = cinemaTab
+            if (openTab == null) {
+                CinemaBanner(
+                    player = player, info = cinema, tech = tech,
+                    position = { position.value }, duration = duration, isPlaying = isPlaying,
+                    hasNext = nav.hasNext, hasEpisodes = cinemaEpisodes.size > 1 && onPlayEpisode != null,
+                    playFocus = playFocus, seekFocus = seekFocus,
+                    onOpen = { cinemaTab = it },
+                    onNext = { player.next() },
+                )
+                Box(Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 40.dp)) {
+                    PlayerClock(watchingMs = watchingWallMs?.invoke())
+                }
+            } else {
+                CinemaPanel(
+                    tab = openTab, onTab = { cinemaTab = it },
+                    player = player, info = cinema, tech = tech,
+                    episodes = cinemaEpisodes, episodeIndex = cinemaEpisodeIndex, onPlayEpisode = onPlayEpisode,
+                    actions = CinemaActions(
+                        openDialog = { dialog = it },
+                        vodOnExo = vodOnExo, onToggleEngine = toggleVod,
+                        onPip = onPip?.let { pip -> { cinemaTab = null; pip() } },
+                        onAudioOnly = onAudioMode?.let { a -> { cinemaTab = null; a() } },
+                        favorite = favorite, onToggleFavorite = onToggleFavorite,
+                        onTechDetails = { cinemaTab = null; showInfo = !showInfo },
+                        onSearchSubtitles = onSearchSubtitles?.let { open -> { cinemaTab = null; open() } },
+                        onLocalSubtitle = onSelectLocalSubtitle?.let { open -> { cinemaTab = null; open() } },
+                    ),
+                    focus = panelFocus,
+                )
+            }
+        } else if (controlsVisible) {
+            // glcn: the bar rises gently from the foot of the screen each time it is called (not in light mode).
+            val rise = remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
+            val riseSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(HUD_RISE_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
+            LaunchedEffect(Unit) { rise.animateTo(1f, riseSpec) }
+            val risen = Modifier.graphicsLayer { translationY = (1f - rise.value) * HUD_RISE_DP.dp.toPx(); alpha = 0.25f + 0.75f * rise.value }
             // Scrims: a FLAT semi-transparent panel behind the controls, feathered to transparent only at
             // the inner edge. A pure gradient faded out exactly where the chips and the Now/Next text sit,
             // so those washed out on bright scenes; a hard-edged band would instead draw a visible seam
@@ -743,7 +822,7 @@ fun PlayerHud(
                     0.5f to hudShade(0.72f),
                     1.0f to Color.Transparent,
                 ))
-            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(260.dp)
+            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(260.dp).graphicsLayer { alpha = rise.value }
                 .gradientWash(
                     vertical = true,
                     0.0f to Color.Transparent,
@@ -784,7 +863,7 @@ fun PlayerHud(
             // Hide the transport (play/seek/prev/next) and bottom bar while an error is up — the error
             // overlay owns the screen with its own Retry, so the play/rewind/forward must not show behind it.
             if (error == null) {
-                CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center))
+                CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp)) // glcn: clear of the now/next card's top edge
 
                 val reportDuration = duration.takeIf { it > 0 }?.let { formatTime(it) }
                 val reportSavedMessage = stringResource(R.string.player_report_saved)
@@ -831,7 +910,7 @@ fun PlayerHud(
                     favorite = favorite, onToggleFavorite = onToggleFavorite,
                     onOpenDialog = { dialog = it }, onPip = onPip, onAudioMode = onAudioMode,
                     onMultiview = onMultiview, onRecordThis = onRecordThis, recordingThis = recordingThis, onBack = onBack,
-                    modifier = Modifier.align(Alignment.BottomStart),
+                    modifier = Modifier.align(Alignment.BottomStart).then(risen),
                     side = if (isLive) liveEpgCard else null,
                     header = if (isLive) {
                         { LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack) }
@@ -1061,3 +1140,7 @@ fun PlayerHud(
         HudDialog.NONE -> Unit
     }
 }
+
+/** glcn: the player bar's rise when it is called — how long, and from how far below. */
+private const val HUD_RISE_MS = 420
+private const val HUD_RISE_DP = 90

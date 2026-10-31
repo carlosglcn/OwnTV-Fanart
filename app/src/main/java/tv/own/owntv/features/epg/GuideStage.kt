@@ -254,6 +254,7 @@ internal fun GuideRuler(
             }
         },
     ) { measurables, constraints ->
+        val scrollPx = scrollPx()
         val ppm = GuideGridDefaults.PxPerMin.toPx()
         val chipShift = 34.mpx.toPx()
         val placeables = measurables.map { it.measure(Constraints()) }
@@ -273,7 +274,8 @@ internal fun GuideRuler(
 
 /**
  * A channel's label column: the playlist's 7 px dot, the number (38 wide, 17/700 dim), the
- * logo on a 58×40 plate, the name 17/700. The row the focus is in has its number and name in accent.
+ * logo on a 58×40 plate, the name 17/700, and the Rewind mark when the channel has catch-up (as in
+ * the channel lists). The row the focus is in has its number, name and mark in accent.
  */
 @Composable
 internal fun GuideChannelLabel(channel: ChannelEntity, name: String, dot: Color?, selected: Boolean, numberWidth: Dp, modifier: Modifier = Modifier) {
@@ -284,7 +286,8 @@ internal fun GuideChannelLabel(channel: ChannelEntity, name: String, dot: Color?
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(7.mpx).background(dot ?: Color.Transparent, RoundedCornerShape(50)))
-        Text(
+        // glcn: Settings › Live TV › Channel numbers off drops the whole column, not just its digits.
+        if (tv.own.owntv.glcn.LocalShowChannelNumbers.current) Text(
             channel.number?.toString().orEmpty(),
             style = stageText(17, 700).copy(fontFeatureSettings = Tabular), color = if (selected) a.accent else StageColors.Dim,
             // Always whole: the column fits the longest number in the list; only the name is cut.
@@ -292,6 +295,7 @@ internal fun GuideChannelLabel(channel: ChannelEntity, name: String, dot: Color?
         )
         LivePlate(channel.displayLogoUrl, 68.mpx, 50.mpx, radius = 10.mpx)
         Text(name, style = stageText(17, 700), color = if (selected) a.accent else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        if (channel.catchup) OwnTVIcon(OwnTVIcon.REWIND, if (selected) a.accent else StageColors.Dim, Modifier.padding(end = 8.mpx).size(20.mpx))
     }
 }
 
@@ -551,8 +555,8 @@ internal fun GuideOrderMenu(
         // SHOW, as the Series page's order menu has it: a filter, not an order.
         StageGroupLabel(stringResource(R.string.content_menu_group_show).uppercase(androidx.compose.ui.text.intl.Locale.current.platformLocale))
         StageMenuItem(
-            text = stringResource(R.string.content_epg_show_empty), icon = OwnTVIcon.EYE_OFF,
-            value = stringResource(if (showEmpty) R.string.common_on else R.string.common_off),
+            text = stringResource(R.string.glcn_epg_show_empty), icon = OwnTVIcon.EYE_OFF,
+            value = stringResource(if (showEmpty) R.string.glcn_yes else R.string.settings_no),
             onClick = { onShowEmpty(!showEmpty); onDismiss() },
         )
         StageMenuItem(
@@ -584,7 +588,7 @@ internal fun GuideChannelMenu(
     val locale = androidx.compose.ui.text.intl.Locale.current.platformLocale
     GuideMenuHost(x = 1150f, top = 64.mpx, width = 560.mpx, onDismiss = onDismiss) {
         StageMenuHeader(
-            title = listOfNotNull(channel.number?.toString(), tv.own.owntv.core.live.ProviderTags.parse(channel.name).name).joinToString(" · "),
+            title = listOfNotNull(channel.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.toString(), tv.own.owntv.core.live.ProviderTags.displayName(channel.name)).joinToString(" · "),
             subtitle = stringResource(R.string.content_epg_no_programme),
         )
         StageGroupLabel(stringResource(R.string.content_menu_group_watch).uppercase(locale))

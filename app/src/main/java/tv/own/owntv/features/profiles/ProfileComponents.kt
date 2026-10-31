@@ -116,8 +116,12 @@ internal fun ProfileEditorDialog(
     customPath: String = "",
     onPickPicture: ((java.io.File) -> Unit)? = null,
     onClearPicture: (() -> Unit)? = null,
+    /** glcn: "TV profile" — starts on the last channel; ▼ in the player raises the TV strip. */
+    initialTv: Boolean = false,
+    onTv: (name: String, on: Boolean) -> Unit = { _, _ -> },
 ) {
     var name by remember { mutableStateOf(initial?.name ?: "") }
+    var isTv by remember { mutableStateOf(initialTv) }
     var avatarId by remember { mutableIntStateOf(initial?.avatarId ?: -1) } // new profiles default to no avatar
     var isKids by remember { mutableStateOf(initial?.isKids ?: false) }
     var pin by remember { mutableStateOf("") }
@@ -136,7 +140,7 @@ internal fun ProfileEditorDialog(
             tv.own.owntv.ui.stage.StagePopupButton(stringResource(R.string.common_cancel), onClick = onDismiss, primary = false)
             tv.own.owntv.ui.stage.StagePopupButton(
                 stringResource(if (initial == null) R.string.profiles_create else R.string.profiles_save),
-                onClick = { onConfirm(name, avatarId, isKids, if (removePin) "" else pin.takeIf { it.isNotBlank() }, pendingPicture) },
+                onClick = { onTv(name.trim(), isTv); onConfirm(name, avatarId, isKids, if (removePin) "" else pin.takeIf { it.isNotBlank() }, pendingPicture) },
                 enabled = name.isNotBlank() && !nameTaken && (removePin || pin.isEmpty() || pin.length >= 4),
             )
         },
@@ -181,6 +185,8 @@ internal fun ProfileEditorDialog(
             },
         )
         tv.own.owntv.ui.stage.StagePopupDivider()
+        // glcn: a profile for watching TV — straight to the channel, the TV strip under ▼.
+        ToggleRow(label = stringResource(R.string.glcn_profile_tv), desc = stringResource(R.string.glcn_profile_tv_description), checked = isTv) { isTv = it }
         ToggleRow(label = stringResource(R.string.profiles_kids), desc = stringResource(R.string.profiles_kids_description), checked = isKids) { isKids = it }
         if (initial?.pinHash != null) {
             ToggleRow(label = stringResource(R.string.profiles_remove_pin), desc = stringResource(R.string.profiles_no_pin), checked = removePin) { removePin = it }

@@ -1,5 +1,7 @@
 package tv.own.owntv.ui.theme
 
+import androidx.compose.ui.draw.drawWithContent
+
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.LinearGradient
@@ -198,6 +200,19 @@ fun Modifier.dissolveEdges(start: Float, bottom: Float): Modifier = this
             drawImage(image = down, dstSize = dstSize, blendMode = BlendMode.DstIn)
         }
     }
+
+/**
+ * glcn: [dissolveEdges] for moving pictures (a trailer): the edges fade into [color] painted over them, instead of a mask
+ * in an offscreen layer — a mask made every video frame redraw the whole layer, and the trailer stuttered.
+ */
+fun Modifier.fadeEdgesInto(color: Color, start: Float, bottom: Float): Modifier = this.drawWithContent {
+    drawContent()
+    val ltr = layoutDirection != LayoutDirection.Rtl
+    val across = if (ltr) androidx.compose.ui.graphics.Brush.horizontalGradient(0f to color, start to color.copy(alpha = 0f))
+        else androidx.compose.ui.graphics.Brush.horizontalGradient(1f - start to color.copy(alpha = 0f), 1f to color)
+    drawRect(across)
+    drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(1f - bottom to color.copy(alpha = 0f), 1f to color))
+}
 
 /** [gradientWash] with evenly spaced [colors], like `Brush.verticalGradient(listOf(...))`. */
 fun Modifier.gradientWash(vertical: Boolean, colors: List<Color>): Modifier =

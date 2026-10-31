@@ -23,6 +23,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import tv.own.owntv.core.content.AdultCategoryClassifier
+import tv.own.owntv.core.customize.CustomizationStore
+import tv.own.owntv.core.customize.SectionCustomizations
 import tv.own.owntv.core.database.dao.CategoryDao
 import tv.own.owntv.core.database.dao.ChannelDao
 import tv.own.owntv.core.database.dao.MovieDao
@@ -46,6 +49,7 @@ import tv.own.owntv.core.model.MediaType
 import tv.own.owntv.core.metadata.MetadataImages
 import tv.own.owntv.core.metadata.MetadataRepository
 import tv.own.owntv.core.settings.SettingsRepository
+import tv.own.owntv.core.categorylock.sealedCategoryKeys
 import tv.own.owntv.player.HeroPreviewEngine
 
 @Immutable
@@ -88,6 +92,7 @@ data class HomeUiState(
     val continueSeries: List<LauncherContinuationItem> = emptyList(),
     val heroMetadata: Map<String, HomeHeroMetadata> = emptyMap(),
     val recentLive: List<ChannelEntity> = emptyList(),
+    val recentWatchedAt: Map<Long, Long> = emptyMap(),
     val favoriteLive: List<ChannelEntity> = emptyList(),
     val favoriteMovies: List<MovieEntity> = emptyList(),
     val favoriteSeries: List<SeriesEntity> = emptyList(),
@@ -100,6 +105,7 @@ data class HomeUiState(
     val recentSeries: List<SeriesEntity> = emptyList(),
     val featured: List<tv.own.owntv.core.home.FeaturedItem> = emptyList(),
     val tonight: List<tv.own.owntv.core.home.TonightItem> = emptyList(),
+    val startingSoon: List<tv.own.owntv.core.home.TonightItem> = emptyList(),
     val genres: List<tv.own.owntv.core.home.GenreRow> = emptyList(),
     val profileName: String? = null,
     /**
@@ -149,6 +155,7 @@ class HomeViewModel(
     private val userDataWriter: tv.own.owntv.core.backup.UserDataWriter,
     private val reminderManager: tv.own.owntv.core.reminder.ReminderManager,
     private val sourceRepository: tv.own.owntv.core.repository.SourceRepository,
+    private val customize: CustomizationStore,
 ) : ViewModel() {
 
     /** The Dock's long press: take this row off Home, where Settings › Home rows would show it again. */
@@ -229,6 +236,11 @@ class HomeViewModel(
                 reloadRequests.emit(null)
             }
         }
+        // A lock closing or opening (the relock on leaving the app, a PIN entry) changes which titles
+        // the rows may show. drop(1): the shell asks for the first load.
+        viewModelScope.launch {
+            customize.sealedCategoryKeys(settings.activeProfileId).drop(1).collect { reloadRequests.emit(null) }
+        }
     }
 
     // --- The single most-recent resumable item, for the shared top-bar Continue chip. ---
@@ -236,29 +248,36 @@ class HomeViewModel(
     val continueTarget: StateFlow<ContinueTarget?> = settings.activeProfileId
         .flatMapLatest { pid ->
             if (pid < 0) flowOf(null)
-            else historyDao.observeMostRecent(pid).map { h -> h?.let { resolveContinue(pid, it) } }
+            // The section's customizations ride along so a rename in Customize retitles the chip at once.
+            else combine(historyDao.observeMostRecent(pid), customize.sealedCategoryKeys(flowOf(pid))) { h, _ -> h }
+                .flatMapLatest { h ->
+                    if (h == null) return@flatMapLatest flowOf(null)
+                    val section = if (h.mediaType == MediaType.EPISODE) MediaType.SERIES else h.mediaType
+                    customize.observe(pid, section).map { cust -> resolveContinue(pid, h, cust) }
+                }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private suspend fun resolveContinue(
         pid: Long,
         h: tv.own.owntv.core.database.entity.WatchHistoryEntity,
+        cust: SectionCustomizations,
     ): ContinueTarget? = when (h.mediaType) {
         MediaType.MOVIE -> movieDao.getById(h.itemId)?.let { m ->
-            if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, m.categoryId, profileDao, categoryDao)) return@let null
+            if (!AdultCategoryClassifier.allows(pid, m.categoryId, profileDao, categoryDao) || customize.sealsCategory(pid, m.categoryId)) return@let null
             val pos = progressDao.get(pid, MediaType.MOVIE, m.id)?.positionMs ?: 0L
-            ContinueTarget(ContinueKind.MOVIE, m.name, if (pos > 0) ContinueAction.RESUME else ContinueAction.PLAY, movieId = m.id, positionMs = pos)
+            ContinueTarget(ContinueKind.MOVIE, cust.displayName(m), if (pos > 0) ContinueAction.RESUME else ContinueAction.PLAY, movieId = m.id, positionMs = pos)
         }
         MediaType.EPISODE -> seriesDao.getEpisodeById(h.itemId)?.let { ep ->
             seriesDao.getSeriesById(ep.seriesId)?.let { s ->
-                if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, s.categoryId, profileDao, categoryDao)) return@let null
+                if (!AdultCategoryClassifier.allows(pid, s.categoryId, profileDao, categoryDao) || customize.sealsCategory(pid, s.categoryId)) return@let null
                 val pos = progressDao.get(pid, MediaType.EPISODE, ep.id)?.positionMs ?: 0L
-                ContinueTarget(ContinueKind.EPISODE, s.name, if (pos > 0) ContinueAction.RESUME else ContinueAction.NEXT_UP, seriesId = ep.seriesId, episodeId = ep.id, positionMs = pos)
+                ContinueTarget(ContinueKind.EPISODE, cust.displayName(s), if (pos > 0) ContinueAction.RESUME else ContinueAction.NEXT_UP, seriesId = ep.seriesId, episodeId = ep.id, positionMs = pos)
             }
         }
         MediaType.LIVE -> channelDao.getById(h.itemId)?.let { c ->
-            if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, c.categoryId, profileDao, categoryDao)) return@let null
-            ContinueTarget(ContinueKind.LIVE, c.name, ContinueAction.LAST_CHANNEL, channelId = c.id)
+            if (!AdultCategoryClassifier.allows(pid, c.categoryId, profileDao, categoryDao) || customize.sealsCategory(pid, c.categoryId)) return@let null
+            ContinueTarget(ContinueKind.LIVE, cust.displayName(c), ContinueAction.LAST_CHANNEL, channelId = c.id)
         }
         else -> null
     }
@@ -500,6 +519,7 @@ class HomeViewModel(
             continueSeries = data.continueSeries,
             heroMetadata = previous.heroMetadata.filterKeys { key -> data.heroItems.any { it.homeKey == key } },
             recentLive = data.recentLive,
+            recentWatchedAt = data.recentWatchedAt,
             favoriteLive = data.favoriteLive,
             favoriteMovies = data.favoriteMovies,
             favoriteSeries = data.favoriteSeries,
@@ -511,6 +531,7 @@ class HomeViewModel(
             recentSeries = data.recentSeries,
             featured = data.featured,
             tonight = data.tonight,
+            startingSoon = data.startingSoon,
             genres = data.genres,
             profileName = data.profileName,
             isLoading = false,

@@ -37,7 +37,7 @@ object UiSounds {
             field = value
         }
 
-    /** 0 classic, 1 crystal, 2 wood, 3 bubble, 4 soft, 5 kalimba. Changing it drops the cached sounds so the next ones are built in the new style. */
+    /** 0 classic, 1 crystal, 2 wood, 3 bubble, 4 soft, 5 kalimba, 6 natural (recorded: Kenney UI sounds, CC0; the opening chime is our own). Changing it drops the cached sounds so the next ones are built in the new style. */
     @Volatile var style: Int = 0
         set(value) {
             if (value == field) return
@@ -89,7 +89,7 @@ object UiSounds {
                 Season.NEW_YEAR -> newYear()
                 Season.CARNIVAL -> carnival()
                 Season.VALENTINE -> valentine()
-                Season.NONE -> chime()
+                Season.NONE -> (if (style == NATURAL) raw(tv.own.owntv.R.raw.glcn_snd_open) else null) ?: chime()
             }
             val track = trackOf(pcm, gain = 0.5f) ?: return@launch
             runCatching { track.play() }
@@ -243,7 +243,40 @@ object UiSounds {
         }
     }
 
-    private fun tick() = when (style) {
+    // --- Recorded (style 6, "Natural") --------------------------------------------------------------
+
+    @Volatile private var app: android.content.Context? = null
+
+    /** glcn: the recorded sounds are read from the app's resources; the activity hands its context over once. */
+    fun init(context: android.content.Context) { app = context.applicationContext }
+
+    /** A 16-bit mono 44.1 kHz WAV from res/raw as samples (its "data" chunk), or null if it cannot be read. */
+    private fun raw(id: Int): ShortArray? = runCatching {
+        val bytes = app?.resources?.openRawResource(id)?.use { it.readBytes() } ?: return null
+        val bb = java.nio.ByteBuffer.wrap(bytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        var pos = 12
+        while (pos + 8 <= bytes.size) {
+            val idTag = String(bytes, pos, 4, Charsets.US_ASCII)
+            val size = bb.getInt(pos + 4)
+            if (idTag == "data") {
+                val n = (minOf(size, bytes.size - pos - 8)) / 2
+                val out = ShortArray(n)
+                bb.position(pos + 8)
+                bb.asShortBuffer().get(out, 0, n)
+                return out
+            }
+            pos += 8 + size + (size and 1)
+        }
+        null
+    }.getOrNull()
+
+    private const val NATURAL = 6
+
+    private fun tick(): ShortArray = (if (style == NATURAL) raw(tv.own.owntv.R.raw.glcn_snd_move) else null) ?: synthTick()
+    private fun pop(): ShortArray = (if (style == NATURAL) raw(tv.own.owntv.R.raw.glcn_snd_ok) else null) ?: synthPop()
+    private fun swoosh(): ShortArray = (if (style == NATURAL) raw(tv.own.owntv.R.raw.glcn_snd_back) else null) ?: synthSwoosh()
+
+    private fun synthTick() = when (style) {
         1 -> Mix(0.04).apply { bell(0.0, 3200.0, 0.04, 0.14, decay = 200.0, partials = doubleArrayOf(1.0, 0.22)) }
         2 -> Mix(0.05).apply { bell(0.0, 620.0, 0.05, 0.3, decay = 90.0, partials = doubleArrayOf(1.0, 0.4, 0.15)) }
         3 -> Mix(0.04).apply { drop(0.0, 900.0, 1500.0, 0.04, 0.24, decay = 70.0) }
@@ -253,7 +286,7 @@ object UiSounds {
         else -> Mix(0.03).apply { bell(0.0, 1900.0, 0.03, 0.18, decay = 160.0, partials = doubleArrayOf(1.0)) }
     }.pcm()
 
-    private fun pop() = when (style) {
+    private fun synthPop() = when (style) {
         1 -> Mix(0.22).apply { bell(0.0, 1568.0, 0.2, 0.2, decay = 24.0, partials = doubleArrayOf(1.0, 0.25)); bell(0.05, 2349.0, 0.17, 0.17, decay = 28.0, partials = doubleArrayOf(1.0, 0.2)) }
         2 -> Mix(0.16).apply { bell(0.0, 392.0, 0.15, 0.34, decay = 28.0, partials = doubleArrayOf(1.0, 0.45, 0.2)); bell(0.045, 587.0, 0.12, 0.28, decay = 34.0, partials = doubleArrayOf(1.0, 0.4, 0.15)) }
         3 -> Mix(0.12).apply { drop(0.0, 600.0, 1500.0, 0.1, 0.32, decay = 26.0) }
@@ -262,7 +295,7 @@ object UiSounds {
         else -> Mix(0.09).apply { bell(0.0, 1250.0, 0.09, 0.3, decay = 45.0); bell(0.012, 1870.0, 0.07, 0.15, decay = 60.0) }
     }.pcm()
 
-    private fun swoosh() = when (style) {
+    private fun synthSwoosh() = when (style) {
         1 -> Mix(0.16).apply { bell(0.0, 1175.0, 0.15, 0.18, decay = 32.0, partials = doubleArrayOf(1.0, 0.22)) }
         2 -> Mix(0.14).apply { bell(0.0, 330.0, 0.13, 0.34, decay = 36.0, partials = doubleArrayOf(1.0, 0.45, 0.2)) }
         3 -> Mix(0.12).apply { drop(0.0, 1300.0, 520.0, 0.1, 0.28, decay = 26.0) }

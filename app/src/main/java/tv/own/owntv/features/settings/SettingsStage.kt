@@ -284,8 +284,9 @@ fun StageSettingsPage(
                     query = searchQuery,
                     onQueryChange = onSearchQuery,
                     placeholder = stringResource(R.string.more_settings_search),
-                    modifier = Modifier.widthIn(max = if (tools != null) 360.mpx else 520.mpx).focusRequester(searchFocus),
-                    height = 52.mpx,
+                    // glcn: as wide as the help panel below it, so the two line up; narrower beside a page's tools.
+                    modifier = Modifier.width(if (tools != null) w * 440 else w * 696).focusRequester(searchFocus),
+                    height = 60.mpx,
                     radius = 18.mpx,
                     horizontalPadding = 20.mpx,
                     autoEdit = searchAutoEdit,
@@ -301,8 +302,16 @@ fun StageSettingsPage(
                     content = toolbar,
                 )
             }
-            if (list != null) list(Modifier.padding(start = w * 50, top = rowsTop).width(w * 1060).fillMaxHeight())
-            else CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
+            // glcn: a page's own list (Sports and leagues, Customize) glides at the same brisk pace as the rows below, with
+            // the same sliding highlight; on the app's slower default a quick run of ▼ left the highlight off the screen.
+            if (list != null) CompositionLocalProvider(LocalBringIntoViewSpec provides settingsScrollSpec) {
+                tv.own.owntv.glcn.SlideFocusHost(stiffness = tv.own.owntv.glcn.SETTINGS_FOCUS_STIFFNESS) {
+                    list(Modifier.padding(start = w * 50, top = rowsTop).width(w * 1060).fillMaxHeight())
+                }
+            }
+            else CompositionLocalProvider(LocalBringIntoViewSpec provides settingsScrollSpec) {
+                // glcn: one highlight that slides from row to row, at the list's own pace.
+                tv.own.owntv.glcn.SlideFocusHost(stiffness = tv.own.owntv.glcn.SETTINGS_FOCUS_STIFFNESS) {
                 Column(
                     Modifier
                         .padding(start = w * 50, top = rowsTop)
@@ -315,6 +324,7 @@ fun StageSettingsPage(
                     verticalArrangement = Arrangement.spacedBy(6.mpx),
                     content = rows,
                 )
+                }
             }
             val help = panel.help
             val editor = panel.editor
@@ -1085,3 +1095,10 @@ fun SpanHelpBlock() {
 /** " · " between two parts of a line (the eyebrow format with both parts empty, so it is localised). */
 @Composable
 fun dotSeparator(): String = stringResource(R.string.settings_breadcrumb_eyebrow, "", "")
+
+/** glcn: Settings' rows — the list's edge rule (a row of room ahead), with the brisker list glide. */
+private val settingsScrollSpec = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
+    override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float> get() = tv.own.owntv.glcn.SmoothScroll.listAnimation
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float =
+        edgeScrollSpec.calculateScrollDistance(offset, size, containerSize)
+}

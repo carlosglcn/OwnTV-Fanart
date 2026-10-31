@@ -566,53 +566,58 @@ fun StageTopBar(
             horizontalArrangement = Arrangement.spacedBy(4.mpx),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BrandMark(rememberAppliedIcon(), sc(44).mpx, Modifier.padding(start = 6.mpx, end = 10.mpx))
-            TopIcon(OwnTVIcon.SEARCH, selected == MainSection.SEARCH, { onSelect(MainSection.SEARCH) },
-                if (focusSection == MainSection.SEARCH) Modifier.focusRequester(selectedItemFocusRequester) else Modifier, k = k)
-            if (nowPlaying != null) TopIcon(if (nowPlaying.audioMode) OwnTVIcon.EQ else OwnTVIcon.PLAY, false, onNowPlaying, accentIcon = true, k = k)
-            named.forEach { section ->
-                val active = section == selected
-                val focusMod = (if (section == focusSection) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
-                    .selectOnRest(section.opensOnRest() && !active) { onSelect(section) }
-                if (compact && !active) {
-                    // Compact: the section is its icon; only the open one shows its name.
-                    TopIcon(section.stageIcon, false, { onSelect(section) }, focusMod, k = k)
-                } else {
-                    StageSurface(
-                        onClick = { onSelect(section) },
-                        radius = sc(24).mpx,
-                        modifier = Modifier.height(sc(50).mpx).then(focusMod),
-                        idle = if (active) Modifier.background(a.accent.copy(alpha = 0.14f), RoundedCornerShape(sc(24).mpx)) else Modifier,
-                        contentAlignment = Alignment.Center,
-                    ) { focused ->
-                        val tint = when { focused -> a.onAccent; active -> a.accent; else -> StageColors.NavText }
-                        Row(
-                            Modifier.padding(horizontal = sc(if (compact) 14 else 18).mpx),
-                            horizontalArrangement = Arrangement.spacedBy(sc(8).mpx),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (compact) OwnTVIcon(section.stageIcon, tint, Modifier.size(sc(25).mpx))
-                            Text(
-                                stringResource(section.labelRes),
-                                style = stageText(sc(19), if (active) 700 else 600),
-                                color = tint,
-                                maxLines = 1,
-                            )
+            // glcn: one focus pill for the whole bar, gliding (and stretching like a drop) from entry to entry.
+            tv.own.owntv.glcn.SlideFocusHost(stiffness = TOP_BAR_GLIDE, stretch = true) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.mpx), verticalAlignment = Alignment.CenterVertically) {
+                BrandMark(rememberAppliedIcon(), sc(44).mpx, Modifier.padding(start = 6.mpx, end = 10.mpx))
+                TopIcon(OwnTVIcon.SEARCH, selected == MainSection.SEARCH, { onSelect(MainSection.SEARCH) },
+                    if (focusSection == MainSection.SEARCH) Modifier.focusRequester(selectedItemFocusRequester) else Modifier, k = k)
+                if (nowPlaying != null) TopIcon(if (nowPlaying.audioMode) OwnTVIcon.EQ else OwnTVIcon.PLAY, false, onNowPlaying, accentIcon = true, k = k)
+                named.forEach { section ->
+                    val active = section == selected
+                    val focusMod = (if (section == focusSection) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
+                        .selectOnRest(section.opensOnRest() && !active) { onSelect(section) }
+                    if (compact && !active) {
+                        // Compact: the section is its icon; only the open one shows its name.
+                        TopIcon(section.stageIcon, false, { onSelect(section) }, focusMod, k = k)
+                    } else {
+                        StageSurface(
+                            onClick = { onSelect(section) },
+                            radius = sc(24).mpx,
+                            modifier = Modifier.height(sc(50).mpx).then(focusMod),
+                            idle = if (active) Modifier.background(a.accent.copy(alpha = 0.14f), RoundedCornerShape(sc(24).mpx)) else Modifier,
+                            contentAlignment = Alignment.Center,
+                        ) { focused ->
+                            val tint = when { focused -> a.onAccent; active -> a.accent; else -> StageColors.NavText }
+                            Row(
+                                Modifier.padding(horizontal = sc(if (compact) 14 else 18).mpx),
+                                horizontalArrangement = Arrangement.spacedBy(sc(8).mpx),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                if (compact) OwnTVIcon(section.stageIcon, tint, Modifier.size(sc(25).mpx))
+                                Text(
+                                    stringResource(section.labelRes),
+                                    style = stageText(sc(19), if (active) 700 else 600),
+                                    color = tint,
+                                    maxLines = 1,
+                                )
+                            }
                         }
                     }
                 }
+                val family by org.koin.compose.koinInject<tv.own.owntv.core.nav.NavVisibility>().familyMode.collectAsStateWithLifecycle(false)
+                if (!family) TopIcon(OwnTVIcon.TILES, selected == MainSection.MORE || selected == MainSection.SETTINGS, { onSelect(MainSection.MORE) },
+                    if (focusSection == MainSection.MORE) Modifier.focusRequester(selectedItemFocusRequester) else Modifier, k = k)
+                StageSurface(
+                    onClick = onSwitchProfile,
+                    onLongClick = onPickAvatar,
+                    radius = sc(23).mpx,
+                    modifier = Modifier.padding(start = 4.mpx).size(sc(46).mpx),
+                    focusStyle = StageFocus.POSTER,
+                    contentAlignment = Alignment.Center,
+                ) { RailAvatar(profileName.trim().take(1).uppercase().ifEmpty { "?" }, size = sc(46), avatarId = avatarId, imagePath = avatarPath) }
+                }
             }
-            val family by org.koin.compose.koinInject<tv.own.owntv.core.nav.NavVisibility>().familyMode.collectAsStateWithLifecycle(false)
-            if (!family) TopIcon(OwnTVIcon.TILES, selected == MainSection.MORE || selected == MainSection.SETTINGS, { onSelect(MainSection.MORE) },
-                if (focusSection == MainSection.MORE) Modifier.focusRequester(selectedItemFocusRequester) else Modifier, k = k)
-            StageSurface(
-                onClick = onSwitchProfile,
-                onLongClick = onPickAvatar,
-                radius = sc(23).mpx,
-                modifier = Modifier.padding(start = 4.mpx).size(sc(46).mpx),
-                focusStyle = StageFocus.POSTER,
-                contentAlignment = Alignment.Center,
-            ) { RailAvatar(profileName.trim().take(1).uppercase().ifEmpty { "?" }, size = sc(46), avatarId = avatarId, imagePath = avatarPath) }
         }
     }
 }
@@ -651,3 +656,6 @@ private fun Modifier.selectOnRest(enabled: Boolean, onRest: () -> Unit): Modifie
     }
     return onFocusChanged { focused = it.hasFocus }
 }
+
+/** glcn: how briskly the top bar's focus pill glides (spring stiffness). */
+private const val TOP_BAR_GLIDE = 420f

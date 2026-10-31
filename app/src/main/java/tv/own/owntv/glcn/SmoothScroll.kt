@@ -1,9 +1,7 @@
 package tv.own.owntv.glcn
 
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.scrollBy
@@ -17,7 +15,30 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 object SmoothScroll {
     val animation: AnimationSpec<Float>
-        get() = if (LowRam.on) snap<Float>() else tween<Float>(420, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))
+        // glcn: a gentle ease over a little more than half a second: it eases in (no jolt at the start) and lands long and
+        // soft, the last third of the way taking as long as the first two. A spring here made
+        // the focus glide lag behind a held ▼ until the page stopped following it.
+        get() = if (LowRam.on) snap<Float>() else androidx.compose.animation.core.tween<Float>(
+            GLIDE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.33f, 0f, 0.12f, 1f),
+        )
+
+    /**
+     * glcn: Home's page, row to row — slower and with a soft S-curve: it starts barely moving and settles long, so the
+     * page never sets off with a jolt. Instant in light mode.
+     */
+    val homeAnimation: AnimationSpec<Float>
+        get() = if (LowRam.on) snap<Float>() else androidx.compose.animation.core.tween<Float>(
+            HOME_GLIDE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.45f, 0.05f, 0.2f, 1f),
+        )
+
+    /**
+     * glcn: a menu's list (Settings) — brisk enough that a quick run of ▼ never leaves the highlight off the screen,
+     * still eased so it glides; the highlight slides at the same pace ([SETTINGS_FOCUS_STIFFNESS]).
+     */
+    val listAnimation: AnimationSpec<Float>
+        get() = if (LowRam.on) snap<Float>() else androidx.compose.animation.core.tween<Float>(
+            LIST_GLIDE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f),
+        )
 
     /** The app-wide default: scroll only as far as the focused item needs, eased. */
     val spec = object : BringIntoViewSpec {
@@ -94,3 +115,10 @@ class GlideScroller(private val state: androidx.compose.foundation.lazy.grid.Laz
 val NoBringIntoViewSpec = object : BringIntoViewSpec {
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
 }
+
+/** Long enough to be seen gliding, short enough that a held ▼ never outruns it. */
+private const val GLIDE_MS = 560
+private const val HOME_GLIDE_MS = 700
+private const val LIST_GLIDE_MS = 300
+/** glcn: the settings highlight's slide, in step with [SmoothScroll.listAnimation]. */
+const val SETTINGS_FOCUS_STIFFNESS = 900f

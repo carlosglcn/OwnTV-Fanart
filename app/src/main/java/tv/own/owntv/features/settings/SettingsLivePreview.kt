@@ -80,8 +80,14 @@ internal fun SettingsLivePreview() {
         ) {
             // The user's picture, when Glass & background shows one, as behind the real Home.
             val background = tv.own.owntv.ui.theme.LocalBackground.current
-            if (background.showsPicture) {
-                tv.own.owntv.ui.components.BackgroundPicture(background, tv.own.owntv.ui.theme.LocalBlurredBackdrop.current, Modifier.fillMaxSize())
+            // glcn: as the real screens draw it — with Glass off they paint the solid page over the picture, so the
+            // picture only shows through while Glass is on (the preview used to show it either way).
+            if (tv.own.owntv.ui.theme.LocalGlass.current.enabled) {
+                if (background.showsPicture) {
+                    tv.own.owntv.ui.components.BackgroundPicture(background, tv.own.owntv.ui.theme.LocalBlurredBackdrop.current, Modifier.fillMaxSize())
+                }
+            } else {
+                Box(Modifier.fillMaxSize().background(tv.own.owntv.ui.theme.LocalStagePalette.current.page))
             }
             Box(Modifier.fillMaxSize().stageBackground(a.accent))
             if (lead != null) {

@@ -2,7 +2,9 @@ package tv.own.owntv
 
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
+import android.os.Bundle
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -72,6 +74,15 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
      * resolves the *new* device locale list, so a device-locale change while following system applies on
      * the next callback rather than freezing the startup locale.
      */
+    /** Core opens external players and system screens from this context: each one is a hand-off. */
+    override fun startActivity(intent: Intent) {
+        tv.own.owntv.features.pip.startAsHandOff(intent) { super.startActivity(it) }
+    }
+
+    override fun startActivity(intent: Intent, options: Bundle?) {
+        tv.own.owntv.features.pip.startAsHandOff(intent) { super.startActivity(it, options) }
+    }
+
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         val tag = tv.own.owntv.core.i18n.LocaleStore.from(this).readBlocking()
@@ -79,7 +90,20 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
     }
 
     override fun onCreate() {
+        // glcn: the crash report runs in a process of its own and needs none of the app's start-up.
+        if (tv.own.owntv.glcn.CrashScreen.isCrashProcess(this)) { super.onCreate(); return }
+        // glcn: the app went down last time — open the report first, in that separate process, so it shows
+        // even when what broke is the start-up below.
+        if (tv.own.owntv.glcn.CrashScreen.pending(this)) runCatching {
+            startActivity(
+                android.content.Intent(this, tv.own.owntv.glcn.CrashActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
         tv.own.owntv.glcn.LowRam.detect(this)
+        tv.own.owntv.glcn.DockPrefs.load(this)
+        tv.own.owntv.glcn.RecentPins.load(this)
+        tv.own.owntv.glcn.TvProfiles.load(this)
         Perf.begin() // zero-point for the OwnTVPerf startup timeline (adb logcat -s OwnTVPerf)
         super.onCreate()
         // "Restart now" after an icon change runs a few milliseconds in a process of its own; nothing
@@ -101,7 +125,12 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // repository instead of relying on core to guess it, the same as the phone app does. A
         // default that happens to be right for one app is a trap for every other one.
         tv.own.owntv.core.CoreBuildInfo.releaseRepo = "carlosglcn/OwnTV-Fanart" // glcn: our own releases
-        if (BuildConfig.GLCN_BETA) tv.own.owntv.core.CoreBuildInfo.releaseTag = "beta-latest" // glcn: the beta follows its own pre-release
+        // glcn: the beta is published only to a private repository, read with the token pasted once in About.
+        if (BuildConfig.GLCN_BETA) {
+            tv.own.owntv.core.CoreBuildInfo.releaseRepo = "carlosglcn/OwnTV-Fanart-Beta"
+            tv.own.owntv.core.CoreBuildInfo.releaseTag = "beta-tv"
+            tv.own.owntv.core.CoreBuildInfo.releaseNeedsToken = true
+        }
         // Fixed for this process before any player exists: the setting applies only after a restart.
         tv.own.owntv.core.player.FfmpegAudioSetting.load(this)
         // First thing after the context exists: a crash from here on leaves a trace on disk that the
@@ -116,6 +145,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         tv.own.owntv.player.SubtitleFontAssets.resourceOf = { it.subtitleFontResource }
         // The six icon colours are MainActivity + a suffix (see MainActivityColours.kt); core switches them.
         tv.own.owntv.core.brand.AppIconSwitcher.mainActivityClass = MainActivity::class.java.name
+        tv.own.owntv.glcn.DeviceClass.detect(this) // glcn: a modest box skips purely decorative motion
         startKoin {
             androidLogger(if (BuildConfig.DEBUG) Level.ERROR else Level.NONE)
             androidContext(this@OwnTVApp)
@@ -139,6 +169,14 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
                 GlobalContext.get().get<tv.own.owntv.core.settings.SettingsRepository>().applyStageDefaults()
             }
         }
+        // glcn: the logins of home-network shares, for playing their files (kept up to date as sources change).
+        appScope.launch {
+            runCatching {
+                GlobalContext.get().get<tv.own.owntv.core.database.dao.SourceDao>().observeAll().collect { list ->
+                    tv.own.owntv.core.netshare.NetShare.rememberSources(list.map { it.url })
+                }
+            }
+        }
         // Sports: core decides from Auto rebuild whether the stored board is due ("on every app start",
         // or older than the chosen hours). It reads one small file and touches no database.
         appScope.launch {
@@ -160,11 +198,12 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
     /**
      * App-wide Coil loader that fetches images through the app's OkHttpClient — so posters/logos get
      * the same player-style User-Agent and connection pooling our IPTV requests use (some panels reject
-     * default UAs). Crossfade smooths the grid as images stream in. The memory cache is capped well
-     * below Coil's default ~25% — on a 4K TV every megabyte belongs to the video pipeline, not to
-     * channel-logo bitmaps.
+     * default UAs). Crossfade (120 ms, off on low-RAM) smooths the grid as images stream in. The memory
+     * cache stays well below Coil's default ~25% — on a 4K TV every megabyte belongs to the video
+     * pipeline, not to channel-logo bitmaps: 15% of the heap up to 64 MB, and 10% on low-RAM devices.
      */
     override fun newImageLoader(context: PlatformContext): ImageLoader {
+        val lowRam = context.getSystemService(android.app.ActivityManager::class.java)?.isLowRamDevice == true
         // The shared client deliberately disables connection retries so catalog/EPG sync owns its retry
         // policy. That setting is harmful for CDN images, though: hosts such as image.tmdb.org publish
         // both IPv6 and IPv4, and some Android TV boxes resolve IPv6 first even when their IPv6 route is
@@ -183,7 +222,13 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             .build()
         return ImageLoader.Builder(context)
             .components { add(OkHttpNetworkFetcherFactory(callFactory = { imageHttpClient })) }
-            .memoryCache { MemoryCache.Builder().maxSizePercent(context, if (tv.own.owntv.glcn.LowRam.on) 0.06 else 0.10).build() }
+            // glcn: the picture cache grows with the box — a 3 GB box (the SHIELD) keeps twice the fanart and backdrops in
+            // memory, so going back to a row or a title shows its pictures at once instead of decoding them again.
+            .memoryCache {
+                // glcn: the share, but never more than the cap for this box (see ArtPrefetch.memoryCapBytes).
+                val shareBytes = (Runtime.getRuntime().maxMemory() * tv.own.owntv.glcn.ArtPrefetch.memoryShare(context)).toLong()
+                MemoryCache.Builder().maxSizeBytes(minOf(shareBytes, tv.own.owntv.glcn.ArtPrefetch.memoryCapBytes(context))).build()
+            }
             // Explicit bounded disk cache: posters/logos survive across sessions instead of
             // re-downloading, capped so a 220k-item catalog can't eat the box's storage.
             .diskCache {
@@ -195,7 +240,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             // Opaque poster art doesn't need an alpha channel; RGB_565 halves bitmap memory
             // under the deliberately small memory cap.
             .allowRgb565(true)
-            .crossfade(!tv.own.owntv.glcn.LowRam.on)
+            .crossfade(if (tv.own.owntv.glcn.LowRam.on || lowRam) 0 else if (tv.own.owntv.glcn.DeviceClass.modest) 120 else 220)
             .build()
     }
 
@@ -218,15 +263,34 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
      */
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
+        // glcn: the app left the screen, or Android wants memory — the trailer player goes first (it is the largest
+        // thing kept only for comfort), and in the background the picture cache keeps half.
+        @Suppress("DEPRECATION")
+        if (level >= TRIM_MEMORY_RUNNING_MODERATE) android.os.Handler(mainLooper).post { tv.own.owntv.ui.components.TrailerPool.free() }
+        if (level == TRIM_MEMORY_UI_HIDDEN) runCatching { SingletonImageLoader.get(this).memoryCache?.let { it.trimToSize(it.maxSize / 2) } }
         // TRIM_MEMORY_RUNNING_LOW is deprecated on API 34+ but still the only signal on TV devices
         // running older Android, so keep honouring it.
         @Suppress("DEPRECATION")
         if (level >= TRIM_MEMORY_RUNNING_LOW) {
             runCatching { SingletonImageLoader.get(this).memoryCache?.clear() }
+        } else if (level >= TRIM_MEMORY_RUNNING_MODERATE) {
+            // glcn: the first warning halves the picture cache instead of waiting for the one that empties it.
+            runCatching { SingletonImageLoader.get(this).memoryCache?.let { it.trimToSize(it.maxSize / 2) } }
+        }
+        // glcn: what was large when Android warned — into the playback report.
+        @Suppress("DEPRECATION")
+        if (level >= TRIM_MEMORY_RUNNING_MODERATE && level < TRIM_MEMORY_UI_HIDDEN) {
+            Thread { tv.own.owntv.player.MemoryBreakdown.read()?.let { tv.own.owntv.player.LiveDiagnosticsLog.event("memory warning (level $level) · " + it.line()) } }.start()
         }
         if (level >= TRIM_MEMORY_RUNNING_CRITICAL) tv.own.owntv.glcn.LowRam.onMemoryCritical(this)
         // The engines judge the level themselves: UI_HIDDEN (every Home press) is not pressure for them,
         // and used to leave mpv on a trimmed cache for the rest of the session.
         runCatching { GlobalContext.getOrNull()?.getOrNull<tv.own.owntv.player.PlaybackEngines>()?.onTrimMemory(level) }
     }
+}
+
+/** 15% of the heap, capped at 64 MB; low-RAM devices keep 10%. */
+internal fun imageMemoryCacheBytes(heapBytes: Long, lowRam: Boolean): Long {
+    if (lowRam) return (heapBytes * 0.10).toLong()
+    return minOf((heapBytes * 0.15).toLong(), 64L * 1024 * 1024)
 }

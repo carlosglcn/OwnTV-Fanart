@@ -71,7 +71,9 @@ internal object Seasonal {
     fun Layer(season: Season, animated: Boolean, modifier: Modifier = Modifier) {
         if (season == Season.NONE) return
         val animate = animated && tv.own.owntv.ui.theme.animationsOn
-        Box(modifier.fillMaxSize()) {
+        // glcn: its own layer, so each frame of the leaves, bats or snow re-records this overlay alone — drawn straight
+        // into the shell's layer, every particle frame re-recorded the screen around it too, scroll or not.
+        Box(modifier.fillMaxSize().graphicsLayer()) {
             when (season) {
                 Season.HALLOWEEN -> {
                     Cobweb(Modifier.align(Alignment.TopEnd))

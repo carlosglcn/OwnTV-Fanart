@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -89,6 +90,17 @@ private fun Modifier.stageFocusDecor(style: StageFocus, radius: Dp, a: StageAcce
 
 /** glcn: the focus treatment as a drawing, for an overlay that slides between items. */
 fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocus(style: StageFocus, radius: Dp, a: StageAccent, palette: StagePalette) {
+    drawStageFocusInner(style, radius, a, palette)
+    // glcn: accessible mode — a thick ring round whatever has focus, white on dark, ink on light, never missed.
+    if (tv.own.owntv.glcn.Accessible.on) {
+        val px = 1.mpx.toPx()
+        drawOuterRing(if (palette.isLight) palette.text else Color.White, ACCESSIBLE_RING * px, radius.toPx(), inset = 3 * px)
+    }
+}
+
+private const val ACCESSIBLE_RING = 5f
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocusInner(style: StageFocus, radius: Dp, a: StageAccent, palette: StagePalette) {
     val r = radius.toPx()
     val px = 1.mpx.toPx()
     if (palette.isLight) {
@@ -815,10 +827,13 @@ fun StagePoster(
     fresh: Boolean = false,
     /** glcn: Runway — take the width the parent gives (it changes while the row glides) instead of [width]. */
     fillWidth: Boolean = false,
+    /** glcn: the quality marks the title advertises (DV, 4K, REMUX…), at most two, along the artwork's foot. */
+    badges: List<String> = emptyList(),
     artwork: @Composable BoxScope.() -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val pressed by interaction.collectIsPressedAsState()
     val accent = stageAccent
     val r = StageRadii.Poster
     val badge = Color(8, 12, 14)
@@ -851,10 +866,16 @@ fun StagePoster(
                         }
                     },
                 )
-                .clip(RoundedCornerShape(r)),
+                .pressSink(pressed)
+                .clip(RoundedCornerShape(r))
+                .posterWait(),
         ) {
             FocusArtFx(focused) { artwork() }
             if (rating != null) StageRatingChip(rating, Modifier.padding(8.mpx), small = compact)
+            if (badges.isNotEmpty()) PosterQualityBadges(
+                badges.take(2), compact,
+                Modifier.align(Alignment.BottomStart).padding(start = 8.mpx, bottom = if (progress != null && progress > 0f) 14.mpx else 8.mpx),
+            )
             if (watched) {
                 Box(
                     Modifier.align(Alignment.TopEnd).padding(8.mpx).size(if (compact) 26.mpx else 30.mpx)
@@ -879,14 +900,39 @@ fun StagePoster(
             }
         }
         Spacer(Modifier.height(12.mpx))
+        // glcn: the focused card's name rises into place under it; the others rest a little lower.
+        val titleRise by androidx.compose.animation.core.animateFloatAsState(if (focused) 0f else 1f, ownTvTween(260), label = "posterTitle")
         Text(
             title,
+            modifier = Modifier.graphicsLayer { translationY = titleRise * POSTER_TITLE_DROP.toPx() },
             style = if (line != null) stageText(18, 700) else stageText(if (compact) 15.5f else 17f, if (focused) 700 else 600),
             color = if (focused || line != null) stageTone(Color.White, StageColors.Text) else StageColors.Muted,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         if (line != null) Text(line, style = stageText(15, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
+ * glcn: a poster's quality marks — small dark chips with the mark in bold: gold for the HDR formats (DV, HDR10+,
+ * HDR10, HDR), white for the rest (4K, REMUX). Technical tokens, the same in every language.
+ */
+@Composable
+private fun PosterQualityBadges(badges: List<String>, compact: Boolean, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(5.mpx)) {
+        badges.forEach { b ->
+            val hdr = b.startsWith("HDR") || b == "DV"
+            Text(
+                b,
+                style = stageText(if (compact) 11.5f else 12.5f, 800),
+                color = if (hdr) Color(0xFFF2C14E) else Color.White,
+                maxLines = 1,
+                modifier = Modifier
+                    .background(Color(8, 12, 14).copy(alpha = 0.82f), RoundedCornerShape(6.mpx))
+                    .padding(horizontal = if (compact) 6.mpx else 7.mpx, vertical = 2.mpx),
+            )
+        }
     }
 }
 
@@ -917,17 +963,26 @@ fun StageStill(
     val focused by interaction.collectIsFocusedAsState()
     val accent = stageAccent
     val r = StageRadii.Poster
+    // glcn: under a sliding focus box (Home's rows) the still does not lift: the box glides to it and wraps its art.
+    val slide = tv.own.owntv.glcn.LocalSlideFocus.current
+    val region = remember { tv.own.owntv.glcn.SlideRegion() }
     Column(
         modifier
             .width(width)
-            .then(if (lift) Modifier.stageLift(focused, StageFocus.POSTER).stageTilt(focused) else Modifier)
+            .then(
+                if (slide != null) Modifier.slideFocusReport(slide, StageFocus.POSTER, r, accent, region)
+                else if (lift) Modifier.stageLift(focused, StageFocus.POSTER).stageTilt(focused) else Modifier,
+            )
             .stageClickable(interaction, true, onClick, onLongClick),
     ) {
         Box(
             Modifier
                 .size(width, height)
+                .then(if (slide != null) Modifier.slideRegion(region) else Modifier)
                 .then(
-                    if (focused) {
+                    if (focused && slide != null) {
+                        Modifier
+                    } else if (focused) {
                         Modifier.stageFocusDecor(StageFocus.POSTER, r, accent, LocalStagePalette.current)
                     } else {
                         // `.mine.light .pc .img`: a soft green-grey shadow instead of black.
@@ -937,7 +992,8 @@ fun StageStill(
                         }
                     },
                 )
-                .clip(RoundedCornerShape(r)),
+                .clip(RoundedCornerShape(r))
+                .posterWait(),
         ) {
             FocusArtFx(focused) { artwork() }
             if (progress != null && progress > 0f) {
@@ -988,6 +1044,7 @@ fun StageEpisode(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val pressed by interaction.collectIsPressedAsState()
     val accent = stageAccent
     val r = StageRadii.Poster
     val badge = Color(8, 12, 14)
@@ -1174,3 +1231,18 @@ val stageStillBack: Color
 /** glcn: a title added to the library in the last seven days. */
 fun isFreshlyAdded(addedAt: Long?): Boolean =
     addedAt != null && addedAt > 0L && System.currentTimeMillis() - addedAt in 0L..(7L * 24 * 60 * 60 * 1000)
+
+/** glcn: while a picture loads, a soft tinted card (not a hole) — the theme's ink, faint above, a touch stronger below; the picture fades in over it. */
+@Composable
+private fun Modifier.posterWait(): Modifier {
+    val ink = LocalStagePalette.current.ink
+    val brush = remember(ink) { Brush.verticalGradient(listOf(ink.copy(alpha = POSTER_WAIT_TOP), ink.copy(alpha = POSTER_WAIT_BOTTOM))) }
+    return drawBehind { drawRect(brush) }
+}
+
+private const val POSTER_WAIT_TOP = 0.07f
+private const val POSTER_WAIT_BOTTOM = 0.13f
+
+
+/** glcn: how much lower an unfocused poster's name rests. */
+private val POSTER_TITLE_DROP = 5.mpx

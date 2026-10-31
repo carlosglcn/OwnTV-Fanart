@@ -113,7 +113,7 @@ fun LiveEpgCard(
             )
             val remaining = ((now.stopMs - nowMs) / 60_000L).toInt()
             Text(
-                if (remaining in 1..600) stringResource(R.string.content_live_time_remaining, formatTime(now.stopMs), remaining)
+                if (remaining in 1..600) stringResource(R.string.glcn_pi_ends_left, formatTime(now.stopMs), remaining)
                 else stringResource(R.string.content_live_time_range, formatTime(now.startMs), formatTime(now.stopMs)),
                 style = MaterialTheme.typography.labelSmall,
                 color = hudInk.copy(alpha = 0.7f),
@@ -208,7 +208,7 @@ fun ZapGuideLines(epg: EpgNowNext?, modifier: Modifier = Modifier) {
             Text(entry.title, style = tv.own.owntv.ui.theme.stageText(25, 400), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val remaining = ((entry.stopMs - nowMs) / 60_000L).toInt()
             Text(
-                if (remaining in 1..600) stringResource(R.string.content_live_time_remaining, formatTime(entry.stopMs), remaining)
+                if (remaining in 1..600) stringResource(R.string.glcn_pi_ends_left, formatTime(entry.stopMs), remaining)
                 else stringResource(R.string.content_live_time_range, formatTime(entry.startMs), formatTime(entry.stopMs)),
                 style = tv.own.owntv.ui.theme.stageText(20, 500),
                 color = hudInk.copy(alpha = 0.5f),
