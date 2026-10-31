@@ -2436,7 +2436,7 @@ class LiveViewModel(
         for ((id, rows) in slice) {
             val ch = byId[id] ?: continue
             rows.firstOrNull { it.startMs in (now - STARTING_WINDOW_MS)..(now + STARTING_WINDOW_MS) }?.let { starting += ch to it }
-            rows.firstOrNull { now in it.startMs until it.stopMs }?.let { onAir ->
+            rows.filter { now in it.startMs until it.stopMs }.maxByOrNull { it.startMs }?.let { onAir ->
                 if (isFilm(onAir)) films += ch to onAir
                 if (tv.own.owntv.core.live.SportsNow.isSport(onAir)) sport += ch to onAir
             }

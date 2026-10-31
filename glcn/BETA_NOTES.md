@@ -251,3 +251,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Settings › Appearance: the live preview shows the background as the app really draws it — with Glass off, no picture behind
 - 📺 Home (TV layout): rows that say something, ahead of your groups — Starting now (begun up to ten minutes ago or starting in the next ten), Films on air (most left first), Sport on air (live first) and Tonight at 22:00; a programme still to come shows its time on the card and in the panel.
 - 👥 Profiles: a profile no longer starts on the channel another profile watched last, so other people's channels stop appearing in its Recent
+- 📺 Live TV: when a guide lists two programmes at once, the banner, its picture, the channel list and Home now all name the same one (the one that started last), and "Up next" is what starts after it ends

@@ -413,7 +413,7 @@ internal fun ArtLiveRow(
             itemsIndexed(channels, key = { _, c -> c.id }) { index, channel ->
                 ArtLiveCard(
                     channel = channel,
-                    programme = programmes[channel.id].orEmpty().firstOrNull { now in it.startMs until it.stopMs },
+                    programme = programmes[channel.id].orEmpty().filter { now in it.startMs until it.stopMs }.maxByOrNull { it.startMs },
                     now = now,
                     onClick = { onChannelClick(channel.id, channels) },
                     onLongClick = onLongPress?.let { lp -> { lp(channel) } },

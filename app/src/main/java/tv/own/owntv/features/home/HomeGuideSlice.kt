@@ -204,7 +204,7 @@ fun ChannelPlate(channel: ChannelEntity, modifier: Modifier = Modifier) {
 }
 
 private fun currentProgramme(programmes: List<EpgProgrammeEntity>, now: Long): EpgProgrammeEntity? =
-    programmes.firstOrNull { now in it.startMs until it.stopMs }
+    programmes.filter { now in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
 
 private fun programmeProgress(programme: EpgProgrammeEntity, now: Long): Float {
     val duration = (programme.stopMs - programme.startMs).coerceAtLeast(1L)
