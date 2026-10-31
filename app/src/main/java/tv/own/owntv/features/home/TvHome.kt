@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,9 +67,12 @@ import tv.own.owntv.ui.theme.stageAccent
 import tv.own.owntv.ui.theme.stageText
 
 /**
- * glcn (TV profile): a Home made only for watching TV. The picture of what is on the focused channel fills the screen
- * and drifts slowly; over it, large, the hour, and the programme itself — the channel, its title, how long is left,
- * the synopsis and what comes next. Along the bottom, your channels by group as picture cards. OK tunes, full screen.
+ * glcn (TV profile): a Home made only for watching TV — "the TV already on". The focused channel plays behind
+ * everything (the live preview engine, sound as the Live preview is set), its programme picture until the video
+ * starts; over it, on a panel of its own, the programme — channel, title, how long is left, synopsis and what
+ * comes next. Along the bottom, your channels by group as picture cards; ◀ ▶ (or CH±) move along them and the
+ * picture follows once the focus rests; OK goes full screen on the stream already playing, with no new start.
+ * The same channel in HD and SD shows as one card (the HD one).
  */
 @Composable
 internal fun TvHome(
@@ -78,8 +82,15 @@ internal fun TvHome(
     onChildFocused: () -> Unit,
     contentStart: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
+    /** The live engine the focused channel plays on behind Home; null keeps the programme pictures only. */
+    previewEngine: tv.own.owntv.player.LivePreviewEngine? = null,
+    /** Start [previewEngine] on a channel (muted or not as the Live preview is set). */
+    playPreview: (ChannelEntity) -> Unit = {},
 ) {
-    val groups by produceState<List<LiveViewModel.StripGroup>?>(null) { value = runCatching { load() }.getOrDefault(emptyList()) }
+    val groups by produceState<List<LiveViewModel.StripGroup>?>(null) {
+        value = runCatching { load() }.getOrDefault(emptyList())
+            .map { it.copy(channels = oneCardPerChannel(it.channels)) }.filter { it.channels.isNotEmpty() }
+    }
     var selected by remember { mutableIntStateOf(0) }
     val nowNext = remember { mutableStateMapOf<Long, Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>>() }
     var focusedChannel by remember { mutableStateOf<ChannelEntity?>(null) }
@@ -97,6 +108,19 @@ internal fun TvHome(
     val timeFormat = remember { android.text.format.DateFormat.getTimeFormat(context) }
     val page = tv.own.owntv.ui.theme.stageTone(Color(0xFF05080B), tv.own.owntv.ui.theme.LocalStagePalette.current.page)
     val animate = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
+    // The focused channel starts behind Home once the focus rests on it — running along the row tunes nothing.
+    LaunchedEffect(focusedChannel?.id, previewEngine != null) {
+        val ch = focusedChannel ?: return@LaunchedEffect
+        if (previewEngine == null) return@LaunchedEffect
+        delay(PREVIEW_SETTLE_MS)
+        playPreview(ch)
+    }
+    val previewState = previewEngine?.state?.collectAsStateWithLifecycle()?.value
+    val videoOn = previewState != null &&
+        previewState != tv.own.owntv.player.LivePreviewEngine.State.IDLE &&
+        previewState != tv.own.owntv.player.LivePreviewEngine.State.ERROR &&
+        previewState != tv.own.owntv.player.LivePreviewEngine.State.LOADING
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
     Box(modifier.fillMaxSize().background(page).onFocusChanged { if (it.hasFocus) onChildFocused() }) {
         // The programme's picture, edge to edge, drifting closer.
@@ -112,18 +136,28 @@ internal fun TvHome(
                 )
             }
         }
-        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to page.copy(alpha = 0.92f), 0.45f to page.copy(alpha = 0.55f), 0.75f to Color.Transparent)))
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 0.72f to page.copy(alpha = 0.75f), 1f to page.copy(alpha = 0.97f))))
+        // The channel itself, live, over its picture once the video runs.
+        if (previewEngine != null) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = videoOn,
+                enter = androidx.compose.animation.fadeIn(tv.own.owntv.ui.theme.ownTvTween(600)),
+                exit = androidx.compose.animation.fadeOut(tv.own.owntv.ui.theme.ownTvTween(300)),
+            ) { tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize()) }
+        }
+        // Only the bottom is shaded, for the cards; the picture itself stays whole (the text has its own panel).
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 0.78f to page.copy(alpha = 0.6f), 1f to page.copy(alpha = 0.92f))))
 
 
         // The programme on the focused channel.
         val ch = focusedChannel
         val (now, next) = ch?.let { nowNext[it.id] } ?: (null to null)
-        Column(
-            Modifier.align(Alignment.TopStart).padding(start = contentStart + 24.mpx, top = 200.mpx).widthIn(max = 1100.mpx),
-            verticalArrangement = Arrangement.spacedBy(14.mpx),
+        if (ch != null) Column(
+            Modifier.align(Alignment.TopStart).padding(start = contentStart, top = 170.mpx).widthIn(max = 1040.mpx)
+                // A panel of the page colour behind the text: readable in light and dark over any picture or video.
+                .clip(RoundedCornerShape(28.mpx)).background(page.copy(alpha = 0.78f)).padding(horizontal = 28.mpx, vertical = 24.mpx),
+            verticalArrangement = Arrangement.spacedBy(12.mpx),
         ) {
-            if (ch != null) {
+            run {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                     tv.own.owntv.ui.components.ChannelLogoTile(
                         ch.displayLogoUrl, Modifier.size(88.mpx, 56.mpx).clip(RoundedCornerShape(10.mpx)),
@@ -135,7 +169,7 @@ internal fun TvHome(
                 }
                 Text(
                     now?.title?.let(SportsNow::displayTitle) ?: ch.name,
-                    style = stageText(64, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    style = stageText(52, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
                 now?.let { p ->
                     val total = (p.stopMs - p.startMs).coerceAtLeast(1L)
@@ -153,7 +187,7 @@ internal fun TvHome(
                         )
                     }
                     p.description?.takeIf { it.isNotBlank() }?.let {
-                        Text(it, style = stageText(20, 400), color = StageColors.Body, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 980.mpx))
+                        Text(it, style = stageText(19, 400), color = StageColors.Body, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 next?.let { n ->
@@ -195,7 +229,15 @@ internal fun TvHome(
                         state = rememberLazyListState(),
                         contentPadding = PaddingValues(start = contentStart + 24.mpx, end = 64.mpx, top = 16.mpx, bottom = 16.mpx),
                         horizontalArrangement = Arrangement.spacedBy(20.mpx),
-                        modifier = Modifier.fillMaxWidth().focusRestorer().focusGroup(),
+                        modifier = Modifier.fillMaxWidth().focusRestorer().focusGroup().onPreviewKeyEvent { e ->
+                            // CH+ / CH- step along the channels, as on a TV remote.
+                            if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                            when (e.key) {
+                                Key.ChannelUp -> { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right); true }
+                                Key.ChannelDown -> { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Left); true }
+                                else -> false
+                            }
+                        },
                     ) {
                         itemsIndexed(g.channels, key = { _, c -> c.id }) { i, c ->
                             LaunchedEffect(c.id) { if (c.id !in nowNext) nowNext[c.id] = runCatching { loadNow(c) }.getOrDefault(null to null) }
@@ -227,7 +269,41 @@ private fun tvHomeTitle(g: LiveViewModel.StripGroup): String = when (g.kind) {
     LiveViewModel.StripKind.ALL -> stringResource(R.string.content_category_all_channels)
 }
 
+/**
+ * One card per channel: "La 1 HD" and "LA 1", or "M+ Estrenos" and "M+ Estrenos HD", are the same channel twice.
+ * Names are compared without quality marks, case, accents or punctuation; the HD one is kept, in the place of the first.
+ */
+internal fun oneCardPerChannel(channels: List<ChannelEntity>): List<ChannelEntity> {
+    if (channels.size < 2) return channels
+    val order = LinkedHashMap<String, ChannelEntity>()
+    for (c in channels) {
+        val key = sameChannelKey(tv.own.owntv.core.live.ProviderTags.parse(c.name).name)
+        if (key.isEmpty()) { order["#" + c.id] = c; continue }
+        val kept = order[key]
+        if (kept == null) order[key] = c
+        else if (!isHd(kept) && isHd(c)) order[key] = c
+    }
+    return order.values.toList()
+}
+
+private val QUALITY_WORDS = Regex("\\b(uhd|fhd|hd|sd|4k|1080p?|720p?|hevc|h265)\\b")
+private val HD_WORDS = Regex("\\b(uhd|fhd|hd|4k|1080p?)\\b")
+private val NOT_ALNUM = Regex("[^a-z0-9+]")
+private val MARKS = Regex("\\p{M}+")
+private val HD_TAGS = setOf("HD", "FHD", "UHD", "4K")
+
+private fun sameChannelKey(name: String): String {
+    val plain = java.text.Normalizer.normalize(name.lowercase(), java.text.Normalizer.Form.NFD).replace(MARKS, "")
+    return plain.replace(QUALITY_WORDS, " ").replace(NOT_ALNUM, "")
+}
+
+private fun isHd(c: ChannelEntity): Boolean {
+    val parsed = tv.own.owntv.core.live.ProviderTags.parse(c.name)
+    return parsed.tags.any { it in HD_TAGS } || HD_WORDS.containsMatchIn(parsed.name.lowercase())
+}
+
 private const val TV_CARD_WIDTH = 340
+private const val PREVIEW_SETTLE_MS = 900L
 private const val ART_SETTLE_MS = 450L
 private const val CLOCK_TICK_MS = 15_000L
 private const val DRIFT_MS = 14_000

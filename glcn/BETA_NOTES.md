@@ -240,3 +240,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ☀️ Home (TV layout) with a light theme: the channel, programme title, times and "Up next" are readable — they were white on white
 - 🩺 More › Error log: a freeze now shows what the app was doing at that moment (the main thread), not just memory statistics
 - 🕐 Home (TV layout): the large clock under the top bar is gone — the clock in the bar already shows the time
+- 📺 Home (TV layout) — "the TV already on": the channel in focus plays behind Home (sound as your Live preview is set), its programme picture until the video starts. ◀ ▶ or CH± move along the channels and the picture follows when you stop; OK goes full screen on the stream already playing. Needs Settings › Live TV › Live preview on; light mode keeps the pictures only
+- 🪟 Home (TV layout): the programme sits on a panel of its own, so the picture or the video behind it is shown whole — no more washed-out background in the light theme
+- 🔀 Home (TV layout): the same channel in HD and SD (La 1 HD / LA 1, M+ Estrenos / M+ Estrenos HD) shows as one card, the HD one

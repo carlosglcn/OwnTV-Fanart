@@ -338,6 +338,8 @@ fun OwnTVShell(
     val afrPrompted by settingsRepo.autoFrameRatePrompted.collectAsStateWithLifecycle(initialValue = true)
     // Direct tune (type a channel number on the remote). Settings › Live TV › Channel numbers; default on.
     val directTuneEnabled by settingsRepo.directTune.collectAsStateWithLifecycle(initialValue = true)
+    // glcn: TV profile Home plays the focused channel behind it when the Live preview is on.
+    val tvHomePreview by liveVm.livePreviewEnabled.collectAsStateWithLifecycle()
     val playerRemoteOptions by settingsRepo.playerRemoteOptions.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.PlayerRemoteOptions())
     // "Prefer EPG logos": start following the setting once, here rather than in Application.onCreate —
     // the store queries nothing at all while the toggle is off, so cold start stays free of EPG reads.
@@ -1625,6 +1627,10 @@ fun OwnTVShell(
                             onChildFocused = { focusedLayer = ShellLayer.CONTENT },
                             contentStart = if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.FLOATING) 150.mpx else 64.mpx,
                             modifier = Modifier.fillMaxSize(),
+                            // glcn: the focused channel plays behind Home — only with the Live preview on, not in light
+                            // mode, and not under the player (OK promotes this same stream to full screen).
+                            previewEngine = liveVm.previewEngine.takeIf { tvHomePreview && !tv.own.owntv.glcn.LowRam.on && playerMode == PlayerMode.NONE },
+                            playPreview = { liveVm.playPreview(it) },
                         )
                         selectedSection == MainSection.HOME && homeLayout == 3 -> tv.own.owntv.features.home.LumenHome(
                             vm = homeVm,
