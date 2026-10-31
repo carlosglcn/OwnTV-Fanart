@@ -239,3 +239,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔁 Live TV on mpv: 1080i channels no longer reload a few seconds in (the double frame rate of the deinterlaced picture was taken for broken sound)
 - ☀️ Home (TV layout) with a light theme: the channel, programme title, times and "Up next" are readable — they were white on white
 - 🩺 More › Error log: a freeze now shows what the app was doing at that moment (the main thread), not just memory statistics
+- 🕐 Home (TV layout): the large clock under the top bar is gone — the clock in the bar already shows the time

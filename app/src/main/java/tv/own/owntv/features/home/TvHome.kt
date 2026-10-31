@@ -115,14 +115,6 @@ internal fun TvHome(
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to page.copy(alpha = 0.92f), 0.45f to page.copy(alpha = 0.55f), 0.75f to Color.Transparent)))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 0.72f to page.copy(alpha = 0.75f), 1f to page.copy(alpha = 0.97f))))
 
-        // The hour, large, top right under the bar.
-        Column(Modifier.align(Alignment.TopEnd).padding(top = 120.mpx, end = 72.mpx), horizontalAlignment = Alignment.End) {
-            Text(timeFormat.format(java.util.Date(clock)), style = stageText(72, 300), color = StageColors.Text, maxLines = 1)
-            Text(
-                java.text.DateFormat.getDateInstance(java.text.DateFormat.FULL).format(java.util.Date(clock)).replaceFirstChar { it.titlecase() },
-                style = stageText(20, 500), color = StageColors.Text.copy(alpha = 0.75f), maxLines = 1,
-            )
-        }
 
         // The programme on the focused channel.
         val ch = focusedChannel
