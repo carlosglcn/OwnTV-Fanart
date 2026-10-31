@@ -246,7 +246,7 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 👋 New profile screen: a greeting for the time of day, the clock, and a background that follows the profile in focus — a slow aurora in its colour and the fanart of what it watched last, with "Continue: …" under its name; the focused profile grows with a glow of its own colour.
 - 🧯 If the app closed because of an error, the next start shows the report first, with Share report and Open the app — so a crash at start-up can still be sent.
 - 🩹 Fixed: the beta closed at start (the player's controls were compiled into code Android 11 refused to load).
-- 👤 Profiles: the glow behind the profile in focus fades out softly instead of ending in straight lines
+- 👤 Profiles: no more rectangle with straight edges round the profile in focus (its glow was cut by the row); the screen's colour follows the profile instead
 - 🔘 Light theme: the main button of a window (Save, Create…) is readable in pale accents such as turquoise or pink
 - 🖼️ Settings › Appearance: the live preview shows the background as the app really draws it — with Glass off, no picture behind
 - 📺 Home (TV layout): rows that say something, ahead of your groups — Starting now (begun up to ten minutes ago or starting in the next ten), Films on air (most left first), Sport on air (live first) and Tonight at 22:00; a programme still to come shows its time on the card and in the panel.

@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.flow.first
@@ -121,8 +120,7 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
             )
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(36.dp),
-                // glcn: room inside the row for the focused tile's glow — the list clips to its own bounds, and
-                // the glow used to stop there in straight lines above and beside the tile.
+                // glcn: room inside the row for the focused tile's growth (the list clips to its own bounds).
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 72.dp, vertical = 44.dp),
                 modifier = Modifier.focusGroup(),
             ) {
@@ -160,22 +158,14 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
 private fun ProfileTile(profile: ProfileEntity, continueTitle: String?, modifier: Modifier = Modifier, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val grow by androidx.compose.animation.core.animateFloatAsState(if (focused) 1.12f else 1f, androidx.compose.animation.core.spring(stiffness = 420f, dampingRatio = 0.7f), label = "tileGrow")
-    val glow = tv.own.owntv.ui.components.avatarColor(profile.avatarId)
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(200.dp)) {
         tv.own.owntv.ui.stage.StageSurface(
             onClick = onClick,
             radius = 30.dp,
             modifier = modifier.size(140.dp)
-                .graphicsLayer { scaleX = grow; scaleY = grow }
-                .drawBehind {
-                    if (focused) drawCircle(
-                        androidx.compose.ui.graphics.Brush.radialGradient(
-                            0f to glow.copy(alpha = 0.55f), 1f to androidx.compose.ui.graphics.Color.Transparent,
-                            center = center, radius = size.minDimension * 0.8f,
-                        ),
-                        radius = size.minDimension * 0.8f,
-                    )
-                },
+                // glcn: no glow drawn round the tile any more — whatever holds the row clipped it to a rectangle with
+                // straight edges; the screen's aurora already takes the focused profile's colour.
+                .graphicsLayer { scaleX = grow; scaleY = grow },
             focusDecor = false,
             contentAlignment = Alignment.Center,
         ) { f ->
