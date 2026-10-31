@@ -256,3 +256,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🩺 Playlists › Test connection: when the server cannot be reached, the technical reason is shown under the message (name not found, certificate, timeout, HTTP code…)
 - 🔐 Secure connections: a server that sends its certificate without the intermediate one (common behind a NAS reverse proxy) is now accepted — the app fetches the missing certificate itself, as browsers do. Emby on such a server said "Trust anchor for certification path not found"
 - 🪟 Menus, sheets and the rail over content: more solid glass (90% at the default instead of 78%) and no tint from the background picture, so they read cleanly over any page; the picture and the glass stay everywhere else
+- ⏱️ Player banner: the time line reads "Ends at 16:58 · 19 min left", like the programme page, so the end time is not mistaken for the start
