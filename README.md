@@ -38,7 +38,11 @@ OwnTV Fanart is free and made in spare time. If it makes your TV nicer, you can 
 - **A new Home** — four layouts (*Classic*, *Cinema*, *Panel* and *Dock*), with a Featured billboard, Sports now, Tonight (with reminders) and recently added films and series.
 - **A screen for what is on** — press Info in Live TV for the programme's fanart, logo, rating, synopsis, what comes next and when it airs again this week.
 - **TMDB ratings, years and synopses** beside films and series on live TV.
-- **Sports** — football, basketball (ACB, EuroLeague), handball, tennis, Formula 1 and MotoGP with calendars, live scores and classifications.
+- **Sports** — football, basketball (ACB, EuroLeague), handball, tennis, cycling, snooker, Formula 1 and MotoGP with calendars, live scores and classifications.
+- **Zap panel and TV profile** — ◀ in the player opens groups and channels with what is on; a TV profile starts on its last channel, with a Home where the focused channel plays behind.
+- **Title pages and a cinema player** — a page before watching with trailer, versions and extras, and a player with real quality badges; each file opens on the player that suits it.
+- **Network folders** — films and series straight from your NAS over SMB, WebDAV or NFS.
+- **Teletext subtitles** (page 888) on Spanish channels.
 - **Smooth, calm motion** — rows that glide to the focus, floating cards and a light sweep, or a *Subtle* style; a *Light mode* for older devices.
 - **Seasonal themes** (optional) — Halloween, Christmas, New Year's Eve, Carnival and Valentine's touches, menu sounds and an opening chime.
 - **Sound** — the best audio track in your language, clearer dialogue, and (on SHIELD) Dolby/DTS passthrough from mpv too.

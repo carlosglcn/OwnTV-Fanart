@@ -47,7 +47,11 @@ Los problemas de **esta versión** van al grupo de Fanart; el otro es para la ap
 - **Tres diseños para Películas y Series** — los tres paneles clásicos, **Cinematográfico** (la portada del título enfocado a pantalla completa) o **Pasarela**: una fila de pósters donde el enfocado se abre ancho con su fondo y los demás se deslizan a un lado.
 - **Una pantalla para lo que estás viendo** — pulsa Info en TV en directo: fanart del programa, logo, valoración, sinopsis, qué viene después y cuándo se vuelve a emitir esta semana.
 - **Valoración, año y sinopsis de TMDB** junto a películas y series en directo.
-- **Deportes** — fútbol, baloncesto (ACB, Euroliga), balonmano, tenis, Fórmula 1 y MotoGP con calendarios, marcadores en directo y clasificaciones.
+- **Deportes** — fútbol, baloncesto (ACB, Euroliga), balonmano, tenis, ciclismo, snooker, Fórmula 1 y MotoGP con calendarios, marcadores en directo y clasificaciones.
+- **Panel de zapping y perfil TV** — ◀ en el reproductor abre grupos y canales con lo que echan; un perfil TV arranca en su último canal, con un Inicio donde el canal enfocado se ve de fondo.
+- **Fichas y reproductor de cine** — una ficha antes de ver con tráiler, versiones y extras, y un reproductor con insignias de calidad reales; cada archivo se abre con el reproductor adecuado.
+- **Carpetas de red** — películas y series directamente desde tu NAS por SMB, WebDAV o NFS.
+- **Subtítulos de teletexto** (página 888) en los canales españoles.
 - **Movimiento suave y tranquilo** — filas que se deslizan hasta el foco, tarjetas flotantes y un barrido de luz, o un estilo *Sutil*; un *Modo ligero* para aparatos antiguos.
 - **Temas de temporada** (opcional) — Halloween, Navidad, Nochevieja, Carnaval y San Valentín, sonidos de menú y un acorde de apertura.
 - **Sonido** — la mejor pista de audio en tu idioma, diálogos más claros y (en SHIELD) paso de Dolby/DTS también desde mpv.
