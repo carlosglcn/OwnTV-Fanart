@@ -1,0 +1,189 @@
+Starting a Gradle Daemon (subsequent builds will be faster)
+Calculating task graph as no cached configuration is available for tasks: :app:assembleStandardRelease
+> Task :core-src:player-core:preBuild UP-TO-DATE
+> Task :app:generateStandardReleaseAssets UP-TO-DATE
+> Task :core-src:player-core:generateReleaseAssets UP-TO-DATE
+> Task :core-src:core:generateReleaseAssets UP-TO-DATE
+> Task :core-src:player-core:preReleaseBuild UP-TO-DATE
+> Task :core-src:core:prepareLintJarForPublish
+> Task :core-src:player-core:generateReleaseResources FROM-CACHE
+> Task :core-src:player-core:processReleaseNavigationResources FROM-CACHE
+> Task :core-src:player-core:mergeReleaseJniLibFolders
+> Task :core-src:player-core:javaPreCompileRelease FROM-CACHE
+> Task :core-src:player-core:mergeReleaseNativeLibs NO-SOURCE
+> Task :core-src:player-core:prepareReleaseArtProfile
+> Task :core-src:player-core:copyReleaseJniLibsProjectOnly
+> Task :core-src:player-core:packageReleaseResources FROM-CACHE
+> Task :core-src:player-core:writeReleaseAarMetadata
+> Task :core-src:player-core:extractDeepLinksRelease FROM-CACHE
+> Task :core-src:player-core:mapReleaseSourceSetPaths
+> Task :core-src:player-core:compileReleaseLibraryResources FROM-CACHE
+> Task :core-src:core:verifyI18nLiterals
+> Task :core-src:core:preBuild
+> Task :core-src:core:preReleaseBuild
+> Task :core-src:player-core:mergeReleaseAssets
+> Task :core-src:core:mergeReleaseJniLibFolders
+> Task :core-src:core:mergeReleaseNativeLibs NO-SOURCE
+> Task :core-src:core:generateReleaseBuildConfig FROM-CACHE
+> Task :app:verifyI18nLiterals
+> Task :app:preBuild
+> Task :app:preStandardReleaseBuild
+> Task :core-src:core:generateReleaseResources FROM-CACHE
+> Task :core-src:core:packageReleaseResources FROM-CACHE
+> Task :core-src:player-core:processReleaseManifest FROM-CACHE
+> Task :core-src:core:processReleaseNavigationResources FROM-CACHE
+> Task :core-src:core:copyReleaseJniLibsProjectOnly
+> Task :app:mergeStandardReleaseJniLibFolders
+> Task :app:generateStandardReleaseBuildConfig
+> Task :app:generateStandardReleaseResValues
+> Task :app:generateStandardReleaseResources FROM-CACHE
+> Task :core-src:player-core:parseReleaseLocalResources FROM-CACHE
+> Task :core-src:core:parseReleaseLocalResources FROM-CACHE
+> Task :core-src:core:generateReleaseRFile FROM-CACHE
+> Task :app:packageStandardReleaseResources
+> Task :app:javaPreCompileStandardRelease FROM-CACHE
+> Task :app:mapStandardReleaseSourceSetPaths
+> Task :app:processStandardReleaseNavigationResources
+> Task :app:checkStandardReleaseDuplicateClasses
+> Task :app:compileStandardReleaseNavigationResources FROM-CACHE
+> Task :app:createStandardReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksStandardRelease
+> Task :app:extractProguardFiles
+> Task :app:mergeStandardReleaseStartupProfile
+> Task :app:extractStandardReleaseVersionControlInfo
+> Task :app:mergeStandardReleaseNativeLibs
+> Task :app:collectStandardReleaseDependencies
+> Task :app:parseStandardReleaseLocalResources
+> Task :app:validateSigningStandardRelease
+> Task :app:writeStandardReleaseAppMetadata
+> Task :app:writeStandardReleaseSigningConfigVersions
+> Task :core-src:core:javaPreCompileRelease FROM-CACHE
+> Task :core-src:player-core:generateReleaseRFile FROM-CACHE
+> Task :app:sdkStandardReleaseDependencyData
+> Task :core-src:core:prepareReleaseArtProfile
+> Task :app:mergeStandardReleaseArtProfile
+> Task :app:stripStandardReleaseDebugSymbols
+> Task :core-src:core:writeReleaseAarMetadata
+> Task :app:extractStandardReleaseNativeSymbolTables FROM-CACHE
+> Task :app:mergeStandardReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:generateStandardReleaseRFile
+> Task :core-src:core:processReleaseManifest FROM-CACHE
+> Task :core-src:core:extractDeepLinksRelease FROM-CACHE
+> Task :app:checkStandardReleaseAarMetadata
+> Task :core-src:core:mapReleaseSourceSetPaths
+> Task :core-src:core:compileReleaseLibraryResources FROM-CACHE
+> Task :core-src:core:mergeReleaseAssets
+> Task :app:mergeStandardReleaseAssets
+> Task :app:compressStandardReleaseAssets FROM-CACHE
+> Task :core-src:core:extractProguardFiles
+> Task :core-src:player-core:extractProguardFiles
+> Task :core-src:player-core:prepareLintJarForPublish
+> Task :app:processStandardReleaseMainManifest
+> Task :app:processStandardReleaseManifest
+> Task :core-src:player-core:checkReleaseAarMetadata
+> Task :app:processStandardReleaseManifestForPackage
+> Task :core-src:player-core:extractDeepLinksForAarRelease FROM-CACHE
+> Task :core-src:core:extractDeepLinksForAarRelease FROM-CACHE
+> Task :core-src:core:writeReleaseLintModelMetadata
+> Task :core-src:player-core:writeReleaseLintModelMetadata
+> Task :core-src:core:checkReleaseAarMetadata
+> Task :app:mergeStandardReleaseResources
+> Task :app:processStandardReleaseResources
+> Task :core-src:core:kspReleaseKotlin
+> Task :core-src:core:extractReleaseAnnotations
+> Task :core-src:core:compileReleaseKotlin
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/core/src/main/java/tv/own/owntv/core/emby/EmbyPlayback.kt:123:34 Unnecessary safe call on a non-null receiver of type 'ResponseBody'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/core/src/main/java/tv/own/owntv/core/netshare/WebDav.kt:48:29 Unnecessary safe call on a non-null receiver of type 'ResponseBody'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/core/src/main/java/tv/own/owntv/core/sports/BasketDataSource.kt:299:53 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Int'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/core/src/main/java/tv/own/owntv/core/sports/BasketDataSource.kt:299:60 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Int'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/core/src/main/java/tv/own/owntv/core/sports/BasketDataSource.kt:300:54 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Int'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/core/src/main/java/tv/own/owntv/core/sports/BasketDataSource.kt:300:61 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Int'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/core/src/main/java/tv/own/owntv/core/sports/EspnParser.kt:82:37 Unnecessary safe call on a non-null receiver of type 'JSONObject'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/core/src/main/java/tv/own/owntv/core/sync/EmbyBridge.kt:105:60 Unnecessary safe call on a non-null receiver of type 'ResponseBody'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/core/src/main/java/tv/own/owntv/core/sync/EmbyBridge.kt:136:38 Unnecessary safe call on a non-null receiver of type 'ResponseBody'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/core/src/main/java/tv/own/owntv/core/sync/EmbyBridge.kt:152:34 Unnecessary safe call on a non-null receiver of type 'ResponseBody'.
+
+> Task :core-src:core:processReleaseJavaRes
+> Task :core-src:core:mergeReleaseJavaResource
+> Task :core-src:core:compileReleaseJavaWithJavac
+> Task :core-src:core:mergeReleaseGeneratedProguardFiles
+> Task :core-src:core:exportReleaseConsumerProguardFiles
+> Task :core-src:core:mergeReleaseConsumerProguardFiles
+> Task :core-src:core:bundleLibCompileToJarRelease
+> Task :core-src:core:bundleLibRuntimeToJarRelease
+> Task :core-src:core:createFullJarRelease
+> Task :core-src:core:generateReleaseLintModel
+> Task :core-src:player-core:extractReleaseAnnotations
+> Task :core-src:core:generateReleaseLintVitalModel
+> Task :core-src:core:syncReleaseLibJars
+> Task :core-src:core:bundleReleaseLocalLintAar
+> Task :core-src:player-core:compileReleaseKotlin
+> Task :core-src:core:lintVitalAnalyzeRelease
+> Task :core-src:player-core:processReleaseJavaRes
+> Task :core-src:player-core:mergeReleaseJavaResource
+> Task :core-src:player-core:compileReleaseJavaWithJavac
+> Task :core-src:player-core:mergeReleaseGeneratedProguardFiles
+> Task :core-src:player-core:exportReleaseConsumerProguardFiles
+> Task :core-src:player-core:bundleLibRuntimeToJarRelease
+> Task :core-src:player-core:bundleLibCompileToJarRelease
+> Task :core-src:player-core:createFullJarRelease
+> Task :core-src:player-core:mergeReleaseConsumerProguardFiles
+> Task :core-src:player-core:syncReleaseLibJars FROM-CACHE
+> Task :core-src:player-core:bundleReleaseLocalLintAar
+> Task :core-src:player-core:generateReleaseLintModel
+> Task :core-src:player-core:generateReleaseLintVitalModel
+> Task :app:kspStandardReleaseKotlin
+> Task :core-src:player-core:lintVitalAnalyzeRelease
+> Task :app:compileStandardReleaseKotlin
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/OwnTVApp.kt:285:22 'static field TRIM_MEMORY_RUNNING_CRITICAL: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt:852:94 Unnecessary safe call on a non-null receiver of type 'MetadataCacheEntity'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt:376:39 Unnecessary safe call on a non-null receiver of type 'String'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt:381:39 Unnecessary safe call on a non-null receiver of type 'LumenItem'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt:381:59 Unnecessary safe call on a non-null receiver of type 'LumenItem'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt:382:42 Unnecessary safe call on a non-null receiver of type 'LumenItem'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt:382:64 Unnecessary safe call on a non-null receiver of type 'LumenItem'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt:367:26 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/live/LiveCinematic.kt:165:9 Expression is unused.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt:746:33 Condition is always 'true'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt:756:48 Condition is always 'false'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt:1659:40 Condition is always 'true'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/live/LiveStage.kt:422:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/settings/SettingsStage.kt:1101:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/setup/AddSourceScreen.kt:125:98 Unnecessary safe call on a non-null receiver of type 'SourceEntity'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt:2521:54 Condition is always 'true'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt:2524:33 Condition is always 'true'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/shell/components/ChannelListOverlay.kt:320:24 Condition is always 'true'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/sports/SportsHubScreen.kt:373:85 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/sports/SportsHubScreen.kt:394:36 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt:438:33 Unnecessary non-null assertion (!!) on a non-null receiver of type 'Competitor'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/glcn/SmoothScroll.kt:45:22 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/glcn/WholeCardScroll.kt:15:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/player/PlayerHud.kt:774:63 Condition is always 'true'.
+w: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/ui/components/ChannelLogoTile.kt:104:33 Condition is always 'true'.
+
+> Task :app:processStandardReleaseJavaRes
+> Task :app:mergeStandardReleaseJavaResource
+> Task :app:compileStandardReleaseJavaWithJavac
+> Task :app:mergeStandardReleaseGeneratedProguardFiles
+> Task :app:generateStandardReleaseLintVitalReportModel
+> Task :app:expandStandardReleaseArtProfileWildcards
+> Task :app:produceStandardReleaseComposeMapping
+> Task :app:reportStandardReleaseComposeMappingErrors
+> Task :app:lintVitalAnalyzeStandardRelease
+> Task :app:minifyStandardReleaseWithR8
+> Task :app:lintVitalReportStandardRelease
+> Task :app:lintVitalStandardRelease
+> Task :app:convertShrunkResourcesToBinaryStandardRelease
+> Task :app:optimizeStandardReleaseResources
+> Task :app:mergeStandardReleaseComposeMapping
+> Task :app:compileStandardReleaseArtProfile
+> Task :app:packageStandardRelease
+> Task :app:assembleStandardRelease
+> Task :app:createStandardReleaseApkListingFileRedirect
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1793468549589.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 11m 51s
+130 actionable tasks: 103 executed, 27 from cache
+Configuration cache entry stored.
