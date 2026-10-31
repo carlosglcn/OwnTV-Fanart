@@ -57,6 +57,12 @@ fun OwnTVAvatar(avatarId: Int, modifier: Modifier = Modifier, imagePath: String 
     }
 }
 
+/** glcn: the colour of a preset avatar's tile (the default silhouette's teal for none) — the profile gate's glow. */
+fun avatarColor(avatarId: Int): Color {
+    if (avatarId < 0) return Color(0xFF54F2E2)
+    return BG[((avatarId % OwnTVAvatars.COUNT) + OwnTVAvatars.COUNT) % OwnTVAvatars.COUNT % BG.size]
+}
+
 /** Matches the rounding the drawn tiles use, so a picture sits in the same shape as a tile. */
 private val AvatarShape = RoundedCornerShape(percent = 30)
 
