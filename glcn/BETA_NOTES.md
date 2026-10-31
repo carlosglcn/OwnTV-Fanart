@@ -253,3 +253,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 👥 Profiles: a profile no longer starts on the channel another profile watched last, so other people's channels stop appearing in its Recent
 - 📺 Live TV: when a guide lists two programmes at once, the banner, its picture, the channel list and Home now all name the same one (the one that started last), and "Up next" is what starts after it ends
 - 🔐 Emby / Jellyfin and WebDAV: they now use the app's own connection settings — the newer Let's Encrypt certificates the TV does not know, your custom DNS and proxy. A server whose certificate moved to the new roots said "Could not reach the server" on the TV while the phone reached it
+- 🩺 Playlists › Test connection: when the server cannot be reached, the technical reason is shown under the message (name not found, certificate, timeout, HTTP code…)
