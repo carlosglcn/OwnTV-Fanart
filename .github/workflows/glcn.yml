@@ -145,18 +145,6 @@ jobs:
           gh release create "$BETA_TAG" dist/OwnTV-Fanart-Beta.apk -R "$BETA_REPO" \
             --title "OwnTV Fanart Beta $VERSION_NAME" --notes "$NOTES" --prerelease
 
-      # glcn: TRANSITION ONLY — the betas already installed still look for the public "beta-latest", so it is
-      # published once more for them to update to the build that reads the private repository. Remove this
-      # step (and delete beta-latest) once both devices run that build.
-      - name: Publish beta (public, transition)
-        if: success() && github.ref == 'refs/heads/dev'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release delete beta-latest --yes --cleanup-tag || true
-          gh release create beta-latest dist/OwnTV-Fanart-Beta.apk \
-            --title "OwnTV Fanart Beta $VERSION_NAME" --notes "Beta ${GITHUB_SHA::7}" --target "$GITHUB_SHA" --prerelease
-
       - name: Report status to ci-status branch
         if: always()
         run: |
