@@ -9,6 +9,9 @@
 
     <!-- In-app updates: hand the downloaded release APK to the system installer. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- glcn (test feature): open when the TV starts — BootStart. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!-- MODIFY_AUDIO_SETTINGS is declared by :player-core, which owns VolumeBoost. -->
 
@@ -388,6 +391,13 @@ android:largeHeap="true"
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
+        <!-- glcn (test feature): open when the TV starts (BootStart). -->
+        <receiver android:name=".glcn.BootStartReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

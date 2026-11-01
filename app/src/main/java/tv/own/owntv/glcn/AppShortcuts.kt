@@ -46,6 +46,26 @@ object AppShortcuts {
         save(context)
     }
 
+    /** Moves [pkg] one place left (-1) or right (+1) in the chosen order. */
+    fun move(context: Context, pkg: String, delta: Int) {
+        val i = chosen.indexOf(pkg)
+        val j = i + delta
+        if (i < 0 || j !in chosen.indices) return
+        chosen.removeAt(i)
+        chosen.add(j, pkg)
+        save(context)
+    }
+
+    /** The app's own page in Android's settings (storage, permissions, uninstall). */
+    fun openInfo(context: Context, pkg: String) {
+        runCatching {
+            context.startActivity(
+                Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:$pkg"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+    }
+
     fun open(context: Context, pkg: String): Boolean = runCatching {
         val pm = context.packageManager
         val launch = pm.getLeanbackLaunchIntentForPackage(pkg) ?: pm.getLaunchIntentForPackage(pkg) ?: return false

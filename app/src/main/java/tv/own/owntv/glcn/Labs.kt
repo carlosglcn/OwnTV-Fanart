@@ -20,10 +20,21 @@ object Labs {
     private var loaded = false
     private var step = 0
 
+    /** Open the app when the TV starts (see BootStart) — only counts while [on]. */
+    var autostart by mutableStateOf(false)
+        private set
+
     fun ensure(context: Context) {
         if (loaded) return
         loaded = true
         on = prefs(context).getBoolean(KEY, false)
+        autostart = prefs(context).getBoolean(KEY_AUTOSTART, false)
+    }
+
+    fun setAutostart(context: Context, value: Boolean) {
+        ensure(context)
+        autostart = value
+        prefs(context).edit().putBoolean(KEY_AUTOSTART, value).apply()
     }
 
     /** Fed every key in Settings; never consumes one. */
@@ -57,4 +68,5 @@ object Labs {
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     private const val PREFS = "glcn_labs"
     private const val KEY = "on"
+    private const val KEY_AUTOSTART = "autostart"
 }

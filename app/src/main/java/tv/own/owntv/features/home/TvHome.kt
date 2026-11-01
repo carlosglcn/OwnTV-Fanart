@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -29,11 +28,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.launch
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.graphics.drawable.toBitmap
-import tv.own.owntv.ui.components.longPressMenuGuard
-import tv.own.owntv.ui.components.trapAllFocusExit
-import tv.own.owntv.glcn.modalScrim
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -380,7 +374,7 @@ internal fun TvHome(
                 }
             }
         }
-        if (pickingApps) AppsPicker { pickingApps = false }
+        if (pickingApps) tv.own.owntv.glcn.AppsPickerGrid { pickingApps = false }
     }
 }
 
@@ -435,68 +429,40 @@ private const val ART_SETTLE_MS = 450L
 private const val CLOCK_TICK_MS = 15_000L
 private const val DRIFT_MS = 14_000
 
-/** glcn: the picked apps as their TV banners — OK opens one, hold OK takes it off; the last card adds more. */
+/** glcn: the picked apps as their TV banners (one size, framed) — OK opens one, hold OK takes it off; a small card adds more. */
 @Composable
 private fun AppsRow(contentStart: androidx.compose.ui.unit.Dp, first: FocusRequester, onAdd: () -> Unit) {
     val context = LocalContext.current
     val apps = tv.own.owntv.glcn.AppShortcuts.chosen.toList()
-    val all = remember(apps) { tv.own.owntv.glcn.AppShortcuts.installed(context).associateBy { it.pkg } }
+    val all by androidx.compose.runtime.produceState(emptyMap<String, tv.own.owntv.glcn.AppShortcuts.App>(), apps) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { tv.own.owntv.glcn.AppShortcuts.installed(context).associateBy { it.pkg } }
+    }
     val shown = apps.mapNotNull { all[it] }
     LazyRow(
         contentPadding = PaddingValues(start = contentStart + 24.mpx, end = 64.mpx, top = 16.mpx, bottom = 16.mpx),
         horizontalArrangement = Arrangement.spacedBy(20.mpx),
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().focusRestorer().focusGroup(),
     ) {
         itemsIndexed(shown, key = { _, a -> a.pkg }) { i, a ->
-            tv.own.owntv.ui.stage.StageSurface(
+            tv.own.owntv.glcn.AppBanner(
+                a, width = APP_CARD_W.mpx,
                 onClick = { tv.own.owntv.glcn.AppShortcuts.open(context, a.pkg) },
                 onLongClick = { tv.own.owntv.glcn.AppShortcuts.toggle(context, a.pkg) },
-                radius = 18.mpx,
-                modifier = Modifier.size(APP_CARD_W.mpx, APP_CARD_H.mpx).then(if (i == 0) Modifier.focusRequester(first) else Modifier),
-            ) { _ ->
-                val img = remember(a.pkg) { a.banner?.let { d -> runCatching { d.toBitmap(APP_CARD_W, APP_CARD_H).asImageBitmap() }.getOrNull() } }
-                if (img != null) androidx.compose.foundation.Image(img, contentDescription = a.label, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-                else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(a.label, style = stageText(22, 700), color = StageColors.Text, maxLines = 2) }
-            }
+                modifier = if (i == 0) Modifier.focusRequester(first) else Modifier,
+            )
         }
         item(key = "__add__") {
             tv.own.owntv.ui.stage.StageSurface(
-                onClick = onAdd, radius = 18.mpx,
-                modifier = Modifier.size(APP_CARD_W.mpx, APP_CARD_H.mpx).then(if (shown.isEmpty()) Modifier.focusRequester(first) else Modifier),
-            ) { _ ->
-                Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    tv.own.owntv.ui.components.OwnTVIcon(tv.own.owntv.ui.components.OwnTVIcon.ADD, StageColors.Text, Modifier.size(40.mpx))
-                    Text(stringResource(R.string.glcn_apps_add), style = stageText(19, 700), color = StageColors.Text, modifier = Modifier.padding(top = 8.mpx))
-                }
-            }
-        }
-    }
-}
-
-/** glcn: every app the TV shows, to tick the ones that go in the Apps row. */
-@Composable
-private fun AppsPicker(onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val all = remember { tv.own.owntv.glcn.AppShortcuts.installed(context) }
-    androidx.activity.compose.BackHandler { onDismiss() }
-    val first = remember { FocusRequester() }
-    LaunchedEffect(Unit) { androidx.compose.runtime.withFrameNanos { }; runCatching { first.requestFocus() } }
-    tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onDismiss, stageLayout = true) {
-        Box(
-            Modifier.fillMaxSize().longPressMenuGuard().modalScrim().trapAllFocusExit().focusGroup(),
-            contentAlignment = Alignment.Center,
-        ) {
-            tv.own.owntv.ui.stage.StageMenu(Modifier.width(620.mpx)) {
-                tv.own.owntv.ui.stage.StageMenuHeader(title = stringResource(R.string.glcn_apps_pick_title), subtitle = stringResource(R.string.glcn_apps_hint))
-                androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 640.mpx)) {
-                    itemsIndexed(all, key = { _, a -> a.pkg }) { i, a ->
-                        tv.own.owntv.ui.stage.StageMenuItem(
-                            a.label,
-                            onClick = { tv.own.owntv.glcn.AppShortcuts.toggle(context, a.pkg) },
-                            checked = a.pkg in tv.own.owntv.glcn.AppShortcuts.chosen,
-                            modifier = if (i == 0) Modifier.focusRequester(first) else Modifier,
-                        )
-                    }
+                onClick = onAdd, radius = 16.mpx,
+                idle = Modifier.background(StageColors.Text.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(16.mpx)),
+                modifier = Modifier.size(APP_ADD_W.mpx, (APP_CARD_W * 9 / 16).mpx).then(if (shown.isEmpty()) Modifier.focusRequester(first) else Modifier),
+                contentAlignment = Alignment.Center,
+            ) { focused ->
+                val c = if (focused) stageAccent.onAccent else StageColors.Text
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    tv.own.owntv.ui.components.OwnTVIcon(tv.own.owntv.ui.components.OwnTVIcon.ADD, c, Modifier.size(30.mpx))
+                    Text(stringResource(R.string.glcn_apps_add), style = stageText(16, 700), color = c, modifier = Modifier.padding(top = 6.mpx))
                 }
             }
         }
@@ -504,7 +470,7 @@ private fun AppsPicker(onDismiss: () -> Unit) {
 }
 
 private const val APP_CARD_W = 320
-private const val APP_CARD_H = 180
+private const val APP_ADD_W = 150
 
 /**
  * glcn: the order of Home's rows (Starting now, Films, a group…), chosen by holding OK on a row's name and moving it.

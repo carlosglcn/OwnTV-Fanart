@@ -1030,6 +1030,11 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	,
 1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	apps
 1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	glcn_app_shortcuts
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	package:$pkg
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppsHub.kt	:
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppsHub.kt	a
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppsHub.kt	appsTint
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppsHub.kt	m
 1	technical	app/src/main/java/tv/own/owntv/glcn/ArtPrefetch.kt	http
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	Back held $held ms; armed at press=$armedAtDown, now=${armed()}; repeats=$repeats
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	Back hold closed the player ($how)
@@ -1037,6 +1042,8 @@
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	release
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	repeats
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	timer
+1	technical	app/src/main/java/tv/own/owntv/glcn/BootStart.kt	android.intent.action.QUICKBOOT_POWERON
+1	technical	app/src/main/java/tv/own/owntv/glcn/BootStart.kt	package:
 1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryGlyphPaths.kt	M100-240q-19 0-27-16.5t3-31.5l180-240q5-6 11-9t13-3q7 0 13 3t11 9l171 228h325L560-619 459-485q-9 12-21 12.5t-21-6.5q-9-7-12-18.5t6-23.5l125-167q5-6 11-9t13-3q7 0 13 3t11 9l300 400q11 15 3 31.5T860-240H100Zm335-60h365-334 51-82Zm-275 0h240L280-460 160-300Zm0 0h240-240Z
 1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryGlyphPaths.kt	M140-120q-24.75 0-42.37-17.63Q80-155.25 80-180v-642q0-5.25 4.5-7.13Q89-831 93-827l54 54 55-56q4.64-5 10.82-5 6.18 0 11.18 5l56 56 56-56q4.64-5 10.82-5 6.18 0 11.18 5l55 56 56-56q4.64-5 10.82-5 6.18 0 11.18 5l56 56 55-56q4.64-5 10.82-5 6.18 0 11.18 5l56 56 56-56q4.64-5 10.82-5 6.18 0 11.18 5l55 56 54-54q4-4 8.5-2.13 4.5 1.88 4.5 7.13v642q0 24.75-17.62 42.37Q844.75-120 820-120H140Zm0-60h310v-280H140v280Zm370 0h310v-110H510v110Zm0-170h310v-110H510v110ZM140-520h680v-120H140v120Z
 1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryGlyphPaths.kt	M140-160q-24 0-42-18t-18-42v-520q0-24 18-42t42-18h520q24 0 42 18t18 42v215l134-134q7-7 16.5-3.46T880-649v338q0 9.92-9.5 13.46Q861-294 854-301L720-435v215q0 24-18 42t-42 18H140Zm0-60h520v-520H140v520Zm0 0v-520 520Z
@@ -1193,6 +1200,7 @@
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	glcn_hidden_categories
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	keys
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	playlist:$id
+1	technical	app/src/main/java/tv/own/owntv/glcn/Labs.kt	autostart
 1	technical	app/src/main/java/tv/own/owntv/glcn/Labs.kt	glcn_labs
 1	technical	app/src/main/java/tv/own/owntv/glcn/Labs.kt	on
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/LowRam.kt	asked

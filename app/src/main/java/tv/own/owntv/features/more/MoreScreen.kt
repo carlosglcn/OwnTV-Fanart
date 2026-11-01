@@ -71,7 +71,7 @@ import tv.own.owntv.ui.theme.stageAccent
 import tv.own.owntv.ui.theme.stageText
 
 /** The sheet's items, top to bottom. [DEVELOPER] exists only in local builds (BuildConfig.DEV_TOOLS). */
-private enum class MoreItem { SETTINGS, FAVORITES, HISTORY, BACKUP, LOCAL_SYNC, ERROR_LOG, ABOUT, DEVELOPER }
+private enum class MoreItem { SETTINGS, FAVORITES, HISTORY, APPS, BACKUP, LOCAL_SYNC, ERROR_LOG, ABOUT, DEVELOPER }
 
 /** The pages that ask for the Settings PIN when it is on. */
 private val PIN_PAGES = setOf(MoreItem.BACKUP, MoreItem.LOCAL_SYNC, MoreItem.DEVELOPER)
@@ -187,6 +187,8 @@ fun MoreScreen(
             GroupLabel(stringResource(R.string.more_group_your_things))
             item(MoreItem.FAVORITES, OwnTVIcon.FAVORITE, stringResource(R.string.content_category_favorites), favorites.total.toString(), false)
             item(MoreItem.HISTORY, OwnTVIcon.HISTORY, stringResource(R.string.content_category_history), history.total.toString(), false)
+            // glcn (test feature): the TV's other apps — only while the Labs switch is on.
+            if (tv.own.owntv.glcn.Labs.on) item(MoreItem.APPS, OwnTVIcon.LIST_GRID, stringResource(R.string.glcn_tvhome_apps), tv.own.owntv.glcn.AppShortcuts.chosen.size.takeIf { it > 0 }?.toString(), false)
             GroupLabel(stringResource(R.string.more_group_keep_safe))
             item(
                 MoreItem.BACKUP, OwnTVIcon.DOWNLOADS, stringResource(R.string.settings_backup_restore),
@@ -233,6 +235,7 @@ fun MoreScreen(
                     onClearHistory = { settingsVm.clearWatchHistory(it) },
                     onPlayChannel = onPlayChannel, onPlayMovie = onPlayMovie, onPlayEpisode = onPlayEpisode, onOpenSeries = onOpenSeries,
                 )
+                MoreItem.APPS -> tv.own.owntv.glcn.AppsHub(entry = pageTarget, modifier = Modifier.fillMaxSize())
                 MoreItem.BACKUP -> BackupScreen(entry = pageTarget, modifier = Modifier.fillMaxSize())
                 MoreItem.LOCAL_SYNC -> LocalSyncScreen(entry = pageTarget, modifier = Modifier.fillMaxSize())
                 MoreItem.ERROR_LOG -> ErrorLogPage(setEntry = setEntry, onCountChanged = { logVersion++ })

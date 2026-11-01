@@ -131,6 +131,7 @@ open class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        tv.own.owntv.glcn.AppForeground.visible = false // glcn: BootStart's wake check
         if (!isChangingConfigurations) get<tv.own.owntv.core.sync.local.AutoSyncManager>().onBackground() // glcn
         // Backgrounded (Home / another app), exited, logged out, or the picture-in-picture window closed:
         // stop playback and free the demuxer cache + decoder buffers — holding them while invisible got
@@ -155,6 +156,7 @@ open class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        tv.own.owntv.glcn.AppForeground.visible = true // glcn: BootStart's wake check
         get<tv.own.owntv.core.sync.local.AutoSyncManager>().onForeground() // glcn
         // Paired with onStop: bring back what was freed while backgrounded (notably the TV screensaver, which
         // kicks in during a long pause) — a VOD restored paused at its position, and a live channel re-tuned
