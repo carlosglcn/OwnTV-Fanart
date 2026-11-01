@@ -281,7 +281,16 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // glcn: what was large when Android warned — into the playback report.
         @Suppress("DEPRECATION")
         if (level >= TRIM_MEMORY_RUNNING_MODERATE && level < TRIM_MEMORY_UI_HIDDEN) {
-            Thread { tv.own.owntv.player.MemoryBreakdown.read()?.let { tv.own.owntv.player.LiveDiagnosticsLog.event("memory warning (level $level) · " + it.line()) } }.start()
+            // glcn: and which playlists were syncing then — the memory floods so far came during syncs.
+            val syncing = runCatching {
+                GlobalContext.getOrNull()?.getOrNull<tv.own.owntv.core.sync.SyncActivityTracker>()?.active?.value?.values
+                    ?.joinToString(", ") { a -> a.sourceName }
+            }.getOrNull()?.takeIf { it.isNotBlank() }
+            Thread {
+                tv.own.owntv.player.MemoryBreakdown.read()?.let {
+                    tv.own.owntv.player.LiveDiagnosticsLog.event("memory warning (level $level) · " + it.line() + (syncing?.let { s -> " · syncing $s" } ?: ""))
+                }
+            }.start()
         }
         if (level >= TRIM_MEMORY_RUNNING_CRITICAL) tv.own.owntv.glcn.LowRam.onMemoryCritical(this)
         // The engines judge the level themselves: UI_HIDDEN (every Home press) is not pressure for them,
