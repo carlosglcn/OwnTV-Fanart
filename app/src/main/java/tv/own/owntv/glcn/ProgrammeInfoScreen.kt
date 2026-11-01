@@ -78,7 +78,8 @@ fun ProgrammeInfoScreen(
         value = runCatching { loadSchedule(channel) }.getOrDefault(emptyList())
     }
     val rows = schedule.orEmpty()
-    val cur = rows.firstOrNull { nowMs in it.startMs until it.stopMs }
+    // glcn: with overlapping guides, the one that started last — as the banner, the lists and Home pick it.
+    val cur = rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
     // glcn: what follows — the rest of the evening, not two lines.
     val next = if (cur == null) emptyList() else rows.filter { it.startMs >= cur.stopMs }.take(NEXT_MAX)
 

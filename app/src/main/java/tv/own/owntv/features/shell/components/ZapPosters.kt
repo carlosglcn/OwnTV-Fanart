@@ -258,7 +258,11 @@ private fun ZapPosterInfo(
     val ch = channel ?: return
     val nowMs = System.currentTimeMillis()
     val card = programmes[ch.id]
-    val cur = rows.firstOrNull { nowMs in it.startMs until it.stopMs } ?: card ?: return // no guide: nothing
+    // glcn: the same programme as the card — with two guides listing different shows at once, the first one on air was
+    // not the card's (the one that started last), and "Up next" then named the card's own show.
+    val cur = card?.takeIf { nowMs in it.startMs until it.stopMs }
+        ?: rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
+        ?: card ?: return // no guide: nothing
     val next = rows.filter { it.startMs >= cur.stopMs }.take(2)
     // glcn: a film or series the guide says little about: TMDB lends its year, rating and synopsis, once
     // the D-pad has rested (and from memory when it was asked before).
