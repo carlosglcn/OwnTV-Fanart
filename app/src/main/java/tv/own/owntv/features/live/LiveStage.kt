@@ -822,7 +822,7 @@ internal fun LiveCategories(
                                 entry.name.tags.forEach { StageTag(it, onAccent = if (focused) a.onAccent else null) }
                             },
                             // glcn: not on a platform's row (Netflix, HBO…) — those only come from Emby / Jellyfin.
-                            trailing = entry.mark?.takeUnless { entry.name?.name?.let(tv.own.owntv.glcn.CategoryIcons::isPlatform) == true }?.let { m -> { _ -> StagePlaylistMark(m) } },
+                            trailing = entry.mark?.takeUnless { entry.name?.name?.let(tv.own.owntv.glcn.CategoryIcons::isPlatform) == true }?.let { m -> { focused -> StagePlaylistMark(m, onLight = focused) } },
                             onLongClick = { entryLong(entry, index) },
                             leading = glyph?.let { g -> { tint -> tv.own.owntv.glcn.CategoryGlyphView(g, tint, name = entry.label) } },
                             modifier = rowModifier,

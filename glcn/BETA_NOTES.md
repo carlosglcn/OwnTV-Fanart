@@ -35,3 +35,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📝 Zapping › Coming up: the synopsis gets up to six lines (the free room above the picture)
 - 🎯 Zapping › Coming up: ▶ starts on the programme on air (the top row), not on the one after it
 - 🟠 Plex playlists show Plex's own logo on their mark (used under Plex's trademark guidelines)
+- 🌗 Plex's logo from Plex's own kit, in its version for dark grounds and for light ones (light theme, focused row)

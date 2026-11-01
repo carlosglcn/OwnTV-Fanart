@@ -519,11 +519,17 @@ fun StageTag(text: String, onAccent: Color? = null, tint: Color? = null) {
 
 /** `.pm`: which playlist a row comes from, outlined in that playlist's colour (see [PlaylistMark]). */
 @Composable
-fun StagePlaylistMark(mark: PlaylistMark) {
+fun StagePlaylistMark(
+    mark: PlaylistMark,
+    /** glcn: drawn on a light ground (a focused row) — the service's logo for light backgrounds, when it has one. */
+    onLight: Boolean = false,
+) {
     // glcn: a playlist named after its service (Emby, Jellyfin, Plex, Movistar) shows the service's own logo, when
     // that artwork is in the app (res/drawable/glcn_source_<service>, from the service's brand kit); else its name.
+    // On a light ground (the light theme, a focused row) its version for light backgrounds (…_light) if there is one.
     val context = androidx.compose.ui.platform.LocalContext.current
-    val logoRes = androidx.compose.runtime.remember(mark.text) { sourceLogoRes(context, mark.text) }
+    val light = onLight || LocalStagePalette.current.isLight
+    val logoRes = androidx.compose.runtime.remember(mark.text, light) { sourceLogoRes(context, mark.text, light) }
     if (logoRes != 0) {
         androidx.compose.foundation.Image(
             androidx.compose.ui.res.painterResource(logoRes), contentDescription = mark.text,
@@ -549,15 +555,18 @@ fun StagePlaylistMark(mark: PlaylistMark) {
 
 /** glcn: the drawable of the service a playlist is named after, or 0. */
 @android.annotation.SuppressLint("DiscouragedApi")
-private fun sourceLogoRes(context: android.content.Context, name: String): Int {
+private fun sourceLogoRes(context: android.content.Context, name: String, light: Boolean = false): Int {
     val n = name.lowercase(java.util.Locale.ROOT)
     val key = SOURCE_LOGO_KEYS.firstOrNull { it in n } ?: return 0
-    return context.resources.getIdentifier(SOURCE_LOGO_PREFIX + key, SOURCE_LOGO_TYPE, context.packageName)
+    val res = context.resources
+    if (light) res.getIdentifier(SOURCE_LOGO_PREFIX + key + SOURCE_LOGO_LIGHT, SOURCE_LOGO_TYPE, context.packageName).takeIf { it != 0 }?.let { return it }
+    return res.getIdentifier(SOURCE_LOGO_PREFIX + key, SOURCE_LOGO_TYPE, context.packageName)
 }
 
 private val SOURCE_LOGO_KEYS = listOf("jellyfin", "emby", "plex", "movistar")
 private const val SOURCE_LOGO_PREFIX = "glcn_source_"
 private const val SOURCE_LOGO_TYPE = "drawable"
+private const val SOURCE_LOGO_LIGHT = "_light"
 
 /** The mark's colour as shown: the pastel marks are darkened in light (`.mine.light .pm`, brightness .72) to read on white. */
 val PlaylistMark.shownColor: Color

@@ -1755,6 +1755,7 @@
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	DV
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	DiscouragedApi
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	HDR
+1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	_light
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	drawable
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	emby
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	glcn_source_
