@@ -325,7 +325,7 @@ fun ZapDeck(
                         horizontalArrangement = Arrangement.spacedBy(10.mpx),
                     ) {
                         entry.icon?.let { OwnTVIcon(it, tint, Modifier.size(20.mpx)) }
-                        entry.groupGlyph()?.let { tv.own.owntv.glcn.CategoryGlyphView(it) }
+                        entry.groupGlyph()?.let { tv.own.owntv.glcn.CategoryGlyphView(it, tint, size = 20.mpx) }
                         Text(
                             entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
                             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),

@@ -653,7 +653,7 @@ fun StageMenuItem(
         ) {
             val on = if (focused) a.onAccent else null
             if (icon != null) StageIcon(icon, on ?: StageColors.Muted, 21.mpx, iconFilled)
-            leading?.invoke()
+            leading?.invoke(on ?: if (selected) a.accent else StageColors.Muted)
             Text(text, style = stageText(19, 600), color = on ?: StageColors.MenuItemText, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             if (value != null) Text(value, style = stageText(15, 700), color = on ?: StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -679,8 +679,8 @@ fun StageSheetItem(
     maxLines: Int = 1,
     tags: (@Composable RowScope.(focused: Boolean) -> Unit)? = null,
     trailing: (@Composable RowScope.(focused: Boolean) -> Unit)? = null,
-    /** glcn: a picture before the name (a group's category icon). */
-    leading: (@Composable () -> Unit)? = null,
+    /** glcn: a picture before the name (a group's category icon), given the row's icon colour. */
+    leading: (@Composable (Color) -> Unit)? = null,
 ) {
     val a = stageAccent
     StageSurface(
@@ -700,7 +700,7 @@ fun StageSheetItem(
                 Box(Modifier.width(3.mpx).wrapContentWidth(Alignment.Start, unbounded = true)) { StageSelectedDot() }
             }
             if (icon != null) StageIcon(icon, on ?: if (selected) a.accent else StageColors.Muted, 22.mpx)
-            leading?.invoke()
+            leading?.invoke(on ?: if (selected) a.accent else StageColors.Muted)
             val label = @Composable { m: Modifier ->
                 Text(
                     text,

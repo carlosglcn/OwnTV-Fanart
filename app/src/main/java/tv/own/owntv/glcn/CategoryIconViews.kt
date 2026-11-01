@@ -1,6 +1,7 @@
 package tv.own.owntv.glcn
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
@@ -28,13 +29,11 @@ internal fun LiveCategoryEntry.groupGlyph(): CategoryIcons.Glyph? {
     return CategoryIcons.glyph(n.name, n.tags, n.country)
 }
 
-/** glcn: a group's picture at the size of the list's line icons: the emoji, or the posters' quality chip. */
+/** glcn: a group's picture at the size of the list's line icons: the line icon in [tint], or the posters' chip. */
 @Composable
-internal fun CategoryGlyphView(glyph: CategoryIcons.Glyph, modifier: Modifier = Modifier) {
+internal fun CategoryGlyphView(glyph: CategoryIcons.Glyph, tint: Color, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 22.mpx) {
     when (glyph) {
-        is CategoryIcons.Glyph.Emoji -> Box(modifier.size(24.mpx), contentAlignment = Alignment.Center) {
-            Text(glyph.text, style = stageText(18, 400), textAlign = TextAlign.Center, maxLines = 1)
-        }
+        is CategoryIcons.Glyph.Icon -> CategoryIconShape(glyph.key, tint, modifier.size(size))
         is CategoryIcons.Glyph.Badge -> Text(
             glyph.text,
             style = stageText(if (glyph.text.length > 3) 10.5f else 11.5f, 800),
@@ -46,6 +45,31 @@ internal fun CategoryGlyphView(glyph: CategoryIcons.Glyph, modifier: Modifier = 
         )
     }
 }
+
+/** glcn: one of [CategoryGlyphPaths] drawn to fit, parsed once per key. */
+@Composable
+internal fun CategoryIconShape(key: String, tint: Color, modifier: Modifier) {
+    val path = androidx.compose.runtime.remember(key) { CategoryIconCache.path(key) } ?: return
+    androidx.compose.foundation.Canvas(modifier) {
+        val scale = size.minDimension / ICON_BOX
+        withTransform({
+            translate(left = (size.width - ICON_BOX * scale) / 2f, top = (size.height - ICON_BOX * scale) / 2f + ICON_BOX * scale)
+            scale(scale, scale, pivot = androidx.compose.ui.geometry.Offset.Zero)
+        }) { drawPath(path, tint) }
+    }
+}
+
+private object CategoryIconCache {
+    private val parsed = HashMap<String, androidx.compose.ui.graphics.Path>()
+    fun path(key: String): androidx.compose.ui.graphics.Path? = synchronized(parsed) {
+        parsed[key] ?: CategoryGlyphPaths.paths[key]?.let { d ->
+            runCatching { androidx.compose.ui.graphics.vector.PathParser().parsePathString(d).toPath() }.getOrNull()?.also { parsed[key] = it }
+        }
+    }
+}
+
+/** Material Symbols draw in a 960-unit box. */
+private const val ICON_BOX = 960f
 
 /**
  * glcn: choose a group's icon — a grid of pictures, then Automatic (back to the one read from the name) and No icon.
@@ -79,9 +103,9 @@ internal fun CategoryIconPicker(groupName: String, onDismiss: () -> Unit) {
                             tv.own.owntv.ui.stage.StageSurface(
                                 onClick = { pick(code) },
                                 radius = 14.mpx,
-                                modifier = Modifier.size(84.mpx, 64.mpx).then(if (r == 0 && c == 0) Modifier.focusRequester(first) else Modifier),
+                                modifier = Modifier.size(72.mpx, 60.mpx).then(if (r == 0 && c == 0) Modifier.focusRequester(first) else Modifier),
                                 contentAlignment = Alignment.Center,
-                            ) { Text(code, style = stageText(28, 400), maxLines = 1) }
+                            ) { focused -> CategoryIconShape(code, if (focused) tv.own.owntv.ui.theme.stageAccent.onAccent else tv.own.owntv.ui.theme.StageColors.Text, Modifier.size(34.mpx)) }
                         }
                     }
                 }
@@ -99,4 +123,4 @@ internal fun CategoryIconPicker(groupName: String, onDismiss: () -> Unit) {
     }
 }
 
-private const val PICKER_COLUMNS = 6
+private const val PICKER_COLUMNS = 7

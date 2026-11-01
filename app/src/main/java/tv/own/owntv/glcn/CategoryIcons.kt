@@ -7,15 +7,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 /**
- * glcn: a small picture beside each provider group in the category lists — a football for sport, a clapperboard for
- * cinema, the flag of a country, and for a quality group (4K, HDR, Dolby Vision…) the same mark the posters carry.
+ * glcn: a small picture beside each provider group in the category lists — a line icon in the app's own style (a football
+ * for football, a clapperboard for cinema, masks for drama…), the country's code for a country, and for a quality group
+ * (4K, HDR, Dolby Vision…) the same mark the posters carry.
  * Picked from the group's name; hold OK on a group › Icon to choose another or none. One switch in Settings › Fanart.
  * Kept per device, by the group's name (ids change when a playlist is synced again).
  */
 object CategoryIcons {
     sealed interface Glyph {
-        /** A colour emoji, drawn by the system font. */
-        data class Emoji(val text: String) : Glyph
+        /** A line icon from [CategoryGlyphPaths], tinted like the list's other icons. */
+        data class Icon(val key: String) : Glyph
         /** A quality mark in the posters' style; [gold] for the HDR formats. */
         data class Badge(val text: String, val gold: Boolean) : Glyph
     }
@@ -38,7 +39,7 @@ object CategoryIcons {
         prefs(context).edit().putBoolean(KEY_ON, value).apply()
     }
 
-    /** [code]: an emoji from [CHOICES], [NONE] for no icon, null to go back to the automatic one. */
+    /** [code]: an icon key from [CHOICES], [NONE] for no icon, null to go back to the automatic one. */
     fun choose(context: Context, groupName: String, code: String?) {
         val k = key(groupName)
         if (code == null) overrides.remove(k) else overrides[k] = code
@@ -48,7 +49,8 @@ object CategoryIcons {
     /** The group's picture, or null (switched off, none chosen, nothing recognised). */
     fun glyph(groupName: String, tags: List<String> = emptyList(), country: String? = null): Glyph? {
         if (!on) return null
-        overrides[key(groupName)]?.let { return if (it == NONE) null else Glyph.Emoji(it) }
+        // A choice from before the line icons (an emoji) is not a key any more: back to the automatic one.
+        overrides[key(groupName)]?.let { if (it == NONE) return null; if (it in CategoryGlyphPaths.paths) return Glyph.Icon(it) }
         return auto(groupName, tags, country)
     }
 
@@ -57,11 +59,11 @@ object CategoryIcons {
 
     internal fun auto(groupName: String, tags: List<String>, country: String? = null): Glyph? {
         val text = " " + normalize(groupName) + " "
-        TOPICS.firstOrNull { (_, words) -> words.any { w -> text.contains(" $w ") } }?.let { return Glyph.Emoji(it.first) }
-        COUNTRIES.firstOrNull { (_, words) -> words.any { w -> text.contains(" $w ") } }?.let { return Glyph.Emoji(flag(it.first)) }
+        TOPICS.firstOrNull { (_, words) -> words.any { w -> text.contains(" $w ") } }?.let { return Glyph.Icon(it.first) }
+        COUNTRIES.firstOrNull { (_, words) -> words.any { w -> text.contains(" $w ") } }?.let { return Glyph.Badge(it.first, gold = false) }
         // The provider's "ES|" prefix, when the name itself says nothing better.
         val quality = qualityOf(text, tags)
-        if (quality == null && country != null && country.length == 2 && country.all { it in 'A'..'Z' }) return Glyph.Emoji(flag(country))
+        if (quality == null && country != null && country.length in 2..3 && country.all { it in 'A'..'Z' }) return Glyph.Badge(country, gold = false)
         return quality
     }
 
@@ -86,12 +88,6 @@ object CategoryIcons {
         return plain.uppercase(java.util.Locale.ROOT).replace(NON_WORD, " ").replace(SPACES, " ").trim()
     }
 
-    /** "ES" → 🇪🇸: the two regional-indicator letters. */
-    private fun flag(code: String): String {
-        val c = if (code == "UK") "GB" else code
-        return String(Character.toChars(REGIONAL_A + (c[0] - 'A'))) + String(Character.toChars(REGIONAL_A + (c[1] - 'A')))
-    }
-
     private fun key(groupName: String) = normalize(groupName)
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -112,7 +108,6 @@ object CategoryIcons {
     private val DIACRITICS = Regex("\\p{Mn}+")
     private val NON_WORD = Regex("[^A-Z0-9+]+")
     private val SPACES = Regex(" +")
-    private const val REGIONAL_A = 0x1F1E6
     private const val PREFS = "glcn_category_icons"
     private const val KEY_ON = "on"
     private const val PREFIX = "g:"
@@ -125,51 +120,69 @@ object CategoryIcons {
     private const val BADGE_FHD = "FHD"
 }
 
-/** Emoji = words (upper case, no accents), first match wins — so sport before "TV", kids before "cine". */
+/** Icon key = words (upper case, no accents), first match wins — so sport before "TV", kids before "cine". */
 private const val TOPIC_TABLE = """
-⚽=FUTBOL,FOOTBALL,SOCCER,LALIGA,LIGA,CHAMPIONS,PREMIER,BUNDESLIGA,SERIE A,LIGUE 1,DAZN,MOVISTAR LIGA,M LIGA,EUROPA LEAGUE
-🏀=BALONCESTO,BASKET,BASKETBALL,NBA,ACB,EUROLIGA,EUROLEAGUE
-🎾=TENIS,TENNIS,ATP,WTA
-🏎️=F1,FORMULA 1,MOTOR,MOTOGP,MOTORSPORT,RACING
-🥊=BOXEO,BOXING,UFC,MMA,LUCHA,WRESTLING,WWE
-⛳=GOLF
-🏆=DEPORTES,DEPORTE,SPORTS,SPORT,ESPN,EUROSPORT,EVENTOS,EVENTS,PPV
-🧸=INFANTIL,INFANTILES,KIDS,NINOS,CHILDREN,DIBUJOS,CARTOONS,ANIMACION,ANIMATION,DISNEY,JUNIOR
-🍥=ANIME
-🔫=ACTION,ACCION
-📖=BIOGRAPHY,BIOGRAFIA,BIOGRAFIAS,BIOPIC
-🎭=DRAMA,DRAMAS
-🕵️=NOIR,CRIME,CRIMEN,THRILLER,THRILLERS,SUSPENSE,SUSPENSO,MISTERIO,MYSTERY,POLICIACA,POLICIACO,INTRIGA
-🗺️=ADVENTURE,ADVENTURES,AVENTURA,AVENTURAS
-👽=SCI FI,SCIFI,CIENCIA FICCION,SCIENCE FICTION
-🧙=FANTASY,FANTASIA
-💕=ROMANCE,ROMANTICA,ROMANTICAS,ROMANTICO,ROMANTIC
-👪=FAMILY,FAMILIA,FAMILIAR
-⚔️=WAR,GUERRA,BELICA,BELICO
-🤠=WESTERN,WESTERNS
-🎬=TV MOVIE,TELEFILM,TELEFILMS,CINE,PELICULAS,PELICULA,MOVIES,MOVIE,FILMS,FILM,ESTRENOS,CINEMA,PREMIERES
-📺=SERIES,SERIE,SHOWS,TV SHOWS,TELENOVELAS,TELENOVELA,NOVELAS,SOAP,REALITY,REALITY SHOW,TALK,TALK SHOW,CONCURSOS,GAME SHOW
-🎵=MUSICA,MUSIC,MUSICAL,MUSICALES,RADIO,CONCIERTOS,CONCERTS
-📰=NOTICIAS,NEWS,INFORMATIVOS,NOTICIAS 24H
-🌍=DOCUMENTALES,DOCUMENTAL,DOCUMENTARY,DOCUMENTARIES,DOCS,NATURALEZA,NATURE,HISTORIA,HISTORY
-🍳=COCINA,COOKING,FOOD,GASTRONOMIA
-😂=COMEDIA,COMEDIAS,COMEDY,COMEDIES,HUMOR
-👻=TERROR,HORROR,MIEDO,HALLOWEEN
-⛪=RELIGION,RELIGIOSOS,RELIGIOUS
-🔞=ADULTOS,ADULT,ADULTS,XXX,18
-🎄=NAVIDAD,CHRISTMAS
-⭐=FAVORITOS,FAVORITES,VIP,PREMIUM
-📡=TDT,NACIONALES,GENERALISTAS,LOCAL,LOCALES,AUTONOMICAS,REGIONAL
+soccer=FUTBOL,FOOTBALL,SOCCER,LALIGA,LIGA,CHAMPIONS,PREMIER,BUNDESLIGA,SERIE A,LIGUE 1,DAZN,MOVISTAR LIGA,M LIGA,EUROPA LEAGUE
+basketball=BALONCESTO,BASKET,BASKETBALL,NBA,ACB,EUROLIGA,EUROLEAGUE
+tennis=TENIS,TENNIS,ATP,WTA,PADEL
+motor=F1,FORMULA 1,MOTOR,MOTOGP,MOTORSPORT,RACING
+combat=BOXEO,BOXING,UFC,MMA,LUCHA,WRESTLING,WWE
+golf=GOLF
+handball=BALONMANO,HANDBALL
+football=NFL,FUTBOL AMERICANO,AMERICAN FOOTBALL
+hockey=HOCKEY,NHL
+esports=ESPORTS,E SPORTS,GAMING,VIDEOJUEGOS
+sports=DEPORTES,DEPORTE,SPORTS,SPORT,ESPN,EUROSPORT,EVENTOS,EVENTS,PPV
+anime=ANIME
+kids=INFANTIL,INFANTILES,KIDS,NINOS,CHILDREN,DIBUJOS,CARTOONS,DISNEY,JUNIOR
+animation=ANIMACION,ANIMATION
+action=ACTION,ACCION
+biography=BIOGRAPHY,BIOGRAFIA,BIOGRAFIAS,BIOPIC
+drama=DRAMA,DRAMAS
+crime=NOIR,CRIME,CRIMEN,POLICIACA,POLICIACO,POLICIACAS
+thriller=THRILLER,THRILLERS
+mystery=MISTERIO,MYSTERY
+suspense=SUSPENSE,SUSPENSO
+intrigue=INTRIGA
+adventure=ADVENTURE,ADVENTURES,AVENTURA,AVENTURAS
+scifi=SCI FI,SCIFI,CIENCIA FICCION,SCIENCE FICTION
+fantasy=FANTASY,FANTASIA
+romance=ROMANCE,ROMANTICA,ROMANTICAS,ROMANTICO,ROMANTIC
+family=FAMILY,FAMILIA,FAMILIAR
+war=WAR,GUERRA,BELICA,BELICO
+western=WESTERN,WESTERNS
+tvmovie=TV MOVIE,TELEFILM,TELEFILMS
+movies=CINE,PELICULAS,PELICULA,MOVIES,MOVIE,FILMS,FILM,ESTRENOS,CINEMA,PREMIERES
+reality=REALITY,REALITY SHOW,CONCURSOS,GAME SHOW
+talk=TALK,TALK SHOW,TERTULIA,MAGAZINE
+series=SERIES,SERIE,SHOWS,TV SHOWS,TELENOVELAS,TELENOVELA,NOVELAS,SOAP
+radio=RADIO
+music=MUSICA,MUSIC,MUSICAL,MUSICALES,CONCIERTOS,CONCERTS
+news=NOTICIAS,NEWS,INFORMATIVOS,NOTICIAS 24H
+history=HISTORIA,HISTORY
+nature=NATURALEZA,NATURE,ANIMALES,ANIMALS
+science=CIENCIA,SCIENCE
+travel=VIAJES,TRAVEL
+docs=DOCUMENTALES,DOCUMENTAL,DOCUMENTARY,DOCUMENTARIES,DOCS
+cooking=COCINA,COOKING,FOOD,GASTRONOMIA
+comedy=COMEDIA,COMEDIAS,COMEDY,COMEDIES,HUMOR
+horror=TERROR,HORROR,MIEDO,HALLOWEEN
+religion=RELIGION,RELIGIOSOS,RELIGIOUS
+adult=ADULTOS,ADULT,ADULTS,XXX,18
+christmas=NAVIDAD,CHRISTMAS
+favorites=FAVORITOS,FAVORITES,VIP,PREMIUM
+tdt=TDT,NACIONALES,GENERALISTAS,LOCAL,LOCALES,AUTONOMICAS,REGIONAL
+live=24 7,24/7,EN DIRECTO,LIVE
 """
 
-/** ISO code = names a group may carry (upper case, no accents). */
+/** Country code shown = names a group may carry (upper case, no accents). */
 private const val COUNTRY_TABLE = """
 ES=ESPANA,SPAIN,ESPANOL,ESPANOLA,SPANISH
 PT=PORTUGAL,PORTUGUES,PORTUGUESE
 FR=FRANCIA,FRANCE,FRANCAIS,FRENCH
 IT=ITALIA,ITALY,ITALIANO,ITALIAN
 DE=ALEMANIA,GERMANY,DEUTSCHLAND,GERMAN,DEUTSCH
-GB=REINO UNIDO,UNITED KINGDOM,ENGLAND,INGLATERRA,BRITISH
+UK=REINO UNIDO,UNITED KINGDOM,ENGLAND,INGLATERRA,BRITISH
 US=USA,ESTADOS UNIDOS,UNITED STATES,AMERICA
 MX=MEXICO,MEXICANO
 AR=ARGENTINA
@@ -195,5 +208,5 @@ CA=CANADA
 IN=INDIA
 """
 
-/** The icons the picker offers. */
-private const val CHOICE_LIST = "⚽ 🏀 🎾 🏎️ 🥊 ⛳ 🏆 🎬 📺 🧸 🍥 🔫 📖 🎭 🕵️ 🗺️ 👽 🧙 💕 👪 ⚔️ 🤠 🎵 📰 🌍 🍳 😂 👻 ⭐ 📡 🎄 🔞 ❤️ 🔥 💎 🎮 🐾 🚀 🇪🇸 🇵🇹 🇫🇷 🇮🇹 🇩🇪 🇬🇧 🇺🇸 🇲🇽 🇦🇷 🇧🇷"
+/** The icons the picker offers, in this order. */
+private const val CHOICE_LIST = "soccer basketball tennis motor combat golf handball football hockey esports sports movies tvmovie series kids animation anime action drama comedy horror crime thriller mystery suspense intrigue adventure scifi fantasy romance family war western biography history docs nature science travel music radio news reality talk cooking religion adult christmas favorites tdt live"

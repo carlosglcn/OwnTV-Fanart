@@ -62,3 +62,5 @@ Los problemas de **esta versión** van al grupo de Fanart; el otro es para la ap
 
 GPLv3, como OwnTV. Todo el mérito de la app en sí es de **ahXN00** y los colaboradores de OwnTV; el
 logotipo **owntv** es de [@m3th0d93](https://github.com/m3th0d93). El icono de OwnTV Fanart es original de esta versión.
+
+Los iconos de categorías de OwnTV Fanart proceden de [Material Symbols](https://fonts.google.com/icons) de Google (licencia Apache 2.0).

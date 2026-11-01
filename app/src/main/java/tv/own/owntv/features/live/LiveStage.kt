@@ -822,7 +822,7 @@ internal fun LiveCategories(
                             },
                             trailing = entry.mark?.let { m -> { _ -> StagePlaylistMark(m) } },
                             onLongClick = { entryLong(entry, index) },
-                            leading = entry.groupGlyph()?.let { g -> { tv.own.owntv.glcn.CategoryGlyphView(g) } },
+                            leading = entry.groupGlyph()?.let { g -> { tint -> tv.own.owntv.glcn.CategoryGlyphView(g, tint) } },
                             modifier = rowModifier,
                         )
                     } else {
@@ -874,7 +874,7 @@ private fun LiveColumnItem(
         ) {
             val on = if (focused) a.onAccent else null
             entry.icon?.let { OwnTVIcon(it, on ?: StageColors.Muted, Modifier.size(20.mpx)) }
-            entry.groupGlyph()?.let { tv.own.owntv.glcn.CategoryGlyphView(it) }
+            entry.groupGlyph()?.let { tv.own.owntv.glcn.CategoryGlyphView(it, on ?: StageColors.Muted, size = 20.mpx) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.mpx)) {
                 Text(
                     entry.label, style = stageText(18.5f, 600),
