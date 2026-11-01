@@ -204,17 +204,19 @@ fun ProgrammeInfoScreen(
                 ((film?.overview?.takeIf { it.isNotBlank() }) ?: ownSynopsis ?: lent?.overview)?.let {
                     // glcn: as wide as the room up to the panels on the right, and a line more, so most synopses read whole
                     // without drifting.
-                    DriftingSynopsis(it, modifier = Modifier.staggerIn(300).padding(top = 16.mpx).width(1220.mpx), style = stageText(21, 400), color = Soft, lines = if (film?.cast.isNullOrEmpty()) 7 else 5, fade = true)
-                }
-                film?.cast?.takeIf { it.isNotEmpty() }?.let { cast ->
-                    tv.own.owntv.features.shell.components.VodCast(cast, 7, Modifier.staggerIn(360).padding(top = 20.mpx))
+                    // glcn: the cast sits on the right now, so the synopsis has the whole column down to the button.
+                    DriftingSynopsis(it, modifier = Modifier.staggerIn(300).padding(top = 16.mpx).width(1220.mpx), style = stageText(21, 400), color = Soft, lines = SYNOPSIS_LINES, fade = true)
                 }
             }
         }
 
-        // Right: when it airs again this week.
+        // Right: when it airs again this week, and under it a film's cast.
         if (cur != null) Column(
-            Modifier.align(Alignment.TopEnd).padding(end = 96.mpx, top = 150.mpx).staggerIn(340, fromRight = true).width(420.mpx)
+            Modifier.align(Alignment.TopEnd).padding(end = 96.mpx, top = 150.mpx).width(420.mpx),
+            verticalArrangement = Arrangement.spacedBy(16.mpx),
+        ) {
+        Column(
+            Modifier.staggerIn(340, fromRight = true).fillMaxWidth()
                 .clip(RoundedCornerShape(20.mpx)).background(Color(0x990A1012)).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
@@ -230,6 +232,21 @@ fun ProgrammeInfoScreen(
                     }
                 }
             }
+        }
+        // glcn: a film's cast, in the room between the repeats and "Up next" — two rows of four, one when the repeats
+        // run long (so it never reaches "Up next"); not while the technical data take that corner.
+        val cast = film?.cast.orEmpty()
+        if (cast.isNotEmpty() && !showTech) Column(
+            Modifier.staggerIn(380, fromRight = true).fillMaxWidth()
+                .clip(RoundedCornerShape(20.mpx)).background(Color(0x990A1012)).padding(24.mpx),
+            verticalArrangement = Arrangement.spacedBy(12.mpx),
+        ) {
+            Text(stringResource(R.string.content_media_cast), style = stageText(18, 800), color = accent, maxLines = 1)
+            val castRows = if (again.size > CAST_TWO_ROWS_MAX_REPEATS) 1 else 2
+            cast.take(CAST_PER_ROW * castRows).chunked(CAST_PER_ROW).forEach { row ->
+                tv.own.owntv.features.shell.components.VodCast(row, CAST_PER_ROW, gap = 12.mpx)
+            }
+        }
         }
 
         // glcn: what follows on the channel, the rest of the evening, under the repeats.
@@ -259,6 +276,12 @@ fun ProgrammeInfoScreen(
         if (showTech) StreamInfoOverlay(player, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 96.mpx, bottom = 56.mpx))
     }
 }
+
+/** glcn: the synopsis' lines, now that the cast is on the right. */
+private const val SYNOPSIS_LINES = 10
+/** glcn: the cast panel on the right: four a row, two rows unless the repeats above take more than this many lines. */
+private const val CAST_PER_ROW = 4
+private const val CAST_TWO_ROWS_MAX_REPEATS = 3
 
 /** glcn: how many programmes "Up next" lists. */
 private const val NEXT_MAX = 6

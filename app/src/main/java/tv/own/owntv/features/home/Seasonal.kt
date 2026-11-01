@@ -372,8 +372,10 @@ internal object Seasonal {
                 Kind.LEAF -> listOf(Color(0xFFE07A2E), Color(0xFFC2512B), Color(0xFFB8862F))
             }
         }
+        // glcn: a modest box draws a third of them — the canvas redraws every frame over whatever is on screen.
+        val shown = if (tv.own.owntv.glcn.DeviceClass.modest) (count / 3).coerceAtLeast(6) else count
         val bits = remember {
-            List(count) {
+            List(shown) {
                 Bit(
                     x = rnd.nextFloat(), y = rnd.nextFloat(),
                     speed = (if (kind == Kind.LEAF) 0.025f else 0.018f) + rnd.nextFloat() * 0.03f,

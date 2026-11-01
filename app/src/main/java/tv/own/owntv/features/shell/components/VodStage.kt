@@ -472,9 +472,9 @@ internal fun PlatformBadgeChip(tmdbId: Int?, isTv: Boolean) {
 
 /** `.cast`: photos 64 round with a 2 px white-14% ring, the initials on the mint→blue gradient when there is no photo. */
 @Composable
-internal fun VodCast(cast: List<CastMember>, count: Int, modifier: Modifier = Modifier) {
+internal fun VodCast(cast: List<CastMember>, count: Int, modifier: Modifier = Modifier, gap: androidx.compose.ui.unit.Dp = 20.mpx) {
     val castRing = StageColors.Ink.copy(alpha = 0.14f)
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(gap)) {
         cast.take(count).forEach { member ->
             Column(Modifier.width(84.mpx), horizontalAlignment = Alignment.CenterHorizontally) {
                 val photo = MetadataImages.profile(member.profilePath)

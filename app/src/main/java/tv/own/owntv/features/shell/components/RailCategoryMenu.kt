@@ -2,6 +2,7 @@ package tv.own.owntv.features.shell.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -38,6 +39,12 @@ internal fun RailCategoryMenu(
         if (item.sealed) onSealedAction(item.key, action) else run(item.key)
         onClose()
     }
+    // glcn: the icon picker steps in for the menu.
+    var pickingIcon by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    if (pickingIcon) {
+        tv.own.owntv.glcn.CategoryIconPicker(tv.own.owntv.core.live.ProviderTags.parse(name).name) { pickingIcon = false; onClose() }
+        return
+    }
     CategoryContextMenu(
         categoryName = name,
         canHide = real,
@@ -57,5 +64,6 @@ internal fun RailCategoryMenu(
             else -> null
         },
         onToggleLock = { onToggleLock(item.key); onClose() },
+        onIcon = if (real && !item.nested && tv.own.owntv.glcn.CategoryIcons.on) ({ pickingIcon = true }) else null,
     )
 }

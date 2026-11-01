@@ -100,6 +100,20 @@ jobs:
           retention-days: 90
           if-no-files-found: ignore
 
+      # glcn: the same mapping, readable with git (artifact downloads are not reachable from every tool): branch
+      # ci-mapping-<branch>, one commit holding this build's mapping.txt.gz, replaced by the next build.
+      - name: Keep R8 mapping in git
+        if: success()
+        run: |
+          MAP=$(ls app/build/outputs/mapping/*/mapping.txt 2>/dev/null | head -1)
+          [ -n "$MAP" ] || exit 0
+          mkdir -p /tmp/cim && cd /tmp/cim
+          gzip -9c "$GITHUB_WORKSPACE/$MAP" > mapping.txt.gz
+          echo "$VERSION_NAME ${GITHUB_SHA::7}" > build.txt
+          git init -q . && git checkout -q --orphan map
+          git add -A && git -c user.name=ci -c user.email=ci@example.com commit -q -m "mapping $VERSION_NAME"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" map:ci-mapping-${{ github.ref_name }} || true
+
       # glcn: every push is built and checked, but a version is only published when asked:
       # a commit whose message carries [release], or a manual run. The notes come from
       # glcn/RELEASE_NOTES.md, which the in-app updater shows.

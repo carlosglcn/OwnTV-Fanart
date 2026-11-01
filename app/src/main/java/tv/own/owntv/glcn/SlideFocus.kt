@@ -55,6 +55,8 @@ class SlideFocusState {
     val alpha = Animatable(0f)
     /** How briskly the box glides (spring stiffness): menus snap, Home's rows take their time. */
     var stiffness = 700f
+    /** glcn: below 1 the box overshoots a touch and settles back — an elastic glide (Home's rows). */
+    var damping = 1f
     /** glcn: the box stretches as it goes — its leading edge gets there first, the trailing one follows (menu bars). */
     var stretch = false
 }
@@ -63,11 +65,12 @@ val LocalSlideFocus = compositionLocalOf<SlideFocusState?> { null }
 
 /** Wraps a list or a menu: draws the sliding box behind [content] and tells its items to leave focus drawing to it. */
 @Composable
-fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, stretch: Boolean = false, content: @Composable () -> Unit) {
+fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, stretch: Boolean = false, damping: Float = 1f, content: @Composable () -> Unit) {
     if (LowRam.on) { content(); return }
     val st = remember { SlideFocusState() }
     st.stiffness = stiffness
     st.stretch = stretch
+    st.damping = damping
     val palette = LocalStagePalette.current
     val on = st.current != null
     val fade = ownTvTween<Float>(140)
@@ -145,7 +148,7 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
                 if (rect != Rect.Zero) st.live = rect
                 scope.launch(start = CoroutineStart.UNDISPATCHED) {
                     st.glide.snapTo(1f)
-                    st.glide.animateTo(0f, spring(dampingRatio = 1f, stiffness = st.stiffness))
+                    st.glide.animateTo(0f, spring(dampingRatio = st.damping, stiffness = st.stiffness))
                 }
             } else if (st.current === id) st.current = null
         }

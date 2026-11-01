@@ -15,11 +15,11 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 object SmoothScroll {
     val animation: AnimationSpec<Float>
-        // glcn: a gentle ease over a little more than half a second: it eases in (no jolt at the start) and lands long and
-        // soft, the last third of the way taking as long as the first two. A spring here made
-        // the focus glide lag behind a held ▼ until the page stopped following it.
-        get() = if (LowRam.on) snap<Float>() else androidx.compose.animation.core.tween<Float>(
-            GLIDE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.33f, 0f, 0.12f, 1f),
+        // glcn: elastic, and never behind: a single step glides a little past and settles back (an Apple TV feel);
+        // steps coming quickly (a held key, a fast run) each take a short plain glide, so the row keeps pace with the
+        // focus. A spring here made the focus glide lag behind a held ▼ until the page stopped following it.
+        get() = if (LowRam.on) snap<Float>() else paced(
+            androidx.compose.animation.core.tween<Float>(GLIDE_MS, easing = ELASTIC),
         )
 
     /**
@@ -27,9 +27,25 @@ object SmoothScroll {
      * page never sets off with a jolt. Instant in light mode.
      */
     val homeAnimation: AnimationSpec<Float>
-        get() = if (LowRam.on) snap<Float>() else androidx.compose.animation.core.tween<Float>(
-            HOME_GLIDE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.45f, 0.05f, 0.2f, 1f),
+        get() = if (LowRam.on) snap<Float>() else paced(
+            androidx.compose.animation.core.tween<Float>(HOME_GLIDE_MS, easing = ELASTIC_SOFT),
         )
+
+    /**
+     * glcn: [calm] for a step on its own; a short, plain glide when the previous one started under [QUICK_MS] ago —
+     * read each time a scroll begins, so a held key never leaves the page behind its focus.
+     */
+    private fun paced(calm: AnimationSpec<Float>): AnimationSpec<Float> {
+        val now = android.os.SystemClock.uptimeMillis()
+        val quick = now - lastStart < QUICK_MS
+        lastStart = now
+        return if (quick) androidx.compose.animation.core.tween(QUICK_GLIDE_MS, easing = androidx.compose.animation.core.LinearOutSlowInEasing) else calm
+    }
+    @Volatile private var lastStart = 0L
+    /** Goes a little past and comes back (about 6 %): the elastic landing. */
+    private val ELASTIC = androidx.compose.animation.core.CubicBezierEasing(0.3f, 0.9f, 0.3f, 1.12f)
+    /** Home's page: softer start, a smaller overshoot. */
+    private val ELASTIC_SOFT = androidx.compose.animation.core.CubicBezierEasing(0.4f, 0.4f, 0.25f, 1.06f)
 
     /**
      * glcn: a menu's list (Settings) — brisk enough that a quick run of ▼ never leaves the highlight off the screen,
@@ -120,5 +136,8 @@ val NoBringIntoViewSpec = object : BringIntoViewSpec {
 private const val GLIDE_MS = 560
 private const val HOME_GLIDE_MS = 700
 private const val LIST_GLIDE_MS = 300
+/** glcn: steps closer together than this count as a run (a held key repeats every ~50–100 ms). */
+private const val QUICK_MS = 260L
+private const val QUICK_GLIDE_MS = 200
 /** glcn: the settings highlight's slide, in step with [SmoothScroll.listAnimation]. */
 const val SETTINGS_FOCUS_STIFFNESS = 900f

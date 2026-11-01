@@ -679,6 +679,8 @@ fun StageSheetItem(
     maxLines: Int = 1,
     tags: (@Composable RowScope.(focused: Boolean) -> Unit)? = null,
     trailing: (@Composable RowScope.(focused: Boolean) -> Unit)? = null,
+    /** glcn: a picture before the name (a group's category icon), given the row's icon colour. */
+    leading: (@Composable (Color) -> Unit)? = null,
 ) {
     val a = stageAccent
     StageSurface(
@@ -698,6 +700,7 @@ fun StageSheetItem(
                 Box(Modifier.width(3.mpx).wrapContentWidth(Alignment.Start, unbounded = true)) { StageSelectedDot() }
             }
             if (icon != null) StageIcon(icon, on ?: if (selected) a.accent else StageColors.Muted, 22.mpx)
+            leading?.invoke(on ?: if (selected) a.accent else StageColors.Muted)
             val label = @Composable { m: Modifier ->
                 Text(
                     text,

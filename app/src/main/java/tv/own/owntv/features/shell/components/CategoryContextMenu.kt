@@ -52,6 +52,8 @@ fun CategoryContextMenu(
     onReset: () -> Unit = {},
     locked: Boolean? = null,
     onToggleLock: () -> Unit = {},
+    /** glcn: choose the group's icon (provider groups only). */
+    onIcon: (() -> Unit)? = null,
 ) {
     val focus = remember { FocusRequester() }
     var confirmingReset by remember { mutableStateOf(false) }
@@ -84,6 +86,12 @@ fun CategoryContextMenu(
                         stringResource(if (locked) tv.own.owntv.R.string.settings_customize_remove_lock else tv.own.owntv.R.string.content_category_lock),
                         onClick = onToggleLock, icon = OwnTVIcon.LOCK,
                         modifier = if (!canMove && !canHide) Modifier.focusRequester(focus) else Modifier,
+                    )
+                }
+                if (onIcon != null) {
+                    tv.own.owntv.ui.stage.StageMenuItem(
+                        stringResource(tv.own.owntv.R.string.glcn_category_icon), onClick = onIcon, icon = OwnTVIcon.SPARKLE,
+                        modifier = if (!canMove && !canHide && locked == null) Modifier.focusRequester(focus) else Modifier,
                     )
                 }
                 if (resetLabel != null) {

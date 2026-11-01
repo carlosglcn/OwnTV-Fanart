@@ -534,6 +534,14 @@ fun SettingsScreen(
             onClick = { tv.own.owntv.glcn.Accessible.set(accessibleContext, !tv.own.owntv.glcn.Accessible.on) },
         ),
         RootRow(
+            "glcn_category_icons", TileTone.PRIMARY, OwnTVIcon.SPARKLE,
+            title = stringResource(R.string.glcn_category_icons_title),
+            desc = stringResource(R.string.glcn_category_icons_desc),
+            chip = stringResource(if (tv.own.owntv.glcn.CategoryIcons.on) R.string.common_on else R.string.common_off),
+            chipTone = if (tv.own.owntv.glcn.CategoryIcons.on) TileTone.PRIMARY else TileTone.SECONDARY,
+            onClick = { tv.own.owntv.glcn.CategoryIcons.setOn(accessibleContext, !tv.own.owntv.glcn.CategoryIcons.on) },
+        ),
+        RootRow(
             "glcn_home_backdrop", TileTone.PRIMARY, OwnTVIcon.THEME,
             title = stringResource(R.string.glcn_home_backdrop_title),
             desc = stringResource(R.string.glcn_home_backdrop_desc),
