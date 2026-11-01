@@ -12,7 +12,7 @@ import androidx.compose.ui.input.key.type
 
 /**
  * glcn: features still being tried (today: the Apps row on TV Home), hidden from everyone until switched on on this
- * device with a key sequence in Settings — ▲ ▲ ▼ ▼ ◀ ▶ ◀ ▶. The same sequence switches them off again.
+ * device with a key sequence in Settings — ▲ ▼ four times. The same sequence switches them off again.
  */
 object Labs {
     var on by mutableStateOf(false)
@@ -47,9 +47,11 @@ object Labs {
         }
     }
 
+    // Up and down only: ◀ in a list goes to the menu (and the menu opens other sections), so a sequence with sideways
+    // steps left Settings half way through and was never seen whole.
     private val SEQUENCE = listOf(
-        Key.DirectionUp, Key.DirectionUp, Key.DirectionDown, Key.DirectionDown,
-        Key.DirectionLeft, Key.DirectionRight, Key.DirectionLeft, Key.DirectionRight,
+        Key.DirectionUp, Key.DirectionDown, Key.DirectionUp, Key.DirectionDown,
+        Key.DirectionUp, Key.DirectionDown, Key.DirectionUp, Key.DirectionDown,
     )
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

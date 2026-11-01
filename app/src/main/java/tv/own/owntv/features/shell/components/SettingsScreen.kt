@@ -159,7 +159,7 @@ fun SettingsScreen(
     start: SettingsStart? = null,
     onStartConsumed: () -> Unit = {},
 ) {
-    // glcn: the test switch — ▲ ▲ ▼ ▼ ◀ ▶ ◀ ▶ anywhere in Settings turns the hidden features on or off (Labs).
+    // glcn: the test switch — ▲ ▼ four times in a row anywhere in Settings turns the hidden features on or off (Labs).
     val labsContext = androidx.compose.ui.platform.LocalContext.current
     @Suppress("NAME_SHADOWING")
     val modifier = modifier.onPreviewKeyEvent { e -> tv.own.owntv.glcn.Labs.observe(labsContext, e); false }
