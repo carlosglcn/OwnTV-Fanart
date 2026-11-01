@@ -134,6 +134,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // Fixed for this process before any player exists: the setting applies only after a restart.
         tv.own.owntv.core.player.FfmpegAudioSetting.load(this)
         tv.own.owntv.glcn.CategoryIcons.ensure(this) // glcn: category icons and the ones chosen by hand
+        tv.own.owntv.glcn.EmbyGroupsPref.load(this) // glcn: how Emby / Jellyfin libraries are split into categories
         // First thing after the context exists: a crash from here on leaves a trace on disk that the
         // user can export from Settings, instead of being lost with the process.
         tv.own.owntv.core.util.CrashRecorder.diagnostics = { tv.own.owntv.player.LiveDiagnosticsLog.snapshot() }

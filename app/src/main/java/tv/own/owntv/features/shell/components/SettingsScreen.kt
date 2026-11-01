@@ -534,6 +534,20 @@ fun SettingsScreen(
             onClick = { tv.own.owntv.glcn.Accessible.set(accessibleContext, !tv.own.owntv.glcn.Accessible.on) },
         ),
         RootRow(
+            "glcn_emby_groups", TileTone.PRIMARY, OwnTVIcon.LAYERS,
+            title = stringResource(R.string.glcn_emby_groups_title),
+            desc = stringResource(R.string.glcn_emby_groups_desc),
+            chip = stringResource(
+                when (tv.own.owntv.glcn.EmbyGroupsPref.mode) {
+                    tv.own.owntv.core.sync.EmbyGroups.Mode.GENRE -> R.string.glcn_emby_groups_genre
+                    tv.own.owntv.core.sync.EmbyGroups.Mode.PLATFORM -> R.string.glcn_emby_groups_platform
+                    tv.own.owntv.core.sync.EmbyGroups.Mode.LIBRARY -> R.string.glcn_emby_groups_library
+                },
+            ),
+            chipTone = TileTone.PRIMARY,
+            onClick = { tv.own.owntv.glcn.EmbyGroupsPref.cycle(accessibleContext) },
+        ),
+        RootRow(
             "glcn_category_icons", TileTone.PRIMARY, OwnTVIcon.SPARKLE,
             title = stringResource(R.string.glcn_category_icons_title),
             desc = stringResource(R.string.glcn_category_icons_desc),

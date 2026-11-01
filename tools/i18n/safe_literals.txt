@@ -761,6 +761,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	github.com/ahXN00/OwnTV
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_accessible
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_category_icons
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_emby_groups
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_fps
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_light_mode
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_reset_appearance
@@ -1170,6 +1171,9 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	glcn_dock
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	title_page
 1	technical	app/src/main/java/tv/own/owntv/glcn/DockPrefs.kt	trailer_sound
+1	preference-key	app/src/main/java/tv/own/owntv/glcn/EmbyGroupsPref.kt	\0
+1	preference-key	app/src/main/java/tv/own/owntv/glcn/EmbyGroupsPref.kt	glcn_emby_groups
+1	preference-key	app/src/main/java/tv/own/owntv/glcn/EmbyGroupsPref.kt	mode
 3	technical	app/src/main/java/tv/own/owntv/glcn/FanartDream.kt	·
 2	technical	app/src/main/java/tv/own/owntv/glcn/FanartDream.kt	★ %.1f
 2	empty	app/src/main/java/tv/own/owntv/glcn/FrameMeter.kt	\0

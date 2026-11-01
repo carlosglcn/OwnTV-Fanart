@@ -6,3 +6,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 Programme info: the channel goes on playing in a small window up on the right, so nothing is missed while you read
 - 🔤 Programme info: the synopsis reads over bright pictures (deeper shade, a little narrower), the age rating is a badge of its own, and "Airs again this week" only shows when it does
 - ⏪ Programme info: From the start (catch-up channels) and Record buttons beside Technical data
+- 🗂️ Emby / Jellyfin: choose how a library is split into categories — by genre (now series too), by platform or network (Netflix, HBO…, from Emby's studios) or as one list each for films and series (Settings › Fanart › Emby / Jellyfin categories; applies at the next sync)
+- 🧯 Emby / Jellyfin sync reads the library a page at a time instead of holding every episode (with its media streams) in memory at once — a big library filled the memory while syncing
