@@ -50,3 +50,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎯 Logos alone in the category list: a little larger and centred in the row (they sat at the left with the row empty to their right)
 - 🧪 **Test features (▲ ▼ four times in Settings): Apps, the SHIELD way** — More › Apps: "Your apps" (picked, in order) over "All apps", every banner one size and framed, the focused one lifting and the page taking its colours; hold OK to add or take off, move, or open the app's Android settings. The "Add apps" picker on TV Home is now a dark grid of banners with a ✓ on the added ones (added first, with a count), and the row's Add card is small
 - 🧪 **Test feature: open when the TV starts** — off by default; Settings › App (or More › Apps): OwnTV Fanart comes up on start-up and when the TV wakes; Android asks once for "Display over other apps"
+- 📍 **Chapter marks on the film's seek bar** (thin cuts where each chapter starts, mpv)
+- ⏩ **Skip intro from the chapters:** a file whose chapters name its intro ("Intro", "Opening"…) offers Skip intro — films too — and lands exactly where it ends (Auto-skip uses it as well)
+- 🌈 **HDR on a TV without HDR:** an HDR / Dolby Vision film plays on mpv's GL path, which turns it to SDR with the right colours instead of washed-out ones (only when the screen takes no HDR at all)

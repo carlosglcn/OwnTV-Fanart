@@ -803,6 +803,7 @@ fun PlayerHud(
                     onOpen = { cinemaTab = it },
                     onNext = { player.next() },
                     hasChapters = chapters.size > 1,
+                    chapterMarks = chapters.map { it.startMs },
                 )
                 Box(Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 40.dp)) {
                     PlayerClock(watchingMs = watchingWallMs?.invoke())

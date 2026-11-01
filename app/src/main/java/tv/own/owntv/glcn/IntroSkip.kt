@@ -50,6 +50,19 @@ object IntroSkip {
     /** Watching on this long after a jump confirms where the intro ended. */
     private const val SETTLE_MS = 12_000L
 
+    /** glcn: the end of the playing file's intro chapter (the next chapter's start), or -1. Set by [Chip]. */
+    @Volatile var chapterEnd: Long = -1L
+        private set
+
+    /** The end of a chapter named as an intro and starting in the first minutes, from the file's chapters. */
+    fun introEnd(chapters: List<tv.own.owntv.player.PlayerChapter>): Long {
+        val i = chapters.indexOfFirst { c -> c.startMs < WINDOW_MS && c.title?.let { INTRO_NAME.containsMatchIn(it) } == true }
+        if (i < 0) return -1L
+        return chapters.getOrNull(i + 1)?.startMs?.takeIf { it > chapters[i].startMs } ?: -1L
+    }
+
+    private val INTRO_NAME = Regex("""(?i)\b(intro|introduction|opening|openings|op|apertura|cabecera|generique|générique|vorspann)\b""")
+
     private fun prefs(c: Context) = c.getSharedPreferences("glcn_intro", Context.MODE_PRIVATE)
     fun key(series: String) = series.trim().lowercase()
     fun learned(c: Context, series: String): Long = prefs(c).getLong(key(series), -1L)
@@ -65,6 +78,12 @@ object IntroSkip {
         val meta by engine.currentMeta.collectAsStateWithLifecycle()
         val series = meta.subtitle?.takeIf { meta.episodeNumber != null && it.isNotBlank() }
         val position by engine.position.collectAsStateWithLifecycle()
+        // glcn: a file whose chapters name its intro ("Intro", "Opening") says exactly where it ends — films too.
+        val duration by engine.duration.collectAsStateWithLifecycle()
+        val introChapterEnd by androidx.compose.runtime.produceState(-1L, meta, duration > 0) {
+            value = if (duration > 0) introEnd(runCatching { engine.chapters() }.getOrDefault(emptyList())) else -1L
+            chapterEnd = value
+        }
         var learnedEnd by remember(series) { mutableLongStateOf(series?.let { learned(context, it) } ?: -1L) }
         var autoDone by remember(meta) { mutableStateOf(false) }
 
@@ -93,18 +112,21 @@ object IntroSkip {
             }
         }
 
-        val inWindow = series != null && when {
+        val inWindow = when {
+            introChapterEnd > 0 -> position in 2_000L until (introChapterEnd - 3_000L)
+            series == null -> false
             learnedEnd > 0 -> position in 2_000L until (learnedEnd - 3_000L)
             else -> position in SHOW_FROM_MS until SHOW_UNTIL_MS
         }
+        val exactEnd = if (introChapterEnd > 0) introChapterEnd else learnedEnd
         // Auto-skip: once per episode, only to a learned end.
-        LaunchedEffect(inWindow, autoSkip, learnedEnd) {
-            if (autoSkip && inWindow && learnedEnd > 0 && !autoDone) {
+        LaunchedEffect(inWindow, autoSkip, exactEnd) {
+            if (autoSkip && inWindow && exactEnd > 0 && !autoDone) {
                 autoDone = true
-                engine.seekBy(learnedEnd - position)
+                engine.seekBy(exactEnd - position)
             }
         }
-        val visible = inWindow && !jumped && controlsHidden && !(autoSkip && learnedEnd > 0)
+        val visible = inWindow && !jumped && controlsHidden && !(autoSkip && exactEnd > 0)
         LaunchedEffect(visible) { onVisible(visible) }
         Box(modifier) {
             AnimatedVisibility(visible, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomEnd)) {
@@ -123,9 +145,11 @@ object IntroSkip {
 
     /** The button's action: to the learned end, or a typical intro length on. */
     fun skip(context: Context, engine: PlaybackEngine) {
+        val pos = engine.position.value
+        // glcn: the intro chapter's end, when the file names one.
+        chapterEnd.takeIf { it > pos }?.let { engine.seekBy(it - pos); return }
         val series = engine.currentMeta.value.subtitle ?: return
         val end = learned(context, series)
-        val pos = engine.position.value
         engine.seekBy(if (end > pos) end - pos else DEFAULT_JUMP_MS)
     }
 }

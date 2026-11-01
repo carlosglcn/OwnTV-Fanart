@@ -1201,6 +1201,7 @@
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	glcn_hidden_categories
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	keys
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	playlist:$id
+1	regex	app/src/main/java/tv/own/owntv/glcn/IntroSkip.kt	(?i)\\b(intro|introduction|opening|openings|op|apertura|cabecera|generique|générique|vorspann)\\b
 1	technical	app/src/main/java/tv/own/owntv/glcn/Labs.kt	autostart
 1	technical	app/src/main/java/tv/own/owntv/glcn/Labs.kt	glcn_labs
 1	technical	app/src/main/java/tv/own/owntv/glcn/Labs.kt	on

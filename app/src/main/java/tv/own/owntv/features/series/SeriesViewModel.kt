@@ -1124,6 +1124,7 @@ class SeriesViewModel(
                             enginePick = tv.own.owntv.core.player.EngineHint.of(
                                 ep.name, ep.streamUrl, show.qualityRank, show.advertisedCapabilities, ep.containerExt,
                             ),
+                            hdr = tv.own.owntv.core.player.EngineHint.isHdr(ep.name, show.advertisedCapabilities),
                         ),
                         resolveUrl = if (needsResolve && source != null) {
                             { streamUrlResolver.resolve(source, ep.streamUrl, vod = true, episode = ep.episodeNumber) }

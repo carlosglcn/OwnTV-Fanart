@@ -470,7 +470,11 @@ private fun BoxScope.Playhead(frac: Float) {
 }
 
 @Composable
-internal fun SeekBar(positionMs: Long, durationMs: Long, bufferedMs: Long, stepMs: Long, onSeek: (Long) -> Unit, focusRequester: FocusRequester? = null) {
+internal fun SeekBar(
+    positionMs: Long, durationMs: Long, bufferedMs: Long, stepMs: Long, onSeek: (Long) -> Unit, focusRequester: FocusRequester? = null,
+    /** glcn: chapter starts, drawn as small gaps along the bar. */
+    marks: List<Long> = emptyList(),
+) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val frac = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
@@ -495,6 +499,18 @@ internal fun SeekBar(positionMs: Long, durationMs: Long, bufferedMs: Long, stepM
         Box(Modifier.fillMaxWidth().height(if (focused) 6.dp else 4.dp).clip(RoundedCornerShape(50)).background(hudInk.copy(alpha = if (focused) 0.4f else 0.22f))) {
             Box(Modifier.fillMaxWidth(bufferedFrac).fillMaxHeight().clip(RoundedCornerShape(50)).background(hudInk.copy(alpha = 0.28f)))
             Box(Modifier.fillMaxWidth(frac).fillMaxHeight().clip(RoundedCornerShape(50)).background(hudAccent))
+            // glcn: the chapters, as thin cuts in the bar (the first, at 0, is the start and not drawn).
+            if (marks.isNotEmpty() && durationMs > 0) {
+                val cut = hudShade(0.9f)
+                androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
+                    val w = 2.dp.toPx()
+                    marks.forEach { m ->
+                        if (m <= 0 || m >= durationMs) return@forEach
+                        val x = size.width * (m.toFloat() / durationMs)
+                        drawRect(cut, topLeft = androidx.compose.ui.geometry.Offset(x - w / 2, 0f), size = androidx.compose.ui.geometry.Size(w, size.height))
+                    }
+                }
+            }
         }
         if (focused) {
             Playhead(frac)

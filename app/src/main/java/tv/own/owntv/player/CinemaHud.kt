@@ -241,6 +241,8 @@ internal fun CinemaBanner(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
     hasChapters: Boolean = false,
+    /** glcn: where the chapters start, marked on the seek bar. */
+    chapterMarks: List<Long> = emptyList(),
 ) {
     Box(modifier.fillMaxSize()) {
         Box(
@@ -269,7 +271,7 @@ internal fun CinemaBanner(
                     Text(formatTime(pos), style = stageText(20, 700), color = Color.White.copy(alpha = 0.85f))
                     Spacer(Modifier.width(16.mpx))
                     Box(Modifier.weight(1f)) {
-                        SeekBar(positionMs = pos, durationMs = duration, bufferedMs = buffered, stepMs = seekStep, onSeek = { player.seekBy(it) }, focusRequester = seekFocus)
+                        SeekBar(positionMs = pos, durationMs = duration, bufferedMs = buffered, stepMs = seekStep, onSeek = { player.seekBy(it) }, focusRequester = seekFocus, marks = chapterMarks)
                     }
                     Spacer(Modifier.width(16.mpx))
                     Text(stringResource(R.string.player_time_remaining, formatTime((duration - pos).coerceAtLeast(0))), style = stageText(20, 700), color = Color.White.copy(alpha = 0.85f))

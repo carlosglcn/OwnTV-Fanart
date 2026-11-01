@@ -775,6 +775,7 @@ class MovieViewModel(
                 enginePick = tv.own.owntv.core.player.EngineHint.of(
                     movie.name, movie.streamUrl, movie.qualityRank, movie.advertisedCapabilities, movie.containerExt,
                 ),
+                hdr = tv.own.owntv.core.player.EngineHint.isHdr(movie.name, movie.advertisedCapabilities),
                 // Engine pins key on this, not on playUrl (a Stalker playUrl is minted per play).
                 contentKey = pinKey,
                 // A Stalker create_link URL dies before a long film ends; give the player a way to
