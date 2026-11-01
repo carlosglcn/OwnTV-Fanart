@@ -822,6 +822,7 @@ internal fun LiveCategories(
                             },
                             trailing = entry.mark?.let { m -> { _ -> StagePlaylistMark(m) } },
                             onLongClick = { entryLong(entry, index) },
+                            leading = entry.groupGlyph()?.let { g -> { tv.own.owntv.glcn.CategoryGlyphView(g) } },
                             modifier = rowModifier,
                         )
                     } else {
