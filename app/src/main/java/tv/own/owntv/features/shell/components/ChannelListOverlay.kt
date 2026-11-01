@@ -516,6 +516,8 @@ internal fun ZapSchedulePanel(
                 // glcn: 16:9 like the programme pictures themselves — 21:9 cut posters and stills at the top and bottom.
                 channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 46.mpx), framed = false, peek = peek,
                 bareAspect = 16f / 9f,
+                // glcn: the free room between the schedule and the picture goes to the synopsis.
+                bareLines = 6,
                 showing = pick?.let { it to rows.getOrNull(selected + 1) },
             )
         }

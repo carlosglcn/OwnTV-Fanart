@@ -32,3 +32,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔢 **Platforms from most titles to fewest**, "Other networks" always last (sync the list again once)
 - 🏷️ **Playlist marks with the service's own logo** (Emby, Jellyfin, Plex, Movistar) when that artwork is in the app; its name otherwise
 - 🪼 Jellyfin playlists show Jellyfin's own icon on their mark (jellyfin-ux, CC BY-SA 4.0)
+- 📝 Zapping › Coming up: the synopsis gets up to six lines (the free room above the picture)
