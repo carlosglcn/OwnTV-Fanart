@@ -1853,7 +1853,14 @@ private fun AllRowsHiddenState(
 
 /** glcn: the hold-OK menu of a Keep watching card. */
 @Composable
-internal fun KeepWatchingMenu(title: String, onRemove: () -> Unit, onDismiss: () -> Unit, label: String = stringResource(R.string.glcn_remove_from_continue)) {
+internal fun KeepWatchingMenu(
+    title: String,
+    onRemove: () -> Unit,
+    onDismiss: () -> Unit,
+    label: String = stringResource(R.string.glcn_remove_from_continue),
+    /** glcn: a second choice, "Move row" (the Dock's tabs). */
+    onMove: (() -> Unit)? = null,
+) {
     androidx.activity.compose.BackHandler { onDismiss() }
     val first = androidx.compose.runtime.remember { FocusRequester() }
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -1872,6 +1879,11 @@ internal fun KeepWatchingMenu(title: String, onRemove: () -> Unit, onDismiss: ()
                     onClick = { onRemove(); onDismiss() },
                     icon = OwnTVIcon.CLOSE,
                     modifier = Modifier.focusRequester(first),
+                )
+                if (onMove != null) tv.own.owntv.ui.stage.StageMenuItem(
+                    stringResource(R.string.settings_home_move_row),
+                    onClick = { onDismiss(); onMove() },
+                    icon = OwnTVIcon.MOVE,
                 )
             }
         }

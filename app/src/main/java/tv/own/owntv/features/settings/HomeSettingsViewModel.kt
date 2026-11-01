@@ -134,6 +134,23 @@ class HomeSettingsViewModel(
         }
     }
 
+    /** glcn: [row] to the other side of [target] — moving among the rows shown, past any hidden one between them. */
+    fun moveNextTo(row: HomeRow, target: HomeRow) {
+        updateConfig { config ->
+            val rows = config.settingsRows.toMutableList()
+            val from = rows.indexOf(row)
+            val at = rows.indexOf(target)
+            if (from < 0 || at < 0 || from == at) {
+                config
+            } else {
+                rows.removeAt(from)
+                val t = rows.indexOf(target)
+                rows.add(if (at > from) t + 1 else t, row)
+                config.copy(order = rows + config.order.filterNot { it.implemented })
+            }
+        }
+    }
+
     fun moveToEdge(row: HomeRow, top: Boolean) {
         updateConfig { config ->
             val rows = config.settingsRows.toMutableList()

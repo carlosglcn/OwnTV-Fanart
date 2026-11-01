@@ -329,11 +329,14 @@ fun StagePill(
     highlighted: Boolean = false,
     /** Idle text in the dim colour: a choice that is currently off. */
     dimmed: Boolean = false,
+    /** glcn: hold OK (Home's rows: move the row). */
+    onLongClick: (() -> Unit)? = null,
 ) {
     val a = stageAccent
     val r = StageRadii.Pill
     StageSurface(
         onClick = onClick,
+        onLongClick = onLongClick,
         radius = r,
         modifier = modifier.height(50.mpx).widthIn(max = 470.mpx),
         idle = Modifier.stageGlass(r),

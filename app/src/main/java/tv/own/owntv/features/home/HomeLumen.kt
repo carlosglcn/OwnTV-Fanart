@@ -233,6 +233,10 @@ fun LumenHome(
         pendingEntry = false
     }
     var menuRow by remember { mutableStateOf<HomeRow?>(null) }
+    // glcn: the tab being moved (its menu › Move row): ◀ ▶ move it among the tabs, OK or Back leave it there.
+    var movingRow by remember { mutableStateOf<HomeRow?>(null) }
+    var swallowOkUp by remember { mutableStateOf(false) }
+    val rowsVm: tv.own.owntv.features.settings.HomeSettingsViewModel = koinViewModel()
     // glcn: TMDB for the film or series the focus rests on — its title logo and trailer.
     val metaRepo: tv.own.owntv.core.metadata.MetadataRepository = org.koin.compose.koinInject()
     val metas = remember { androidx.compose.runtime.mutableStateMapOf<String, tv.own.owntv.core.database.entity.MetadataCacheEntity>() }
@@ -346,6 +350,7 @@ fun LumenHome(
             KeepWatchingMenu(
                 title = row.displayTitle(), onRemove = { onHideRow(row) }, onDismiss = { menuRow = null },
                 label = stringResource(R.string.settings_home_hide_row),
+                onMove = { movingRow = row; runCatching { selectedTab.requestFocus() } },
             )
         }
         if (tab == null) return@Box
@@ -433,11 +438,34 @@ fun LumenHome(
         ) {
             LazyRow(Modifier.padding(horizontal = 24.mpx).focusGroup(), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
                 itemsIndexed(tabs, key = { _, t -> t.row.name }) { i, t ->
+                    val isMoving = movingRow == t.row
                     StageTab(
-                        label = t.row.displayTitle(), count = t.items.size.toString(), selected = i == selected,
+                        label = t.row.displayTitle(), count = t.items.size.toString(), selected = i == selected || isMoving,
                         onClick = { selected = i },
                         onLongClick = { menuRow = t.row },
-                        modifier = Modifier.then(if (i == selected) Modifier.focusRequester(selectedTab) else Modifier).onFocusChanged { if (it.hasFocus) { selected = i; onChildFocused() } },
+                        modifier = Modifier.animateItem().then(if (i == selected) Modifier.focusRequester(selectedTab) else Modifier)
+                            .onPreviewKeyEvent { e ->
+                                val ok = e.key == androidx.compose.ui.input.key.Key.DirectionCenter || e.key == androidx.compose.ui.input.key.Key.Enter ||
+                                    e.key == androidx.compose.ui.input.key.Key.NumPadEnter
+                                val down = e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown
+                                if (isMoving) {
+                                    if (!down) {
+                                        if (e.key == androidx.compose.ui.input.key.Key.Back) movingRow = null
+                                        return@onPreviewKeyEvent true
+                                    }
+                                    val to = when {
+                                        e.key == androidx.compose.ui.input.key.Key.DirectionLeft -> i - 1
+                                        e.key == androidx.compose.ui.input.key.Key.DirectionRight -> i + 1
+                                        ok -> { movingRow = null; swallowOkUp = true; return@onPreviewKeyEvent true }
+                                        else -> return@onPreviewKeyEvent true
+                                    }
+                                    tabs.getOrNull(to)?.let { target -> rowsVm.moveNextTo(t.row, target.row); selected = to }
+                                    true
+                                } else if (swallowOkUp && ok && !down) {
+                                    swallowOkUp = false; true
+                                } else false
+                            }
+                            .onFocusChanged { if (it.hasFocus) { selected = i; onChildFocused() } else if (isMoving) movingRow = null },
                     )
                 }
             }

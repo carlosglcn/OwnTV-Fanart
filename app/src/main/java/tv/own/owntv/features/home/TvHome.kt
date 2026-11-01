@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -99,6 +100,11 @@ internal fun TvHome(
         if (smart.isNotEmpty()) value = smart + plain
     }
     var selected by remember { mutableIntStateOf(0) }
+    val orderContext = LocalContext.current
+    var rowOrder by remember { mutableStateOf(TvHomeOrder.load(orderContext)) }
+    // glcn: the row being moved (hold OK on its name): ◀ ▶ move it, OK or Back leave it there.
+    var moving by remember { mutableStateOf<String?>(null) }
+    var swallowOkUp by remember { mutableStateOf(false) }
     val nowNext = remember { mutableStateMapOf<Long, Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>>() }
     var focusedChannel by remember { mutableStateOf<ChannelEntity?>(null) }
     // glcn: the programme that put the focused card in its row (Tonight's 22:00 film), shown in the panel instead of now.
@@ -219,27 +225,70 @@ internal fun TvHome(
             }
         }
 
-        // Your channels, by group, as picture cards.
-        val list = groups.orEmpty()
+        // Your channels, by group, as picture cards — in the order chosen by holding OK on a row's name.
+        val list = remember(groups, rowOrder) { TvHomeOrder.sort(groups.orEmpty(), rowOrder) }
         val group = list.getOrNull(selected.coerceIn(0, (list.size - 1).coerceAtLeast(0)))
         Column(
             Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(bottom = 40.mpx),
             verticalArrangement = Arrangement.spacedBy(16.mpx),
         ) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = moving != null,
+                enter = androidx.compose.animation.fadeIn(tv.own.owntv.ui.theme.ownTvTween(200)),
+                exit = androidx.compose.animation.fadeOut(tv.own.owntv.ui.theme.ownTvTween(150)),
+            ) {
+                Text(
+                    stringResource(R.string.glcn_tvhome_move_hint), style = stageText(17, 600),
+                    color = StageColors.Text.copy(alpha = 0.85f), modifier = Modifier.padding(start = contentStart + 28.mpx),
+                )
+            }
+            val pillsState = rememberLazyListState()
+            val moveScope = androidx.compose.runtime.rememberCoroutineScope()
             LazyRow(
+                state = pillsState,
                 contentPadding = PaddingValues(start = contentStart + 24.mpx, end = 64.mpx),
                 horizontalArrangement = Arrangement.spacedBy(12.mpx),
                 modifier = Modifier.focusRestorer().focusGroup(),
             ) {
-                itemsIndexed(list) { i, g ->
+                itemsIndexed(list, key = { _, g -> TvHomeOrder.keyOf(g) }) { i, g ->
+                    val key = TvHomeOrder.keyOf(g)
+                    val isMoving = moving == key
                     StagePill(
                         text = tvHomeTitle(g),
                         onClick = { selected = i; runCatching { firstCard.requestFocus() } },
+                        onLongClick = { selected = i; moving = key },
                         small = g.channels.size.toString(),
+                        trailingIcon = if (isMoving) tv.own.owntv.ui.components.OwnTVIcon.MOVE else null,
                         highlighted = i == selected,
-                        modifier = Modifier.onPreviewKeyEvent { e ->
-                            if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown) { selected = i; runCatching { firstCard.requestFocus() }.isSuccess } else false
-                        }.onFocusChanged { if (it.hasFocus) selected = i },
+                        modifier = Modifier.animateItem().onPreviewKeyEvent { e ->
+                            val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
+                            if (isMoving) {
+                                // Ups are kept: the one ending the hold that started the move, and Back's (the system acts on its up).
+                                if (e.type != KeyEventType.KeyDown) {
+                                    if (e.key == Key.Back) moving = null
+                                    return@onPreviewKeyEvent true
+                                }
+                                val to = when {
+                                    e.key == Key.DirectionLeft -> i - 1
+                                    e.key == Key.DirectionRight -> i + 1
+                                    ok -> { moving = null; swallowOkUp = true; return@onPreviewKeyEvent true }
+                                    else -> return@onPreviewKeyEvent true
+                                }
+                                if (to in list.indices) {
+                                    val keys = list.map(TvHomeOrder::keyOf).toMutableList()
+                                    java.util.Collections.swap(keys, i, to)
+                                    rowOrder = keys
+                                    TvHomeOrder.save(orderContext, keys)
+                                    selected = to
+                                    moveScope.launch { pillsState.animateScrollToItem((to - 1).coerceAtLeast(0)) }
+                                }
+                                true
+                            } else if (swallowOkUp && ok && e.type == KeyEventType.KeyUp) {
+                                swallowOkUp = false; true
+                            } else if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown) {
+                                selected = i; runCatching { firstCard.requestFocus() }.isSuccess
+                            } else false
+                        }.onFocusChanged { if (it.hasFocus) selected = i else if (isMoving) moving = null },
                     )
                 }
             }
@@ -333,3 +382,31 @@ private const val PREVIEW_SETTLE_MS = 900L
 private const val ART_SETTLE_MS = 450L
 private const val CLOCK_TICK_MS = 15_000L
 private const val DRIFT_MS = 14_000
+
+/**
+ * glcn: the order of Home's rows (Starting now, Films, a group…), chosen by holding OK on a row's name and moving it.
+ * Kept per device by kind and name; a row not placed yet (a new group) follows the placed ones in its own order.
+ */
+internal object TvHomeOrder {
+    fun keyOf(g: LiveViewModel.StripGroup): String = g.kind.name + SEP + g.title.orEmpty()
+
+    fun sort(groups: List<LiveViewModel.StripGroup>, order: List<String>): List<LiveViewModel.StripGroup> {
+        if (order.isEmpty()) return groups
+        val at = order.withIndex().associate { (i, k) -> k to i }
+        return groups.withIndex().sortedBy { (i, g) -> at[keyOf(g)] ?: (order.size + i) }.map { it.value }
+    }
+
+    fun load(context: android.content.Context): List<String> =
+        prefs(context).getString(KEY, null)?.let { raw ->
+            runCatching { org.json.JSONArray(raw).let { a -> List(a.length()) { a.getString(it) } } }.getOrNull()
+        }.orEmpty()
+
+    fun save(context: android.content.Context, keys: List<String>) {
+        prefs(context).edit().putString(KEY, org.json.JSONArray(keys).toString()).apply()
+    }
+
+    private fun prefs(context: android.content.Context) = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+    private const val PREFS = "glcn_tvhome"
+    private const val KEY = "row_order"
+    private const val SEP = "|"
+}
