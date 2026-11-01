@@ -2452,14 +2452,16 @@ fun OwnTVShell(
                 if (showProgramInfo) {
                     val infoChannel = previewChannel
                     if (infoChannel != null) tv.own.owntv.glcn.ProgrammeInfoScreen(
-                        channel = infoChannel,
+                        startChannel = infoChannel,
                         player = if (liveOnExo) liveVm.previewEngine else mpvEngine,
                         loadSchedule = { liveVm.scheduleFor(it) },
                         loadWeek = { liveVm.weekFor(it) },
                         onDismiss = { showProgramInfo = false },
                         modifier = Modifier.fillMaxSize(),
-                        onStartOver = { p -> showProgramInfo = false; liveVm.playCatchupProgramme(infoChannel, p) },
-                        onRecord = { liveVm.recordNow(infoChannel) },
+                        onStartOver = { ch, p -> showProgramInfo = false; liveVm.playCatchupProgramme(ch, p) },
+                        onRecord = { ch -> liveVm.recordNow(ch) },
+                        channels = zapChannels,
+                        onTune = { ch -> showProgramInfo = false; liveVm.ensurePlaying(ch) },
                     ) else showProgramInfo = false
                 }
                 if (showCopies) {

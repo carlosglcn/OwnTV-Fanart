@@ -1,5 +1,11 @@
 package tv.own.owntv.glcn
 
+import kotlinx.coroutines.launch
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.foundation.focusable
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -61,17 +67,47 @@ private val Dim = Color(0xFF93A09E)
  */
 @Composable
 fun ProgrammeInfoScreen(
-    channel: ChannelEntity,
+    startChannel: ChannelEntity,
     player: PlaybackEngine,
     loadSchedule: suspend (ChannelEntity) -> List<EpgProgrammeEntity>,
     loadWeek: suspend (ChannelEntity) -> List<EpgProgrammeEntity>,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     /** glcn: watch the programme on air from its start (catch-up channels only). */
-    onStartOver: ((EpgProgrammeEntity) -> Unit)? = null,
+    onStartOver: ((ChannelEntity, EpgProgrammeEntity) -> Unit)? = null,
     /** glcn: record the channel from now. */
-    onRecord: (() -> Unit)? = null,
+    onRecord: ((ChannelEntity) -> Unit)? = null,
+    /** glcn: the list being watched, in order — ◀ ▶ (and CH±) look at what is on along it without changing channel. */
+    channels: List<ChannelEntity> = emptyList(),
+    /** glcn: OK on another channel's page tunes it. */
+    onTune: ((ChannelEntity) -> Unit)? = null,
 ) {
+    // glcn: the channel whose page is shown — the one playing at first; the window keeps playing that one throughout.
+    var channel by remember { mutableStateOf(startChannel) }
+    val swap = remember { androidx.compose.animation.core.Animatable(0f) }
+    val swapScope = androidx.compose.runtime.rememberCoroutineScope()
+    var lastSwapAt by remember { mutableStateOf(0L) }
+    fun go(step: Int) {
+        if (channels.size < 2) return
+        val at = channels.indexOfFirst { it.id == channel.id }.takeIf { it >= 0 } ?: return
+        val next = channels[(at + step + channels.size) % channels.size]
+        val now = android.os.SystemClock.uptimeMillis()
+        // A held key gets shorter moves, so the pages keep up with it.
+        val quick = now - lastSwapAt < QUICK_SWAP_MS
+        lastSwapAt = now
+        val calm = DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn
+        swapScope.launch {
+            if (!calm) { channel = next; return@launch }
+            swap.animateTo(-step.toFloat(), androidx.compose.animation.core.tween(if (quick) 70 else SWAP_OUT_MS, easing = androidx.compose.animation.core.FastOutLinearInEasing))
+            channel = next
+            swap.snapTo(step.toFloat())
+            swap.animateTo(0f, androidx.compose.animation.core.tween(if (quick) 140 else SWAP_IN_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+        }
+    }
+    val slide = Modifier.graphicsLayer {
+        translationX = swap.value * SWAP_SHIFT.toPx()
+        alpha = 1f - kotlin.math.abs(swap.value) * 0.9f
+    }
     BackHandler { onDismiss() }
     val accent = stageAccent.accent
     val resolver: ProgrammeArtResolver = org.koin.compose.koinInject()
@@ -147,6 +183,20 @@ fun ProgrammeInfoScreen(
     val filmLogo = film?.logoPath?.let { tv.own.owntv.core.metadata.MetadataImages.logo(it) }
     var logoFailed by remember(titleLogo, filmLogo) { mutableStateOf(false) }
 
+    // glcn: the channels either side are read ahead (schedule, then TMDB for what they show), so a page is ready before ◀ ▶.
+    LaunchedEffect(channel.id, channels) {
+        if (channels.size < 2) return@LaunchedEffect
+        kotlinx.coroutines.delay(PREFETCH_DELAY_MS)
+        val at = channels.indexOfFirst { it.id == channel.id }.takeIf { it >= 0 } ?: return@LaunchedEffect
+        for (d in listOf(1, -1, 2, -2)) {
+            val n = channels[((at + d) % channels.size + channels.size) % channels.size]
+            if (n.id == channel.id) continue
+            val rows = runCatching { loadSchedule(n) }.getOrNull().orEmpty()
+            val onAir = rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs } ?: continue
+            runCatching { resolver.filmFor(onAir.title, onAir.categories) }
+            runCatching { resolver.detailsFor(onAir.title, onAir.categories) }
+        }
+    }
     var showTech by remember { mutableStateOf(false) }
     // glcn: the channel goes on in a small window up on the right (the shell moves the picture there).
     androidx.compose.runtime.DisposableEffect(Unit) {
@@ -154,9 +204,36 @@ fun ProgrammeInfoScreen(
         onDispose { InfoStage.liveWindow = false }
     }
     val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    val pageFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { pageFocus.requestFocus() } }
 
-    Box(modifier.fillMaxSize()) {
+    Box(
+        modifier.fillMaxSize().onPreviewKeyEvent { e ->
+            if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            when (e.key) {
+                androidx.compose.ui.input.key.Key.ChannelUp -> { go(1); true }
+                androidx.compose.ui.input.key.Key.ChannelDown -> { go(-1); true }
+                else -> false
+            }
+        },
+    ) {
+        // glcn: the page itself takes the focus first: ◀ ▶ walk the channels, OK tunes the one shown, ▼ goes to the buttons.
+        Box(
+            Modifier.fillMaxSize().focusRequester(pageFocus).focusable().onKeyEvent { e ->
+                if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onKeyEvent false
+                when (e.key) {
+                    androidx.compose.ui.input.key.Key.DirectionLeft -> { go(-1); true }
+                    androidx.compose.ui.input.key.Key.DirectionRight -> { go(1); true }
+                    androidx.compose.ui.input.key.Key.DirectionDown -> { runCatching { focus.requestFocus() }; true }
+                    androidx.compose.ui.input.key.Key.DirectionUp -> true
+                    androidx.compose.ui.input.key.Key.DirectionCenter, androidx.compose.ui.input.key.Key.Enter, androidx.compose.ui.input.key.Key.NumPadEnter -> {
+                        if (channel.id != startChannel.id && onTune != null) onTune(channel) else onDismiss()
+                        true
+                    }
+                    else -> false
+                }
+            },
+        )
         // glcn: the backdrop, with a window cut in it up on the right where the channel goes on playing.
         val windowRadius = 18.mpx
         Box(
@@ -183,7 +260,9 @@ fun ProgrammeInfoScreen(
             Box(Modifier.fillMaxSize().background(Color(0xFF06090A)))
             val art = film?.backdropPath?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w1280") }
                 ?: lent?.backdropUrl ?: cur?.imageUrl?.takeIf { it.isNotBlank() }
-            if (art != null) ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
+            androidx.compose.animation.Crossfade(art, androidx.compose.animation.core.tween(SWAP_IN_MS), label = "infoArt") { url ->
+                if (url != null) ProgrammeArt(url = url, modifier = Modifier.fillMaxSize())
+            }
             // The picture stays behind, never under the words: dark from the left and from the foot.
             // A deeper shade on the left, where the synopsis now runs long, so it reads over bright pictures too.
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color(0xF5050809), 0.62f to Color(0xD0050809), 1f to Color(0x4D050809))))
@@ -202,7 +281,7 @@ fun ProgrammeInfoScreen(
             )
         }
 
-        Column(Modifier.padding(start = 96.mpx, top = 80.mpx, end = 96.mpx).width(1240.mpx)) {
+        Column(Modifier.padding(start = 96.mpx, top = 80.mpx, end = 96.mpx).width(1240.mpx).then(slide)) {
             Row(Modifier.staggerIn(0), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
                 val logo = channel.displayLogoUrl?.takeIf { it.isNotBlank() }
                 if (logo != null) ChannelLogoTile(logoUrl = logo, modifier = Modifier.size(132.mpx, 80.mpx), fill = Color.Transparent, surfaceLuminance = 0.02f) { }
@@ -270,7 +349,7 @@ fun ProgrammeInfoScreen(
 
         // Right: when it airs again this week, and under it a film's cast.
         if (cur != null) Column(
-            Modifier.align(Alignment.TopEnd).padding(end = 96.mpx, top = WINDOW_TOP + WINDOW_H + 16.mpx).width(WINDOW_W),
+            Modifier.align(Alignment.TopEnd).padding(end = 96.mpx, top = WINDOW_TOP + WINDOW_H + 16.mpx).width(WINDOW_W).then(slide),
             verticalArrangement = Arrangement.spacedBy(16.mpx),
         ) {
         // glcn: only when it does air again — "no repeats this week" was a panel saying nothing.
@@ -308,7 +387,7 @@ fun ProgrammeInfoScreen(
 
         // glcn: what follows on the channel, the rest of the evening, under the repeats.
         if (cur != null && next.isNotEmpty() && !showTech) Column(
-            Modifier.align(Alignment.BottomEnd).padding(end = 96.mpx, bottom = 56.mpx).staggerIn(400, fromRight = true).width(420.mpx)
+            Modifier.align(Alignment.BottomEnd).padding(end = 96.mpx, bottom = 56.mpx).staggerIn(400, fromRight = true).width(420.mpx).then(slide)
                 .clip(RoundedCornerShape(20.mpx)).background(Color(0x990A1012)).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
@@ -322,13 +401,21 @@ fun ProgrammeInfoScreen(
         }
 
         // The stream's technical data, kept off the player bar: one button here shows or hides them.
-        Row(Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 56.mpx), horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+        Row(
+            Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 56.mpx).onPreviewKeyEvent { e ->
+                if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown && e.key == androidx.compose.ui.input.key.Key.DirectionUp) {
+                    runCatching { pageFocus.requestFocus() }; true
+                } else false
+            },
+            horizontalArrangement = Arrangement.spacedBy(12.mpx),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             // glcn: what can be done with the programme on air — from its start (catch-up), record.
             if (cur != null && onStartOver != null && channel.catchup) StageTool(
-                text = stringResource(R.string.glcn_pi_start_over), onClick = { onStartOver(cur) }, icon = OwnTVIcon.REWIND,
+                text = stringResource(R.string.glcn_pi_start_over), onClick = { onStartOver(channel, cur) }, icon = OwnTVIcon.REWIND,
             )
             if (cur != null && onRecord != null) StageTool(
-                text = stringResource(R.string.recording_record), onClick = { onRecord(); onDismiss() }, icon = OwnTVIcon.REC,
+                text = stringResource(R.string.recording_record), onClick = { onRecord(channel); onDismiss() }, icon = OwnTVIcon.REC,
             )
             StageTool(
                 text = stringResource(if (showTech) R.string.glcn_pi_hide_technical else R.string.glcn_pi_technical),
@@ -337,9 +424,22 @@ fun ProgrammeInfoScreen(
                 modifier = Modifier.focusRequester(focus),
             )
         }
+        if (channels.size > 1) Text(
+            "◀ ▶  " + stringResource(R.string.glcn_pi_hint_channels) + "   ·   ▼  " + stringResource(R.string.glcn_pi_hint_options),
+            style = stageText(15, 600), color = Dim, maxLines = 1,
+            modifier = Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 20.mpx),
+        )
         if (showTech) StreamInfoOverlay(player, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 96.mpx, bottom = 56.mpx))
     }
 }
+
+/** glcn: walking the channels — the old page leaving, the new one coming in, how far they slide, a held key's pace. */
+private const val SWAP_OUT_MS = 140
+private const val SWAP_IN_MS = 300
+private val SWAP_SHIFT = 90.mpx
+private const val QUICK_SWAP_MS = 350L
+/** glcn: how long a page rests before the channels either side are read ahead. */
+private const val PREFETCH_DELAY_MS = 250L
 
 /** glcn: the synopsis' lines, now that the cast is on the right. */
 private const val SYNOPSIS_LINES = 10

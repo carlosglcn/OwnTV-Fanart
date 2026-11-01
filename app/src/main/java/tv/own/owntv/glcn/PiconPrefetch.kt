@@ -11,8 +11,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.coroutineScope
 import org.koin.core.context.GlobalContext
 import tv.own.owntv.core.database.dao.ChannelDao
@@ -43,7 +41,8 @@ object PiconPrefetch {
                 .map { list -> list.map { it.id to it.lastSyncAt } }
                 .distinctUntilChanged()
                 .collect { list ->
-                    if (list.isEmpty() || metered(app)) return@collect
+                    // glcn: not in light mode — it is for spare memory and network, which a light box has neither of.
+                    if (list.isEmpty() || metered(app) || LowRam.on) return@collect
                     runCatching { fetch(app, channels, list.map { it.first }) }
                 }
         }
@@ -64,10 +63,13 @@ object PiconPrefetch {
             .mapNotNull { it.displayLogoUrl?.takeIf { u -> u.startsWith("http") } }
             .distinct()
             .filter { url -> disk.openSnapshot(url)?.use { false } ?: true }
-        val gate = Semaphore(PARALLEL)
-        urls.forEach { url ->
+        // glcn: a few workers taking the next address in turn — one coroutine per logo (up to 20 000 waiting on a gate)
+        // was a burst of memory after every sync.
+        val queue = java.util.concurrent.ConcurrentLinkedQueue(urls)
+        repeat(PARALLEL) {
             launch {
-                gate.withPermit {
+                while (true) {
+                    val url = queue.poll() ?: break
                     val request = ImageRequest.Builder(app)
                         .data(url)
                         .memoryCachePolicy(CachePolicy.DISABLED)
