@@ -190,7 +190,8 @@ fun ZapPosterOverlay(
                 modifier = Modifier.focusGroup(),
             ) {
                 itemsIndexed(channels, key = { _, c -> c.id }) { index, ch ->
-                    Column(Modifier.staggerAt((index - start + 1).coerceAtLeast(0), zapGate, step = 70, cap = 6).width(360.mpx)) {
+                    // glcn: the cards rise into place one after another from below the screen's edge when the strip opens.
+                    Column(Modifier.staggerAt((index - start + 1).coerceAtLeast(0), zapGate, step = 70, cap = 6, rise = 90.mpx).width(360.mpx)) {
                     tv.own.owntv.features.home.ArtLiveCard(
                         channel = ch,
                         programme = programmes[ch.id],

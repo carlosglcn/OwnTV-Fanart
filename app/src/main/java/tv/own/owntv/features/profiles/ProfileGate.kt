@@ -1,5 +1,6 @@
 package tv.own.owntv.features.profiles
 
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.animation.core.animateFloat
@@ -61,12 +62,23 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
         if (profiles.isNotEmpty()) runCatching { firstFocus.requestFocus() }
     }
 
+    // glcn: entering a profile, the screen opens up towards you and fades as Home comes in, instead of a cut.
+    val leave = remember { androidx.compose.animation.core.Animatable(0f) }
+    val leaveScope = androidx.compose.runtime.rememberCoroutineScope()
+    fun enter(p: ProfileEntity) {
+        if (!tv.own.owntv.glcn.DeviceClass.richMotion || !tv.own.owntv.ui.theme.animationsOn) { vm.switchTo(p) { onEnter(p.id) }; return }
+        leaveScope.launch {
+            leave.animateTo(1f, androidx.compose.animation.core.tween(GATE_LEAVE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.4f, 0f, 0.2f, 1f)))
+            vm.switchTo(p) { onEnter(p.id) }
+        }
+    }
+
     fun choose(p: ProfileEntity) {
         if (p.pinHash != null) {
             pinError = false
             pinFor = p
         } else {
-            vm.switchTo(p) { onEnter(p.id) }
+            enter(p)
         }
     }
 
@@ -80,7 +92,12 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
         androidx.compose.animation.core.tween(GATE_FADE_MS), label = "gateTint",
     )
     Box(
-        modifier = modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF05080A)),
+        modifier = modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF05080A))
+            .graphicsLayer {
+                val l = leave.value
+                scaleX = 1f + GATE_LEAVE_GROW * l; scaleY = 1f + GATE_LEAVE_GROW * l
+                alpha = 1f - l
+            },
         contentAlignment = Alignment.Center,
     ) {
         GateAurora(tint, Modifier.fillMaxSize())
@@ -146,7 +163,8 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
             title = if (pinError) stringResource(R.string.profiles_wrong_pin) else stringResource(R.string.profiles_enter_pin, p.name),
             onSubmit = { pin ->
                 if (vm.verifyPin(p, pin)) {
-                    vm.switchTo(p) { onEnter(p.id) }
+                    pinFor = null
+                    enter(p)
                 } else pinError = true
             },
             onDismiss = { pinFor = null },
@@ -308,3 +326,7 @@ private const val GATE_FADE_MS = 600
 private const val GATE_STAGGER_MS = 70
 private const val AURORA_CYCLE_MS = 24_000
 private const val GATE_BACKDROP_SIZE = "w1280"
+
+/** glcn: entering a profile — how long the gate takes to open up and fade, and how much it grows. */
+private const val GATE_LEAVE_MS = 380
+private const val GATE_LEAVE_GROW = 0.08f

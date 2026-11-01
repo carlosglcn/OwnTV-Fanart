@@ -426,6 +426,18 @@ fun SettingsScreen(
     // A full page's search hands over to Settings search, keyboard up.
     val openSearch: () -> Unit = { lastTab = null; searchQuery = ""; searchMode = true; searchFromMore = false; searchAutoEdit = true; tab = SettingsTab.ROOT }
     if (tab != SettingsTab.ROOT) {
+    // glcn: a page opens sliding in a little from the right as it fades up, the way iOS and Apple TV go one level down.
+    val pageIn = remember(tab) { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn) 0f else 1f) }
+    LaunchedEffect(tab) {
+        if (pageIn.value < 1f) pageIn.animateTo(1f, androidx.compose.animation.core.tween(PAGE_IN_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+    }
+    androidx.compose.foundation.layout.Box(
+        Modifier.fillMaxSize().graphicsLayer {
+            val e = pageIn.value
+            translationX = (1f - e) * PAGE_IN_SHIFT.toPx()
+            alpha = 0.25f + 0.75f * e
+        },
+    ) {
     CompositionLocalProvider(tv.own.owntv.features.settings.LocalSettingsSearch provides openSearch) {
     when (tab) {
         SettingsTab.LANGUAGE -> { LanguageSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
@@ -453,6 +465,7 @@ fun SettingsScreen(
                 onBack = { tab = SettingsTab.ROOT }, modifier = modifier,
             )
             SettingsTab.ROOT -> Unit
+    }
     }
     }
     return
@@ -3194,3 +3207,7 @@ private fun serviceRowExtras(vm: SettingsViewModel): Map<String, RowExtra> {
         "tab_DNS" to RowExtra(SettingValue.Opens(if (dns.enabled && dnsHost.isNotBlank()) dnsHost else if (dns.enabled) on else off)),
     )
 }
+
+/** glcn: a Settings page's way in — how long, and how far from the right it slides. */
+private const val PAGE_IN_MS = 300
+private val PAGE_IN_SHIFT = 60.mpx

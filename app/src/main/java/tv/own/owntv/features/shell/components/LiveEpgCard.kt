@@ -1,5 +1,6 @@
 package tv.own.owntv.features.shell.components
 
+import androidx.compose.ui.draw.drawBehind
 import androidx.tv.material3.MaterialTheme
 import tv.own.owntv.ui.theme.hudInk
 import tv.own.owntv.ui.theme.hudShade
@@ -123,9 +124,19 @@ fun LiveEpgCard(
             val span = (now.stopMs - now.startMs).toFloat()
             if (span > 0f) {
                 val progress = ((nowMs - now.startMs) / span).coerceIn(0f, 1f)
+                val accentFill = tv.own.owntv.ui.theme.stageAccent.accent
                 Spacer(Modifier.height(6.dp))
                 Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(hudInk.copy(alpha = 0.2f))) {
-                    Box(Modifier.fillMaxWidth(progress).height(3.dp).clip(RoundedCornerShape(2.dp)).background(tv.own.owntv.ui.theme.stageAccent.accent))
+                    // glcn: the bar fills to where the programme is when the card comes up, instead of being there already.
+                    val fill = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.DeviceClass.richMotion) 0f else 1f) }
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        if (fill.value < 1f) fill.animateTo(1f, androidx.compose.animation.core.tween(PROGRESS_FILL_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+                    }
+                    Box(
+                        Modifier.fillMaxWidth().height(3.dp).drawBehind {
+                            drawRoundRect(accentFill, size = androidx.compose.ui.geometry.Size(size.width * progress * fill.value, size.height), cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
+                        },
+                    )
                 }
             }
             // What the programme actually IS, not just what it is called.
@@ -251,3 +262,6 @@ private fun SlotLabel(text: String, color: Color) {
         modifier = Modifier.padding(bottom = 1.dp),
     )
 }
+
+/** glcn: how long the programme bar takes to fill when the card comes up. */
+private const val PROGRESS_FILL_MS = 650

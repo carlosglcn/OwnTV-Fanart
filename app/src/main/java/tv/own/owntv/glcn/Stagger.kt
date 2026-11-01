@@ -29,11 +29,11 @@ private val StaggerEase = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
 /** [index]th piece: [step] ms after the one before, never more than [cap] steps in. */
 @Composable
-fun Modifier.staggerAt(index: Int, gate: StaggerGate? = null, step: Int = 60, cap: Int = 10, fromRight: Boolean = false): Modifier =
-    staggerIn(delayMs = index.coerceIn(0, cap) * step, fromRight = fromRight, gate = gate)
+fun Modifier.staggerAt(index: Int, gate: StaggerGate? = null, step: Int = 60, cap: Int = 10, fromRight: Boolean = false, rise: androidx.compose.ui.unit.Dp = 24.mpx): Modifier =
+    staggerIn(delayMs = index.coerceIn(0, cap) * step, fromRight = fromRight, gate = gate, rise = rise)
 
 @Composable
-fun Modifier.staggerIn(delayMs: Int, fromRight: Boolean = false, gate: StaggerGate? = null): Modifier {
+fun Modifier.staggerIn(delayMs: Int, fromRight: Boolean = false, gate: StaggerGate? = null, rise: androidx.compose.ui.unit.Dp = 24.mpx): Modifier {
     if (LowRam.on) return this
     // Decided once, when the piece first appears: a late one (scrolled into view) is simply shown.
     val animate = remember { gate?.open() ?: true }
@@ -45,7 +45,7 @@ fun Modifier.staggerIn(delayMs: Int, fromRight: Boolean = false, gate: StaggerGa
     }
     return this.graphicsLayer {
         alpha = p.value
-        if (fromRight) translationX = (1f - p.value) * 48.mpx.toPx() else translationY = (1f - p.value) * 24.mpx.toPx()
+        if (fromRight) translationX = (1f - p.value) * 48.mpx.toPx() else translationY = (1f - p.value) * rise.toPx()
     }
 }
 

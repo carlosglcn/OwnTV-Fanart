@@ -1,5 +1,6 @@
 package tv.own.owntv.ui.components
 
+import androidx.compose.ui.graphics.graphicsLayer
 import android.view.WindowManager
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -126,7 +127,20 @@ fun OwnTVPopup(
                     tv.own.owntv.ui.theme.LocalPopupFontScaleFactor.current,
             )
             CompositionLocalProvider(LocalDensity provides stageDensity, LocalTvImeWatcher provides watcher, LocalTvImeMetrics provides metrics, tv.own.owntv.features.settings.LocalSettingsPanel provides null) {
-                Box(Modifier.fillMaxSize()) { content() }
+                // glcn: menus and windows come in — a short fade while they grow from 96 % — instead of appearing at once.
+                val enterOn = tv.own.owntv.glcn.DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn
+                val enter = remember { androidx.compose.animation.core.Animatable(if (enterOn) 0f else 1f) }
+                LaunchedEffect(Unit) {
+                    if (enter.value < 1f) enter.animateTo(1f, androidx.compose.animation.core.tween(POPUP_ENTER_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+                }
+                Box(
+                    Modifier.fillMaxSize().graphicsLayer {
+                        val e = enter.value
+                        alpha = e
+                        val sc = POPUP_ENTER_SCALE + (1f - POPUP_ENTER_SCALE) * e
+                        scaleX = sc; scaleY = sc
+                    },
+                ) { content() }
             }
             return@Dialog
         }
@@ -165,3 +179,7 @@ fun OwnTVPopup(
         }
     }
 }
+
+/** glcn: a popup's way in — how long, and the size it grows from. */
+private const val POPUP_ENTER_MS = 220
+private const val POPUP_ENTER_SCALE = 0.96f
