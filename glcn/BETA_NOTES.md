@@ -37,3 +37,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🟠 Plex playlists show Plex's own logo on their mark (used under Plex's trademark guidelines)
 - 🌗 Plex's logo from Plex's own kit, in its version for dark grounds and for light ones (light theme, focused row)
 - 🟢 Emby playlists show Emby's own logo (on a focused row or the light theme, its icon alone)
+- 🔄 Merged the original OwnTV's latest: Stalker portals crawled more gently, with optional login fields, and playlist counts after the background download; builds on Java 25 / Gradle 9.8.2
