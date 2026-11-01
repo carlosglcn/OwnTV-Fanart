@@ -21,3 +21,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏷️ **Category names: text, icons or logos** (Settings › Fanart › Category icons): words only by default; icons beside the name; or, for the platforms, their logo in place of the name. Logos drop the white plate and take the row's colour; "Other networks" gets an icon, and a platform no show carries finds its logo on TMDB's network page
 - ↔️ **Move Home's rows:** in the TV profile's Home, hold OK on a row's name (Starting now, Films on air…) and move it with ◀ ▶; OK leaves it there. In the Dock, hold OK on a tab › Move row — same keys, and the order is the one in Settings › Home
 - 🎞️ **Xtream: the film's own TMDB id and trailer from your list:** when the panel keeps them, the film or show is matched exactly (no guessing by name) and its trailer is used when TMDB has none
+- 🐛 **TV Home: the programme panel showed the previous programme's synopsis** (a film's under a talk show) — read afresh for every programme now
+- 🔎 **Emby / Jellyfin: no TMDB search by name** for what your server already identified — its own TMDB ids are kept at sync and used directly (fewer TMDB calls, no wrong match)

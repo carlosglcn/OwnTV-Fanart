@@ -207,8 +207,10 @@ internal fun TvHome(
                     // glcn: the strips' programmes come from the zap cache, which leaves the synopsis out (it is heavy) — Recent
                     // showed none while the same channel elsewhere did. Read here, for the programme in focus only.
                     val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
-                    val synopsis by androidx.compose.runtime.produceState(p.description?.takeIf { it.isNotBlank() }, p.id) {
-                        if (value == null) value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    // Set afresh for every programme: produceState keeps its value across keys, so "load only when
+                    // empty" left the previous programme's synopsis (a film's) under the next one.
+                    val synopsis by androidx.compose.runtime.produceState<String?>(null, p.id) {
+                        value = p.description?.takeIf { it.isNotBlank() } ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                             runCatching { epgDao.programmeDescription(p.id) }.getOrNull()?.takeIf { it.isNotBlank() }
                         }
                     }
