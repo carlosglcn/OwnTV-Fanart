@@ -513,7 +513,9 @@ internal fun ZapSchedulePanel(
         if (joined && loadNow != null) {
             val pick = rows.getOrNull(selected)
             ZapPreviewPanel(
+                // glcn: 16:9 like the programme pictures themselves — 21:9 cut posters and stills at the top and bottom.
                 channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 46.mpx), framed = false, peek = peek,
+                bareAspect = 16f / 9f,
                 showing = pick?.let { it to rows.getOrNull(selected + 1) },
             )
         }

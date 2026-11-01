@@ -23,3 +23,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ **Xtream: the film's own TMDB id and trailer from your list:** when the panel keeps them, the film or show is matched exactly (no guessing by name) and its trailer is used when TMDB has none
 - 🐛 **TV Home: the programme panel showed the previous programme's synopsis** (a film's under a talk show) — read afresh for every programme now
 - 🔎 **Emby / Jellyfin: no TMDB search by name** for what your server already identified — its own TMDB ids are kept at sync and used directly (fewer TMDB calls, no wrong match)
+- 🖼️ Zapping › Coming up: the programme picture keeps its 16:9 shape (it was cut at the top and bottom)
+- 🇪🇸 Title logos in your country's version: within Spanish, Spain's logo before Mexico's (TMDB files both as Spanish)
