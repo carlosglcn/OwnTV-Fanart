@@ -810,8 +810,9 @@ internal fun LiveCategories(
                     // glcn: Favourites' groups sit in under it.
                     val rowModifier = if (entry.item.nested) baseRow.padding(start = NESTED_INDENT) else baseRow
                     if (sheet) {
+                        val glyph = entry.groupGlyph()
                         StageSheetItem(
-                            text = entry.label,
+                            text = if (tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) "" else entry.label,
                             onClick = { onSelect(index) },
                             icon = entry.icon,
                             count = entry.count?.let { tv.own.owntv.ui.components.formatCount(it) },
@@ -822,7 +823,7 @@ internal fun LiveCategories(
                             },
                             trailing = entry.mark?.let { m -> { _ -> StagePlaylistMark(m) } },
                             onLongClick = { entryLong(entry, index) },
-                            leading = entry.groupGlyph()?.let { g -> { tint -> tv.own.owntv.glcn.CategoryGlyphView(g, tint) } },
+                            leading = glyph?.let { g -> { tint -> tv.own.owntv.glcn.CategoryGlyphView(g, tint, name = entry.label) } },
                             modifier = rowModifier,
                         )
                     } else {
@@ -874,9 +875,10 @@ private fun LiveColumnItem(
         ) {
             val on = if (focused) a.onAccent else null
             entry.icon?.let { OwnTVIcon(it, on ?: StageColors.Muted, Modifier.size(20.mpx)) }
-            entry.groupGlyph()?.let { tv.own.owntv.glcn.CategoryGlyphView(it, on ?: StageColors.Muted, size = 20.mpx) }
+            val glyph = entry.groupGlyph()
+            glyph?.let { tv.own.owntv.glcn.CategoryGlyphView(it, on ?: StageColors.Muted, size = 20.mpx, name = entry.label) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.mpx)) {
-                Text(
+                if (!tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) Text(
                     entry.label, style = stageText(18.5f, 600),
                     color = on ?: if (selected) a.accent else stageTone(Color(0xFFCDD7D3), StageColors.ItemText),
                     maxLines = 2, overflow = TextOverflow.Ellipsis,

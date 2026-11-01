@@ -23,8 +23,14 @@ object CategoryIcons {
         data class Badge(val text: String, val gold: Boolean) : Glyph
     }
 
-    var on by mutableStateOf(true)
+    /** How the category lists name their groups: words only (the default), a picture beside the words, or the logo alone. */
+    enum class Mode { TEXT, ICONS, LOGOS }
+
+    var mode by mutableStateOf(Mode.TEXT)
         private set
+
+    /** Any picture at all (icons, or logos). */
+    val on: Boolean get() = mode != Mode.TEXT
     private val overrides = mutableStateMapOf<String, String>()
     private var loaded = false
 
@@ -32,14 +38,18 @@ object CategoryIcons {
         if (loaded) return
         loaded = true
         val p = prefs(context)
-        on = p.getBoolean(KEY_ON, true)
+        mode = p.getString(KEY_MODE, null)?.let { m -> Mode.entries.firstOrNull { it.name == m } } ?: Mode.TEXT
         p.all.forEach { (k, v) -> if (k.startsWith(PREFIX) && v is String) overrides[k.removePrefix(PREFIX)] = v }
     }
 
-    fun setOn(context: Context, value: Boolean) {
-        on = value
-        prefs(context).edit().putBoolean(KEY_ON, value).apply()
+    /** Words only → icons and words → logos alone → words only. */
+    fun cycle(context: Context) {
+        mode = Mode.entries[(mode.ordinal + 1) % Mode.entries.size]
+        prefs(context).edit().putString(KEY_MODE, mode.name).apply()
     }
+
+    /** Whether the row shows [glyph] instead of the group's name (a platform's logo, with logos alone chosen). */
+    fun hidesName(glyph: Glyph?): Boolean = mode == Mode.LOGOS && glyph is Glyph.Logo
 
     /** [code]: an icon key from [CHOICES], [NONE] for no icon, null to go back to the automatic one. */
     fun choose(context: Context, groupName: String, code: String?) {
@@ -50,9 +60,9 @@ object CategoryIcons {
 
     /** The group's picture, or null (switched off, none chosen, nothing recognised). */
     fun glyph(groupName: String, tags: List<String> = emptyList(), country: String? = null): Glyph? {
-        // glcn: a platform category (Netflix, HBO…) shows the platform's logo, even with the icons switched off.
-        tv.own.owntv.core.sync.PlatformLogos.logoFor(groupName)?.let { return Glyph.Logo(it) }
         if (!on) return null
+        // glcn: a platform category (Netflix, HBO…) shows the platform's logo.
+        tv.own.owntv.core.sync.PlatformLogos.logoFor(groupName)?.let { return Glyph.Logo(it) }
         // A choice from before the line icons (an emoji) is not a key any more: back to the automatic one.
         overrides[key(groupName)]?.let { if (it == NONE) return null; if (it in CategoryGlyphPaths.paths) return Glyph.Icon(it) }
         return auto(groupName, tags, country)
@@ -113,7 +123,7 @@ object CategoryIcons {
     private val NON_WORD = Regex("[^A-Z0-9+]+")
     private val SPACES = Regex(" +")
     private const val PREFS = "glcn_category_icons"
-    private const val KEY_ON = "on"
+    private const val KEY_MODE = "mode"
     private const val PREFIX = "g:"
     private const val BADGE_DV = "DV"
     private const val BADGE_HDR10_PLUS = "HDR10+"
@@ -175,7 +185,7 @@ religion=RELIGION,RELIGIOSOS,RELIGIOUS
 adult=ADULTOS,ADULT,ADULTS,XXX,18
 christmas=NAVIDAD,CHRISTMAS
 favorites=FAVORITOS,FAVORITES,VIP,PREMIUM
-tdt=TDT,NACIONALES,GENERALISTAS,LOCAL,LOCALES,AUTONOMICAS,REGIONAL
+tdt=OTRAS CADENAS,OTHER NETWORKS,CADENAS,NETWORKS,TDT,NACIONALES,GENERALISTAS,LOCAL,LOCALES,AUTONOMICAS,REGIONAL
 live=24 7,24/7,EN DIRECTO,LIVE
 """
 

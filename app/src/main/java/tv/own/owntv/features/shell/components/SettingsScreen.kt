@@ -3166,9 +3166,15 @@ private fun glcnCategoryIconsRow(ctx: android.content.Context): RootRow = RootRo
     "glcn_category_icons", TileTone.PRIMARY, OwnTVIcon.SPARKLE,
     title = stringResource(R.string.glcn_category_icons_title),
     desc = stringResource(R.string.glcn_category_icons_desc),
-    chip = stringResource(if (tv.own.owntv.glcn.CategoryIcons.on) R.string.common_on else R.string.common_off),
+    chip = stringResource(
+        when (tv.own.owntv.glcn.CategoryIcons.mode) {
+            tv.own.owntv.glcn.CategoryIcons.Mode.TEXT -> R.string.glcn_category_icons_text
+            tv.own.owntv.glcn.CategoryIcons.Mode.ICONS -> R.string.glcn_category_icons_icons
+            tv.own.owntv.glcn.CategoryIcons.Mode.LOGOS -> R.string.glcn_category_icons_logos
+        },
+    ),
     chipTone = if (tv.own.owntv.glcn.CategoryIcons.on) TileTone.PRIMARY else TileTone.SECONDARY,
-    onClick = { tv.own.owntv.glcn.CategoryIcons.setOn(ctx, !tv.own.owntv.glcn.CategoryIcons.on) },
+    onClick = { tv.own.owntv.glcn.CategoryIcons.cycle(ctx) },
 )
 
 @Composable

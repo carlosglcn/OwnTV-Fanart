@@ -31,17 +31,32 @@ internal fun LiveCategoryEntry.groupGlyph(): CategoryIcons.Glyph? {
 
 /** glcn: a group's picture at the size of the list's line icons: the line icon in [tint], or the posters' chip. */
 @Composable
-internal fun CategoryGlyphView(glyph: CategoryIcons.Glyph, tint: Color, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 22.mpx) {
+internal fun CategoryGlyphView(
+    glyph: CategoryIcons.Glyph,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 22.mpx,
+    /** The group's name, read out when the logo stands in for it. */
+    name: String? = null,
+) {
     when (glyph) {
         is CategoryIcons.Glyph.Icon -> CategoryIconShape(glyph.key, tint, modifier.size(size))
-        is CategoryIcons.Glyph.Logo -> Box(
-            modifier.size(size * 2.6f, size * 1.15f).background(Color(0xF2F4F6F5), RoundedCornerShape(6.mpx)).padding(horizontal = 5.mpx, vertical = 3.mpx),
-            contentAlignment = Alignment.Center,
-        ) {
-            coil3.compose.AsyncImage(
-                model = glyph.url, contentDescription = null,
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.matchParentSize(),
-            )
+        // The platform's logo in the row's own colour (no plate): light on the list, dark on the focused row.
+        // Alone (no name beside it) it is drawn larger, in the name's place.
+        is CategoryIcons.Glyph.Logo -> {
+            val alone = CategoryIcons.hidesName(glyph)
+            Box(
+                modifier.size(if (alone) size * 6f else size * 2.6f, if (alone) size * 1.5f else size * 1.1f),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                coil3.compose.AsyncImage(
+                    model = glyph.url, contentDescription = if (alone) name else null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    alignment = Alignment.CenterStart,
+                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(tint, androidx.compose.ui.graphics.BlendMode.SrcIn),
+                    modifier = Modifier.matchParentSize(),
+                )
+            }
         }
         is CategoryIcons.Glyph.Badge -> Text(
             glyph.text,
