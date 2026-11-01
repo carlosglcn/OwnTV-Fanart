@@ -131,7 +131,7 @@ internal fun TvHome(
     var appsShown by remember { mutableStateOf(false) }
     var pickingApps by remember { mutableStateOf(false) }
     val firstApp = remember { FocusRequester() }
-    LaunchedEffect(Unit) { tv.own.owntv.glcn.AppShortcuts.ensure(orderContext) }
+    LaunchedEffect(Unit) { tv.own.owntv.glcn.AppShortcuts.ensure(orderContext); tv.own.owntv.glcn.Labs.ensure(orderContext) }
     val nowNext = remember { mutableStateMapOf<Long, Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>>() }
     var focusedChannel by remember { mutableStateOf<ChannelEntity?>(null) }
     // glcn: the programme that put the focused card in its row (Tonight's 22:00 film), shown in the panel instead of now.
@@ -323,7 +323,8 @@ internal fun TvHome(
                         }.onFocusChanged { if (it.hasFocus) selected = i else if (isMoving) moving = null },
                     )
                 }
-                item(key = "__apps__") {
+                // glcn: still being tried — only once switched on with the Labs sequence in Settings.
+                if (tv.own.owntv.glcn.Labs.on) item(key = "__apps__") {
                     StagePill(
                         text = stringResource(R.string.glcn_tvhome_apps),
                         onClick = { appsShown = true; runCatching { firstApp.requestFocus() } },
@@ -335,7 +336,7 @@ internal fun TvHome(
                     )
                 }
             }
-            if (appsShown) AppsRow(contentStart, firstApp) { pickingApps = true }
+            if (appsShown && tv.own.owntv.glcn.Labs.on) AppsRow(contentStart, firstApp) { pickingApps = true }
             group?.let { g ->
                 androidx.compose.runtime.key(g) {
                     LazyRow(

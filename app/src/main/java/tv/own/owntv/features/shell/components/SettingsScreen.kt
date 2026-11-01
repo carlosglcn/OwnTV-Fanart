@@ -159,6 +159,10 @@ fun SettingsScreen(
     start: SettingsStart? = null,
     onStartConsumed: () -> Unit = {},
 ) {
+    // glcn: the test switch — ▲ ▲ ▼ ▼ ◀ ▶ ◀ ▶ anywhere in Settings turns the hidden features on or off (Labs).
+    val labsContext = androidx.compose.ui.platform.LocalContext.current
+    @Suppress("NAME_SHADOWING")
+    val modifier = modifier.onPreviewKeyEvent { e -> tv.own.owntv.glcn.Labs.observe(labsContext, e); false }
     // A cross-script language change recreates the Activity so Android can apply the new script's
     // shaping and font fallback. Keep the open settings sub-screen across that configuration change
     // instead of dropping back to the Settings root/sidebar.
