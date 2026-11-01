@@ -45,3 +45,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔤 **Styled subtitles (ASS/SSA) shown as made:** a film or episode from Emby / Jellyfin that carries them starts on mpv, which draws their fonts, colours and positions (ExoPlayer showed plain text); not for Dolby Vision (sync the list once)
 - 📖 **Chapters** for films with chapters (when mpv plays them): a Chapters button in the cinema banner and a tab in the side panel — the one playing marked, OK jumps to it
 - 💿 **Discs copied as folders** on your network shares (SMB / NFS): a Blu-ray folder (BDMV) or a DVD folder (VIDEO_TS) shows as one film and plays its main title (on mpv)
+- 📱 **Apps on TV Home:** an "Apps" pill at the end of the rows with the TV's other apps you pick (YouTube, Plex, Kodi…) as their own banners — OK opens one, hold OK takes it off, the last card adds more

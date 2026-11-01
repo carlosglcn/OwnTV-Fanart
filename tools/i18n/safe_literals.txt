@@ -155,6 +155,8 @@
 1	protocol	app/src/main/java/tv/own/owntv/features/home/TvHome.kt	HD
 1	protocol	app/src/main/java/tv/own/owntv/features/home/TvHome.kt	UHD
 1	regex	app/src/main/java/tv/own/owntv/features/home/TvHome.kt	[^a-z0-9+]
+1	technical	app/src/main/java/tv/own/owntv/features/home/TvHome.kt	__add__
+1	technical	app/src/main/java/tv/own/owntv/features/home/TvHome.kt	__apps__
 1	technical	app/src/main/java/tv/own/owntv/features/home/TvHome.kt	glcn_tvhome
 1	technical	app/src/main/java/tv/own/owntv/features/home/TvHome.kt	row_order
 1	technical	app/src/main/java/tv/own/owntv/features/home/TvHome.kt	tvHomeArt
@@ -1023,6 +1025,9 @@
 2	technical	app/src/main/java/tv/own/owntv/features/update/UpdateDialog.kt	•
 1	technical	app/src/main/java/tv/own/owntv/glcn/Accessible.kt	glcn_accessible
 1	technical	app/src/main/java/tv/own/owntv/glcn/Accessible.kt	on_$profile
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	,
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	apps
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	glcn_app_shortcuts
 1	technical	app/src/main/java/tv/own/owntv/glcn/ArtPrefetch.kt	http
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	Back held $held ms; armed at press=$armedAtDown, now=${armed()}; repeats=$repeats
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	Back hold closed the player ($how)
