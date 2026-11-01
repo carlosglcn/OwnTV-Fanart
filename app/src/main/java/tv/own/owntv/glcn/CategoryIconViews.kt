@@ -56,9 +56,11 @@ internal fun CategoryGlyphView(
             var h = kotlin.math.sqrt(area / ratio).coerceAtMost(maxH)
             var w = h * ratio
             if (w > maxW) { w = maxW; h = w / ratio }
+            // Alone, the logo stands in the middle of the row's free width (it sat at the left with the row empty
+            // to its right); beside a name it keeps to the left.
             Box(
-                modifier.size(if (alone) size * maxW else size * w, size * maxH),
-                contentAlignment = Alignment.CenterStart,
+                modifier.size(if (alone) size * LOGO_SLOT_ALONE else size * w, size * maxH),
+                contentAlignment = if (alone) Alignment.Center else Alignment.CenterStart,
             ) {
                 coil3.compose.AsyncImage(
                     model = glyph.url, contentDescription = if (alone) name else null,
@@ -166,9 +168,11 @@ private const val PICKER_COLUMNS = 7
 
 // glcn: platform logos' optical size, in units of the list's icon size — area, then the height and width caps.
 private const val LOGO_DEFAULT_RATIO = 3f
-private const val LOGO_AREA_ALONE = 5.2f
-private const val LOGO_MAX_H_ALONE = 2.0f
-private const val LOGO_MAX_W_ALONE = 5.6f
+private const val LOGO_AREA_ALONE = 7.5f
+private const val LOGO_MAX_H_ALONE = 2.1f
+private const val LOGO_MAX_W_ALONE = 7f
+/** The width a logo shown alone is centred in: the row's free room between the left edge and the count. */
+private const val LOGO_SLOT_ALONE = 12f
 private const val LOGO_AREA_BESIDE = 2.0f
 private const val LOGO_MAX_H_BESIDE = 1.25f
 private const val LOGO_MAX_W_BESIDE = 2.8f
