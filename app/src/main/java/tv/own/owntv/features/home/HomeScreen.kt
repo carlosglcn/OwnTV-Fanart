@@ -1959,9 +1959,12 @@ private val PANEL_WIDE_ROWS = setOf(HomeRow.FEATURED, HomeRow.LIVE_SPORTS)
 private fun HomeReadScope(content: @Composable () -> Unit) { content() }
 
 /** glcn: Home's one focus box glides slower than a menu's — soft, never a jump. */
-private const val HOME_GLIDE_STIFFNESS = 380f
-/** glcn: a touch of overshoot — the box lands a little past and settles back, elastic; stiffer so it keeps pace. */
-private const val HOME_GLIDE_DAMPING = 0.72f
+/**
+ * glcn: brisk, like the player's picture strip (whose cards take the focus at once): the box is on the next card almost
+ * as the key lands, with only a small give at the end — it used to trail behind and catch up.
+ */
+private const val HOME_GLIDE_STIFFNESS = 1100f
+private const val HOME_GLIDE_DAMPING = 0.82f
 
 /** glcn: the rows a TV profile's Home keeps. */
 internal val TV_PROFILE_ROWS = setOf(
