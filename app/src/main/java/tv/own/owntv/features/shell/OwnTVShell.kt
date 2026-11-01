@@ -551,6 +551,17 @@ fun OwnTVShell(
             else -> null
         }
     }
+    // glcn: the next episode's picture for its card — its TMDB still, or the show's fanart.
+    val nextEpisode = cinemaQueue?.let { (list, i) -> list.getOrNull(i + 1) }
+    val nextEpisodeArt by androidx.compose.runtime.produceState<String?>(null, nextEpisode?.id, cinemaInfo?.backdropUrl) {
+        val ep = nextEpisode
+        val show = playingSeries
+        value = if (ep != null && show != null) {
+            runCatching { cinemaMeta.resolveEpisode(show, ep) }.getOrNull()?.posterPath
+                ?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w780") } ?: cinemaInfo?.backdropUrl
+        } else null
+    }
+    val nextEpisodeCode = nextEpisode?.let { stringResource(R.string.glcn_cine_episode_code, it.seasonNumber, it.episodeNumber) }
     val cinemaEpisodes = remember(cinemaQueue?.first) {
         cinemaQueue?.first.orEmpty().map {
             tv.own.owntv.glcn.CinemaEpisode(it.seasonNumber, it.episodeNumber, it.name, it.plot, it.durationSecs?.let { s -> s / 60 }?.takeIf { m -> m > 0 })
@@ -2409,6 +2420,8 @@ fun OwnTVShell(
                     cinema = if (!isLiveStream && !isLiveChannel) cinemaInfo else null,
                     cinemaEpisodes = if (zapSource == MainSection.SERIES) cinemaEpisodes else emptyList(),
                     cinemaEpisodeIndex = cinemaQueue?.second ?: -1,
+                    nextEpisodeArt = if (zapSource == MainSection.SERIES) nextEpisodeArt else null,
+                    nextEpisodeCode = if (zapSource == MainSection.SERIES) nextEpisodeCode else null,
                     onPlayEpisode = if (zapSource == MainSection.SERIES) {
                         { i ->
                             val q = cinemaQueue

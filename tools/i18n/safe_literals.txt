@@ -713,6 +713,7 @@
 1	log	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	startup-settled
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	vtt
 2	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	w1280
+1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	w780
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	webvtt
 2	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	⏯
@@ -1220,7 +1221,7 @@
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	${t.width}×${t.height}
 1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	%.3f fps
 1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	%d fps
-1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	,
+2	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	,
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	2.0
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	4K
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	4k
@@ -1228,7 +1229,7 @@
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	5_1
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	7.1
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	7_1
-1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	:
+2	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	:
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	DTS
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	DTS-HD
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	DiscouragedApi
@@ -1286,7 +1287,7 @@
 1	empty	app/src/main/java/tv/own/owntv/player/MiniPlayer.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/MiniPlayer.kt	miniControls
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	EEEdMMM
-9	empty	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	\0
+10	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	$k: $v
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	/ $it
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	?

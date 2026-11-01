@@ -223,6 +223,9 @@ fun PlayerHud(
     cinemaEpisodes: List<tv.own.owntv.glcn.CinemaEpisode> = emptyList(),
     cinemaEpisodeIndex: Int = -1,
     onPlayEpisode: ((Int) -> Unit)? = null,
+    /** glcn: the next episode's picture (its still, or the show's fanart) and code ("T1 · E3"), for its card. */
+    nextEpisodeArt: String? = null,
+    nextEpisodeCode: String? = null,
     modifier: Modifier = Modifier,
 ) {
     // Nothing that ticks is read in this root scope: with the controls hidden it used to recompose
@@ -295,6 +298,15 @@ fun PlayerHud(
         onDispose { tv.own.owntv.glcn.CinemaStage.panelOpen = false }
     }
     val forceShow = error != null || dialog != HudDialog.NONE || cinemaTab != null
+    // glcn: a film paused with the controls gone shows what it is after a few seconds (see CinemaPauseScreen).
+    var pauseScreen by remember { mutableStateOf(false) }
+    LaunchedEffect(cinemaMode, isPlaying, buffering, error, controlsVisible, cinemaTab) {
+        pauseScreen = false
+        if (cinemaMode && !isPlaying && !buffering && error == null && !controlsVisible && cinemaTab == null) {
+            delay(PAUSE_SCREEN_AFTER_MS)
+            pauseScreen = true
+        }
+    }
     // First Back hides the controls (instead of leaving the channel); with the controls already hidden
     // this handler is disabled, so Back falls through to the shell, which exits the player. Also disabled
     // while an error/dialog is up (a dialog handles its own Back; an error should exit).
@@ -719,6 +731,10 @@ fun PlayerHud(
             }
         },
     ) {
+        // glcn: the pause screen, a few seconds into a pause once the controls have gone (any key brings them back).
+        if (pauseScreen && cinema != null && !showNextCard) {
+            CinemaPauseScreen(cinema, position = { position.value }, duration = duration)
+        }
         if (!controlsVisible && !showNextCard) {
             Box(
                 Modifier.fillMaxSize().focusRequester(catchFocus).focusable()
@@ -921,7 +937,18 @@ fun PlayerHud(
 
         // Next-episode countdown card (VOD queue only) — surfaces the automatic advance with Play now /
         // Cancel. Shown independently of the main controls so it appears even after they auto-hide.
-        if (showNextCard) {
+        if (showNextCard && cinemaMode) {
+            // glcn: films and episodes — the next one's picture in the corner.
+            CinemaNextCard(
+                seconds = { ((msToAdvance() + 999L) / 1000L).toInt().coerceIn(0, 30) },
+                title = nextUpTitle ?: "",
+                art = nextEpisodeArt, code = nextEpisodeCode,
+                playFocus = nextFocus,
+                onPlayNow = { autoNextDismissed = true; player.next() },
+                onCancel = { autoNextDismissed = true; player.cancelAutoNext() },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 48.dp, bottom = 48.dp),
+            )
+        } else if (showNextCard) {
             NextEpisodeCard(
                 seconds = { ((msToAdvance() + 999L) / 1000L).toInt().coerceIn(0, 30) },
                 title = nextUpTitle ?: "",
@@ -1153,3 +1180,6 @@ fun PlayerHud(
 /** glcn: the player bar's rise when it is called — how long, and from how far below. */
 private const val HUD_RISE_MS = 420
 private const val HUD_RISE_DP = 90
+
+/** glcn: how long a film stays paused, with the controls gone, before the pause screen comes up. */
+private const val PAUSE_SCREEN_AFTER_MS = 5_000L

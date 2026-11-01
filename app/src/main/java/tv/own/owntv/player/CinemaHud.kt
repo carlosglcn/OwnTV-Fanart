@@ -610,3 +610,105 @@ private const val LABEL_DTS = "DTS"
 private const val LABEL_51 = "5.1"
 private const val LABEL_71 = "7.1"
 private const val LABEL_20 = "2.0"
+
+/**
+ * glcn: the pause screen — a few seconds after a film or episode is paused (and the controls have gone), what it is
+ * comes up over the frozen picture: "Paused", its lettering, the episode, the facts and the synopsis, on a shade from
+ * the left. Any key brings the controls back and it goes.
+ */
+@Composable
+internal fun CinemaPauseScreen(info: CinemaInfo, position: () -> Long, duration: Long, modifier: Modifier = Modifier) {
+    val a = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { a.animateTo(1f, tween(PAUSE_FADE_MS, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) }
+    Box(modifier.fillMaxSize().graphicsLayer { alpha = a.value }) {
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.88f), 0.5f to Color.Black.copy(alpha = 0.55f), 1f to Color.Black.copy(alpha = 0.15f)),
+            ),
+        )
+        Column(
+            Modifier.align(Alignment.CenterStart).padding(start = 96.mpx, end = 96.mpx).widthIn(max = 900.mpx)
+                .graphicsLayer { translationX = (1f - a.value) * -40f },
+        ) {
+            Text(
+                stringResource(R.string.glcn_cine_paused).uppercase(),
+                style = stageText(20, 800).copy(letterSpacing = 3.sp), color = Color.White.copy(alpha = 0.7f),
+            )
+            Spacer(Modifier.height(18.mpx))
+            CinemaTitle(info, widthPx = 680, heightPx = 150, textSize = 60)
+            episodeLine(info)?.let {
+                Text(it, style = stageText(26, 700), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 14.mpx))
+            }
+            Text(
+                metaLine(info, duration, position()), style = stageText(22, 600), color = Color.White.copy(alpha = 0.78f),
+                maxLines = 1, modifier = Modifier.padding(top = 12.mpx),
+            )
+            info.overview?.takeIf { it.isNotBlank() }?.let {
+                Text(
+                    it, style = stageText(22, 400), color = Color.White.copy(alpha = 0.86f), maxLines = 6, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 20.mpx),
+                )
+            }
+            if (info.cast.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.glcn_cine_cast) + ": " + info.cast.take(4).joinToString(", "),
+                    style = stageText(19, 500), color = Color.White.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 16.mpx),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * glcn: the next episode coming up — its picture in the corner, the countdown filling along its foot, its code and
+ * name, and Play now / Cancel. The picture is the episode's still, or the show's fanart when TMDB has none.
+ */
+@Composable
+internal fun CinemaNextCard(
+    seconds: () -> Int,
+    title: String,
+    art: String?,
+    code: String?,
+    playFocus: FocusRequester,
+    onPlayNow: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val a = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { a.animateTo(1f, tween(PAUSE_FADE_MS, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) }
+    val start = remember { seconds().coerceAtLeast(1) }
+    Column(
+        modifier.width(420.mpx).graphicsLayer { alpha = a.value; translationY = (1f - a.value) * 30f }
+            .clip(RoundedCornerShape(18.mpx)).background(Color(0xE60E1113)),
+    ) {
+        Box(Modifier.fillMaxWidth().height(236.mpx)) {
+            if (!art.isNullOrBlank()) {
+                coil3.compose.AsyncImage(model = art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.75f))))
+            Text(
+                stringResource(R.string.player_next_episode, seconds()), style = stageText(20, 800), color = Color.White,
+                modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.mpx, bottom = 14.mpx),
+            )
+            // The countdown, filling along the picture's foot.
+            val left = seconds().coerceAtLeast(0)
+            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.mpx).background(Color.White.copy(alpha = 0.2f))) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(1f - left.toFloat() / start).background(tv.own.owntv.ui.theme.stageAccent.accent))
+            }
+        }
+        Column(Modifier.padding(horizontal = 16.mpx, vertical = 14.mpx)) {
+            code?.let { Text(it, style = stageText(17, 700), color = Color.White.copy(alpha = 0.65f), maxLines = 1) }
+            Text(title, style = stageText(22, 700), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Row(Modifier.padding(top = 12.mpx).focusGroup(), horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
+                tv.own.owntv.ui.stage.StageButton(
+                    stringResource(R.string.player_play_now), onClick = onPlayNow,
+                    modifier = Modifier.focusRequester(playFocus), icon = OwnTVIcon.PLAY, tinted = true,
+                )
+                tv.own.owntv.ui.stage.StageButton(stringResource(R.string.common_cancel), onClick = onCancel, icon = OwnTVIcon.CLOSE)
+            }
+        }
+    }
+}
+
+private const val PAUSE_FADE_MS = 420

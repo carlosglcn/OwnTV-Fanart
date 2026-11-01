@@ -38,3 +38,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌗 Plex's logo from Plex's own kit, in its version for dark grounds and for light ones (light theme, focused row)
 - 🟢 Emby playlists show Emby's own logo (on a focused row or the light theme, its icon alone)
 - 🔄 Merged the original OwnTV's latest: Stalker portals crawled more gently, with optional login fields, and playlist counts after the background download; builds on Java 25 / Gradle 9.8.2
+- 📡 **Guide refresh, lighter:** an automatic refresh first asks the server whether the guide changed and skips an unchanged file (no download, no reading); on devices with room to spare (not low-RAM boxes) it no longer waits for you to stop watching. "Sync now" still reads it in full
+- ⏸️ **Pause screen for films and episodes:** a few seconds into a pause, with the controls gone, what you are watching comes up over the picture — lettering, episode, facts, synopsis and cast. Any key brings the controls back
+- ⏭️ **Next episode card with its picture** in the corner (the episode's still, or the show's fanart), the countdown filling along its foot
