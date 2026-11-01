@@ -1,5 +1,6 @@
 package tv.own.owntv.features.shell.components
 
+import tv.own.owntv.glcn.groupGlyph
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -324,6 +325,7 @@ fun ZapDeck(
                         horizontalArrangement = Arrangement.spacedBy(10.mpx),
                     ) {
                         entry.icon?.let { OwnTVIcon(it, tint, Modifier.size(20.mpx)) }
+                        entry.groupGlyph()?.let { tv.own.owntv.glcn.CategoryGlyphView(it) }
                         Text(
                             entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
                             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),

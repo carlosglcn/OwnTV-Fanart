@@ -1,5 +1,6 @@
 package tv.own.owntv.features.live
 
+import tv.own.owntv.glcn.groupGlyph
 import tv.own.owntv.ui.theme.stageTone
 import tv.own.owntv.ui.theme.stageShadow
 import androidx.compose.foundation.background
@@ -872,6 +873,7 @@ private fun LiveColumnItem(
         ) {
             val on = if (focused) a.onAccent else null
             entry.icon?.let { OwnTVIcon(it, on ?: StageColors.Muted, Modifier.size(20.mpx)) }
+            entry.groupGlyph()?.let { tv.own.owntv.glcn.CategoryGlyphView(it) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.mpx)) {
                 Text(
                     entry.label, style = stageText(18.5f, 600),

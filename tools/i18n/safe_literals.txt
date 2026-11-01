@@ -755,6 +755,7 @@
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	fonts
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	github.com/ahXN00/OwnTV
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_accessible
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_category_icons
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_fps
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_light_mode
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_reset_appearance
@@ -1018,6 +1019,35 @@
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	release
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	repeats
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	timer
+8	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	\0
+2	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	$w
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	+
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	-
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	1080P
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	2160P
+2	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	4K
+2	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	8K
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	DOLBY VISION
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	DOVI
+2	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	DV
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	ES=ESPANA,SPAIN,ESPANOL,ESPANOLA,SPANISH PT=PORTUGAL,PORTUGUES,PORTUGUESE FR=FRANCIA,FRANCE,FRANCAIS,FRENCH IT=ITALIA,ITALY,ITALIANO,ITALIAN DE=ALEMANIA,GERMANY,DEUTSCHLAND,GERMAN,DEUTSCH GB=REINO UNIDO,UNITED KINGDOM,ENGLAND,INGLATERRA,BRITISH US=USA,ESTADOS UNIDOS,UNITED STATES,AMERICA MX=MEXICO,MEXICANO AR=ARGENTINA CO=COLOMBIA CL=CHILE PE=PERU VE=VENEZUELA BR=BRASIL,BRAZIL NL=HOLANDA,PAISES BAJOS,NETHERLANDS,DUTCH BE=BELGICA,BELGIUM CH=SUIZA,SWITZERLAND AT=AUSTRIA PL=POLONIA,POLAND RO=RUMANIA,ROMANIA GR=GRECIA,GREECE TR=TURQUIA,TURKEY MA=MARRUECOS,MOROCCO IE=IRLANDA,IRELAND SE=SUECIA,SWEDEN NO=NORUEGA,NORWAY DK=DINAMARCA,DENMARK CA=CANADA IN=INDIA
+2	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	FHD
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	GB
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	HD
+2	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	HDR
+2	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	HDR10
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	HDR10 PLUS
+2	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	HDR10+
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	SD
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	UHD
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	UK
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	[^A-Z0-9+]+
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	\\p{Mn}+
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	g:
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	glcn_category_icons
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	on
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	⚽ 🏀 🎾 🏎️ 🥊 ⛳ 🏆 🎬 📺 🧸 🎵 📰 🌍 🍳 😂 👻 ⭐ 📡 🎄 🔞 ❤️ 🔥 💎 🎮 🐾 🚀 🇪🇸 🇵🇹 🇫🇷 🇮🇹 🇩🇪 🇬🇧 🇺🇸 🇲🇽 🇦🇷 🇧🇷
+1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	⚽=FUTBOL,FOOTBALL,SOCCER,LALIGA,LIGA,CHAMPIONS,PREMIER,BUNDESLIGA,SERIE A,LIGUE 1,DAZN,MOVISTAR LIGA,M LIGA,EUROPA LEAGUE 🏀=BALONCESTO,BASKET,BASKETBALL,NBA,ACB,EUROLIGA,EUROLEAGUE 🎾=TENIS,TENNIS,ATP,WTA 🏎️=F1,FORMULA 1,MOTOR,MOTOGP,MOTORSPORT,RACING 🥊=BOXEO,BOXING,UFC,MMA,LUCHA,WRESTLING,WWE ⛳=GOLF 🏆=DEPORTES,DEPORTE,SPORTS,SPORT,ESPN,EUROSPORT,EVENTOS,EVENTS,PPV 🧸=INFANTIL,INFANTILES,KIDS,NINOS,CHILDREN,DIBUJOS,CARTOONS,ANIMACION,ANIMATION,DISNEY,JUNIOR 🎬=CINE,PELICULAS,PELICULA,MOVIES,MOVIE,FILMS,FILM,ESTRENOS,CINEMA,PREMIERES 📺=SERIES,SERIE,SHOWS,TV SHOWS,TELENOVELAS,NOVELAS 🎵=MUSICA,MUSIC,RADIO,CONCIERTOS,CONCERTS 📰=NOTICIAS,NEWS,INFORMATIVOS,NOTICIAS 24H 🌍=DOCUMENTALES,DOCUMENTAL,DOCUMENTARY,DOCUMENTARIES,DOCS,NATURALEZA,NATURE,HISTORIA,HISTORY 🍳=COCINA,COOKING,FOOD,GASTRONOMIA 😂=COMEDIA,COMEDY,HUMOR 👻=TERROR,HORROR,MIEDO ⛪=RELIGION,RELIGIOSOS,RELIGIOUS 🔞=ADULTOS,ADULT,ADULTS,XXX,18 🎄=NAVIDAD,CHRISTMAS ⭐=FAVORITOS,FAVORITES,VIP,PREMIUM 📡=TDT,NACIONALES,GENERALISTAS,LOCAL,LOCALES,AUTONOMICAS,REGIONAL
 2	technical	app/src/main/java/tv/own/owntv/glcn/CrashScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/glcn/CrashScreen.kt	/proc/self/cmdline
 1	technical	app/src/main/java/tv/own/owntv/glcn/CrashScreen.kt	:crash

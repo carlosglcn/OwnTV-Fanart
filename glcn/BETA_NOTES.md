@@ -7,3 +7,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎭 Programme info: a film's cast moves to the right, in its own panel between "Airs again this week" and "Up next", so the synopsis has the whole left column and most read whole
 - 🏷️ Quality marks: "[DV R]" reads Dolby Vision · REMUX on the title's page (the picture format first, as on the posters, and Dolby Vision spelled out); posters keep DV
 - 📝 Home (TV layout): Recently watched cards show the programme's synopsis too — it came only from rows that carried it (thanks, Diego)
+- 🎨 Category icons: each group in the category lists (Live TV, Movies, Series, the zap panel) gets a picture from its name — ⚽ football, 🏀 basketball, 🎬 cinema, 🧸 kids, 🎵 music, 📰 news, 🌍 documentaries, a country's flag… — and quality groups the posters' mark (DV in gold, HDR, 4K, FHD). Hold OK on a group › Icon to choose another, go back to Automatic or have none; Settings › Fanart › Category icons turns them off
