@@ -426,19 +426,7 @@ fun SettingsScreen(
     // A full page's search hands over to Settings search, keyboard up.
     val openSearch: () -> Unit = { lastTab = null; searchQuery = ""; searchMode = true; searchFromMore = false; searchAutoEdit = true; tab = SettingsTab.ROOT }
     if (tab != SettingsTab.ROOT) {
-    // glcn: a page opens sliding in a little from the right as it fades up, the way iOS and Apple TV go one level down.
-    val pageAnimated = tv.own.owntv.glcn.DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn
-    val pageIn = remember(tab) { androidx.compose.animation.core.Animatable(if (pageAnimated) 0f else 1f) }
-    LaunchedEffect(tab) {
-        if (pageIn.value < 1f) pageIn.animateTo(1f, androidx.compose.animation.core.tween(PAGE_IN_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
-    }
-    androidx.compose.foundation.layout.Box(
-        Modifier.fillMaxSize().graphicsLayer {
-            val e = pageIn.value
-            translationX = (1f - e) * PAGE_IN_SHIFT.toPx()
-            alpha = 0.25f + 0.75f * e
-        },
-    ) {
+    GlcnPageSlide(tab) {
     CompositionLocalProvider(tv.own.owntv.features.settings.LocalSettingsSearch provides openSearch) {
     when (tab) {
         SettingsTab.LANGUAGE -> { LanguageSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
@@ -539,82 +527,14 @@ fun SettingsScreen(
             chipTone = if (glcnStyle != null) TileTone.PRIMARY else TileTone.SECONDARY,
             onClick = { showGlcnStyle = true },
         ),
-        RootRow(
-            "glcn_accessible", TileTone.PRIMARY, OwnTVIcon.PERSON,
-            title = stringResource(R.string.glcn_accessible_title),
-            desc = stringResource(R.string.glcn_accessible_desc),
-            chip = stringResource(if (tv.own.owntv.glcn.Accessible.on) R.string.common_on else R.string.common_off),
-            chipTone = if (tv.own.owntv.glcn.Accessible.on) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { tv.own.owntv.glcn.Accessible.set(accessibleContext, !tv.own.owntv.glcn.Accessible.on) },
-        ),
-        RootRow(
-            "glcn_emby_groups", TileTone.PRIMARY, OwnTVIcon.LAYERS,
-            title = stringResource(R.string.glcn_emby_groups_title),
-            desc = stringResource(R.string.glcn_emby_groups_desc),
-            chip = stringResource(
-                when (tv.own.owntv.glcn.EmbyGroupsPref.mode) {
-                    tv.own.owntv.core.sync.EmbyGroups.Mode.GENRE -> R.string.glcn_emby_groups_genre
-                    tv.own.owntv.core.sync.EmbyGroups.Mode.PLATFORM -> R.string.glcn_emby_groups_platform
-                    tv.own.owntv.core.sync.EmbyGroups.Mode.LIBRARY -> R.string.glcn_emby_groups_library
-                },
-            ),
-            chipTone = TileTone.PRIMARY,
-            onClick = { tv.own.owntv.glcn.EmbyGroupsPref.cycle(accessibleContext) },
-        ),
-        RootRow(
-            "glcn_category_icons", TileTone.PRIMARY, OwnTVIcon.SPARKLE,
-            title = stringResource(R.string.glcn_category_icons_title),
-            desc = stringResource(R.string.glcn_category_icons_desc),
-            chip = stringResource(if (tv.own.owntv.glcn.CategoryIcons.on) R.string.common_on else R.string.common_off),
-            chipTone = if (tv.own.owntv.glcn.CategoryIcons.on) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { tv.own.owntv.glcn.CategoryIcons.setOn(accessibleContext, !tv.own.owntv.glcn.CategoryIcons.on) },
-        ),
+        glcnAccessibleRow(accessibleContext),
+        glcnEmbyGroupsRow(accessibleContext),
+        glcnCategoryIconsRow(accessibleContext),
         // glcn: a TV profile has a Home of its own — the layouts and backdrops of the other Homes mean nothing there.
-        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else RootRow(
-            "glcn_home_backdrop", TileTone.PRIMARY, OwnTVIcon.THEME,
-            title = stringResource(R.string.glcn_home_backdrop_title),
-            desc = stringResource(R.string.glcn_home_backdrop_desc),
-            chip = stringResource(
-                when (homeBackdrop) {
-                    1 -> R.string.glcn_home_backdrop_cinema
-                    2 -> R.string.glcn_home_backdrop_panel
-                    3 -> R.string.glcn_home_backdrop_dock
-                    else -> R.string.glcn_home_backdrop_classic
-                },
-            ),
-            chipTone = TileTone.PRIMARY,
-            onClick = { showHomeLayout = true },
-        ),
-        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else RootRow(
-            "glcn_home_cover", TileTone.PRIMARY, OwnTVIcon.IMAGE,
-            title = stringResource(R.string.glcn_home_cover_title),
-            desc = stringResource(R.string.glcn_home_cover_desc),
-            chip = stringResource(when (homeCover) { 1 -> R.string.glcn_home_cover_app; 2 -> R.string.glcn_home_cover_mine; else -> R.string.glcn_home_cover_art }),
-            chipTone = TileTone.PRIMARY,
-            onClick = { settingsVm.cycleHomeCover() },
-        ),
-        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else RootRow(
-            "glcn_home_image", TileTone.PRIMARY, OwnTVIcon.IMAGE,
-            title = stringResource(R.string.glcn_home_image_title),
-            desc = stringResource(R.string.glcn_home_image_desc),
-            chip = stringResource(if (homeImagePath.isBlank()) R.string.glcn_home_image_none else R.string.glcn_home_image_change),
-            chipTone = TileTone.PRIMARY,
-            onClick = { showHomePicker = true },
-        ),
-        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else RootRow(
-            "glcn_home_dim", TileTone.SECONDARY, OwnTVIcon.GLOW,
-            title = stringResource(R.string.glcn_home_dim_title),
-            desc = stringResource(R.string.glcn_home_dim_desc),
-            chip = stringResource(
-                when (homeCoverDim) {
-                    1 -> R.string.glcn_home_dim_soft
-                    2 -> R.string.glcn_home_dim_softer
-                    else -> R.string.glcn_home_dim_normal
-                },
-            ),
-            chipTone = TileTone.SECONDARY,
-            onClick = { settingsVm.cycleHomeCoverDim() },
-        ),
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeBackdropRow(homeBackdrop) { showHomeLayout = true },
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeCoverRow(homeCover) { settingsVm.cycleHomeCover() },
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeImageRow(homeImagePath) { showHomePicker = true },
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeDimRow(homeCoverDim) { settingsVm.cycleHomeCoverDim() },
         RootRow(
             "glcn_season", TileTone.SECONDARY, OwnTVIcon.THEME,
             title = stringResource(R.string.glcn_season_title),
@@ -3212,3 +3132,111 @@ private fun serviceRowExtras(vm: SettingsViewModel): Map<String, RowExtra> {
 /** glcn: a Settings page's way in — how long, and how far from the right it slides. */
 private const val PAGE_IN_MS = 300
 private val PAGE_IN_SHIFT = 60.mpx
+
+// glcn: rows kept out of SettingsScreen so its method stays under the JVM size limit.
+
+@Composable
+private fun glcnAccessibleRow(ctx: android.content.Context): RootRow = RootRow(
+    "glcn_accessible", TileTone.PRIMARY, OwnTVIcon.PERSON,
+    title = stringResource(R.string.glcn_accessible_title),
+    desc = stringResource(R.string.glcn_accessible_desc),
+    chip = stringResource(if (tv.own.owntv.glcn.Accessible.on) R.string.common_on else R.string.common_off),
+    chipTone = if (tv.own.owntv.glcn.Accessible.on) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = { tv.own.owntv.glcn.Accessible.set(ctx, !tv.own.owntv.glcn.Accessible.on) },
+)
+
+@Composable
+private fun glcnEmbyGroupsRow(ctx: android.content.Context): RootRow = RootRow(
+    "glcn_emby_groups", TileTone.PRIMARY, OwnTVIcon.LAYERS,
+    title = stringResource(R.string.glcn_emby_groups_title),
+    desc = stringResource(R.string.glcn_emby_groups_desc),
+    chip = stringResource(
+        when (tv.own.owntv.glcn.EmbyGroupsPref.mode) {
+            tv.own.owntv.core.sync.EmbyGroups.Mode.GENRE -> R.string.glcn_emby_groups_genre
+            tv.own.owntv.core.sync.EmbyGroups.Mode.PLATFORM -> R.string.glcn_emby_groups_platform
+            tv.own.owntv.core.sync.EmbyGroups.Mode.LIBRARY -> R.string.glcn_emby_groups_library
+        },
+    ),
+    chipTone = TileTone.PRIMARY,
+    onClick = { tv.own.owntv.glcn.EmbyGroupsPref.cycle(ctx) },
+)
+
+@Composable
+private fun glcnCategoryIconsRow(ctx: android.content.Context): RootRow = RootRow(
+    "glcn_category_icons", TileTone.PRIMARY, OwnTVIcon.SPARKLE,
+    title = stringResource(R.string.glcn_category_icons_title),
+    desc = stringResource(R.string.glcn_category_icons_desc),
+    chip = stringResource(if (tv.own.owntv.glcn.CategoryIcons.on) R.string.common_on else R.string.common_off),
+    chipTone = if (tv.own.owntv.glcn.CategoryIcons.on) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = { tv.own.owntv.glcn.CategoryIcons.setOn(ctx, !tv.own.owntv.glcn.CategoryIcons.on) },
+)
+
+@Composable
+private fun glcnHomeBackdropRow(homeBackdrop: Int, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_home_backdrop", TileTone.PRIMARY, OwnTVIcon.THEME,
+    title = stringResource(R.string.glcn_home_backdrop_title),
+    desc = stringResource(R.string.glcn_home_backdrop_desc),
+    chip = stringResource(
+        when (homeBackdrop) {
+            1 -> R.string.glcn_home_backdrop_cinema
+            2 -> R.string.glcn_home_backdrop_panel
+            3 -> R.string.glcn_home_backdrop_dock
+            else -> R.string.glcn_home_backdrop_classic
+        },
+    ),
+    chipTone = TileTone.PRIMARY,
+    onClick = onClick,
+)
+
+@Composable
+private fun glcnHomeCoverRow(homeCover: Int, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_home_cover", TileTone.PRIMARY, OwnTVIcon.IMAGE,
+    title = stringResource(R.string.glcn_home_cover_title),
+    desc = stringResource(R.string.glcn_home_cover_desc),
+    chip = stringResource(when (homeCover) { 1 -> R.string.glcn_home_cover_app; 2 -> R.string.glcn_home_cover_mine; else -> R.string.glcn_home_cover_art }),
+    chipTone = TileTone.PRIMARY,
+    onClick = onClick,
+)
+
+@Composable
+private fun glcnHomeImageRow(homeImagePath: String, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_home_image", TileTone.PRIMARY, OwnTVIcon.IMAGE,
+    title = stringResource(R.string.glcn_home_image_title),
+    desc = stringResource(R.string.glcn_home_image_desc),
+    chip = stringResource(if (homeImagePath.isBlank()) R.string.glcn_home_image_none else R.string.glcn_home_image_change),
+    chipTone = TileTone.PRIMARY,
+    onClick = onClick,
+)
+
+@Composable
+private fun glcnHomeDimRow(homeCoverDim: Int, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_home_dim", TileTone.SECONDARY, OwnTVIcon.GLOW,
+    title = stringResource(R.string.glcn_home_dim_title),
+    desc = stringResource(R.string.glcn_home_dim_desc),
+    chip = stringResource(
+        when (homeCoverDim) {
+            1 -> R.string.glcn_home_dim_soft
+            2 -> R.string.glcn_home_dim_softer
+            else -> R.string.glcn_home_dim_normal
+        },
+    ),
+    chipTone = TileTone.SECONDARY,
+    onClick = onClick,
+)
+
+/** glcn: a page opens sliding in a little from the right as it fades up, the way iOS and Apple TV go one level down. */
+@Composable
+private fun GlcnPageSlide(tab: Any, content: @Composable () -> Unit) {
+    val pageAnimated = tv.own.owntv.glcn.DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn
+    val pageIn = remember(tab) { androidx.compose.animation.core.Animatable(if (pageAnimated) 0f else 1f) }
+    LaunchedEffect(tab) {
+        if (pageIn.value < 1f) pageIn.animateTo(1f, androidx.compose.animation.core.tween(PAGE_IN_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+    }
+    androidx.compose.foundation.layout.Box(
+        Modifier.fillMaxSize().graphicsLayer {
+            val e = pageIn.value
+            translationX = (1f - e) * PAGE_IN_SHIFT.toPx()
+            alpha = 0.25f + 0.75f * e
+        },
+    ) { content() }
+}

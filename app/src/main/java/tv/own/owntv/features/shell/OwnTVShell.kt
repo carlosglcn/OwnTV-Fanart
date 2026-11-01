@@ -1516,22 +1516,9 @@ fun OwnTVShell(
                     seriesFromHome = true
                     onSelectSection(MainSection.SERIES)
                 }
-                // glcn: a new section comes in with a slight slide — no hard cut between screens.
-                val sectionIn = remember { androidx.compose.animation.core.Animatable(1f) }
-                val sectionMotion = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on && !tv.own.owntv.glcn.Accessible.on
-                val sectionSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(SECTION_IN_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
-                LaunchedEffect(selectedSection) {
-                    if (!sectionMotion) return@LaunchedEffect
-                    sectionIn.snapTo(0f)
-                    sectionIn.animateTo(1f, sectionSpec)
-                }
+                // glcn: sections change with a clean cut — the small sideways slide read as a judder.
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth()
-                        .graphicsLayer {
-                            val t = sectionIn.value
-                            // A slide only: no transparency, so the whole screen is never drawn twice while it loads.
-                            if (t < 1f) translationX = (1f - t) * SECTION_IN_SLIDE.toPx()
-                        }
                         .then(
                             // The floating rail sits over the content, so the content starts at the screen
                             // edge (or beside a docked rail).
@@ -2881,8 +2868,6 @@ private const val HOLD_SETTLE_MS = 600L
 private const val FILM_WARM_MS = 1_500L
 
 /** glcn: a section's entrance — how long and from how far right. */
-private const val SECTION_IN_MS = 180
-private val SECTION_IN_SLIDE = 14.dp
 
 /** glcn: a stored JSON array of strings (TMDB genres) as a list; empty when absent or unreadable. */
 private fun cinemaJsonList(json: String?): List<String> {

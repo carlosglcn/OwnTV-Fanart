@@ -16,3 +16,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ◀ ▶ Programme info walks the channels: ◀ ▶ (or CH±) show what is on the next channels of the list, sliding smoothly while the window keeps playing yours; ▼ goes to the buttons (◀ ▶ there between Record and Technical data) and ▲ back; OK tunes the channel shown. The channels either side are read ahead so each page is ready
 - 🗓️ Guide: the provider's own short guide also names, with overlapping programmes, the one that started last — like every other screen
 - 🧠 Memory: the now/next caches no longer grow with every channel ever focused, channel logos are fetched by a few workers (not one task per logo) and skipped in light mode, and Home reads the live channels once instead of twice
+- 🧘 **Changing section (Home, Live TV, Sports…) is a clean cut:** the small sideways slide that read as a judder is gone, and pages ease out without going past

@@ -1964,7 +1964,7 @@ private fun HomeReadScope(content: @Composable () -> Unit) { content() }
  * as the key lands, with only a small give at the end — it used to trail behind and catch up.
  */
 private const val HOME_GLIDE_STIFFNESS = 1100f
-private const val HOME_GLIDE_DAMPING = 0.82f
+private const val HOME_GLIDE_DAMPING = 0.92f
 
 /** glcn: the rows a TV profile's Home keeps. */
 internal val TV_PROFILE_ROWS = setOf(
