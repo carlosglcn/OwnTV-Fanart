@@ -17,6 +17,8 @@ object CategoryIcons {
     sealed interface Glyph {
         /** A line icon from [CategoryGlyphPaths], tinted like the list's other icons. */
         data class Icon(val key: String) : Glyph
+        /** A platform's own logo (an Emby / Jellyfin library grouped by platform), on a light plate. */
+        data class Logo(val url: String) : Glyph
         /** A quality mark in the posters' style; [gold] for the HDR formats. */
         data class Badge(val text: String, val gold: Boolean) : Glyph
     }
@@ -48,6 +50,8 @@ object CategoryIcons {
 
     /** The group's picture, or null (switched off, none chosen, nothing recognised). */
     fun glyph(groupName: String, tags: List<String> = emptyList(), country: String? = null): Glyph? {
+        // glcn: a platform category (Netflix, HBO…) shows the platform's logo, even with the icons switched off.
+        tv.own.owntv.core.sync.PlatformLogos.logoFor(groupName)?.let { return Glyph.Logo(it) }
         if (!on) return null
         // A choice from before the line icons (an emoji) is not a key any more: back to the automatic one.
         overrides[key(groupName)]?.let { if (it == NONE) return null; if (it in CategoryGlyphPaths.paths) return Glyph.Icon(it) }

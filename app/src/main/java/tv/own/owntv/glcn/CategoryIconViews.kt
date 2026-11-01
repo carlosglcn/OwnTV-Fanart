@@ -34,6 +34,15 @@ internal fun LiveCategoryEntry.groupGlyph(): CategoryIcons.Glyph? {
 internal fun CategoryGlyphView(glyph: CategoryIcons.Glyph, tint: Color, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 22.mpx) {
     when (glyph) {
         is CategoryIcons.Glyph.Icon -> CategoryIconShape(glyph.key, tint, modifier.size(size))
+        is CategoryIcons.Glyph.Logo -> Box(
+            modifier.size(size * 2.6f, size * 1.15f).background(Color(0xF2F4F6F5), RoundedCornerShape(6.mpx)).padding(horizontal = 5.mpx, vertical = 3.mpx),
+            contentAlignment = Alignment.Center,
+        ) {
+            coil3.compose.AsyncImage(
+                model = glyph.url, contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.matchParentSize(),
+            )
+        }
         is CategoryIcons.Glyph.Badge -> Text(
             glyph.text,
             style = stageText(if (glyph.text.length > 3) 10.5f else 11.5f, 800),
