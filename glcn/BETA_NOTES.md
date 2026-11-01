@@ -11,3 +11,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🇪🇸 Emby / Jellyfin genres in Spanish when the app is in Spanish (Ciencia ficción, Miniseries, Documental…), so a library tagged in English and one in Spanish share their categories
 - 🏷️ Emby / Jellyfin by platform: each platform shows its own logo (TMDB's network logo) in the category list; variants are joined (HBO Nordic → HBO, Paramount+ with Showtime → Paramount+, Sky One/Max/Atlantic → Sky…), networks with only one or two shows go in "Other networks", and films keep their genres (their studios are their makers, not where they stream)
 - 🪄 Programme info opens with the picture folding into its window: the TV shrinks smoothly to its place on the right, its corners rounding, while the backdrop comes up around it (and the reverse on closing)
+- 📺 TV profile: Settings no longer offers the Home layouts and Home backdrop — a TV profile always has its own TV Home

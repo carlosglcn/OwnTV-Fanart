@@ -555,7 +555,8 @@ fun SettingsScreen(
             chipTone = if (tv.own.owntv.glcn.CategoryIcons.on) TileTone.PRIMARY else TileTone.SECONDARY,
             onClick = { tv.own.owntv.glcn.CategoryIcons.setOn(accessibleContext, !tv.own.owntv.glcn.CategoryIcons.on) },
         ),
-        RootRow(
+        // glcn: a TV profile has a Home of its own — the layouts and backdrops of the other Homes mean nothing there.
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else RootRow(
             "glcn_home_backdrop", TileTone.PRIMARY, OwnTVIcon.THEME,
             title = stringResource(R.string.glcn_home_backdrop_title),
             desc = stringResource(R.string.glcn_home_backdrop_desc),
@@ -570,7 +571,7 @@ fun SettingsScreen(
             chipTone = TileTone.PRIMARY,
             onClick = { showHomeLayout = true },
         ),
-        RootRow(
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else RootRow(
             "glcn_home_cover", TileTone.PRIMARY, OwnTVIcon.IMAGE,
             title = stringResource(R.string.glcn_home_cover_title),
             desc = stringResource(R.string.glcn_home_cover_desc),
@@ -578,7 +579,7 @@ fun SettingsScreen(
             chipTone = TileTone.PRIMARY,
             onClick = { settingsVm.cycleHomeCover() },
         ),
-        RootRow(
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else RootRow(
             "glcn_home_image", TileTone.PRIMARY, OwnTVIcon.IMAGE,
             title = stringResource(R.string.glcn_home_image_title),
             desc = stringResource(R.string.glcn_home_image_desc),
@@ -586,7 +587,7 @@ fun SettingsScreen(
             chipTone = TileTone.PRIMARY,
             onClick = { showHomePicker = true },
         ),
-        RootRow(
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else RootRow(
             "glcn_home_dim", TileTone.SECONDARY, OwnTVIcon.GLOW,
             title = stringResource(R.string.glcn_home_dim_title),
             desc = stringResource(R.string.glcn_home_dim_desc),
