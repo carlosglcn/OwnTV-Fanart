@@ -127,6 +127,8 @@ jobs:
           # Versioned release: what the in-app updater reads (releases/latest).
           gh release create "v$VERSION_NAME" dist/OwnTV-Fanart.apk \
             --title "OwnTV Fanart $VERSION_NAME" --notes "$NOTES" --target "$GITHUB_SHA" --latest
+          # glcn: the counts of what is about to be deleted go into the lasting total first (glcn/download_stats.py).
+          python3 glcn/download_stats.py || true
           # Fixed link for Downloader, kept as a pre-release so it is never "latest".
           gh release delete glcn-latest --yes --cleanup-tag || true
           gh release create glcn-latest dist/OwnTV-Fanart.apk \

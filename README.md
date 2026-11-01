@@ -21,8 +21,8 @@ https://github.com/user-attachments/assets/faacb82b-6903-47c0-ae53-6854024aa5b6
 
 On a TV, open **Downloader** (by AFTVnews), type the code and install — it always fetches the newest version.
 
-[![TV downloads](https://img.shields.io/github/downloads/carlosglcn/OwnTV-Fanart/total?label=TV%20downloads&color=00c2a8)](https://github.com/carlosglcn/OwnTV-Fanart/releases)
-[![Phone downloads](https://img.shields.io/github/downloads/carlosglcn/OwnTV-Fanart-Mobile/total?label=Phone%20downloads&color=00c2a8)](https://github.com/carlosglcn/OwnTV-Fanart-Mobile/releases)
+[![TV downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fcarlosglcn%2FOwnTV-Fanart%2Fstats%2Fdownloads.json&query=%24.total&label=TV%20downloads&color=00c2a8)](https://github.com/carlosglcn/OwnTV-Fanart/releases)
+[![Phone downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fcarlosglcn%2FOwnTV-Fanart-Mobile%2Fstats%2Fdownloads.json&query=%24.total&label=Phone%20downloads&color=00c2a8)](https://github.com/carlosglcn/OwnTV-Fanart-Mobile/releases)
 
 It installs **beside** the official app (its own package, `tv.own.owntv.glcn`), and tells you in-app when a new version is out.
 
