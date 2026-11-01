@@ -1277,6 +1277,10 @@
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR: video ${fps}fps matches no mode -> display default
 1	compiler	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	DEPRECATION
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	FrameRate
+1	technical	app/src/main/java/tv/own/owntv/player/LoadMorph.kt	loadMorph
+1	technical	app/src/main/java/tv/own/owntv/player/LoadMorph.kt	loadMorphSpin
+1	technical	app/src/main/java/tv/own/owntv/player/LoadMorph.kt	spinRing
+1	technical	app/src/main/java/tv/own/owntv/player/LoadMorph.kt	spinRingTurn
 1	protocol	app/src/main/java/tv/own/owntv/player/MediaSpecDisplayText.kt	exoplayer
 1	protocol	app/src/main/java/tv/own/owntv/player/MediaSpecDisplayText.kt	mpv
 1	empty	app/src/main/java/tv/own/owntv/player/MiniPlayer.kt	\0

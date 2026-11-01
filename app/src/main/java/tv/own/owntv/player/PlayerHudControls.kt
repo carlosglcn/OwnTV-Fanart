@@ -152,14 +152,19 @@ internal fun TransportCapsule(modifier: Modifier = Modifier, content: @Composabl
  * as [TransportCapsule] at the dock's own 22 dp radius, so the two read as one material.
  */
 @Composable
-internal fun Dock(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+internal fun Dock(
+    modifier: Modifier = Modifier,
+    /** glcn: no panel — the screen's own shade at the foot carries the text (live TV), so more of the picture shows. */
+    bare: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     // No clip: the fill and rim already take the shape, and a clip cut off the seek bar's time bubble,
     // which floats above band A — outside the dock.
     Column(
-        modifier
+        (if (bare) modifier else modifier
             .background(hudShade(0.55f), RoundedCornerShape(22.dp))
-            .border(1.dp, hudInk.copy(alpha = 0.10f), RoundedCornerShape(22.dp))
-            .padding(horizontal = 18.dp, vertical = 12.dp),
+            .border(1.dp, hudInk.copy(alpha = 0.10f), RoundedCornerShape(22.dp)))
+            .padding(horizontal = 18.dp, vertical = if (bare) 4.dp else 12.dp),
         content = content,
     )
 }

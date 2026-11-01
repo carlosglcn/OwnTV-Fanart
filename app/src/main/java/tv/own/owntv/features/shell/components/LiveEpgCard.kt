@@ -140,7 +140,8 @@ fun LiveEpgCard(
                 }
             }
             // What the programme actually IS, not just what it is called.
-            now.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
+            // glcn: not in the player's bar (bare): it is on the programme's Info screen, and the bar stays low.
+            now.description?.takeIf { it.isNotBlank() && !bare }?.let { synopsis ->
                 // glcn: three lines, and a longer text drifts slowly down and back instead of ending in "…".
                 DriftingSynopsis(
                     synopsis,
@@ -186,17 +187,15 @@ fun LiveEpgCard(
 fun LiveEpgCardWithArt(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier) {
     if (epg == null || (epg.now == null && epg.next == null)) return
     if (art.isNullOrBlank()) { LiveEpgCard(epg, modifier); return }
+    // glcn: no panel of its own (the bar's shade is behind it) and a smaller picture, so the bar stays low.
     Row(
-        modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(hudShade(0.72f))
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier.padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         tv.own.owntv.ui.components.ProgrammeArt(
             url = art,
-            modifier = Modifier.size(width = 128.dp, height = 72.dp).clip(RoundedCornerShape(10.dp)),
+            modifier = Modifier.size(width = 96.dp, height = 54.dp).clip(RoundedCornerShape(9.dp)),
         )
         LiveEpgCard(epg, bare = true)
     }

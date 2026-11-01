@@ -25,3 +25,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔎 **Emby / Jellyfin: no TMDB search by name** for what your server already identified — its own TMDB ids are kept at sync and used directly (fewer TMDB calls, no wrong match)
 - 🖼️ Zapping › Coming up: the programme picture keeps its 16:9 shape (it was cut at the top and bottom)
 - 🇪🇸 Title logos in your country's version: within Spanish, Spain's logo before Mexico's (TMDB files both as Spanish)
+- 📺 **Live TV's bar, lower and lighter:** no panel any more — a deeper shade at the foot of the screen carries the text; smaller programme picture, no synopsis there (it is on the programme's Info screen), the stream chips in one small line, and on channels with an archive the timeline takes the place of the dividing line
+- ⭕ **One loading sign:** a ring where the play button sits while the channel opens, which closes and turns into the play sign when the picture arrives (instead of a spinner on its own); with the bar up, the play button wears the ring

@@ -59,7 +59,6 @@ import tv.own.owntv.core.settings.RemoteShortcutAction
 import tv.own.owntv.core.settings.RemoteShortcutPress
 import tv.own.owntv.ui.components.LocalRemoteShortcuts
 import tv.own.owntv.ui.components.OwnTVIcon
-import tv.own.owntv.ui.components.OwnTVSpinner
 import tv.own.owntv.ui.components.displayText // PlayerFailureReason.displayText, for the error overlay
 import tv.own.owntv.ui.theme.gradientWash
 
@@ -822,12 +821,13 @@ fun PlayerHud(
                     0.5f to hudShade(0.72f),
                     1.0f to Color.Transparent,
                 ))
-            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(260.dp).graphicsLayer { alpha = rise.value }
+            // glcn: live TV's bar has no panel of its own any more — this shade carries its text, a little deeper.
+            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(if (isLive) 280.dp else 260.dp).graphicsLayer { alpha = rise.value }
                 .gradientWash(
                     vertical = true,
                     0.0f to Color.Transparent,
-                    0.45f to hudShade(0.68f),
-                    1.0f to hudShade(0.78f),
+                    0.4f to hudShade(if (isLive) 0.74f else 0.68f),
+                    1.0f to hudShade(if (isLive) 0.88f else 0.78f),
                 ))
 
             // The active engine (MPV/EXO) leads the mini chips so users can always tell which player is on.
@@ -863,7 +863,7 @@ fun PlayerHud(
             // Hide the transport (play/seek/prev/next) and bottom bar while an error is up — the error
             // overlay owns the screen with its own Retry, so the play/rewind/forward must not show behind it.
             if (error == null) {
-                CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp)) // glcn: clear of the now/next card's top edge
+                CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp), buffering = buffering) // glcn: clear of the now/next card's top edge
 
                 val reportDuration = duration.takeIf { it > 0 }?.let { formatTime(it) }
                 val reportSavedMessage = stringResource(R.string.player_report_saved)
@@ -952,6 +952,14 @@ fun PlayerHud(
             }
         }
 
+        // glcn: the one loading sign — a ring where the play button sits, which closes into the play sign when the
+        // picture comes. Hidden while the HUD's own play button is up (that button wears the ring then).
+        LoadMorph(
+            loading = buffering && error == null,
+            hidden = controlsVisible && error == null && !(cinemaMode && cinema != null),
+            modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp),
+        )
+
         // Status overlay (always shown).
         when {
             error != null -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1015,7 +1023,8 @@ fun PlayerHud(
             // the panel's own countdown and the engine re-asks by itself. The line under the spinner says
             // why nothing is happening yet, so nobody reaches for Retry (or thinks the channel is dead).
             buffering -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                OwnTVSpinner(sizeDp = 56)
+                // The sign itself is [LoadMorph], above; the lines under it start below its ring.
+                Spacer(Modifier.height(56.dp))
                 val stalledSince = stalledSinceMs
                 if (providerBackOff == null && stalledSince != null) {
                     val showNotice by produceState(false, stalledSince) {

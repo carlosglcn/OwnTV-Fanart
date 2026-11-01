@@ -1,5 +1,7 @@
 package tv.own.owntv.player
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.tv.material3.MaterialTheme
 import tv.own.owntv.ui.theme.hudAccent
 import tv.own.owntv.ui.theme.hudShade
@@ -180,7 +182,7 @@ internal fun LiveChannelHeader(player: PlaybackEngine, chips: List<String>, onBa
         CircleButton(OwnTVIcon.BACK, size = 40, onClick = onBack)
         Spacer(Modifier.width(14.dp))
         Box(
-            Modifier.size(width = 96.dp, height = 66.dp).clip(RoundedCornerShape(14.dp)).background(hudShade(0.45f)),
+            Modifier.size(width = 80.dp, height = 54.dp).clip(RoundedCornerShape(12.dp)).background(hudShade(0.45f)),
             contentAlignment = Alignment.Center,
         ) {
             if (!meta.logoUrl.isNullOrBlank()) {
@@ -196,26 +198,24 @@ internal fun LiveChannelHeader(player: PlaybackEngine, chips: List<String>, onBa
                     Text(it, style = MaterialTheme.typography.titleMedium, color = hudInk.copy(alpha = 0.5f), fontWeight = FontWeight.SemiBold, maxLines = 1)
                     Spacer(Modifier.width(10.dp))
                 }
-                Text(name, style = tv.own.owntv.ui.theme.stageText(32, 800), color = hudInk, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(name, style = tv.own.owntv.ui.theme.stageText(28, 800), color = hudInk, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             val shown = chips.filterNot { it.contains(':') || it == "MPV" || it == "EXO" }
             if (shown.isNotEmpty()) {
-                // Wraps to a second line when the cell is narrow, so no chip is ever cut ("STERE").
-                @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-                androidx.compose.foundation.layout.FlowRow(
-                    Modifier.padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                // glcn: one low line of small chips (they used to wrap to a second line and lift the whole bar).
+                Row(
+                    Modifier.padding(top = 5.dp).horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     shown.forEach { label ->
                         Text(
                             label,
-                            style = tv.own.owntv.ui.theme.stageText(19, 700),
+                            style = tv.own.owntv.ui.theme.stageText(15, 700),
                             color = hudInk.copy(alpha = 0.85f),
                             fontWeight = FontWeight.SemiBold,
                             // One line each: squeezed, a chip clips instead of stacking its letters.
                             maxLines = 1, softWrap = false,
-                            modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(hudInk.copy(alpha = 0.12f)).padding(horizontal = 10.dp, vertical = 3.dp),
+                            modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(hudInk.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 2.dp),
                         )
                     }
                 }
@@ -344,6 +344,8 @@ internal fun CenterControls(
     player: PlaybackEngine, nav: NavState, isPlaying: Boolean, isLive: Boolean,
     onRewindLive: (() -> Unit)?, onForwardLive: (() -> Unit)?, timeshiftOffset: () -> Int?,
     playFocus: FocusRequester, modifier: Modifier = Modifier,
+    /** glcn: the stream is loading — the play button wears the turning ring (see [LoadMorph]). */
+    buffering: Boolean = false,
 ) {
     val seekStep by player.seekStepMs.collectAsStateWithLifecycle() // Settings -> Seek step
     val rewindMode = onRewindLive != null // this is a catch-up-capable Live channel
@@ -366,7 +368,10 @@ internal fun CenterControls(
                 rewindMode -> CircleButton(OwnTVIcon.REWIND, size = 44) { onRewindLive() } // step back into the archive
                 !isLive -> CircleButton(OwnTVIcon.REWIND, size = 44) { player.seekBy(-seekStep) }
             }
-            CircleButton(if (isPlaying) OwnTVIcon.PAUSE else OwnTVIcon.PLAY, size = 64, primary = true, modifier = Modifier.focusRequester(playFocus)) { player.togglePlayPause() }
+            Box(contentAlignment = Alignment.Center) {
+                if (buffering) SpinRing(sizeDp = 76)
+                CircleButton(if (isPlaying) OwnTVIcon.PAUSE else OwnTVIcon.PLAY, size = 64, primary = true, modifier = Modifier.focusRequester(playFocus)) { player.togglePlayPause() }
+            }
             when {
                 rewindMode && timeshifting -> CircleButton(OwnTVIcon.FORWARD, size = 44) { onForwardLive?.invoke() } // toward live
                 !isLive && !rewindMode -> CircleButton(OwnTVIcon.FORWARD, size = 44) { player.seekBy(seekStep) }
@@ -423,7 +428,10 @@ internal fun BottomBar(
                     Box(Modifier.widthIn(max = 540.dp)) { side() }
                 }
             } else header()
-            Box(Modifier.fillMaxWidth().padding(vertical = if (side != null) 2.dp else 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
+            // glcn: on a channel with an archive the timeline below takes this line's place — no extra row.
+            if (onScrubLive == null || side == null) {
+                Box(Modifier.fillMaxWidth().padding(vertical = if (side != null) 2.dp else 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
+            } else Spacer(Modifier.height(8.dp))
         }
         // Band A — the instrument. The times are the bar's own end caps now; the separate time row is
         // gone, and on live the right cap is the state badge instead of a clock.
@@ -651,7 +659,7 @@ internal fun BottomBar(
         }
         }
     }
-    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = if (side != null) 6.dp else 20.dp)) { body() }
+    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = if (side != null) 6.dp else 20.dp), bare = side != null) { body() }
 }
 
 private fun volumeIcon(volume: Int): OwnTVIcon = when {
@@ -728,3 +736,4 @@ internal fun NextEpisodeCard(
         }
     }
 }
+
