@@ -87,6 +87,7 @@ fun ProgrammeInfoScreen(
     val swap = remember { androidx.compose.animation.core.Animatable(0f) }
     val swapScope = androidx.compose.runtime.rememberCoroutineScope()
     var lastSwapAt by remember { mutableStateOf(0L) }
+    val swapAnimated = DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn
     fun go(step: Int) {
         if (channels.size < 2) return
         val at = channels.indexOfFirst { it.id == channel.id }.takeIf { it >= 0 } ?: return
@@ -95,7 +96,7 @@ fun ProgrammeInfoScreen(
         // A held key gets shorter moves, so the pages keep up with it.
         val quick = now - lastSwapAt < QUICK_SWAP_MS
         lastSwapAt = now
-        val calm = DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn
+        val calm = swapAnimated
         swapScope.launch {
             if (!calm) { channel = next; return@launch }
             swap.animateTo(-step.toFloat(), androidx.compose.animation.core.tween(if (quick) 70 else SWAP_OUT_MS, easing = androidx.compose.animation.core.FastOutLinearInEasing))
@@ -260,7 +261,7 @@ fun ProgrammeInfoScreen(
             Box(Modifier.fillMaxSize().background(Color(0xFF06090A)))
             val art = film?.backdropPath?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w1280") }
                 ?: lent?.backdropUrl ?: cur?.imageUrl?.takeIf { it.isNotBlank() }
-            androidx.compose.animation.Crossfade(art, androidx.compose.animation.core.tween(SWAP_IN_MS), label = "infoArt") { url ->
+            androidx.compose.animation.Crossfade(targetState = art, animationSpec = androidx.compose.animation.core.tween(SWAP_IN_MS), label = "infoArt") { url ->
                 if (url != null) ProgrammeArt(url = url, modifier = Modifier.fillMaxSize())
             }
             // The picture stays behind, never under the words: dark from the left and from the foot.

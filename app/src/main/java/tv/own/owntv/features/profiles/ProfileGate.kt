@@ -64,9 +64,10 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
 
     // glcn: entering a profile, the screen opens up towards you and fades as Home comes in, instead of a cut.
     val leave = remember { androidx.compose.animation.core.Animatable(0f) }
+    val leaveAnimated = tv.own.owntv.glcn.DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn
     val leaveScope = androidx.compose.runtime.rememberCoroutineScope()
     fun enter(p: ProfileEntity) {
-        if (!tv.own.owntv.glcn.DeviceClass.richMotion || !tv.own.owntv.ui.theme.animationsOn) { vm.switchTo(p) { onEnter(p.id) }; return }
+        if (!leaveAnimated) { vm.switchTo(p) { onEnter(p.id) }; return }
         leaveScope.launch {
             leave.animateTo(1f, androidx.compose.animation.core.tween(GATE_LEAVE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.4f, 0f, 0.2f, 1f)))
             vm.switchTo(p) { onEnter(p.id) }

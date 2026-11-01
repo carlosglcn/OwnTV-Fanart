@@ -427,7 +427,8 @@ fun SettingsScreen(
     val openSearch: () -> Unit = { lastTab = null; searchQuery = ""; searchMode = true; searchFromMore = false; searchAutoEdit = true; tab = SettingsTab.ROOT }
     if (tab != SettingsTab.ROOT) {
     // glcn: a page opens sliding in a little from the right as it fades up, the way iOS and Apple TV go one level down.
-    val pageIn = remember(tab) { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn) 0f else 1f) }
+    val pageAnimated = tv.own.owntv.glcn.DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn
+    val pageIn = remember(tab) { androidx.compose.animation.core.Animatable(if (pageAnimated) 0f else 1f) }
     LaunchedEffect(tab) {
         if (pageIn.value < 1f) pageIn.animateTo(1f, androidx.compose.animation.core.tween(PAGE_IN_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
     }
