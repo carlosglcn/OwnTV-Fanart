@@ -45,7 +45,8 @@
     </queries>
 
     <application
-        android:name=".OwnTVApp"
+android:largeHeap="true"
+                android:name=".OwnTVApp"
         android:allowBackup="false"
         android:banner="@drawable/owntv_banner_eggshell"
         android:dataExtractionRules="@xml/data_extraction_rules"
