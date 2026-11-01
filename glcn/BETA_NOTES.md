@@ -41,3 +41,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📡 **Guide refresh, lighter:** an automatic refresh first asks the server whether the guide changed and skips an unchanged file (no download, no reading); on devices with room to spare (not low-RAM boxes) it no longer waits for you to stop watching. "Sync now" still reads it in full
 - ⏸️ **Pause screen for films and episodes:** a few seconds into a pause, with the controls gone, what you are watching comes up over the picture — lettering, episode, facts, synopsis and cast. Any key brings the controls back
 - ⏭️ **Next episode card with its picture** in the corner (the episode's still, or the show's fanart), the countdown filling along its foot
+- 🔔 **TV Home: a reminder in one press** — on a programme still to come (Starting now, Tonight), OK reminds you of it (a bell shows; OK again forgets it) and holding OK watches the channel now

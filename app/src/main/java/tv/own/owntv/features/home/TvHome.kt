@@ -101,6 +101,22 @@ internal fun TvHome(
     }
     var selected by remember { mutableIntStateOf(0) }
     val orderContext = LocalContext.current
+    // glcn: reminders, for the programmes still to come (Starting now, Tonight): one OK sets one.
+    val reminderManager: tv.own.owntv.core.reminder.ReminderManager = org.koin.compose.koinInject()
+    val settingsRepo: tv.own.owntv.core.settings.SettingsRepository = org.koin.compose.koinInject()
+    val profileId by settingsRepo.activeProfileId.collectAsStateWithLifecycle(-1L)
+    val reminders by remember(profileId) {
+        if (profileId >= 0) reminderManager.observe(profileId) else kotlinx.coroutines.flow.flowOf(emptyList())
+    }.collectAsStateWithLifecycle(emptyList())
+    val leadMinutes by settingsRepo.reminderLeadMinutes.collectAsStateWithLifecycle(tv.own.owntv.core.reminder.ReminderSchedule.DEFAULT_LEAD_MINUTES)
+    val remindScope = androidx.compose.runtime.rememberCoroutineScope()
+    val toggleReminder: (ChannelEntity, EpgProgrammeEntity) -> Unit = { c, p ->
+        remindScope.launch {
+            val existing = reminders.firstOrNull { it.channelId == c.id && it.startMs == p.startMs }
+            if (existing != null) reminderManager.dismiss(existing.id)
+            else if (profileId >= 0) reminderManager.add(profileId, c.id, c.name, c.epgChannelId, p.title, p.startMs, p.stopMs, leadMinutes)
+        }
+    }
     var rowOrder by remember { mutableStateOf(TvHomeOrder.load(orderContext)) }
     // glcn: the row being moved (hold OK on its name): ◀ ▶ move it, OK or Back leave it there.
     var moving by remember { mutableStateOf<String?>(null) }
@@ -218,6 +234,9 @@ internal fun TvHome(
                         Text(it, style = stageText(19, 400), color = StageColors.Body, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                 }
+                now?.takeIf { it.startMs > clock }?.let {
+                    Text(stringResource(R.string.glcn_tvhome_remind_hint), style = stageText(17, 600), color = stageAccent.accent, maxLines = 1)
+                }
                 next?.let { n ->
                     Text(
                         stringResource(R.string.content_live_next) + "  " + timeFormat.format(java.util.Date(n.startMs)) + "  " + SportsNow.displayTitle(n.title),
@@ -320,7 +339,13 @@ internal fun TvHome(
                                     now = clock,
                                     // glcn: a programme still to come (Starting now, Tonight) says when it starts.
                                     startLabel = pair?.first?.takeIf { it.startMs > clock }?.let { timeFormat.format(java.util.Date(it.startMs)) },
-                                    onClick = { onTune(c, g.channels) },
+                                    // glcn: a programme still to come — OK reminds you of it (again: forgets it), hold OK watches the channel now.
+                                    bell = pair?.first?.let { p -> reminders.any { it.channelId == c.id && it.startMs == p.startMs } } == true,
+                                    onClick = {
+                                        val p = pair?.first
+                                        if (p != null && p.startMs > clock) toggleReminder(c, p) else onTune(c, g.channels)
+                                    },
+                                    onLongClick = pair?.first?.takeIf { it.startMs > clock }?.let { { onTune(c, g.channels) } },
                                     width = TV_CARD_WIDTH.mpx,
                                     modifier = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier)
                                         .onFocusChanged { if (it.hasFocus) { focusedChannel = c; focusedShow = g.shows[c.id]; if (pair?.first == null) focusedArt = null } },
