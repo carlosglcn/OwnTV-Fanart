@@ -513,7 +513,7 @@ fun HomeScreen(
                 androidx.compose.animation.core.tween(if (CinemaTrailer.lightsDown) 1_600 else 350), label = "cinemaRowsLights",
             )
             // glcn: one focus box for the whole page — it glides from card to card, along a row and between rows.
-            tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxSize(), stiffness = HOME_GLIDE_STIFFNESS) {
+            tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxSize(), stiffness = HOME_GLIDE_STIFFNESS, damping = HOME_GLIDE_DAMPING) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1959,7 +1959,9 @@ private val PANEL_WIDE_ROWS = setOf(HomeRow.FEATURED, HomeRow.LIVE_SPORTS)
 private fun HomeReadScope(content: @Composable () -> Unit) { content() }
 
 /** glcn: Home's one focus box glides slower than a menu's — soft, never a jump. */
-private const val HOME_GLIDE_STIFFNESS = 240f
+private const val HOME_GLIDE_STIFFNESS = 380f
+/** glcn: a touch of overshoot — the box lands a little past and settles back, elastic; stiffer so it keeps pace. */
+private const val HOME_GLIDE_DAMPING = 0.72f
 
 /** glcn: the rows a TV profile's Home keeps. */
 internal val TV_PROFILE_ROWS = setOf(
