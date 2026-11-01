@@ -8,3 +8,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏪ Programme info: From the start (catch-up channels) and Record buttons beside Technical data
 - 🗂️ Emby / Jellyfin: choose how a library is split into categories — by genre (now series too), by platform or network (Netflix, HBO…, from Emby's studios) or as one list each for films and series (Settings › Fanart › Emby / Jellyfin categories; applies at the next sync)
 - 🧯 Emby / Jellyfin sync reads the library a page at a time instead of holding every episode (with its media streams) in memory at once — a big library filled the memory while syncing
+- 🇪🇸 Emby / Jellyfin genres in Spanish when the app is in Spanish (Ciencia ficción, Miniseries, Documental…), so a library tagged in English and one in Spanish share their categories
