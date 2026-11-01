@@ -282,8 +282,12 @@ class EpgViewModel(
      */
     private val rowCache = object : LinkedHashMap<String, List<EpgProgrammeEntity>>(64, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<EpgProgrammeEntity>>?) =
-            size > MAX_CACHED_ROWS
+            size > maxCachedRows()
     }
+
+    /** glcn: each row is the whole guide window (up to two weeks with catch-up) — far fewer kept on a modest box or in light mode. */
+    private fun maxCachedRows(): Int =
+        if (tv.own.owntv.glcn.DeviceClass.modest || tv.own.owntv.glcn.LowRam.on) MAX_CACHED_ROWS_MODEST else MAX_CACHED_ROWS
 
     private fun cacheKey(channel: ChannelEntity, shift: Int) = "${channel.id}|$shift"
 
@@ -1204,6 +1208,7 @@ class EpgViewModel(
         // back never re-reads, and small enough that the grid's memory does not grow with the
         // catalogue. ~100 programmes a row, so a few megabytes at the cap.
         private const val MAX_CACHED_ROWS = 240
+        private const val MAX_CACHED_ROWS_MODEST = 48
         // Rows read ahead of the one that came into view. Roughly a screen's worth on a television,
         // measure before making it two screens; do not raise it on a hunch.
         private const val PREFETCH_AHEAD = 10

@@ -146,8 +146,11 @@ class LiveViewModel(
     private val similarNow by lazy { tv.own.owntv.core.live.SimilarNow(channelDao, guideReader) }
 
     /** glcn: "You may like" — what is on soon in the same genre as the focused programme. */
+    // glcn: off the main thread — it reads thousands of channels and a slice of the guide, and folds every title.
     suspend fun similarTo(title: String?, categories: String?, year: Int?, channelId: Long?, channelName: String?) =
-        similarNow.find(title, categories, year, channelId, channelName, ctx.value.sourceIds, custom.value, epgOffset.value)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            similarNow.find(title, categories, year, channelId, channelName, ctx.value.sourceIds, custom.value, epgOffset.value)
+        }
 
     suspend fun cardProgrammesFor(
         channels: List<ChannelEntity>,
@@ -2452,9 +2455,12 @@ class LiveViewModel(
         )
     }
 
+    /** glcn: compiled once — isFilm runs for every programme of every channel the TV Home reads. */
+    private val MARKS_RE = Regex("\\p{M}+")
+
     private fun isFilm(p: tv.own.owntv.core.database.entity.EpgProgrammeEntity): Boolean {
         val cats = java.text.Normalizer.normalize(p.categories.orEmpty(), java.text.Normalizer.Form.NFD)
-            .replace(Regex("\\p{M}+"), "").lowercase()
+            .replace(MARKS_RE, "").lowercase()
         if (FILM_WORDS.any { it in cats }) return true
         val len = p.lengthMin ?: ((p.stopMs - p.startMs) / 60_000L).toInt()
         return p.year != null && len >= FILM_MIN_MINUTES && p.episode.isNullOrBlank()

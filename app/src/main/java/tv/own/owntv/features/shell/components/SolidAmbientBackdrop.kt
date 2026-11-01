@@ -42,7 +42,8 @@ fun SolidAmbientBackdrop(
 
     val primary = tv.own.owntv.ui.theme.stageAccent.accent
     val (warm, deep) = remember(primary) { companions(primary) }
-    val moving = pulseEnabled && !tv.own.owntv.glcn.LowRam.on
+    // glcn: still on a modest box too — it redraws the whole screen every frame.
+    val moving = pulseEnabled && tv.own.owntv.glcn.DeviceClass.richMotion
     val phase = if (moving) {
         rememberInfiniteTransition(label = "aurora").animateFloat(
             initialValue = 0f,
