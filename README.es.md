@@ -64,3 +64,5 @@ GPLv3, como OwnTV. Todo el mérito de la app en sí es de **ahXN00** y los colab
 logotipo **owntv** es de [@m3th0d93](https://github.com/m3th0d93). El icono de OwnTV Fanart es original de esta versión.
 
 Los iconos de categorías de OwnTV Fanart proceden de [Material Symbols](https://fonts.google.com/icons) de Google (licencia Apache 2.0).
+
+El icono de Jellyfin en las etiquetas de las listas es el del propio proyecto Jellyfin ([jellyfin-ux](https://github.com/jellyfin/jellyfin-ux), CC BY-SA 4.0).

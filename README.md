@@ -54,6 +54,8 @@ OwnTV Fanart is free and made in spare time. If it makes your TV nicer, you can 
 GPLv3, like OwnTV. All credit for the app itself goes to **ahXN00** and the OwnTV contributors; the
 **owntv** wordmark is by [@m3th0d93](https://github.com/m3th0d93). The OwnTV Fanart icon is original to this fork.
 
+The Jellyfin icon on playlist marks is the Jellyfin project's own artwork ([jellyfin-ux](https://github.com/jellyfin/jellyfin-ux), CC BY-SA 4.0).
+
 ---
 
 <details><summary>The original OwnTV README</summary>
