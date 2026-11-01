@@ -34,3 +34,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪼 Jellyfin playlists show Jellyfin's own icon on their mark (jellyfin-ux, CC BY-SA 4.0)
 - 📝 Zapping › Coming up: the synopsis gets up to six lines (the free room above the picture)
 - 🎯 Zapping › Coming up: ▶ starts on the programme on air (the top row), not on the one after it
+- 🟠 Plex playlists show Plex's own logo on their mark (used under Plex's trademark guidelines)
