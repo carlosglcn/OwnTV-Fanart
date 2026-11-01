@@ -298,6 +298,10 @@ fun PlayerHud(
         onDispose { tv.own.owntv.glcn.CinemaStage.panelOpen = false }
     }
     val forceShow = error != null || dialog != HudDialog.NONE || cinemaTab != null
+    // glcn: the film's chapters (mpv reads them once the file is open — asked again when the length is known).
+    val chapters by androidx.compose.runtime.produceState(emptyList<PlayerChapter>(), cinemaMode, duration, player) {
+        value = if (cinemaMode && duration > 0) player.chapters() else emptyList()
+    }
     // glcn: a film paused with the controls gone shows what it is after a few seconds (see CinemaPauseScreen).
     var pauseScreen by remember { mutableStateOf(false) }
     LaunchedEffect(cinemaMode, isPlaying, buffering, error, controlsVisible, cinemaTab) {
@@ -798,6 +802,7 @@ fun PlayerHud(
                     playFocus = playFocus, seekFocus = seekFocus,
                     onOpen = { cinemaTab = it },
                     onNext = { player.next() },
+                    hasChapters = chapters.size > 1,
                 )
                 Box(Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 40.dp)) {
                     PlayerClock(watchingMs = watchingWallMs?.invoke())
@@ -818,6 +823,8 @@ fun PlayerHud(
                         onLocalSubtitle = onSelectLocalSubtitle?.let { open -> { cinemaTab = null; open() } },
                     ),
                     focus = panelFocus,
+                    chapters = chapters,
+                    position = { position.value },
                 )
             }
         } else if (controlsVisible) {

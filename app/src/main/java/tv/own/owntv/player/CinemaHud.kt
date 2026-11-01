@@ -75,7 +75,7 @@ import tv.own.owntv.ui.theme.stageText
  * Always dark, whatever the app's style: a film is watched with the lights down.
  */
 
-internal enum class CinemaTab { INFO, AUDIO, SUBS, EPISODES, SETTINGS }
+internal enum class CinemaTab { INFO, AUDIO, SUBS, EPISODES, CHAPTERS, SETTINGS }
 
 /** What is actually playing, read from the engine: picture, sound and who plays it. */
 @Immutable
@@ -240,6 +240,7 @@ internal fun CinemaBanner(
     onOpen: (CinemaTab) -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
+    hasChapters: Boolean = false,
 ) {
     Box(modifier.fillMaxSize()) {
         Box(
@@ -287,6 +288,7 @@ internal fun CinemaBanner(
                 )
                 StageTool(stringResource(R.string.glcn_cine_audio_subs), icon = OwnTVIcon.SUBTITLE, onClick = { onOpen(CinemaTab.AUDIO) }, boxed = true)
                 if (hasEpisodes) StageTool(stringResource(R.string.glcn_cine_episodes), icon = OwnTVIcon.LIST, onClick = { onOpen(CinemaTab.EPISODES) }, boxed = true)
+                if (hasChapters) StageTool(stringResource(R.string.glcn_cine_chapters), icon = OwnTVIcon.LIST_GRID, onClick = { onOpen(CinemaTab.CHAPTERS) }, boxed = true)
                 StageTool(stringResource(R.string.glcn_cine_info), icon = OwnTVIcon.INFO, onClick = { onOpen(CinemaTab.INFO) }, boxed = true)
                 StageTool(stringResource(R.string.glcn_cine_settings), icon = OwnTVIcon.GEAR, onClick = { onOpen(CinemaTab.SETTINGS) }, boxed = true)
                 if (hasNext) StageTool(stringResource(R.string.glcn_cine_next), icon = OwnTVIcon.SKIP_NEXT, onClick = onNext, boxed = true)
@@ -338,12 +340,16 @@ internal fun CinemaPanel(
     actions: CinemaActions,
     focus: FocusRequester,
     modifier: Modifier = Modifier,
+    /** glcn: the film's chapters (mpv only); the tab is there only when it has some. */
+    chapters: List<PlayerChapter> = emptyList(),
+    position: () -> Long = { 0L },
 ) {
     val slide = remember { Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
     LaunchedEffect(Unit) { slide.animateTo(1f, tween(PANEL_IN_MS, easing = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f))) }
     val tabs = buildList {
         add(CinemaTab.INFO); add(CinemaTab.AUDIO); add(CinemaTab.SUBS)
         if (episodes.size > 1 && onPlayEpisode != null) add(CinemaTab.EPISODES)
+        if (chapters.size > 1) add(CinemaTab.CHAPTERS)
         add(CinemaTab.SETTINGS)
     }
     Box(modifier.fillMaxSize()) {
@@ -381,6 +387,7 @@ internal fun CinemaPanel(
                 CinemaTab.AUDIO -> AudioTab(player, actions)
                 CinemaTab.SUBS -> SubsTab(player, actions)
                 CinemaTab.EPISODES -> EpisodesTab(episodes, episodeIndex, onPlayEpisode)
+                CinemaTab.CHAPTERS -> ChaptersTab(chapters, position) { player.seekBy(it - position()) }
                 CinemaTab.SETTINGS -> SettingsTab(player, actions)
             }
         }
@@ -392,6 +399,7 @@ private fun tabLabel(t: CinemaTab): Int = when (t) {
     CinemaTab.AUDIO -> R.string.player_tool_audio
     CinemaTab.SUBS -> R.string.player_tool_subtitles
     CinemaTab.EPISODES -> R.string.glcn_cine_episodes
+    CinemaTab.CHAPTERS -> R.string.glcn_cine_chapters
     CinemaTab.SETTINGS -> R.string.glcn_cine_settings
 }
 
@@ -538,6 +546,24 @@ private fun EpisodesTab(episodes: List<CinemaEpisode>, current: Int, onPlay: ((I
                 selected = i == current,
                 trailing = e.durationMin?.let { stringResource(R.string.player_duration_minutes, it) },
                 onClick = { if (i != current) onPlay?.invoke(i) },
+            )
+        }
+    }
+}
+
+/** glcn: the film's chapters — name (or "Chapter n") and where it starts; the one playing is marked. OK jumps there. */
+@Composable
+private fun ChaptersTab(chapters: List<PlayerChapter>, position: () -> Long, onSeek: (Long) -> Unit) {
+    val pos = position()
+    val current = chapters.indexOfLast { it.startMs <= pos }
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.mpx)) {
+        itemsIndexed(chapters) { i, c ->
+            PanelRow(
+                text = c.title ?: stringResource(R.string.glcn_cine_chapter_n, i + 1),
+                detail = if (i == current) stringResource(R.string.glcn_cine_now_playing) else null,
+                selected = i == current,
+                trailing = formatTime(c.startMs),
+                onClick = { onSeek(c.startMs) },
             )
         }
     }
