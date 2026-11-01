@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,10 +45,19 @@ internal fun CategoryGlyphView(
         is CategoryIcons.Glyph.Icon -> CategoryIconShape(glyph.key, tint, modifier.size(size))
         // The platform's logo in the row's own colour (no plate): light on the list, dark on the focused row.
         // Alone (no name beside it) it is drawn larger, in the name's place.
+        // Sized by its own shape, to the same optical weight: about the same area for every logo, within a
+        // height and a width — a long one (Netflix) no longer fills the box while a square one (PBS) shrank in it.
         is CategoryIcons.Glyph.Logo -> {
             val alone = CategoryIcons.hidesName(glyph)
+            var ratio by androidx.compose.runtime.remember(glyph.url) { androidx.compose.runtime.mutableFloatStateOf(LOGO_DEFAULT_RATIO) }
+            val area = if (alone) LOGO_AREA_ALONE else LOGO_AREA_BESIDE
+            val maxH = if (alone) LOGO_MAX_H_ALONE else LOGO_MAX_H_BESIDE
+            val maxW = if (alone) LOGO_MAX_W_ALONE else LOGO_MAX_W_BESIDE
+            var h = kotlin.math.sqrt(area / ratio).coerceAtMost(maxH)
+            var w = h * ratio
+            if (w > maxW) { w = maxW; h = w / ratio }
             Box(
-                modifier.size(if (alone) size * 6f else size * 2.6f, if (alone) size * 1.5f else size * 1.1f),
+                modifier.size(if (alone) size * maxW else size * w, size * maxH),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 coil3.compose.AsyncImage(
@@ -54,7 +65,11 @@ internal fun CategoryGlyphView(
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                     alignment = Alignment.CenterStart,
                     colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(tint, androidx.compose.ui.graphics.BlendMode.SrcIn),
-                    modifier = Modifier.matchParentSize(),
+                    onSuccess = { s ->
+                        val i = s.painter.intrinsicSize
+                        if (i.width > 0f && i.height > 0f) ratio = (i.width / i.height).coerceIn(0.5f, 8f)
+                    },
+                    modifier = Modifier.size(size * w, size * h),
                 )
             }
         }
@@ -148,3 +163,12 @@ internal fun CategoryIconPicker(groupName: String, onDismiss: () -> Unit) {
 }
 
 private const val PICKER_COLUMNS = 7
+
+// glcn: platform logos' optical size, in units of the list's icon size — area, then the height and width caps.
+private const val LOGO_DEFAULT_RATIO = 3f
+private const val LOGO_AREA_ALONE = 5.2f
+private const val LOGO_MAX_H_ALONE = 2.0f
+private const val LOGO_MAX_W_ALONE = 5.6f
+private const val LOGO_AREA_BESIDE = 2.0f
+private const val LOGO_MAX_H_BESIDE = 1.25f
+private const val LOGO_MAX_W_BESIDE = 2.8f

@@ -821,7 +821,8 @@ internal fun LiveCategories(
                             tags = if (entry.name?.tags.isNullOrEmpty()) null else { focused ->
                                 entry.name.tags.forEach { StageTag(it, onAccent = if (focused) a.onAccent else null) }
                             },
-                            trailing = entry.mark?.let { m -> { _ -> StagePlaylistMark(m) } },
+                            // glcn: not on a platform's row (Netflix, HBO…) — those only come from Emby / Jellyfin.
+                            trailing = entry.mark?.takeUnless { entry.name?.name?.let(tv.own.owntv.glcn.CategoryIcons::isPlatform) == true }?.let { m -> { _ -> StagePlaylistMark(m) } },
                             onLongClick = { entryLong(entry, index) },
                             leading = glyph?.let { g -> { tint -> tv.own.owntv.glcn.CategoryGlyphView(g, tint, name = entry.label) } },
                             modifier = rowModifier,
@@ -888,7 +889,8 @@ private fun LiveColumnItem(
                 if (tags.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(6.mpx)) { tags.forEach { StageTag(it, onAccent = on) } }
             }
             entry.count?.let { Text(tv.own.owntv.ui.components.formatCount(it), style = stageText(15, 700), color = on ?: StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            entry.mark?.let { m -> Box(Modifier.size(7.mpx).background(m.shownColor, RoundedCornerShape(50))) }
+            entry.mark?.takeUnless { entry.name?.name?.let(tv.own.owntv.glcn.CategoryIcons::isPlatform) == true }
+                ?.let { m -> Box(Modifier.size(7.mpx).background(m.shownColor, RoundedCornerShape(50))) }
         }
     }
 }

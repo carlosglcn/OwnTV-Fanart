@@ -48,6 +48,10 @@ object CategoryIcons {
         prefs(context).edit().putString(KEY_MODE, mode.name).apply()
     }
 
+    /** A platform category of an Emby / Jellyfin library grouped by platform (Netflix, HBO… or "Other networks"). */
+    fun isPlatform(groupName: String): Boolean =
+        tv.own.owntv.core.sync.PlatformLogos.logoFor(groupName) != null || groupName == tv.own.owntv.core.sync.PlatformNames.other()
+
     /** Whether the row shows [glyph] instead of the group's name (a platform's logo, with logos alone chosen). */
     fun hidesName(glyph: Glyph?): Boolean = mode == Mode.LOGOS && glyph is Glyph.Logo
 

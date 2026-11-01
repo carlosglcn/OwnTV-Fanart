@@ -27,3 +27,7 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🇪🇸 Title logos in your country's version: within Spanish, Spain's logo before Mexico's (TMDB files both as Spanish)
 - 📺 **Live TV's bar, lower and lighter:** no panel any more — a deeper shade at the foot of the screen carries the text; smaller programme picture, no synopsis there (it is on the programme's Info screen), the stream chips in one small line, and on channels with an archive the timeline takes the place of the dividing line
 - ⭕ **One loading sign:** a ring where the play button sits while the channel opens, which closes and turns into the play sign when the picture arrives (instead of a spinner on its own); with the bar up, the play button wears the ring
+- ⚖️ **Platform logos at the same optical size:** each logo is sized by its own shape (about the same area, within a height and a width), so Netflix no longer looks huge next to BBC One or PBS
+- 🧹 **No "EMBY" mark on the platform rows** — they can only come from Emby / Jellyfin
+- 🔢 **Platforms from most titles to fewest**, "Other networks" always last (sync the list again once)
+- 🏷️ **Playlist marks with the service's own logo** (Emby, Jellyfin, Plex, Movistar) when that artwork is in the app; its name otherwise

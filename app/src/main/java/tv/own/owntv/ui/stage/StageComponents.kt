@@ -520,6 +520,18 @@ fun StageTag(text: String, onAccent: Color? = null, tint: Color? = null) {
 /** `.pm`: which playlist a row comes from, outlined in that playlist's colour (see [PlaylistMark]). */
 @Composable
 fun StagePlaylistMark(mark: PlaylistMark) {
+    // glcn: a playlist named after its service (Emby, Jellyfin, Plex, Movistar) shows the service's own logo, when
+    // that artwork is in the app (res/drawable/glcn_source_<service>, from the service's brand kit); else its name.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val logoRes = androidx.compose.runtime.remember(mark.text) { sourceLogoRes(context, mark.text) }
+    if (logoRes != 0) {
+        androidx.compose.foundation.Image(
+            androidx.compose.ui.res.painterResource(logoRes), contentDescription = mark.text,
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            modifier = Modifier.height(20.mpx).widthIn(max = 84.mpx),
+        )
+        return
+    }
     val shape = RoundedCornerShape(7.mpx)
     val color = mark.shownColor
     Box(
@@ -534,6 +546,18 @@ fun StagePlaylistMark(mark: PlaylistMark) {
         Text(mark.text, style = stageText(12, 800, 0.04.em), color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
+
+/** glcn: the drawable of the service a playlist is named after, or 0. */
+@android.annotation.SuppressLint("DiscouragedApi")
+private fun sourceLogoRes(context: android.content.Context, name: String): Int {
+    val n = name.lowercase(java.util.Locale.ROOT)
+    val key = SOURCE_LOGO_KEYS.firstOrNull { it in n } ?: return 0
+    return context.resources.getIdentifier(SOURCE_LOGO_PREFIX + key, SOURCE_LOGO_TYPE, context.packageName)
+}
+
+private val SOURCE_LOGO_KEYS = listOf("jellyfin", "emby", "plex", "movistar")
+private const val SOURCE_LOGO_PREFIX = "glcn_source_"
+private const val SOURCE_LOGO_TYPE = "drawable"
 
 /** The mark's colour as shown: the pastel marks are darkened in light (`.mine.light .pm`, brightness .72) to read on white. */
 val PlaylistMark.shownColor: Color
