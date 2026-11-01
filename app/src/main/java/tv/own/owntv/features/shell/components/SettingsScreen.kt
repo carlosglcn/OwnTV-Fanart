@@ -996,6 +996,8 @@ fun SettingsScreen(
             chipTone = if (updateCheckOnStart) TileTone.PRIMARY else TileTone.SECONDARY,
             onClick = { settingsVm.setUpdateCheckOnStart(!updateCheckOnStart) },
         ),
+        // glcn (test feature): open the app when the TV starts — off unless chosen here; only with the Labs switch on.
+        if (tv.own.owntv.glcn.Labs.on) glcnAutostartRow(accessibleContext) else null,
         RootRow(
             tabRowKey(SettingsTab.NETWORK), TileTone.SECONDARY, OwnTVIcon.NETWORK,
             heading = stringResource(R.string.settings_group_network),
@@ -3197,6 +3199,23 @@ private fun glcnHomeBackdropRow(homeBackdrop: Int, onClick: () -> Unit): RootRow
     chipTone = TileTone.PRIMARY,
     onClick = onClick,
 )
+
+/** glcn (test feature): "Open when the TV starts" — off by default; turning it on asks Android's overlay permission once. */
+@Composable
+private fun glcnAutostartRow(ctx: android.content.Context): RootRow {
+    val on = tv.own.owntv.glcn.Labs.autostart
+    return RootRow(
+        "glcn_autostart", TileTone.SECONDARY, OwnTVIcon.POWER,
+        title = stringResource(R.string.glcn_autostart_title),
+        desc = stringResource(R.string.glcn_autostart_desc),
+        chip = stringResource(if (on) R.string.common_on else R.string.common_off),
+        chipTone = if (on) TileTone.PRIMARY else TileTone.SECONDARY,
+        onClick = {
+            if (!on && !tv.own.owntv.glcn.BootStart.canStart(ctx)) tv.own.owntv.glcn.BootStart.askPermission(ctx)
+            tv.own.owntv.glcn.Labs.setAutostart(ctx, !on)
+        },
+    )
+}
 
 /** glcn: a TV profile's own Home — the full picture (TV Home) or the Dock, TV only. Kept per profile. */
 @Composable
