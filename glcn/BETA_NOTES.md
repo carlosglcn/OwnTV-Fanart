@@ -6,3 +6,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪟 Channel options over the player (hold OK on a strip card): the sheet is nearly solid, so the card behind it (synopsis, Up next) no longer shows through and mixes with the menu
 - 🎭 Programme info: a film's cast moves to the right, in its own panel between "Airs again this week" and "Up next", so the synopsis has the whole left column and most read whole
 - 🏷️ Quality marks: "[DV R]" reads Dolby Vision · REMUX on the title's page (the picture format first, as on the posters, and Dolby Vision spelled out); posters keep DV
+- 📝 Home (TV layout): Recently watched cards show the programme's synopsis too — it came only from rows that carried it (thanks, Diego)

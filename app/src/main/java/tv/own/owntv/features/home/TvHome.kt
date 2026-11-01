@@ -198,7 +198,15 @@ internal fun TvHome(
                             style = stageText(20, 600), color = StageColors.Text.copy(alpha = 0.85f), maxLines = 1,
                         )
                     }
-                    p.description?.takeIf { it.isNotBlank() }?.let {
+                    // glcn: the strips' programmes come from the zap cache, which leaves the synopsis out (it is heavy) — Recent
+                    // showed none while the same channel elsewhere did. Read here, for the programme in focus only.
+                    val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
+                    val synopsis by androidx.compose.runtime.produceState(p.description?.takeIf { it.isNotBlank() }, p.id) {
+                        if (value == null) value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            runCatching { epgDao.programmeDescription(p.id) }.getOrNull()?.takeIf { it.isNotBlank() }
+                        }
+                    }
+                    synopsis?.let {
                         Text(it, style = stageText(19, 400), color = StageColors.Body, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                 }
