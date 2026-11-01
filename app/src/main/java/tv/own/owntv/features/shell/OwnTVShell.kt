@@ -2118,9 +2118,13 @@ fun OwnTVShell(
                 // glcn: the programme info screen shows the channel in a small window up on the right.
                 val infoShift by androidx.compose.animation.core.animateFloatAsState(
                     if (isFull && !inPip && tv.own.owntv.glcn.InfoStage.liveWindow) 1f else 0f,
-                    androidx.compose.animation.core.tween(if (tv.own.owntv.glcn.DeviceClass.richMotion) CINEMA_SHIFT_MS else 0),
+                    androidx.compose.animation.core.tween(
+                        if (tv.own.owntv.glcn.DeviceClass.richMotion) INFO_SHIFT_MS else 0,
+                        easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.9f, 0.1f, 1f),
+                    ),
                     label = "infoShift",
                 )
+                androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.InfoStage.progress = infoShift }
                 tv.own.owntv.player.ExoPreviewSurface(
                     engine = liveVm.previewEngine, modifier = Modifier.fillMaxSize().infoWindow(infoShift),
                     keepAwake = true, autoFrameRate = isFull && !inPip && autoFrameRate, holdLastFrame = isFull && !inPip,
@@ -2134,9 +2138,13 @@ fun OwnTVShell(
                 )
                 val infoShiftMpv by androidx.compose.animation.core.animateFloatAsState(
                     if (isFull && !inPip && tv.own.owntv.glcn.InfoStage.liveWindow) 1f else 0f,
-                    androidx.compose.animation.core.tween(if (tv.own.owntv.glcn.DeviceClass.richMotion) CINEMA_SHIFT_MS else 0),
+                    androidx.compose.animation.core.tween(
+                        if (tv.own.owntv.glcn.DeviceClass.richMotion) INFO_SHIFT_MS else 0,
+                        easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.9f, 0.1f, 1f),
+                    ),
                     label = "infoShiftMpv",
                 )
+                androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.InfoStage.progress = infoShiftMpv }
                 MpvVideoSurface(
                     player = player, modifier = Modifier.fillMaxSize().cinemaInset(cinemaShift).infoWindow(infoShiftMpv), autoFrameRate = isFull && !inPip && autoFrameRate,
                     afrMatchResolution = afrMatchResolution, afrHoldSecs = afrPauseSecs,
@@ -2885,6 +2893,8 @@ private fun cinemaJsonList(json: String?): List<String> {
 
 /** glcn: how long the film takes to slide aside for the cinema panel. */
 private const val CINEMA_SHIFT_MS = 380
+/** glcn: the picture folding into the programme info's window — long enough to be seen, eased to land softly. */
+private const val INFO_SHIFT_MS = 560
 
 /**
  * glcn: the film's box as the cinema panel opens — at [p] = 0 the whole screen, at 1 a 16:9 picture filling

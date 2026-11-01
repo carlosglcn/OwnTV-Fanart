@@ -162,12 +162,20 @@ fun ProgrammeInfoScreen(
         Box(
             Modifier.fillMaxSize()
                 .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                // glcn: the backdrop comes up as the picture shrinks, and the window follows the picture all the way —
+                // the TV seems to fold itself into its place on the right instead of jumping there.
+                .graphicsLayer { alpha = (InfoStage.progress * 1.4f).coerceAtMost(1f) }
                 .drawWithContent {
                     drawContent()
+                    val p = InfoStage.progress
                     val r = InfoStage.windowRect(size.width, size.height)
+                    val left = r.left * p
+                    val top = r.top * p
+                    val w = size.width + (r.width - size.width) * p
+                    val h = size.height + (r.height - size.height) * p
                     drawRoundRect(
-                        Color.Black, topLeft = androidx.compose.ui.geometry.Offset(r.left, r.top), size = r.size,
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(windowRadius.toPx()),
+                        Color.Black, topLeft = androidx.compose.ui.geometry.Offset(left, top), size = androidx.compose.ui.geometry.Size(w, h),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(windowRadius.toPx() * p),
                         blendMode = androidx.compose.ui.graphics.BlendMode.Clear,
                     )
                 },
@@ -353,6 +361,8 @@ private const val NEXT_MAX = 6
  */
 object InfoStage {
     var liveWindow by mutableStateOf(false)
+    /** glcn: how far the picture has shrunk into the window (0 full screen → 1 in the window), set by the shell. */
+    var progress by mutableStateOf(0f)
 
     /** The window in a [w] × [h] screen, as the screen lays it out at 1920 × 1080 (end 96, top 150, 420 × 236). */
     fun windowRect(w: Float, h: Float): androidx.compose.ui.geometry.Rect {
