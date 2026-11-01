@@ -66,4 +66,5 @@ logotipo **owntv** es de [@m3th0d93](https://github.com/m3th0d93). El icono de O
 Los iconos de categorías de OwnTV Fanart proceden de [Material Symbols](https://fonts.google.com/icons) de Google (licencia Apache 2.0).
 
 El icono de Jellyfin en las etiquetas de las listas es el del propio proyecto Jellyfin ([jellyfin-ux](https://github.com/jellyfin/jellyfin-ux), CC BY-SA 4.0).
+El logo de Emby en las etiquetas es el del propio Emby ([MediaBrowser.Resources](https://github.com/MediaBrowser/MediaBrowser.Resources)) y solo indica que la lista viene de un servidor Emby; OwnTV Fanart no está hecha por Emby. Más: [emby.media](https://emby.media).
 El logo de Plex en las etiquetas solo indica que la lista viene de un servidor Plex: Plex\* is used under license from Plex; OwnTV Fanart no está hecha, respaldada ni patrocinada por Plex.

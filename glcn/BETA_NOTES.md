@@ -36,3 +36,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎯 Zapping › Coming up: ▶ starts on the programme on air (the top row), not on the one after it
 - 🟠 Plex playlists show Plex's own logo on their mark (used under Plex's trademark guidelines)
 - 🌗 Plex's logo from Plex's own kit, in its version for dark grounds and for light ones (light theme, focused row)
+- 🟢 Emby playlists show Emby's own logo (on a focused row or the light theme, its icon alone)

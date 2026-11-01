@@ -55,6 +55,7 @@ GPLv3, like OwnTV. All credit for the app itself goes to **ahXN00** and the OwnT
 **owntv** wordmark is by [@m3th0d93](https://github.com/m3th0d93). The OwnTV Fanart icon is original to this fork.
 
 The Jellyfin icon on playlist marks is the Jellyfin project's own artwork ([jellyfin-ux](https://github.com/jellyfin/jellyfin-ux), CC BY-SA 4.0).
+The Emby logo on playlist marks is Emby's own artwork ([MediaBrowser.Resources](https://github.com/MediaBrowser/MediaBrowser.Resources)), shown only to say a playlist comes from an Emby server; OwnTV Fanart is not made by Emby. More: [emby.media](https://emby.media).
 The Plex logo on playlist marks only shows that a playlist comes from a Plex server: Plex\* is used under license from Plex; OwnTV Fanart is not made, endorsed or sponsored by Plex.
 
 ---
