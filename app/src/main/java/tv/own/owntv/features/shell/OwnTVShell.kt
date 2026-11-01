@@ -1618,7 +1618,8 @@ fun OwnTVShell(
 
                         // glcn: the Dock layout — the focused title over its picture and a glass dock with tabs.
                         // glcn (TV profile): a Home of its own, only TV — the programme's picture filling the screen.
-                        selectedSection == MainSection.HOME && tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId) -> tv.own.owntv.features.home.TvHome(
+                        selectedSection == MainSection.HOME && tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId) &&
+                            !tv.own.owntv.glcn.TvProfiles.usesDock(activeProfileId) -> tv.own.owntv.features.home.TvHome(
                             load = { liveVm.tvStripGroups() },
                             loadNow = { liveVm.nowFull(it) },
                             onTune = { ch, list -> scope.launch { if (liveVm.ensurePlayingByIdAsync(ch.id, list)) openFullscreen(MainSection.LIVE_TV) } },
@@ -1631,7 +1632,8 @@ fun OwnTVShell(
                             playPreview = { liveVm.playPreview(it) },
                             loadSmart = { liveVm.tvSmartGroups(it) },
                         )
-                        selectedSection == MainSection.HOME && homeLayout == 3 -> tv.own.owntv.features.home.LumenHome(
+                        // glcn: a TV profile set to the Dock gets it too (TV only — see LumenHome's tvOnly).
+                        selectedSection == MainSection.HOME && (homeLayout == 3 || tv.own.owntv.glcn.TvProfiles.usesDock(activeProfileId)) -> tv.own.owntv.features.home.LumenHome(
                             vm = homeVm,
                             onHideRow = { homeVm.hideRow(it) },
                             onPlayMovie = { id, pos -> scope.launch { if (movieVm.playByIdAsync(id, pos) && !movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES) } },

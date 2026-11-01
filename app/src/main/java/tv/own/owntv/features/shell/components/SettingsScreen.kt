@@ -535,7 +535,7 @@ fun SettingsScreen(
         glcnEmbyGroupsRow(accessibleContext),
         glcnCategoryIconsRow(accessibleContext),
         // glcn: a TV profile has a Home of its own — the layouts and backdrops of the other Homes mean nothing there.
-        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeBackdropRow(homeBackdrop) { showHomeLayout = true },
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) glcnTvHomeRow(accessibleContext) else glcnHomeBackdropRow(homeBackdrop) { showHomeLayout = true },
         if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeCoverRow(homeCover) { settingsVm.cycleHomeCover() },
         if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeImageRow(homeImagePath) { showHomePicker = true },
         if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeDimRow(homeCoverDim) { settingsVm.cycleHomeCoverDim() },
@@ -3197,6 +3197,21 @@ private fun glcnHomeBackdropRow(homeBackdrop: Int, onClick: () -> Unit): RootRow
     chipTone = TileTone.PRIMARY,
     onClick = onClick,
 )
+
+/** glcn: a TV profile's own Home — the full picture (TV Home) or the Dock, TV only. Kept per profile. */
+@Composable
+private fun glcnTvHomeRow(ctx: android.content.Context): RootRow {
+    val id = tv.own.owntv.glcn.TvProfiles.active
+    val dock = tv.own.owntv.glcn.TvProfiles.usesDock(id)
+    return RootRow(
+        "glcn_tv_home", TileTone.PRIMARY, OwnTVIcon.THEME,
+        title = stringResource(R.string.glcn_tv_home_title),
+        desc = stringResource(R.string.glcn_tv_home_desc),
+        chip = stringResource(if (dock) R.string.glcn_home_backdrop_dock else R.string.glcn_tv_home_full),
+        chipTone = TileTone.PRIMARY,
+        onClick = { id?.let { tv.own.owntv.glcn.TvProfiles.setDock(ctx, it, !dock) } },
+    )
+}
 
 @Composable
 private fun glcnHomeCoverRow(homeCover: Int, onClick: () -> Unit): RootRow = RootRow(
