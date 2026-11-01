@@ -2114,8 +2114,11 @@ internal fun liveEpgShiftLabel(minutes: Int): String {
     }
 }
 
-/** glcn: how much glass the channel menu over the player has — the quick view's list panel's share. */
-private const val PLAYER_MENU_GLASS = 0.66f
+/**
+ * glcn: how much glass the channel menu over the player has. Nearly solid: it opens over the picture strip's card, whose
+ * synopsis and "Up next" showed through at the quick view's share and mixed with the menu's words.
+ */
+private const val PLAYER_MENU_GLASS = 0.94f
 
 /** glcn: how long the player's options sheet waits for its programme head before coming in anyway. */
 private const val HEAD_WAIT_MS = 450L
