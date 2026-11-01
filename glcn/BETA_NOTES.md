@@ -33,3 +33,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏷️ **Playlist marks with the service's own logo** (Emby, Jellyfin, Plex, Movistar) when that artwork is in the app; its name otherwise
 - 🪼 Jellyfin playlists show Jellyfin's own icon on their mark (jellyfin-ux, CC BY-SA 4.0)
 - 📝 Zapping › Coming up: the synopsis gets up to six lines (the free room above the picture)
+- 🎯 Zapping › Coming up: ▶ starts on the programme on air (the top row), not on the one after it

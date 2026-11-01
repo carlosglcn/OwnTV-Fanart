@@ -258,7 +258,7 @@ fun ZapDeck(
                             // ▶ from the channels gives the picture back, as Back does.
                             // glcn: in the schedule view ▶ walks into the coming programmes (their picture and synopsis below).
                             1 -> if (first) {
-                                if (detail == 1 && schedCount > 1) { column = 2; schedIdx = 1 }
+                                if (detail == 1 && schedCount > 0) { column = 2; schedIdx = 0 } // glcn: from the programme on air, at the top
                                 else if (onCycleDetail != null) onCycleDetail() else onDismiss()
                             }
                             2 -> if (first) { column = 1; if (onCycleDetail != null) onCycleDetail() }
