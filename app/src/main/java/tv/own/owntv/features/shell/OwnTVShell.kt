@@ -2115,8 +2115,14 @@ fun OwnTVShell(
             // full-screen AND the docked mini-player (same call site = the surface persists across dock/
             // expand, so playback never blips). Everything else (mpv) renders mpv's surface.
             if (liveOnExo) {
+                // glcn: the programme info screen shows the channel in a small window up on the right.
+                val infoShift by androidx.compose.animation.core.animateFloatAsState(
+                    if (isFull && !inPip && tv.own.owntv.glcn.InfoStage.liveWindow) 1f else 0f,
+                    androidx.compose.animation.core.tween(if (tv.own.owntv.glcn.DeviceClass.richMotion) CINEMA_SHIFT_MS else 0),
+                    label = "infoShift",
+                )
                 tv.own.owntv.player.ExoPreviewSurface(
-                    engine = liveVm.previewEngine, modifier = Modifier.fillMaxSize(),
+                    engine = liveVm.previewEngine, modifier = Modifier.fillMaxSize().infoWindow(infoShift),
                     keepAwake = true, autoFrameRate = isFull && !inPip && autoFrameRate, holdLastFrame = isFull && !inPip,
                 )
             } else {
@@ -2126,8 +2132,13 @@ fun OwnTVShell(
                     androidx.compose.animation.core.tween(if (tv.own.owntv.glcn.DeviceClass.richMotion) CINEMA_SHIFT_MS else 0),
                     label = "cinemaShift",
                 )
+                val infoShiftMpv by androidx.compose.animation.core.animateFloatAsState(
+                    if (isFull && !inPip && tv.own.owntv.glcn.InfoStage.liveWindow) 1f else 0f,
+                    androidx.compose.animation.core.tween(if (tv.own.owntv.glcn.DeviceClass.richMotion) CINEMA_SHIFT_MS else 0),
+                    label = "infoShiftMpv",
+                )
                 MpvVideoSurface(
-                    player = player, modifier = Modifier.fillMaxSize().cinemaInset(cinemaShift), autoFrameRate = isFull && !inPip && autoFrameRate,
+                    player = player, modifier = Modifier.fillMaxSize().cinemaInset(cinemaShift).infoWindow(infoShiftMpv), autoFrameRate = isFull && !inPip && autoFrameRate,
                     afrMatchResolution = afrMatchResolution, afrHoldSecs = afrPauseSecs,
                 )
             }
@@ -2439,6 +2450,8 @@ fun OwnTVShell(
                         loadWeek = { liveVm.weekFor(it) },
                         onDismiss = { showProgramInfo = false },
                         modifier = Modifier.fillMaxSize(),
+                        onStartOver = { p -> showProgramInfo = false; liveVm.playCatchupProgramme(infoChannel, p) },
+                        onRecord = { liveVm.recordNow(infoChannel) },
                     ) else showProgramInfo = false
                 }
                 if (showCopies) {
@@ -2878,6 +2891,19 @@ private const val CINEMA_SHIFT_MS = 380
  * the left 56% of the width, centred top to bottom. Measured, not scaled: the picture is a SurfaceView, which
  * follows its layout box but not a drawing transform.
  */
+/** glcn: the picture moved into the programme info screen's live window ([tv.own.owntv.glcn.InfoStage]) as [p] goes 0 → 1. */
+private fun Modifier.infoWindow(p: Float): Modifier = if (p <= 0f) this else this.layout { measurable, constraints ->
+    val fullW = constraints.maxWidth
+    val fullH = constraints.maxHeight
+    val r = tv.own.owntv.glcn.InfoStage.windowRect(fullW.toFloat(), fullH.toFloat())
+    val w = (fullW + (r.width - fullW) * p).toInt()
+    val h = (fullH + (r.height - fullH) * p).toInt()
+    val x = (r.left * p).toInt()
+    val y = (r.top * p).toInt()
+    val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w.coerceAtLeast(1), h.coerceAtLeast(1)))
+    layout(fullW, fullH) { placeable.place(x, y) }
+}
+
 private fun Modifier.cinemaInset(p: Float): Modifier = if (p <= 0f) this else this.layout { measurable, constraints ->
     val fullW = constraints.maxWidth
     val fullH = constraints.maxHeight

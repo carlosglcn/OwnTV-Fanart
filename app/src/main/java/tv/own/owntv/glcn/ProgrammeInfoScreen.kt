@@ -2,6 +2,8 @@ package tv.own.owntv.glcn
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,6 +67,10 @@ fun ProgrammeInfoScreen(
     loadWeek: suspend (ChannelEntity) -> List<EpgProgrammeEntity>,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: watch the programme on air from its start (catch-up channels only). */
+    onStartOver: ((EpgProgrammeEntity) -> Unit)? = null,
+    /** glcn: record the channel from now. */
+    onRecord: (() -> Unit)? = null,
 ) {
     BackHandler { onDismiss() }
     val accent = stageAccent.accent
@@ -142,16 +148,51 @@ fun ProgrammeInfoScreen(
     var logoFailed by remember(titleLogo, filmLogo) { mutableStateOf(false) }
 
     var showTech by remember { mutableStateOf(false) }
+    // glcn: the channel goes on in a small window up on the right (the shell moves the picture there).
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        InfoStage.liveWindow = true
+        onDispose { InfoStage.liveWindow = false }
+    }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 
-    Box(modifier.fillMaxSize().background(Color(0xFF06090A))) {
-        val art = film?.backdropPath?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w1280") }
-            ?: lent?.backdropUrl ?: cur?.imageUrl?.takeIf { it.isNotBlank() }
-        if (art != null) ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
-        // The picture stays behind, never under the words: dark from the left and from the foot.
-        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color(0xF2050809), 0.55f to Color(0xB3050809), 1f to Color(0x4D050809))))
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color(0xE6050809))))
+    Box(modifier.fillMaxSize()) {
+        // glcn: the backdrop, with a window cut in it up on the right where the channel goes on playing.
+        val windowRadius = 18.mpx
+        Box(
+            Modifier.fillMaxSize()
+                .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    val r = InfoStage.windowRect(size.width, size.height)
+                    drawRoundRect(
+                        Color.Black, topLeft = androidx.compose.ui.geometry.Offset(r.left, r.top), size = r.size,
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(windowRadius.toPx()),
+                        blendMode = androidx.compose.ui.graphics.BlendMode.Clear,
+                    )
+                },
+        ) {
+            Box(Modifier.fillMaxSize().background(Color(0xFF06090A)))
+            val art = film?.backdropPath?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w1280") }
+                ?: lent?.backdropUrl ?: cur?.imageUrl?.takeIf { it.isNotBlank() }
+            if (art != null) ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
+            // The picture stays behind, never under the words: dark from the left and from the foot.
+            // A deeper shade on the left, where the synopsis now runs long, so it reads over bright pictures too.
+            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color(0xF5050809), 0.62f to Color(0xD0050809), 1f to Color(0x4D050809))))
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color(0xE6050809))))
+        }
+        // A fine frame round the window, and the word "Live" on it.
+        Box(
+            Modifier.align(Alignment.TopEnd).padding(end = 96.mpx, top = WINDOW_TOP).width(WINDOW_W).height(WINDOW_H)
+                .staggerIn(300, fromRight = true)
+                .border(1.5.mpx, Color.White.copy(alpha = 0.22f), RoundedCornerShape(windowRadius)),
+        ) {
+            Text(
+                stringResource(R.string.glcn_pi_on_air).uppercase(), style = stageText(13, 800), color = Color.White,
+                modifier = Modifier.align(Alignment.TopStart).padding(10.mpx)
+                    .background(Color(0xCC0A1012), RoundedCornerShape(6.mpx)).padding(horizontal = 7.mpx, vertical = 3.mpx),
+            )
+        }
 
         Column(Modifier.padding(start = 96.mpx, top = 80.mpx, end = 96.mpx).width(1240.mpx)) {
             Row(Modifier.staggerIn(0), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
@@ -196,36 +237,43 @@ fun ProgrammeInfoScreen(
                 val facts = (
                     (film?.genres?.take(3)?.takeIf { it.isNotEmpty() } ?: cur.details.categoryList.take(3)) + listOfNotNull(
                         (film?.year ?: cur.year ?: lent?.year)?.toString(),
-                        cur.rating,
                         (film?.rating?.takeIf { it > 0 } ?: lent?.rating)?.let { "★ " + ProgrammeArtResolver.format(it) },
                     )
                     ).filter { it.isNotBlank() }.joinToString("  ·  ")
-                if (facts.isNotEmpty()) Text(facts, style = stageText(20, 600), color = Dim, modifier = Modifier.staggerIn(250).padding(top = 16.mpx), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(Modifier.staggerIn(250).padding(top = 16.mpx), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                    // glcn: the age rating as a badge of its own ("ES 7"), not lost in the line.
+                    cur.rating?.takeIf { it.isNotBlank() }?.let { age ->
+                        Text(
+                            age, style = stageText(16, 800), color = Ink, maxLines = 1,
+                            modifier = Modifier.border(1.5.mpx, Ink.copy(alpha = 0.6f), RoundedCornerShape(6.mpx)).padding(horizontal = 8.mpx, vertical = 2.mpx),
+                        )
+                    }
+                    if (facts.isNotEmpty()) Text(facts, style = stageText(20, 600), color = Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 // A film: TMDB's synopsis (in your language) before the guide's, which is often a list of credits.
                 ((film?.overview?.takeIf { it.isNotBlank() }) ?: ownSynopsis ?: lent?.overview)?.let {
                     // glcn: as wide as the room up to the panels on the right, and a line more, so most synopses read whole
                     // without drifting.
                     // glcn: the cast sits on the right now, so the synopsis has the whole column down to the button.
-                    DriftingSynopsis(it, modifier = Modifier.staggerIn(300).padding(top = 16.mpx).width(1220.mpx), style = stageText(21, 400), color = Soft, lines = SYNOPSIS_LINES, fade = true)
+                    DriftingSynopsis(it, modifier = Modifier.staggerIn(300).padding(top = 16.mpx).width(1120.mpx), style = stageText(21, 400), color = Soft, lines = SYNOPSIS_LINES, fade = true)
                 }
             }
         }
 
         // Right: when it airs again this week, and under it a film's cast.
         if (cur != null) Column(
-            Modifier.align(Alignment.TopEnd).padding(end = 96.mpx, top = 150.mpx).width(420.mpx),
+            Modifier.align(Alignment.TopEnd).padding(end = 96.mpx, top = WINDOW_TOP + WINDOW_H + 16.mpx).width(WINDOW_W),
             verticalArrangement = Arrangement.spacedBy(16.mpx),
         ) {
-        Column(
+        // glcn: only when it does air again — "no repeats this week" was a panel saying nothing.
+        if (again.isNotEmpty()) Column(
             Modifier.staggerIn(340, fromRight = true).fillMaxWidth()
                 .clip(RoundedCornerShape(20.mpx)).background(Color(0x990A1012)).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
             Text(stringResource(R.string.glcn_pi_airs_again), style = stageText(18, 800), color = accent, maxLines = 2)
             when {
-                week == null -> Unit
-                again.isEmpty() -> Text(stringResource(R.string.glcn_pi_no_repeats), style = stageText(17, 500), color = Dim)
-                else -> again.forEach { (a, episode) ->
+                else -> again.take(REPEATS_SHOWN).forEach { (a, episode) ->
                     Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
                         Text(dayFmt.format(java.util.Date(a.startMs)), style = stageText(19, 700), color = Ink, modifier = Modifier.width(110.mpx), maxLines = 1)
                         Text(timeFmt.format(java.util.Date(a.startMs)), style = stageText(19, 500), color = Soft, maxLines = 1)
@@ -243,7 +291,7 @@ fun ProgrammeInfoScreen(
             verticalArrangement = Arrangement.spacedBy(12.mpx),
         ) {
             Text(stringResource(R.string.content_media_cast), style = stageText(18, 800), color = accent, maxLines = 1)
-            val castRows = if (again.size > CAST_TWO_ROWS_MAX_REPEATS) 1 else 2
+            val castRows = if (again.isNotEmpty()) 1 else 2
             cast.take(CAST_PER_ROW * castRows).chunked(CAST_PER_ROW).forEach { row ->
                 tv.own.owntv.features.shell.components.VodCast(row, CAST_PER_ROW, gap = 12.mpx)
             }
@@ -266,7 +314,14 @@ fun ProgrammeInfoScreen(
         }
 
         // The stream's technical data, kept off the player bar: one button here shows or hides them.
-        Row(Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 56.mpx)) {
+        Row(Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 56.mpx), horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+            // glcn: what can be done with the programme on air — from its start (catch-up), record.
+            if (cur != null && onStartOver != null && channel.catchup) StageTool(
+                text = stringResource(R.string.glcn_pi_start_over), onClick = { onStartOver(cur) }, icon = OwnTVIcon.REWIND,
+            )
+            if (cur != null && onRecord != null) StageTool(
+                text = stringResource(R.string.recording_record), onClick = { onRecord(); onDismiss() }, icon = OwnTVIcon.REC,
+            )
             StageTool(
                 text = stringResource(if (showTech) R.string.glcn_pi_hide_technical else R.string.glcn_pi_technical),
                 onClick = { showTech = !showTech },
@@ -282,7 +337,29 @@ fun ProgrammeInfoScreen(
 private const val SYNOPSIS_LINES = 10
 /** glcn: the cast panel on the right: four a row, two rows unless the repeats above take more than this many lines. */
 private const val CAST_PER_ROW = 4
-private const val CAST_TWO_ROWS_MAX_REPEATS = 3
+/** glcn: the live window up on the right (the shell places the picture in the same box, see [InfoStage]). */
+private val WINDOW_TOP = 150.mpx
+private val WINDOW_W = 420.mpx
+private val WINDOW_H = 236.mpx
+/** glcn: repeats listed under the window, so the column never reaches "Up next". */
+private const val REPEATS_SHOWN = 3
 
 /** glcn: how many programmes "Up next" lists. */
 private const val NEXT_MAX = 6
+
+/**
+ * glcn: the programme info screen's live window — while it is open, the shell draws the channel's picture in this box
+ * (up on the right) instead of full screen, and the screen leaves a hole in its backdrop there.
+ */
+object InfoStage {
+    var liveWindow by mutableStateOf(false)
+
+    /** The window in a [w] × [h] screen, as the screen lays it out at 1920 × 1080 (end 96, top 150, 420 × 236). */
+    fun windowRect(w: Float, h: Float): androidx.compose.ui.geometry.Rect {
+        val sx = w / 1920f
+        val sy = h / 1080f
+        val left = (1920f - 96f - 420f) * sx
+        val top = 150f * sy
+        return androidx.compose.ui.geometry.Rect(left, top, left + 420f * sx, top + 236f * sy)
+    }
+}
