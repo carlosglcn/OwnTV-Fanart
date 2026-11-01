@@ -653,7 +653,7 @@ fun StageMenuItem(
         ) {
             val on = if (focused) a.onAccent else null
             if (icon != null) StageIcon(icon, on ?: StageColors.Muted, 21.mpx, iconFilled)
-            leading?.invoke(on ?: if (selected) a.accent else StageColors.Muted)
+            leading?.invoke()
             Text(text, style = stageText(19, 600), color = on ?: StageColors.MenuItemText, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             if (value != null) Text(value, style = stageText(15, 700), color = on ?: StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
