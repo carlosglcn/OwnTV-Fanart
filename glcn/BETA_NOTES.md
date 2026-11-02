@@ -64,3 +64,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📱 Apps (test feature): calmer page — no more pale wash behind white banners (a soft glow from the top instead), focused banners never clipped, more room between them, the start-up switch moved to Settings › App only, and a hint for hold-OK options.
 - 🖼️ Live TV page: the title runs across the top, the video is as wide as the text beside it, and the programme's picture sits whole at the bottom, fading out upwards.
 - 📺 Live TV page: the live video is bigger (60% of the column) with the synopsis beside it and what follows across the full width; a programme listed twice by the guide shows once.
+- 🖼️ Player bar: the programme's picture is half as big again.

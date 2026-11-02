@@ -187,7 +187,7 @@ fun LiveEpgCard(
 fun LiveEpgCardWithArt(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier) {
     if (epg == null || (epg.now == null && epg.next == null)) return
     if (art.isNullOrBlank()) { LiveEpgCard(epg, modifier); return }
-    // glcn: no panel of its own (the bar's shade is behind it) and a smaller picture, so the bar stays low.
+    // glcn: no panel of its own (the bar's shade is behind it); the picture 144 × 81, big enough to tell what is on.
     Row(
         modifier.padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -195,7 +195,7 @@ fun LiveEpgCardWithArt(epg: EpgNowNext?, art: String?, modifier: Modifier = Modi
     ) {
         tv.own.owntv.ui.components.ProgrammeArt(
             url = art,
-            modifier = Modifier.size(width = 96.dp, height = 54.dp).clip(RoundedCornerShape(9.dp)),
+            modifier = Modifier.size(width = 144.dp, height = 81.dp).clip(RoundedCornerShape(10.dp)),
         )
         LiveEpgCard(epg, bare = true)
     }
