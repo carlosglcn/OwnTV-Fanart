@@ -53,3 +53,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📍 **Chapter marks on the film's seek bar** (thin cuts where each chapter starts, mpv)
 - ⏩ **Skip intro from the chapters:** a file whose chapters name its intro ("Intro", "Opening"…) offers Skip intro — films too — and lands exactly where it ends (Auto-skip uses it as well)
 - 🌈 **HDR on a TV without HDR:** an HDR / Dolby Vision film plays on mpv's GL path, which turns it to SDR with the right colours instead of washed-out ones (only when the screen takes no HDR at all)
+- ⏱️ Zap timing in the diagnostics log: for each channel change, when the first data arrived and whether the provider redirected it, next to the decoder start and the first picture
