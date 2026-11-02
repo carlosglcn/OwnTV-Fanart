@@ -268,6 +268,9 @@ fun OwnTVShell(
         tv.own.owntv.features.home.CinemaTrailer.blocked = playerMode != PlayerMode.NONE
         // glcn: something plays — the trailer player is let go, its memory with it.
         if (playerMode != PlayerMode.NONE) tv.own.owntv.ui.components.TrailerPool.free()
+        // glcn: …and for a few seconds after it closes no new one is made: starting a web view while the film's
+        // decoder is still letting its memory go froze the app (Android's "not responding").
+        else tv.own.owntv.ui.components.TrailerPool.coolDownAfterPlayer()
     }
     val navSections = if (tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId)) visibleSections - setOf(MainSection.MOVIES, MainSection.SERIES, MainSection.DOWNLOADS) else visibleSections
     var topCompactForced by remember(topSize, visibleSections) { mutableStateOf(false) }

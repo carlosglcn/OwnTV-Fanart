@@ -139,6 +139,9 @@ object TrailerPool {
     fun view(context: Context): YouTubePlayerView? {
         if (!allowed()) return null
         view?.let { return it }
+        // glcn: no new web view right after a film, or while Android says memory is short — its start-up blocks the
+        // main thread and, on a box short of memory, long enough for an "app not responding".
+        if (android.os.SystemClock.uptimeMillis() < notBefore || memoryShort(context)) return null
         // glcn: made on the activity (not a dialog's context, not the application's): a web view on the application's
         // context does not know the screen it draws on, and video played less smoothly. Let go when the activity goes.
         val app = activityOf(context) ?: context.applicationContext
@@ -213,6 +216,7 @@ object TrailerPool {
 
     /** Let the player go now, its memory with it; the next trailer makes a new one. */
     fun free() {
+        wasPlaying = true
         main.removeCallbacks(idleFree)
         val v = view ?: return
         val r = request
@@ -228,6 +232,23 @@ object TrailerPool {
     }
 
     private fun allowed(): Boolean = !tv.own.owntv.glcn.LowRam.on
+
+    /** glcn: no player is made before this (uptime ms). */
+    private var notBefore = 0L
+    private var wasPlaying = false
+
+    /** glcn: called with nothing playing; the first call after a player closed starts the wait. */
+    fun coolDownAfterPlayer() {
+        if (!wasPlaying) return
+        wasPlaying = false
+        notBefore = android.os.SystemClock.uptimeMillis() + AFTER_PLAYER_MS
+    }
+
+    private fun memoryShort(context: Context): Boolean = runCatching {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val info = android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
+        info.lowMemory
+    }.getOrDefault(false)
 
     private fun activityOf(context: Context): android.app.Activity? {
         var c: Context? = context
@@ -283,6 +304,7 @@ object TrailerPool {
     }
 
     private const val IDLE_FREE_MS = 60_000L
+    private const val AFTER_PLAYER_MS = 6_000L
     private const val HANDOVER_MS = 250L
     private const val RESUME_AFTER_MOVE_MS = 120L
 }

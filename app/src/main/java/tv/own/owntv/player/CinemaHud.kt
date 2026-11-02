@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -389,7 +390,7 @@ internal fun CinemaPanel(
                 CinemaTab.AUDIO -> AudioTab(player, actions)
                 CinemaTab.SUBS -> SubsTab(player, actions)
                 CinemaTab.EPISODES -> EpisodesTab(episodes, episodeIndex, onPlayEpisode)
-                CinemaTab.CHAPTERS -> ChaptersTab(chapters, position) { player.seekBy(it - position()) }
+                CinemaTab.CHAPTERS -> ChaptersTab(chapters, position, remember(player) { player.mediaSource() }, info.backdropUrl) { player.seekBy(it - position()) }
                 CinemaTab.SETTINGS -> SettingsTab(player, actions)
             }
         }
@@ -553,20 +554,88 @@ private fun EpisodesTab(episodes: List<CinemaEpisode>, current: Int, onPlay: ((I
     }
 }
 
-/** glcn: the film's chapters — name (or "Chapter n") and where it starts; the one playing is marked. OK jumps there. */
+/**
+ * glcn: the film's chapters as picture cards, two across — a frame of each chapter (the server's chapter image, else
+ * one read from the film, else the film's backdrop with the number), its name ("Chapter 01" becomes "Capítulo 1"),
+ * where it starts; the one playing has its progress. OK jumps there.
+ */
 @Composable
-private fun ChaptersTab(chapters: List<PlayerChapter>, position: () -> Long, onSeek: (Long) -> Unit) {
+private fun ChaptersTab(
+    chapters: List<PlayerChapter>,
+    position: () -> Long,
+    source: tv.own.owntv.player.PlayerMediaSource?,
+    backdrop: String?,
+    onSeek: (Long) -> Unit,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val pos = position()
-    val current = chapters.indexOfLast { it.startMs <= pos }
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.mpx)) {
-        itemsIndexed(chapters) { i, c ->
-            PanelRow(
-                text = c.title ?: stringResource(R.string.glcn_cine_chapter_n, i + 1),
-                detail = if (i == current) stringResource(R.string.glcn_cine_now_playing) else null,
-                selected = i == current,
-                trailing = formatTime(c.startMs),
+    val current = chapters.indexOfLast { it.startMs <= pos }.coerceAtLeast(0)
+    val thumbs = remember(source) { androidx.compose.runtime.mutableStateMapOf<Int, Any>() }
+    LaunchedEffect(source, chapters.size) {
+        val src = source ?: return@LaunchedEffect
+        // Pictures already read before show at once.
+        chapters.forEachIndexed { i, c -> tv.own.owntv.glcn.ChapterThumbs.cached(context, src, c.startMs)?.let { thumbs[i] = it } }
+        tv.own.owntv.glcn.ChapterThumbs.serverImages(src, chapters.size)?.let { urls ->
+            urls.forEachIndexed { i, u -> thumbs[i] = u }
+            return@LaunchedEffect
+        }
+        if (!tv.own.owntv.glcn.ChapterThumbs.canReadFrames(src) || tv.own.owntv.glcn.LowRam.on) return@LaunchedEffect
+        val frames = tv.own.owntv.glcn.ChapterThumbs.Frames(context, src)
+        try {
+            // Nearest the chapter playing first, then outwards.
+            chapters.indices.sortedBy { kotlin.math.abs(it - current) }.forEach { i ->
+                if (thumbs[i] == null) frames.at(chapters[i].startMs)?.let { thumbs[i] = it }
+            }
+        } finally {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { frames.close() }
+        }
+    }
+    val grid = androidx.compose.foundation.lazy.grid.rememberLazyGridState(initialFirstVisibleItemIndex = (current / 2) * 2)
+    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+        state = grid,
+        horizontalArrangement = Arrangement.spacedBy(16.mpx),
+        verticalArrangement = Arrangement.spacedBy(16.mpx),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(6.mpx),
+    ) {
+        items(chapters.size) { i ->
+            val c = chapters[i]
+            val title = c.title?.takeUnless { tv.own.owntv.glcn.ChapterThumbs.isGeneric(it) } ?: stringResource(R.string.glcn_cine_chapter_n, i + 1)
+            val playing = i == current
+            StageSurface(
                 onClick = { onSeek(c.startMs) },
-            )
+                radius = 14.mpx,
+                focusStyle = tv.own.owntv.ui.stage.StageFocus.POSTER,
+                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+            ) { _ ->
+                Box(Modifier.fillMaxSize().clip(RoundedCornerShape(14.mpx)).background(Color(0xFF1B2024))) {
+                    val pic = thumbs[i]
+                    if (pic != null || backdrop != null) coil3.compose.AsyncImage(
+                        model = pic ?: backdrop, contentDescription = null, contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().then(if (pic == null) Modifier.graphicsLayer { alpha = 0.35f } else Modifier),
+                    )
+                    // No frame of its own: the number, large, over the film's picture.
+                    if (pic == null) Text(
+                        "${i + 1}", style = stageText(64, 800), color = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))))
+                    Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 12.mpx, vertical = 10.mpx)) {
+                        Text(title, style = stageText(17, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            if (playing) formatTime(c.startMs) + "  ·  " + stringResource(R.string.glcn_cine_now_playing) else formatTime(c.startMs),
+                            style = stageText(14, 500), color = if (playing) stageAccent.accent else Color.White.copy(alpha = 0.7f), maxLines = 1,
+                        )
+                    }
+                    if (playing) {
+                        val end = chapters.getOrNull(i + 1)?.startMs
+                        val frac = if (end != null && end > c.startMs) ((pos - c.startMs).toFloat() / (end - c.startMs)).coerceIn(0f, 1f) else 0f
+                        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.mpx).background(Color.White.copy(alpha = 0.18f))) {
+                            Box(Modifier.fillMaxWidth(frac).fillMaxHeight().background(stageAccent.accent))
+                        }
+                    }
+                }
+            }
         }
     }
 }

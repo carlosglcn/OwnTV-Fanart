@@ -1175,6 +1175,22 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	mode
 1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	soccer basketball tennis motor combat golf handball football hockey esports sports movies tvmovie series kids animation anime action drama comedy horror crime thriller mystery suspense intrigue adventure scifi fantasy romance family war western biography history docs nature science travel music radio news reality talk cooking religion adult christmas favorites tdt live
 1	log	app/src/main/java/tv/own/owntv/glcn/CategoryIcons.kt	soccer=FUTBOL,FOOTBALL,SOCCER,LALIGA,LIGA,CHAMPIONS,PREMIER,BUNDESLIGA,SERIE A,LIGUE 1,DAZN,MOVISTAR LIGA,M LIGA,EUROPA LEAGUE basketball=BALONCESTO,BASKET,BASKETBALL,NBA,ACB,EUROLIGA,EUROLEAGUE tennis=TENIS,TENNIS,ATP,WTA,PADEL motor=F1,FORMULA 1,MOTOR,MOTOGP,MOTORSPORT,RACING combat=BOXEO,BOXING,UFC,MMA,LUCHA,WRESTLING,WWE golf=GOLF handball=BALONMANO,HANDBALL football=NFL,FUTBOL AMERICANO,AMERICAN FOOTBALL hockey=HOCKEY,NHL esports=ESPORTS,E SPORTS,GAMING,VIDEOJUEGOS sports=DEPORTES,DEPORTE,SPORTS,SPORT,ESPN,EUROSPORT,EVENTOS,EVENTS,PPV anime=ANIME kids=INFANTIL,INFANTILES,KIDS,NINOS,CHILDREN,DIBUJOS,CARTOONS,DISNEY,JUNIOR animation=ANIMACION,ANIMATION action=ACTION,ACCION biography=BIOGRAPHY,BIOGRAFIA,BIOGRAFIAS,BIOPIC drama=DRAMA,DRAMAS crime=NOIR,CRIME,CRIMEN,POLICIACA,POLICIACO,POLICIACAS thriller=THRILLER,THRILLERS mystery=MISTERIO,MYSTERY suspense=SUSPENSE,SUSPENSO intrigue=INTRIGA adventure=ADVENTURE,ADVENTURES,AVENTURA,AVENTURAS scifi=SCI FI,SCIFI,CIENCIA FICCION,SCIENCE FICTION fantasy=FANTASY,FANTASIA romance=ROMANCE,ROMANTICA,ROMANTICAS,ROMANTICO,ROMANTIC family=FAMILY,FAMILIA,FAMILIAR war=WAR,GUERRA,BELICA,BELICO western=WESTERN,WESTERNS tvmovie=TV MOVIE,TELEFILM,TELEFILMS movies=CINE,PELICULAS,PELICULA,MOVIES,MOVIE,FILMS,FILM,ESTRENOS,CINEMA,PREMIERES reality=REALITY,REALITY SHOW,CONCURSOS,GAME SHOW talk=TALK,TALK SHOW,TERTULIA,MAGAZINE series=SERIES,SERIE,SHOWS,TV SHOWS,TELENOVELAS,TELENOVELA,NOVELAS,SOAP radio=RADIO music=MUSICA,MUSIC,MUSICAL,MUSICALES,CONCIERTOS,CONCERTS news=NOTICIAS,NEWS,INFORMATIVOS,NOTICIAS 24H history=HISTORIA,HISTORY nature=NATURALEZA,NATURE,ANIMALES,ANIMALS science=CIENCIA,SCIENCE travel=VIAJES,TRAVEL docs=DOCUMENTALES,DOCUMENTAL,DOCUMENTARY,DOCUMENTARIES,DOCS cooking=COCINA,COOKING,FOOD,GASTRONOMIA comedy=COMEDIA,COMEDIAS,COMEDY,COMEDIES,HUMOR horror=TERROR,HORROR,MIEDO,HALLOWEEN religion=RELIGION,RELIGIOSOS,RELIGIOUS adult=ADULTOS,ADULT,ADULTS,XXX,18 christmas=NAVIDAD,CHRISTMAS favorites=FAVORITOS,FAVORITES,VIP,PREMIUM tdt=OTRAS CADENAS,OTHER NETWORKS,CADENAS,NETWORKS,TDT,NACIONALES,GENERALISTAS,LOCAL,LOCALES,AUTONOMICAS,REGIONAL live=24 7,24/7,EN DIRECTO,LIVE
+2	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	$base/Items/$id/Images/Chapter/$index?maxWidth=$THUMB_W&api_key=$token
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	${hash(src.url)}_$ms.jpg
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	%02x
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	/
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	ApiKey
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	SHA-1
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	^(https?://.+?)/Videos/([0-9A-Za-z-]+)/stream[^?]*\\?(.*)$
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	^\\s*(chapter|chapitre|cap[ií]tulo|kapitel|capitolo|hoofdstuk|kapittel|rozdział|cap\\.?|ch\\.?)?\\s*#?\\s*\\d{1,3}\\s*$|^\\s*\\d{1,2}:\\d{2}:\\d{2}([.,]\\d+)?\\s*$
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	api_key
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	chapter_thumbs
+2	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	file://
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	http
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	http://
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	https://
+1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	image
 2	technical	app/src/main/java/tv/own/owntv/glcn/CrashScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/glcn/CrashScreen.kt	/proc/self/cmdline
 1	technical	app/src/main/java/tv/own/owntv/glcn/CrashScreen.kt	:crash
@@ -1239,6 +1255,7 @@
 1	technical	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	tnum
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	\0
 1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	$code · ${e.title}
+1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	${i + 1}
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	${t.width}×${t.height}
 1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	%.3f fps
 1	log	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	%d fps
@@ -1289,7 +1306,7 @@
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	ma
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	true-hd
 2	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	truehd
-4	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	·
+5	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	·
 1	technical	app/src/main/java/tv/own/owntv/player/CinemaHud.kt	★
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR apply failed: ${it.message}
 1	log	app/src/main/java/tv/own/owntv/player/FrameRateController.kt	AFR reset failed: ${it.message}

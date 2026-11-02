@@ -68,3 +68,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🃏 Zapping strip: five whole cards across (none cut at the edge), a little narrower and squarer (3:2).
 - 🃏 Zapping strip: the row is clipped at its margins, so no sliver of the next card shows at the edge.
 - 📺 Live TV page: the live video across the whole column at the top; title, details, a 4-line synopsis and what follows (in one row) underneath, with the programme's picture showing at the bottom.
+- 🎞️ Chapters tab: picture cards two across — each chapter's frame (Emby/Jellyfin chapter images when the server has them, otherwise read from the film in the background and kept for next time; the film's backdrop with the number when neither is possible), "Chapter 01" shown as "Capítulo 1", and the one playing with its progress.
+- 🧊 Fix: no trailer player is started for a few seconds after closing a film, nor while Android reports low memory — starting one then could freeze the app ("not responding").
