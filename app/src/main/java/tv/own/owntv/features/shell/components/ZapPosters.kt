@@ -191,14 +191,15 @@ fun ZapPosterOverlay(
             ) {
                 itemsIndexed(channels, key = { _, c -> c.id }) { index, ch ->
                     // glcn: the cards rise into place one after another from below the screen's edge when the strip opens.
-                    Column(Modifier.staggerAt((index - start + 1).coerceAtLeast(0), zapGate, step = 70, cap = 6, rise = 90.mpx).width(360.mpx)) {
+                    Column(Modifier.staggerAt((index - start + 1).coerceAtLeast(0), zapGate, step = 70, cap = 6, rise = 90.mpx).width(ZAP_CARD_W.mpx)) {
                     tv.own.owntv.features.home.ArtLiveCard(
                         channel = ch,
                         programme = programmes[ch.id],
                         now = now,
                         onClick = { onSelect(ch) },
                         onLongClick = onLongPress?.let { lp -> { lp(ch) } },
-                        width = 360.mpx,
+                        width = ZAP_CARD_W.mpx,
+                        artRatio = ZAP_CARD_RATIO,
                         modifier = Modifier.focusRequester(cardFocus.getOrPut(index) { FocusRequester() }).then(if (index == start) Modifier.focusRequester(first) else Modifier),
                     )
                     if (showNext) {
@@ -218,7 +219,7 @@ fun ZapPosterOverlay(
             loadSchedule = loadSchedule,
             cache = scheduleCache,
             loadDescription = loadDescription,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.mpx, bottom = if (showNext) 530.mpx else 392.mpx).staggerIn(260, fromRight = true),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.mpx, bottom = if (showNext) 556.mpx else 418.mpx).staggerIn(260, fromRight = true),
         )
     }
 }
@@ -410,3 +411,10 @@ private const val LIGHT_CARD_GLASS = 0.94f
 private const val LINE_STEP_MS = 520
 private const val LINE_REST_MS = 2_600L
 private const val DARK_CARD_GLASS = 0.92f
+
+/**
+ * glcn: the zapping strip shows whole cards only — five across the 1920 design width between the 64 margins
+ * ((1920 − 128 − 4 × 20) ÷ 5 ≈ 342), so no card is cut at the edge — and a squarer picture, 3:2.
+ */
+private const val ZAP_CARD_W = 342
+private const val ZAP_CARD_RATIO = 3f / 2f

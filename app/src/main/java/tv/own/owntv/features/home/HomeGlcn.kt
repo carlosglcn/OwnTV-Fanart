@@ -211,6 +211,8 @@ internal fun ArtLiveCard(
     width: Dp = LocalHomeCardWidth.current ?: 400.mpx,
     startLabel: String? = null,
     bell: Boolean = false,
+    /** glcn: the picture's shape, width ÷ height — 16:9 on Home, squarer in the zapping strip. */
+    artRatio: Float = 16f / 9f,
     /** glcn: Recent channels — "watched 10 min ago", added to the line under the title. */
     watchedAgo: String? = null,
     /** glcn: pinned to the front of Recent channels. */
@@ -227,7 +229,7 @@ internal fun ArtLiveCard(
         onClick = onClick,
         radius = StageRadii.Row,
         modifier = modifier
-            .size(width, width * 9f / 16f + CAPTION_HEIGHT)
+            .size(width, width / artRatio + CAPTION_HEIGHT)
             .onFocusChanged {
                 held = it.hasFocus
                 if (it.hasFocus) {
@@ -273,7 +275,7 @@ internal fun ArtLiveCard(
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(width * 9f / 16f)
+                    .height(width / artRatio)
                     .clip(RoundedCornerShape(topStart = StageRadii.Row, topEnd = StageRadii.Row)),
             ) {
                 Box(Modifier.fillMaxSize().graphicsLayer { scaleX = zoom; scaleY = zoom }) {
