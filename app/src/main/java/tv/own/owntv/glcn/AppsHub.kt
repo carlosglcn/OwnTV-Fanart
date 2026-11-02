@@ -77,13 +77,18 @@ fun AppsHub(entry: FocusRequester, modifier: Modifier = Modifier) {
     var menuFor by remember { mutableStateOf<AppShortcuts.App?>(null) }
 
     Box(modifier.fillMaxSize()) {
-        // The focused banner's colour, faint behind the page.
-        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(28.mpx)).background(tint.copy(alpha = 0.22f)))
-        Column(Modifier.fillMaxSize().padding(horizontal = 8.mpx)) {
-            AutostartRow()
+        // The focused banner's colour as a soft glow from the top only, darkened first: a white banner (Kodi, Play
+        // Store) used to wash the whole page pale.
+        val glow = androidx.compose.ui.graphics.lerp(tint, Color.Black, 0.55f).copy(alpha = if (tint.alpha > 0f) 0.45f else 0f)
+        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(28.mpx)).background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to glow, 0.55f to Color.Transparent)))
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().padding(start = HPAD.mpx, end = HPAD.mpx, top = 6.mpx), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(if (mine.isNotEmpty()) R.string.glcn_apps_yours else R.string.glcn_apps_all), style = stageText(24, 800), color = StageColors.Text, modifier = Modifier.weight(1f))
+                tv.own.owntv.ui.stage.StageKeyHints(listOf(stringResource(R.string.content_key_hold_ok) to stringResource(R.string.content_key_options)))
+            }
             if (mine.isNotEmpty()) {
-                Text(stringResource(R.string.glcn_apps_yours), style = stageText(24, 800), color = StageColors.Text, modifier = Modifier.padding(top = 18.mpx, bottom = 10.mpx))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(18.mpx), contentPadding = PaddingValues(vertical = 12.mpx), modifier = Modifier.focusGroup()) {
+                // Room on every side for the focused banner's lift and ring, so it is never clipped.
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(GAP.mpx), contentPadding = PaddingValues(horizontal = HPAD.mpx, vertical = 16.mpx), modifier = Modifier.focusGroup()) {
                     itemsIndexed(mine, key = { _, a -> "m" + a.pkg }) { i, a ->
                         AppBanner(
                             a, width = BANNER_W.mpx,
@@ -95,12 +100,12 @@ fun AppsHub(entry: FocusRequester, modifier: Modifier = Modifier) {
                     }
                 }
             }
-            Text(stringResource(R.string.glcn_apps_all), style = stageText(24, 800), color = StageColors.Text, modifier = Modifier.padding(top = 18.mpx, bottom = 10.mpx))
+            if (mine.isNotEmpty()) Text(stringResource(R.string.glcn_apps_all), style = stageText(24, 800), color = StageColors.Text, modifier = Modifier.padding(start = HPAD.mpx, top = 6.mpx))
             LazyVerticalGrid(
                 columns = GridCells.Fixed(GRID_COLUMNS),
-                horizontalArrangement = Arrangement.spacedBy(18.mpx),
-                verticalArrangement = Arrangement.spacedBy(18.mpx),
-                contentPadding = PaddingValues(top = 12.mpx, bottom = 40.mpx),
+                horizontalArrangement = Arrangement.spacedBy(GAP.mpx),
+                verticalArrangement = Arrangement.spacedBy(GAP.mpx),
+                contentPadding = PaddingValues(start = HPAD.mpx, end = HPAD.mpx, top = 16.mpx, bottom = 48.mpx),
                 modifier = Modifier.fillMaxWidth().weight(1f).focusGroup(),
             ) {
                 itemsIndexed(all, key = { _, a -> "a" + a.pkg }) { i, a ->
@@ -117,22 +122,6 @@ fun AppsHub(entry: FocusRequester, modifier: Modifier = Modifier) {
         }
     }
     menuFor?.let { a -> AppMenu(a) { menuFor = null } }
-}
-
-/** glcn: "Open OwnTV Fanart when the SHIELD starts" — needs Android's "Display over other apps" once. */
-@Composable
-private fun AutostartRow() {
-    val context = LocalContext.current
-    val on = Labs.autostart
-    tv.own.owntv.ui.stage.StageButton(
-        stringResource(R.string.glcn_autostart_title) + ": " + stringResource(if (on) R.string.common_on else R.string.common_off),
-        onClick = {
-            if (!on && !BootStart.canStart(context)) BootStart.askPermission(context)
-            Labs.setAutostart(context, !on)
-        },
-        icon = OwnTVIcon.POWER,
-        height = 52.mpx, textSize = 19,
-    )
 }
 
 /**
@@ -258,6 +247,9 @@ fun AppsPickerGrid(onDismiss: () -> Unit) {
 }
 
 private const val GRID_COLUMNS = 5
+/** Side room for the focused banner's lift and ring, and the gap between banners. */
+private const val HPAD = 18
+private const val GAP = 22
 private const val BANNER_W = 288
 private const val BANNER_RATIO = 16f / 9f
 private const val BANNER_PX_W = 320
