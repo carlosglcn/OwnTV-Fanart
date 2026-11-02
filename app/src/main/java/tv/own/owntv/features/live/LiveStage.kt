@@ -327,11 +327,11 @@ internal fun LiveStagePane(
         }
     }
     @Composable
-    fun Info(infoModifier: Modifier, tall: Boolean) {
+    fun Info(infoModifier: Modifier, tall: Boolean, showTop: Boolean = true, showSchedule: Boolean = true) {
         val now = nowNext?.now
         Box(infoModifier) {
-        Column(Modifier.fillMaxWidth().then(if (tall) Modifier.fillMaxHeight() else Modifier).padding(start = 4.mpx, end = 4.mpx, top = if (tall) 0.mpx else 34.mpx)) {
-        Row(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().then(if (tall) Modifier.fillMaxHeight() else Modifier).padding(start = 4.mpx, end = 4.mpx, top = if (tall || !showTop) 0.mpx else 34.mpx)) {
+        if (showTop) Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             if (now != null) {
                 if (!tall) Text(now.title, style = stageText(42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -359,7 +359,7 @@ internal fun LiveStagePane(
             kotlinx.coroutines.delay(300)
             value = runCatching { resolver.detailsFor(n.title, null) }.getOrNull()?.overview
         }
-        (now?.description?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
+        if (showTop) (now?.description?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
             tv.own.owntv.features.shell.components.DriftingSynopsis(
                 it,
                 modifier = Modifier.padding(top = 14.mpx).then(if (tall) Modifier.weight(1f, fill = false) else Modifier),
@@ -370,11 +370,15 @@ internal fun LiveStagePane(
         }
         val next = nowNext?.next
         // glcn: what follows, several — the next one and the two after it.
-        val later = nowNext?.upcoming.orEmpty().take(if (tall) 4 else 2)
-        if (next != null) {
+        // glcn: a guide listing one programme twice (same start, same title) shows it once.
+        val later = nowNext?.upcoming.orEmpty()
+            .filterNot { next != null && it.startMs == next.startMs && it.title == next.title }
+            .distinctBy { it.startMs to it.title }
+            .take(if (tall || !showTop) 4 else 2)
+        if (showSchedule && next != null) {
             Column(
                 Modifier
-                    .padding(top = 14.mpx)
+                    .padding(top = if (showTop) 14.mpx else 0.mpx)
                     .offset(x = (-12).mpx)
                     .focusGroup(),
             ) {
@@ -400,12 +404,19 @@ internal fun LiveStagePane(
     }
     if (ficha) {
         // The title across the whole column, then the details beside a video as wide as they are.
-        Column(modifier.fillMaxHeight().padding(bottom = 110.mpx)) {
-            nowNext?.now?.let { Text(it.title, style = stageText(42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.mpx, bottom = 14.mpx)) }
-            Row(Modifier.fillMaxWidth().weight(1f)) {
-                Column(Modifier.weight(0.5f).fillMaxHeight()) { Info(Modifier.fillMaxWidth().weight(1f), tall = true) }
-                Spacer(Modifier.width(28.mpx))
-                Column(Modifier.weight(0.5f)) { Video(Modifier.fillMaxWidth()) }
+        // glcn: the video takes 60% of the column; the details and synopsis run beside it, as tall as it is, and
+        // what follows runs the full width underneath.
+        androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxHeight().padding(bottom = 110.mpx)) {
+            val gap = 28.mpx
+            val videoW = (maxWidth - gap) * 0.6f
+            Column(Modifier.fillMaxWidth()) {
+                nowNext?.now?.let { Text(it.title, style = stageText(42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.mpx, bottom = 14.mpx)) }
+                Row(Modifier.fillMaxWidth().height(videoW * 9f / 16f)) {
+                    Column(Modifier.weight(1f).fillMaxHeight()) { Info(Modifier.fillMaxWidth().weight(1f), tall = true, showSchedule = false) }
+                    Spacer(Modifier.width(gap))
+                    Video(Modifier.width(videoW))
+                }
+                Info(Modifier.fillMaxWidth().padding(top = 18.mpx), tall = false, showTop = false)
             }
         }
     } else {
