@@ -290,7 +290,7 @@ private fun ZapPosterInfo(
     // brighter secondary words in the dark theme too.
     val quiet = StageColors.Body
     Column(
-        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = if (light) LIGHT_CARD_GLASS else DARK_CARD_GLASS).padding(18.mpx),
+        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.glcn.PlayerGlass.share(if (light) LIGHT_CARD_GLASS else DARK_CARD_GLASS)).padding(18.mpx),
         verticalArrangement = Arrangement.spacedBy(8.mpx),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {

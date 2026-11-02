@@ -113,7 +113,7 @@ fun OtherChannelsPanel(session: SportsSession, playingId: Long?, onSwitch: (Spor
                     .width(620.mpx).fillMaxHeight()
                     .graphicsLayer { translationX = (1f - enter.value) * 80.mpx.toPx() },
             ) {
-                Box(Modifier.matchParentSize().graphicsLayer { alpha = 0.88f }.stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true))
+                Box(Modifier.matchParentSize().graphicsLayer { alpha = tv.own.owntv.glcn.PlayerGlass.share(0.88f) }.stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true))
                 Column(
                     Modifier.fillMaxSize().padding(horizontal = 26.mpx, vertical = 26.mpx).trapAllFocusExit().focusGroup(),
                 ) {

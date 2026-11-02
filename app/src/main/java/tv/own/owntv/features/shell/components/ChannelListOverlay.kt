@@ -162,13 +162,13 @@ fun ChannelListOverlay(
                 .graphicsLayer { translationX = (1f - enterAnim.value) * OVERLAY_ENTER_PX.mpx.toPx() * (if (alignEnd) 1f else -1f) }
                 .padding(horizontal = 14.mpx, vertical = 8.mpx)
                 .fillMaxHeight()
-                .then(if (unified) Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS) else Modifier),
+                .then(if (unified) Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.glcn.PlayerGlass.share(tv.own.owntv.features.live.PLAYER_SHEET_GLASS)) else Modifier),
         ) {
         Column(
             modifier = Modifier
                 .fillMaxHeight()
                 .width(if (history) 760.mpx else 720.mpx)
-                .then(if (unified) Modifier else Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS))
+                .then(if (unified) Modifier else Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.glcn.PlayerGlass.share(tv.own.owntv.features.live.PLAYER_SHEET_GLASS)))
                 .onPreviewKeyEvent { e ->
                     if (onCyclePanel != null && !alignEnd && e.type == KeyEventType.KeyDown &&
                         e.key.horizontalDirection(layoutDirection) == HorizontalDirection.END
@@ -384,7 +384,7 @@ internal fun ZapPreviewPanel(
     val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
     Column(
         modifier
-            .then(if (framed) Modifier.width(620.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS).padding(18.mpx) else Modifier),
+            .then(if (framed) Modifier.width(620.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.glcn.PlayerGlass.share(tv.own.owntv.features.live.PLAYER_SHEET_GLASS)).padding(18.mpx) else Modifier),
         verticalArrangement = Arrangement.spacedBy(8.mpx),
     ) {
         val logo = channel?.displayLogoUrl?.takeIf { it.isNotBlank() }
@@ -460,7 +460,7 @@ internal fun ZapSchedulePanel(
                 if (joined) Modifier.drawBehind {
                     val inset = 26.mpx.toPx()
                     drawLine(line, androidx.compose.ui.geometry.Offset(0f, inset), androidx.compose.ui.geometry.Offset(0f, size.height - inset), strokeWidth = 1.mpx.toPx())
-                } else Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS),
+                } else Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.glcn.PlayerGlass.share(tv.own.owntv.features.live.PLAYER_SHEET_GLASS)),
             )
             .padding(horizontal = 22.mpx, vertical = 20.mpx),
         verticalArrangement = Arrangement.spacedBy(5.mpx),

@@ -1650,7 +1650,7 @@ private fun PlayerOptionsSheet(
             ) {
                 // A share of the glass: the picture shows through, the list still reads — as see-through as the quick
                 // view's panels (ZapDeck), so the two read as one family.
-                Box(Modifier.matchParentSize().graphicsLayer { alpha = PLAYER_MENU_GLASS }.stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true))
+                Box(Modifier.matchParentSize().graphicsLayer { alpha = tv.own.owntv.glcn.PlayerGlass.share(PLAYER_MENU_GLASS) }.stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true))
                 Column(
                     Modifier.fillMaxSize().verticalScroll(rememberScrollState()).trapAllFocusExit().focusGroup()
                         .padding(start = 18.mpx, end = 18.mpx, top = 18.mpx, bottom = 16.mpx),

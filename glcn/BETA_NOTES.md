@@ -55,3 +55,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌈 **HDR on a TV without HDR:** an HDR / Dolby Vision film plays on mpv's GL path, which turns it to SDR with the right colours instead of washed-out ones (only when the screen takes no HDR at all)
 - ⏱️ Zap timing in the diagnostics log: for each channel change, when the first data arrived and whether the provider redirected it, next to the decoder start and the first picture
 - ⚡ Faster channel changes: live playback starts after half a second of buffer instead of one (about 0.3–0.5 s saved per zap; recovery after a stall still waits 2 s).
+- 🪟 New setting in Appearance › Glass and background: "Panels over the video" — five levels, from very see-through to very solid, for the player and channel-change panels.

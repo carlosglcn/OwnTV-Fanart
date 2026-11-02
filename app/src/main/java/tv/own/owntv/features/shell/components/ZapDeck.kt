@@ -288,7 +288,7 @@ fun ZapDeck(
             // glcn: both parts on a share of the same glass, so the picture shows through everywhere: the groups and
             // channels on a little more of it, so their words still read; the column on the right on less.
             Box(Modifier.fillMaxHeight()) {
-            Box(Modifier.matchParentSize().graphicsLayer { alpha = DECK_LIST_GLASS }.stageGlass(StageRadii.Sheet, overContent = true))
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = tv.own.owntv.glcn.PlayerGlass.share(DECK_LIST_GLASS) }.stageGlass(StageRadii.Sheet, overContent = true))
             Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
             // ---- Groups (and the playlists above them).
             Column(Modifier.width(280.mpx).fillMaxHeight().padding(start = 14.mpx, end = 8.mpx)) {
@@ -384,7 +384,7 @@ fun ZapDeck(
             // ---- The focused channel: its programme, or its schedule.
             val focusedChannel = list.getOrNull(chIdx)
             Box(Modifier.fillMaxHeight().padding(start = 8.mpx)) {
-            Box(Modifier.matchParentSize().graphicsLayer { alpha = DECK_DETAIL_GLASS }.stageGlass(StageRadii.Sheet, overContent = true))
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = tv.own.owntv.glcn.PlayerGlass.share(DECK_DETAIL_GLASS) }.stageGlass(StageRadii.Sheet, overContent = true))
             Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
             if (detail == 1) {
                 ZapSchedulePanel(

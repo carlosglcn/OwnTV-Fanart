@@ -359,7 +359,7 @@ internal fun CinemaPanel(
             Modifier.align(Alignment.CenterEnd).padding(top = 48.mpx, bottom = 48.mpx, end = 48.mpx)
                 .width(PANEL_WIDTH.mpx).fillMaxHeight()
                 .graphicsLayer { translationX = (1f - slide.value) * 120.mpx.toPx(); alpha = slide.value }
-                .clip(RoundedCornerShape(28.mpx)).background(Color(0xD90E1113))
+                .clip(RoundedCornerShape(28.mpx)).background(Color(0xFF0E1113).copy(alpha = tv.own.owntv.glcn.PlayerGlass.share(0.85f)))
                 .padding(28.mpx),
         ) {
             Row(Modifier.focusGroup(), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
@@ -708,7 +708,7 @@ internal fun CinemaNextCard(
     val start = remember { seconds().coerceAtLeast(1) }
     Column(
         modifier.width(420.mpx).graphicsLayer { alpha = a.value; translationY = (1f - a.value) * 30f }
-            .clip(RoundedCornerShape(18.mpx)).background(Color(0xE60E1113)),
+            .clip(RoundedCornerShape(18.mpx)).background(Color(0xFF0E1113).copy(alpha = tv.own.owntv.glcn.PlayerGlass.share(0.9f))),
     ) {
         Box(Modifier.fillMaxWidth().height(236.mpx)) {
             if (!art.isNullOrBlank()) {

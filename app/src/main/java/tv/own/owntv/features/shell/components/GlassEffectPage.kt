@@ -196,6 +196,28 @@ internal fun GlassBackgroundPage(
             help = SettingHelp(opacityTitle + dotSeparator() + previewTitle, glassHelp, hints = stepHints, extra = preview),
         )
 
+        // glcn: the panels over the video (player sheets, zapping) — their own five levels, independent of the glass above.
+        val playerCtx = androidx.compose.ui.platform.LocalContext.current
+        val playerTitle = stringResource(R.string.glcn_player_glass_title)
+        val playerLine = stringResource(R.string.glcn_player_glass_desc)
+        val playerLabels = listOf(
+            stringResource(R.string.glcn_player_glass_0),
+            stringResource(R.string.glcn_player_glass_1),
+            stringResource(R.string.glcn_player_glass_2),
+            stringResource(R.string.glcn_player_glass_3),
+            stringResource(R.string.glcn_player_glass_4),
+        )
+        val playerLevel = tv.own.owntv.glcn.PlayerGlass.level
+        StageSettingRow(
+            icon = OwnTVIcon.LAYERS,
+            title = playerTitle,
+            desc = playerLine,
+            value = SettingValue.Stepper(playerLabels[playerLevel]),
+            onClick = { tv.own.owntv.glcn.PlayerGlass.set(playerCtx, (playerLevel + 1) % tv.own.owntv.glcn.PlayerGlass.LEVELS) },
+            onStep = { d -> tv.own.owntv.glcn.PlayerGlass.set(playerCtx, playerLevel + d) },
+            help = SettingHelp(playerTitle, playerLine, playerLabels, chosen = playerLevel, recommended = tv.own.owntv.glcn.PlayerGlass.NORMAL, hints = stepHints),
+        )
+
         val resetTitle = stringResource(tv.own.owntv.R.string.common_reset)
         val resetLine = stringResource(R.string.settings_line_glass_reset, stringResource(R.string.common_percent, tv.own.owntv.core.settings.SettingsRepository.GLASS_ALPHA_DEFAULT_PCT))
         StageSettingRow(
