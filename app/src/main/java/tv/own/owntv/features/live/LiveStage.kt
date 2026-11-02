@@ -334,14 +334,14 @@ internal fun LiveStagePane(
         Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             if (now != null) {
-                Text(now.title, style = stageText(42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (!tall) Text(now.title, style = stageText(42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     listOfNotNull(
                         detailsLine(now, nowNext.nowDetails).takeIf { it.isNotBlank() },
                         tv.own.owntv.ui.components.rememberTmdbRating(now.title, nowNext.nowDetails?.categories),
                     ).joinToString("  ·  "),
                     style = stageText(19, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 8.mpx, bottom = 16.mpx),
+                    modifier = Modifier.padding(top = if (tall) 0.mpx else 8.mpx, bottom = 16.mpx),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                     StageProgress(progressOf(now), Modifier.weight(1f))
@@ -399,10 +399,14 @@ internal fun LiveStagePane(
         }
     }
     if (ficha) {
-        Row(modifier.fillMaxHeight().padding(bottom = 110.mpx)) {
-            Column(Modifier.weight(0.55f).fillMaxHeight()) { Info(Modifier.fillMaxWidth().weight(1f), tall = true) }
-            Spacer(Modifier.width(28.mpx))
-            Column(Modifier.weight(0.45f)) { Video(Modifier.fillMaxWidth()) }
+        // The title across the whole column, then the details beside a video as wide as they are.
+        Column(modifier.fillMaxHeight().padding(bottom = 110.mpx)) {
+            nowNext?.now?.let { Text(it.title, style = stageText(42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.mpx, bottom = 14.mpx)) }
+            Row(Modifier.fillMaxWidth().weight(1f)) {
+                Column(Modifier.weight(0.5f).fillMaxHeight()) { Info(Modifier.fillMaxWidth().weight(1f), tall = true) }
+                Spacer(Modifier.width(28.mpx))
+                Column(Modifier.weight(0.5f)) { Video(Modifier.fillMaxWidth()) }
+            }
         }
     } else {
         Column(modifier) {

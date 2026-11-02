@@ -674,11 +674,12 @@ fun LiveScreen(
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
                 val light = page.luminance() > 0.5f
                 val artW = stageW + margin
-                // The picture runs the whole column down, cropped to it, so the page under the schedule is not bare.
-                Box(Modifier.align(Alignment.TopEnd).padding(top = 96.mpx).width(artW).fillMaxHeight()) {
-                    tv.own.owntv.ui.components.ProgrammeArt(url = backdrop, modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.45f else 0.9f }, tolerance = 10f)
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.5f to page.copy(alpha = if (light) 0.9f else 0.85f), 0.68f to page.copy(alpha = if (light) 0.5f else 0.35f), 0.9f to page.copy(alpha = 0f))))
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.1f to page.copy(alpha = 0f), 0.72f to page.copy(alpha = 0f), 0.95f to page.copy(alpha = 0.9f))))
+                // The picture whole (16:9, not cropped) against the bottom of the column, so it fills the page under the
+                // schedule; it fades out upwards, where the title, the text and the video sit.
+                Box(Modifier.align(Alignment.BottomEnd).width(artW).height(artW * 9f / 16f)) {
+                    tv.own.owntv.ui.components.ProgrammeArt(url = backdrop, modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.45f else 0.9f })
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.25f to page.copy(alpha = if (light) 0.8f else 0.6f), 0.55f to page.copy(alpha = 0f))))
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.35f to page.copy(alpha = 0.7f), 0.62f to page.copy(alpha = 0f), 0.88f to page.copy(alpha = 0f), 1f to page.copy(alpha = 0.75f))))
                 }
             } else if (backdrop != null) {
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
