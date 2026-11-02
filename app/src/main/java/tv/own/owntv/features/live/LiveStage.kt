@@ -370,7 +370,7 @@ internal fun LiveStagePane(
         }
         val next = nowNext?.next
         // glcn: what follows, several — the next one and the two after it.
-        val later = nowNext?.upcoming.orEmpty().take(2)
+        val later = nowNext?.upcoming.orEmpty().take(if (tall) 4 else 2)
         if (next != null) {
             Column(
                 Modifier
@@ -400,9 +400,9 @@ internal fun LiveStagePane(
     }
     if (ficha) {
         Row(modifier.fillMaxHeight().padding(bottom = 110.mpx)) {
-            Column(Modifier.weight(0.6f).fillMaxHeight()) { Info(Modifier.fillMaxWidth().weight(1f), tall = true) }
+            Column(Modifier.weight(0.55f).fillMaxHeight()) { Info(Modifier.fillMaxWidth().weight(1f), tall = true) }
             Spacer(Modifier.width(28.mpx))
-            Column(Modifier.weight(0.4f)) { Video(Modifier.fillMaxWidth()) }
+            Column(Modifier.weight(0.45f)) { Video(Modifier.fillMaxWidth()) }
         }
     } else {
         Column(modifier) {

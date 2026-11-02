@@ -60,3 +60,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⬆️ Top bar navigation: ▲ from the top of Sports, the Guide or any section now reaches the bar.
 - 📰 Live TV (on trial): the column beside the channel list is now the programme's page — title, a longer synopsis (up to 6 lines) and what follows over the programme's picture, with the video small in the top right corner; key hints no longer sit on the schedule.
 - 🌗 Live TV page: the picture darkens more behind the title and synopsis, so the text never sits on faces.
+- 🖼️ Live TV page: bigger video, the programme's picture runs the whole column down, and four programmes follow instead of three.
