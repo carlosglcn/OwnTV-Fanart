@@ -668,7 +668,18 @@ fun LiveScreen(
         // nothing frames it: it fades into the page towards the left and the top, behind the text.
         if (!cinematic && lockedKey == null && previewShown) {
             val backdrop = nowNext?.takeIf { it.now != null }?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() }
-            if (backdrop != null) {
+            if (backdrop != null && tv.own.owntv.glcn.LivePaneLayout.FICHA) {
+                // glcn: Ficha — the picture whole across the column's top, the video tile over its right corner; it
+                // darkens strongly towards the left, where the title and synopsis sit, and melts into the page below.
+                val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
+                val light = page.luminance() > 0.5f
+                val artW = stageW + margin
+                Box(Modifier.align(Alignment.TopEnd).padding(top = 96.mpx).width(artW).height(artW * 9f / 16f)) {
+                    tv.own.owntv.ui.components.ProgrammeArt(url = backdrop, modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.45f else 0.9f })
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.42f to page.copy(alpha = if (light) 0.85f else 0.72f), 0.78f to page.copy(alpha = 0f))))
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.16f to page.copy(alpha = 0f), 0.55f to page.copy(alpha = 0f), 1f to page)))
+                }
+            } else if (backdrop != null) {
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
                 // glcn: the whole picture, in the room under the preview (not a crop running up behind it):
                 // as tall as that room, 16:9, against the right edge.

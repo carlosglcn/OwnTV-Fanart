@@ -266,10 +266,13 @@ internal fun LiveStagePane(
     val loading = showVideo && previewState == tv.own.owntv.player.LivePreviewEngine.State.LOADING
     val videoR = 28.mpx
     val videoShadow = tv.own.owntv.ui.theme.stageShadow(0.55f)
-    Column(modifier) {
+    // glcn: [tv.own.owntv.glcn.LivePaneLayout.FICHA] — the programme's page first (title, a long synopsis, what follows)
+    // with the video small in its top right corner; the older layout keeps the big video on top.
+    val ficha = tv.own.owntv.glcn.LivePaneLayout.FICHA
+    @Composable
+    fun Video(videoModifier: Modifier) {
         Box(
-            Modifier
-                .fillMaxWidth()
+            videoModifier
                 .aspectRatio(16f / 9f)
                 .drawBehind {
                     drawBoxShadow(videoShadow, 80.mpx.toPx(), videoR.toPx(), dy = 30.mpx.toPx())
@@ -322,9 +325,12 @@ internal fun LiveStagePane(
                 )
             }
         }
+    }
+    @Composable
+    fun Info(infoModifier: Modifier, tall: Boolean) {
         val now = nowNext?.now
-        Box(Modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth().padding(start = 4.mpx, end = 4.mpx, top = 34.mpx)) {
+        Box(infoModifier) {
+        Column(Modifier.fillMaxWidth().then(if (tall) Modifier.fillMaxHeight() else Modifier).padding(start = 4.mpx, end = 4.mpx, top = if (tall) 0.mpx else 34.mpx)) {
         Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             if (now != null) {
@@ -356,9 +362,10 @@ internal fun LiveStagePane(
         (now?.description?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
             tv.own.owntv.features.shell.components.DriftingSynopsis(
                 it,
-                modifier = Modifier.padding(top = 14.mpx),
+                modifier = Modifier.padding(top = 14.mpx).then(if (tall) Modifier.weight(1f, fill = false) else Modifier),
                 style = stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp),
                 color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
+                lines = if (tall) 6 else 3,
             )
         }
         val next = nowNext?.next
@@ -389,6 +396,18 @@ internal fun LiveStagePane(
             }
         }
         }
+        }
+    }
+    if (ficha) {
+        Row(modifier.fillMaxHeight().padding(bottom = 110.mpx)) {
+            Column(Modifier.weight(0.6f).fillMaxHeight()) { Info(Modifier.fillMaxWidth().weight(1f), tall = true) }
+            Spacer(Modifier.width(28.mpx))
+            Column(Modifier.weight(0.4f)) { Video(Modifier.fillMaxWidth()) }
+        }
+    } else {
+        Column(modifier) {
+            Video(Modifier.fillMaxWidth())
+            Info(Modifier.fillMaxWidth(), tall = false)
         }
     }
 }
