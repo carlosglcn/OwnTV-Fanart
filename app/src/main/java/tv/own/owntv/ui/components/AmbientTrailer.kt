@@ -233,6 +233,9 @@ object TrailerPool {
 
     private fun allowed(): Boolean = !tv.own.owntv.glcn.LowRam.on
 
+    /** glcn: whether a trailer player exists now (for the memory diary). */
+    val active: Boolean get() = view != null
+
     /** glcn: no player is made before this (uptime ms). */
     private var notBefore = 0L
     private var wasPlaying = false

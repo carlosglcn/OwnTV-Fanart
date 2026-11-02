@@ -134,6 +134,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // Fixed for this process before any player exists: the setting applies only after a restart.
         tv.own.owntv.core.player.FfmpegAudioSetting.load(this)
         tv.own.owntv.glcn.CategoryIcons.ensure(this) // glcn: category icons and the ones chosen by hand
+        tv.own.owntv.glcn.MemoryWatch.start(this) // glcn: memory diary, stall watch and memory brake (one sleeping thread)
         tv.own.owntv.glcn.PlayerGlass.ensure(this) // glcn: see-through level of the panels over the video
         tv.own.owntv.glcn.Labs.ensure(this) // glcn: test features (switched on with a key sequence in Settings)
         tv.own.owntv.glcn.AppShortcuts.ensure(this)

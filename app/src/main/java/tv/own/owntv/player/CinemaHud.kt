@@ -584,6 +584,7 @@ private fun ChaptersTab(
         try {
             // Nearest the chapter playing first, then outwards.
             chapters.indices.sortedBy { kotlin.math.abs(it - current) }.forEach { i ->
+                if (tv.own.owntv.glcn.MemoryWatch.tight) return@LaunchedEffect // memory braked: no more frames now
                 if (thumbs[i] == null) frames.at(chapters[i].startMs)?.let { thumbs[i] = it }
             }
         } finally {
