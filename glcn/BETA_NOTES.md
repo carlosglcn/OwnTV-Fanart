@@ -59,3 +59,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ Runway (Films and Series): coming back from a title or the player lands on the poster you left; CH+/CH− jump a screenful; a held ◀ no longer slips out to the menu; the row glides with less work for the TV.
 - ⬆️ Top bar navigation: ▲ from the top of Sports, the Guide or any section now reaches the bar.
 - 📰 Live TV (on trial): the column beside the channel list is now the programme's page — title, a longer synopsis (up to 6 lines) and what follows over the programme's picture, with the video small in the top right corner; key hints no longer sit on the schedule.
+- 🌗 Live TV page: the picture darkens more behind the title and synopsis, so the text never sits on faces.

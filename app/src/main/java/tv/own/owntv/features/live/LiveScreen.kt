@@ -676,7 +676,7 @@ fun LiveScreen(
                 val artW = stageW + margin
                 Box(Modifier.align(Alignment.TopEnd).padding(top = 96.mpx).width(artW).height(artW * 9f / 16f)) {
                     tv.own.owntv.ui.components.ProgrammeArt(url = backdrop, modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.45f else 0.9f })
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.42f to page.copy(alpha = if (light) 0.85f else 0.72f), 0.78f to page.copy(alpha = 0f))))
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.5f to page.copy(alpha = if (light) 0.9f else 0.85f), 0.68f to page.copy(alpha = if (light) 0.5f else 0.35f), 0.9f to page.copy(alpha = 0f))))
                     Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.16f to page.copy(alpha = 0f), 0.55f to page.copy(alpha = 0f), 1f to page)))
                 }
             } else if (backdrop != null) {
