@@ -325,7 +325,8 @@ private fun SeriesGrid(
     // The List view scrolls a LazyListState, the grids (Cinematic and Separate) a LazyGridState.
     val usesList = viewMode == SettingsRepository.VodViewMode.LIST
     // glcn: the Runway layout is one row of posters; it has no lazy state, only the index it is centred on.
-    var runwayAt by remember(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
+    // glcn: saveable, so coming back from the player or a title's page the row is still on the poster left.
+    var runwayAt by androidx.compose.runtime.saveable.rememberSaveable(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
     var runwayWindow by remember { mutableStateOf(0..0) }
     val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
     suspend fun scrollToIndex(i: Int) {
@@ -564,6 +565,14 @@ private fun SeriesGrid(
         }
     }
     val targetSeriesId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: selectedSeries?.id else selectedSeries?.id
+    // glcn: Runway — the row centres on the remembered title once the list is there, so restoring focus to it
+    // finds it composed (only the posters around the centre exist).
+    androidx.compose.runtime.LaunchedEffect(runway, selectedKey, series.itemCount > 0) {
+        if (!runway || series.itemCount == 0) return@LaunchedEffect
+        val id = targetSeriesId ?: return@LaunchedEffect
+        val idx = series.itemSnapshotList.items.indexOfFirst { it.id == id }
+        if (idx >= 0) runwayAt = idx
+    }
     val openMenu: (tv.own.owntv.core.database.entity.SeriesEntity, Int) -> Unit = { show, index -> contextSeries = show; contextSeriesId = show.id; contextSeriesIndex = index }
     val onShowFocus: (tv.own.owntv.core.database.entity.SeriesEntity) -> Unit = { show ->
         vm.onSeriesFocused(show)

@@ -270,7 +270,8 @@ fun MoviesScreen(
     // The List view scrolls a LazyListState, the grids (Cinematic and Separate) a LazyGridState.
     val usesList = viewMode == SettingsRepository.VodViewMode.LIST
     // glcn: the Runway layout is one row of posters; it has no lazy state, only the index it is centred on.
-    var runwayAt by remember(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
+    // glcn: saveable, so coming back from the player or a title's page the row is still on the poster left.
+    var runwayAt by androidx.compose.runtime.saveable.rememberSaveable(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
     var runwayWindow by remember { mutableStateOf(0..0) }
     val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
     suspend fun scrollToIndex(i: Int) {
@@ -503,6 +504,14 @@ fun MoviesScreen(
         }
     }
     val targetMovieId = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: selectedMovie?.id else selectedMovie?.id
+    // glcn: Runway — the row centres on the remembered title once the list is there, so restoring focus to it
+    // finds it composed (only the posters around the centre exist).
+    androidx.compose.runtime.LaunchedEffect(runway, selectedKey, movies.itemCount > 0) {
+        if (!runway || movies.itemCount == 0) return@LaunchedEffect
+        val id = targetMovieId ?: return@LaunchedEffect
+        val idx = movies.itemSnapshotList.items.indexOfFirst { it.id == id }
+        if (idx >= 0) runwayAt = idx
+    }
     val openMenu: (MovieEntity, Int) -> Unit = { movie, index -> contextMovie = movie; contextMovieId = movie.id; contextMovieIndex = index }
     val onMovieFocus: (MovieEntity) -> Unit = { movie ->
         vm.onMovieFocused(movie)

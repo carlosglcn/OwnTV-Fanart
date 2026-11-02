@@ -1550,6 +1550,14 @@ fun OwnTVShell(
                                 // content was entered. The D-pad search alone missed it whenever the open rail
                                 // overlapped the content's left edge, which left Back as the only way out.
                                 .onKeyEvent { e ->
+                                    // glcn: with the top bar, ▲ with nothing further up in the content (Sports, the Guide's
+                                    // top line) goes to the bar, the way ◀ goes to the rail.
+                                    if (e.key == Key.DirectionUp && e.type == KeyEventType.KeyDown &&
+                                        navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.TOP
+                                    ) {
+                                        if (!contentFocusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Up)) focusRail()
+                                        return@onKeyEvent true
+                                    }
                                     val back = if (contentLtr) Key.DirectionLeft else Key.DirectionRight
                                     if (e.key != back || e.type != KeyEventType.KeyDown) return@onKeyEvent false
                                     if (!contentFocusManager.moveFocus(if (contentLtr) androidx.compose.ui.focus.FocusDirection.Left else androidx.compose.ui.focus.FocusDirection.Right)) {

@@ -56,3 +56,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏱️ Zap timing in the diagnostics log: for each channel change, when the first data arrived and whether the provider redirected it, next to the decoder start and the first picture
 - ⚡ Faster channel changes: live playback starts after half a second of buffer instead of one (about 0.3–0.5 s saved per zap; recovery after a stall still waits 2 s).
 - 🪟 New setting in Appearance › Glass and background: "Panels over the video" — five levels, from very see-through to very solid, for the player and channel-change panels.
+- 🎞️ Runway (Films and Series): coming back from a title or the player lands on the poster you left; CH+/CH− jump a screenful; a held ◀ no longer slips out to the menu; the row glides with less work for the TV.
+- ⬆️ Top bar navigation: ▲ from the top of Sports, the Guide or any section now reaches the bar.

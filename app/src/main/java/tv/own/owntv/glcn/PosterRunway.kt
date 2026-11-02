@@ -9,8 +9,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.graphics.graphicsLayer
@@ -28,6 +42,9 @@ import kotlin.math.floor
  *
  * [item] draws poster [index] at the width the row gives it; [wideness] is 0 (closed) to 1 (open), read inside draw
  * code so the row never recomposes while it glides.
+ *
+ * CH+/CH− (and Page Up/Down) jump a screenful; the posters a held ◀ is heading for are composed ahead of it, so
+ * focus never runs out of neighbours and escapes to the menu.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -48,17 +65,48 @@ fun PosterRunway(
         else pos.animateTo(to, spring(dampingRatio = 1f, stiffness = 140f))
     }
     if (count <= 0) return
-    val k = floor(pos.value).toInt()
-    val from = (minOf(k, focusedAt) - 1).coerceIn(0, count - 1)
-    val to = (maxOf(k, focusedAt) + 10).coerceAtMost(count - 1)
+    // Only the whole poster under the glide matters to composition: a derived value, so the row does not
+    // recompose on every frame of the spring.
+    val k by remember { derivedStateOf { floor(pos.value).toInt() } }
+    var jumpTo by remember { mutableIntStateOf(-1) }
+    val requesters = remember { HashMap<Int, FocusRequester>() }
+    val lo = if (jumpTo >= 0) minOf(k, focusedAt, jumpTo) else minOf(k, focusedAt)
+    val hi = if (jumpTo >= 0) maxOf(k, focusedAt, jumpTo) else maxOf(k, focusedAt)
+    val from = (lo - BEHIND).coerceIn(0, count - 1)
+    val to = (hi + AHEAD).coerceAtMost(count - 1)
     SideEffect { onWindow(from..to) }
+    LaunchedEffect(jumpTo) {
+        if (jumpTo < 0) return@LaunchedEffect
+        withFrameNanos { }
+        runCatching { requesters[jumpTo]?.requestFocus() }
+        jumpTo = -1
+    }
     fun wideness(i: Int, t: Float) = (1f - abs(i - t)).coerceIn(0f, 1f)
     // The row positions everything itself; Compose's own scroll-into-view must not fight it.
     CompositionLocalProvider(LocalBringIntoViewSpec provides NoBringIntoViewSpec) {
         Layout(
-            modifier = modifier.focusGroup(),
+            modifier = modifier
+                .onPreviewKeyEvent { e ->
+                    if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    val step = when (e.key) {
+                        Key.ChannelUp, Key.PageUp -> -PAGE
+                        Key.ChannelDown, Key.PageDown -> PAGE
+                        else -> return@onPreviewKeyEvent false
+                    }
+                    val target = (focusedAt + step).coerceIn(0, count - 1)
+                    if (target != focusedAt) jumpTo = target
+                    true
+                }
+                .focusGroup(),
             content = {
-                for (i in from..to) key(i) { item(i) { wideness(i, pos.value) } }
+                for (i in from..to) key(i) {
+                    val r = remember { FocusRequester() }
+                    DisposableEffect(r) {
+                        requesters[i] = r
+                        onDispose { if (requesters[i] === r) requesters.remove(i) }
+                    }
+                    Box(Modifier.focusRequester(r), propagateMinConstraints = true) { item(i) { wideness(i, pos.value) } }
+                }
             },
         ) { measurables, constraints ->
             val t = pos.value
@@ -87,3 +135,8 @@ fun PosterRunway(
         }
     }
 }
+
+/** Posters kept composed behind and ahead of the focus, and how far CH± jumps. */
+private const val BEHIND = 4
+private const val AHEAD = 10
+private const val PAGE = 6
