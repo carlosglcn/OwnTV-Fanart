@@ -186,8 +186,10 @@ fun ZapPosterOverlay(
             ) { LazyRow(
                 state = listState,
                 horizontalArrangement = Arrangement.spacedBy(20.mpx),
-                contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 10.mpx, bottom = 10.mpx),
-                modifier = Modifier.focusGroup(),
+                // glcn: the row is clipped at the margins (padding on the row, not in its content) so the next card never
+                // peeks in at the edge; 8 of content room on each side keeps the focused card's ring whole.
+                contentPadding = PaddingValues(start = 8.mpx, end = 8.mpx, top = 10.mpx, bottom = 10.mpx),
+                modifier = Modifier.padding(horizontal = 56.mpx).focusGroup(),
             ) {
                 itemsIndexed(channels, key = { _, c -> c.id }) { index, ch ->
                     // glcn: the cards rise into place one after another from below the screen's edge when the strip opens.
@@ -413,8 +415,8 @@ private const val LINE_REST_MS = 2_600L
 private const val DARK_CARD_GLASS = 0.92f
 
 /**
- * glcn: the zapping strip shows whole cards only — five across the 1920 design width between the 64 margins
- * ((1920 − 128 − 4 × 20) ÷ 5 ≈ 342), so no card is cut at the edge — and a squarer picture, 3:2.
+ * glcn: the zapping strip shows whole cards only — five across the 1920 design width inside the row's clipped margins
+ * ((1920 − 2 × 56 − 2 × 8 − 4 × 20) ÷ 5 ≈ 342), so no card is cut at the edge — and a squarer picture, 3:2.
  */
 private const val ZAP_CARD_W = 342
 private const val ZAP_CARD_RATIO = 3f / 2f
