@@ -67,3 +67,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Player bar: the programme's picture is half as big again.
 - 🃏 Zapping strip: five whole cards across (none cut at the edge), a little narrower and squarer (3:2).
 - 🃏 Zapping strip: the row is clipped at its margins, so no sliver of the next card shows at the edge.
+- 📺 Live TV page: the live video across the whole column at the top; title, details, a 4-line synopsis and what follows (in one row) underneath, with the programme's picture showing at the bottom.

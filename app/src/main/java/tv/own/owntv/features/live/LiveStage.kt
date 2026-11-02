@@ -327,7 +327,7 @@ internal fun LiveStagePane(
         }
     }
     @Composable
-    fun Info(infoModifier: Modifier, tall: Boolean, showTop: Boolean = true, showSchedule: Boolean = true) {
+    fun Info(infoModifier: Modifier, tall: Boolean, showTop: Boolean = true, showSchedule: Boolean = true, rowSchedule: Boolean = false) {
         val now = nowNext?.now
         Box(infoModifier) {
         Column(Modifier.fillMaxWidth().then(if (tall) Modifier.fillMaxHeight() else Modifier).padding(start = 4.mpx, end = 4.mpx, top = if (tall || !showTop) 0.mpx else 34.mpx)) {
@@ -365,7 +365,7 @@ internal fun LiveStagePane(
                 modifier = Modifier.padding(top = 14.mpx).then(if (tall) Modifier.weight(1f, fill = false) else Modifier),
                 style = stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp),
                 color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
-                lines = if (tall) 6 else 3,
+                lines = if (tall) 6 else if (rowSchedule) 4 else 3,
             )
         }
         val next = nowNext?.next
@@ -376,26 +376,30 @@ internal fun LiveStagePane(
             .distinctBy { it.startMs to it.title }
             .take(if (tall || !showTop) 4 else 2)
         if (showSchedule && next != null) {
-            Column(
+            // ◀ from what follows goes back to the channel it belongs to, not to whatever lies to the left.
+            val back = Modifier.onPreviewKeyEvent { e ->
+                if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onBackToList(); true } else false
+            }
+            if (rowSchedule) {
+                // glcn: Ficha — what follows in one row across the column, so the picture under it stays in view.
+                Row(
+                    Modifier.fillMaxWidth().padding(top = if (showTop) 18.mpx else 0.mpx).offset(x = (-12).mpx).focusGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(6.mpx),
+                ) {
+                    LiveScheduleItem(next, accentTime = true, onClick = { onOpenProgramme(next) }, modifier = Modifier.weight(1f).focusRequester(scheduleFocus).then(back))
+                    later.take(2).forEach { l ->
+                        LiveScheduleItem(l, accentTime = false, onClick = { onOpenProgramme(l) }, modifier = Modifier.weight(1f))
+                    }
+                }
+            } else Column(
                 Modifier
                     .padding(top = if (showTop) 14.mpx else 0.mpx)
                     .offset(x = (-12).mpx)
                     .focusGroup(),
             ) {
-                // ◀ from next goes back to the channel it belongs to, not to whatever lies to the left.
-                LiveScheduleItem(
-                    next, accentTime = true, onClick = { onOpenProgramme(next) },
-                    modifier = Modifier.focusRequester(scheduleFocus).onPreviewKeyEvent { e ->
-                        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onBackToList(); true } else false
-                    },
-                )
+                LiveScheduleItem(next, accentTime = true, onClick = { onOpenProgramme(next) }, modifier = Modifier.focusRequester(scheduleFocus).then(back))
                 later.forEach { l ->
-                    LiveScheduleItem(
-                        l, accentTime = false, onClick = { onOpenProgramme(l) },
-                        modifier = Modifier.onPreviewKeyEvent { e ->
-                            if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onBackToList(); true } else false
-                        },
-                    )
+                    LiveScheduleItem(l, accentTime = false, onClick = { onOpenProgramme(l) }, modifier = back)
                 }
             }
         }
@@ -403,21 +407,11 @@ internal fun LiveStagePane(
         }
     }
     if (ficha) {
-        // The title across the whole column, then the details beside a video as wide as they are.
-        // glcn: the video takes 60% of the column; the details and synopsis run beside it, as tall as it is, and
-        // what follows runs the full width underneath.
-        androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxHeight().padding(bottom = 110.mpx)) {
-            val gap = 28.mpx
-            val videoW = (maxWidth - gap) * 0.6f
-            Column(Modifier.fillMaxWidth()) {
-                nowNext?.now?.let { Text(it.title, style = stageText(42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.mpx, bottom = 14.mpx)) }
-                Row(Modifier.fillMaxWidth().height(videoW * 9f / 16f)) {
-                    Column(Modifier.weight(1f).fillMaxHeight()) { Info(Modifier.fillMaxWidth().weight(1f), tall = true, showSchedule = false) }
-                    Spacer(Modifier.width(gap))
-                    Video(Modifier.width(videoW))
-                }
-                Info(Modifier.fillMaxWidth().padding(top = 18.mpx), tall = false, showTop = false)
-            }
+        // glcn: the video across the whole column at the top; under it, full width, the title, the details, a longer
+        // synopsis and what follows in one row — the programme's picture shows through at the bottom.
+        Column(modifier.fillMaxHeight().padding(bottom = 110.mpx)) {
+            Video(Modifier.fillMaxWidth())
+            Info(Modifier.fillMaxWidth(), tall = false, rowSchedule = true)
         }
     } else {
         Column(modifier) {
