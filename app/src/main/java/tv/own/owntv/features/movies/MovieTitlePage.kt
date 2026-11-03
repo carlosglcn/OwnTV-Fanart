@@ -1,5 +1,7 @@
 package tv.own.owntv.features.movies
 
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.background
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.focus.onFocusChanged
@@ -170,7 +172,7 @@ internal fun MovieTitlePage(
                 .focusGroup(),
         ) {
             if (!inPlace) {
-                tv.own.owntv.ui.components.ArtTint(info.backdropUrl.takeIf { tv.own.owntv.features.home.CinemaTrailer.playing == null }, Modifier.fillMaxSize(), strength = 0.7f)
+                tv.own.owntv.ui.components.ArtTint(info.backdropUrl.takeIf { tv.own.owntv.features.home.CinemaTrailer.playing == null || tv.own.owntv.glcn.TitleRoom.textTop > 0f }, Modifier.fillMaxSize(), strength = 0.7f)
                 // The picture — or its trailer — edge to edge.
                 tv.own.owntv.features.shell.components.VodCinematicBackdrop(
                     info.backdropUrl, series = false, Modifier.align(Alignment.TopEnd),
@@ -184,8 +186,11 @@ internal fun MovieTitlePage(
             )
             Box(Modifier.fillMaxSize().graphicsLayer { alpha = lowerAt }.background(page.copy(alpha = 0.86f)))
             // First part: the title, its facts and the buttons.
+            androidx.compose.runtime.DisposableEffect(Unit) { onDispose { tv.own.owntv.glcn.TitleRoom.textTop = 0f } }
             Column(
                 Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 64.mpx, end = 96.mpx)
+                    // glcn: where the words begin, for the trailer's window above them (measured before the entrance slide).
+                    .onGloballyPositioned { tv.own.owntv.glcn.TitleRoom.textTop = it.positionInRoot().y }
                     .graphicsLayer {
                         alpha = enter.value * (1f - lowerAt)
                         translationY = (1f - enter.value) * 40.mpx.toPx() - lowerAt * 160.mpx.toPx()

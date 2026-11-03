@@ -1,5 +1,7 @@
 package tv.own.owntv.features.series
 
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.horizontalScroll
@@ -94,7 +96,7 @@ internal fun SeriesTitleCover(
             }
             .focusGroup(),
     ) {
-        tv.own.owntv.ui.components.ArtTint(info.backdropUrl.takeIf { tv.own.owntv.features.home.CinemaTrailer.playing == null }, Modifier.fillMaxSize(), strength = 0.7f)
+        tv.own.owntv.ui.components.ArtTint(info.backdropUrl.takeIf { tv.own.owntv.features.home.CinemaTrailer.playing == null || tv.own.owntv.glcn.TitleRoom.textTop > 0f }, Modifier.fillMaxSize(), strength = 0.7f)
         tv.own.owntv.features.shell.components.VodCinematicBackdrop(
             info.backdropUrl ?: info.posterUrl, series = true, Modifier.align(Alignment.TopEnd),
             trailer = trailerKey, trailerTitle = info.title, focusKey = seriesId,
@@ -103,8 +105,11 @@ internal fun SeriesTitleCover(
             Modifier.fillMaxSize().graphicsLayer { alpha = enter.value }
                 .background(Brush.verticalGradient(0.4f to Color.Transparent, 0.75f to page.copy(alpha = 0.8f), 1f to page.copy(alpha = 0.95f))),
         )
+        androidx.compose.runtime.DisposableEffect(Unit) { onDispose { tv.own.owntv.glcn.TitleRoom.textTop = 0f } }
         Column(
             Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 64.mpx, end = 96.mpx)
+                    // glcn: where the words begin, for the trailer's window above them (measured before the entrance slide).
+                    .onGloballyPositioned { tv.own.owntv.glcn.TitleRoom.textTop = it.positionInRoot().y }
                 .graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 40.mpx.toPx() },
             verticalArrangement = Arrangement.spacedBy(14.mpx),
         ) {

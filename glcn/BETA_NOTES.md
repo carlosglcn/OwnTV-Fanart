@@ -106,3 +106,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🕒 Clock, date and weather now sit together on one glass chip in the dark theme too, so the date and weather read over any picture (the layout around it is unchanged).
 - 📋 Channel list in the player: no playlist mark on each row when every channel comes from one list; the right column now shows the programme first (picture, title, time, a longer synopsis) and the evening's schedule under it — no empty gap, and no repeated "Next" line.
 - 📝 Drifting synopses always rest on whole lines (the first line could show cut at the top).
+- ➡️ Channel list in the player: ▶ now steps into the coming programmes beside the list (▲▼ to walk them, each shown above with its picture and synopsis; ◀ back to the channels; ▶ again changes the view).
+- 🪧 Compact live banner: a programme without a picture shows the same short card (it showed a taller one with the synopsis).
+- 🎬 Title pages: the trailer now plays in its own larger window at the top left, above the title, and the picture stays whole behind; if a tall logo or a long synopsis leaves too little room there, it plays in the picture as before.

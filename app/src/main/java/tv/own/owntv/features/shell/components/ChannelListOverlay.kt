@@ -124,6 +124,10 @@ fun ChannelListOverlay(
     // The row that owns [focusTarget]: the current channel at first, then wherever paging jumped to.
     var targetIndex by remember(currentIndex) { mutableIntStateOf(currentIndex) }
     var focusedIndex by remember(currentIndex) { mutableIntStateOf(currentIndex) }
+    // glcn: the coming programme picked beside the list (-1 = none), and how many there are; a new channel starts again.
+    var schedPick by remember { mutableIntStateOf(-1) }
+    var schedCount by remember { mutableIntStateOf(0) }
+    androidx.compose.runtime.LaunchedEffect(focusedIndex) { schedPick = -1 }
     var listFocused by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val settingsVm: SettingsViewModel = koinViewModel()
@@ -170,6 +174,20 @@ fun ChannelListOverlay(
                 .width(if (history) 760.mpx else 720.mpx)
                 .then(if (unified) Modifier else Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.glcn.PlayerGlass.share(tv.own.owntv.features.live.PLAYER_SHEET_GLASS)))
                 .onPreviewKeyEvent { e ->
+                    // glcn: ▶ steps into the coming programmes beside the list; ▲▼ walk them, ◀ comes back,
+                    // ▶ again changes the view as before.
+                    if (unified && loadSchedule != null && e.type == KeyEventType.KeyDown) {
+                        val dir = e.key.horizontalDirection(layoutDirection)
+                        if (schedPick < 0 && dir == HorizontalDirection.END && schedCount > 0 && !alignEnd) { schedPick = 0; return@onPreviewKeyEvent true }
+                        if (schedPick >= 0) {
+                            when {
+                                dir == HorizontalDirection.START -> { schedPick = -1; return@onPreviewKeyEvent true }
+                                e.key == Key.DirectionUp -> { schedPick = (schedPick - 1).coerceAtLeast(0); return@onPreviewKeyEvent true }
+                                e.key == Key.DirectionDown -> { schedPick = (schedPick + 1).coerceAtMost((schedCount - 1).coerceAtLeast(0)); return@onPreviewKeyEvent true }
+                                dir == HorizontalDirection.END -> schedPick = -1
+                            }
+                        }
+                    }
                     if (onCyclePanel != null && !alignEnd && e.type == KeyEventType.KeyDown &&
                         e.key.horizontalDirection(layoutDirection) == HorizontalDirection.END
                     ) {
@@ -302,7 +320,11 @@ fun ChannelListOverlay(
                         else -> null
                     },
                     "CH±" to stringResource(R.string.content_key_page),
-                    if (onCyclePanel != null && !alignEnd) "▶" to stringResource(R.string.glcn_zap_view_next) else null,
+                    when {
+                        unified && loadSchedule != null && !alignEnd && schedPick < 0 && schedCount > 0 -> "▶" to stringResource(R.string.content_key_programmes)
+                        onCyclePanel != null && !alignEnd -> "▶" to stringResource(R.string.glcn_zap_view_next)
+                        else -> null
+                    },
                     stringResource(R.string.common_back) to stringResource(R.string.content_close),
                 ),
                 textSize = 16,
@@ -325,6 +347,8 @@ fun ChannelListOverlay(
                 loadSchedule = loadSchedule,
                 loadNow = cachedNow, peek = { nowCache[it.id] },
                 joined = true,
+                selected = schedPick,
+                onRowCount = { schedCount = it },
                 modifier = Modifier,
             )
         }

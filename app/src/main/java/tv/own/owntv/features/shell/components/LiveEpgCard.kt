@@ -186,7 +186,8 @@ fun LiveEpgCard(
 @Composable
 fun LiveEpgCardWithArt(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier) {
     if (epg == null || (epg.now == null && epg.next == null)) return
-    if (art.isNullOrBlank()) { LiveEpgCard(epg, modifier); return }
+    // glcn: without a picture it is the same short card (no synopsis), not the taller standalone one.
+    if (art.isNullOrBlank()) { LiveEpgCard(epg, modifier.padding(vertical = 4.dp), bare = true); return }
     // glcn: no panel of its own (the bar's shade is behind it); the picture 144 × 81, big enough to tell what is on.
     Row(
         modifier.padding(vertical = 4.dp),

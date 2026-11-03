@@ -1,5 +1,8 @@
 package tv.own.owntv.features.shell.components
 
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import tv.own.owntv.ui.theme.stageTone
 import tv.own.owntv.ui.stage.StageTitleArt
 import tv.own.owntv.ui.stage.backdropLeftWash
@@ -291,7 +294,20 @@ internal fun VodCinematicBackdrop(
     // runs, a soft hole opens in the picture's middle and the video shows through. So the window's edges are always
     // the picture melting into the real page (tint and light included) — a painted fade into a flat page colour left
     // a hard line wherever the page behind was tinted. Both masks are on still layers: no video frame redraws them.
-    val playingNow = trailer != null && tv.own.owntv.features.home.CinemaTrailer.playing?.first == trailer
+    // glcn: on a title's page the trailer plays in its own window in the free room above the words, at the top left,
+    // and the picture stays whole; with too little room there (a tall logo, a long synopsis) it plays in the picture
+    // as before.
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val textTop = tv.own.owntv.glcn.TitleRoom.textTop
+    val winLeft = with(density) { 96.mpx.toPx() }
+    val winTop = with(density) { TRAILER_WINDOW_TOP.mpx.toPx() }
+    val winMaxW = with(density) { TRAILER_WINDOW_MAX_W.mpx.toPx() }
+    val winH0 = (textTop - with(density) { 30.mpx.toPx() } - winTop)
+    val winW = minOf(winMaxW, winH0 * 16f / 9f)
+    val winH = winW * 9f / 16f
+    val leftWindow = trailer != null && textTop > 0f && winH >= with(density) { TRAILER_WINDOW_MIN_H.mpx.toPx() }
+    var boxRoot by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    val playingNow = trailer != null && !leftWindow && tv.own.owntv.features.home.CinemaTrailer.playing?.first == trailer
     val holeSpec = ownTvTween<Float>(TRAILER_HOLE_MS)
     val hole by androidx.compose.animation.core.animateFloatAsState(if (playingNow) 1f else 0f, holeSpec, label = "vodTrailerHole")
     // glcn: the video takes most of the window: it starts well inside the picture's melting edge, and while it plays
@@ -302,8 +318,8 @@ internal fun VodCinematicBackdrop(
     fun stepped(v: Float) = (kotlin.math.round(v / EDGE_STEP) * EDGE_STEP).coerceAtLeast(0.02f)
     val imageStart = stepped(edgeStart + (vidStart - edgeStart) * hole)
     val imageBottom = stepped(edgeBottom + (vidBottom - edgeBottom) * hole)
-    Box(sized) {
-        tv.own.owntv.features.home.FocusTrailer(
+    Box(sized.onGloballyPositioned { boxRoot = it.positionInRoot() }) {
+        if (!leftWindow) tv.own.owntv.features.home.FocusTrailer(
             trailer, trailerTitle, focusKey, Modifier.fillMaxSize().insetFraction(vidStart, vidBottom), dissolve = true,
         )
         Box(
@@ -341,8 +357,30 @@ internal fun VodCinematicBackdrop(
             ),
         )
         }
+        if (leftWindow) {
+            // glcn: the trailer's own window at the top left, over the page — rounded, its edges melting into the page.
+            val pageColor = tv.own.owntv.ui.theme.LocalStagePalette.current.page
+            Box(
+                Modifier
+                    .offset { androidx.compose.ui.unit.IntOffset((winLeft - boxRoot.x).toInt(), (winTop - boxRoot.y).toInt()) }
+                    .size(with(density) { winW.toDp() }, with(density) { winH.toDp() })
+                    .graphicsLayer { clip = true; shape = RoundedCornerShape(22.mpx) },
+            ) {
+                tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize(), dissolve = false)
+                Box(Modifier.fillMaxSize().drawBehind {
+                    val e = 0.14f
+                    drawRect(Brush.horizontalGradient(0f to pageColor.copy(alpha = 0.85f), e to pageColor.copy(alpha = 0f), 1f - e to pageColor.copy(alpha = 0f), 1f to pageColor.copy(alpha = 0.85f)))
+                    drawRect(Brush.verticalGradient(0f to pageColor.copy(alpha = 0.85f), e to pageColor.copy(alpha = 0f), 1f - e to pageColor.copy(alpha = 0f), 1f to pageColor.copy(alpha = 0.85f)))
+                })
+            }
+        }
     }
 }
+
+/** glcn: the trailer window above a title page's words — its top (under the menu bar), widest and least height. */
+private const val TRAILER_WINDOW_TOP = 150
+private const val TRAILER_WINDOW_MAX_W = 900
+private const val TRAILER_WINDOW_MIN_H = 230
 
 /**
  * The Cinematic hero: title art 170 high (the name in 92/800 when there is none or it
