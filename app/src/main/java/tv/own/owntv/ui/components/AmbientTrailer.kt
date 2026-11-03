@@ -119,6 +119,9 @@ object TrailerPool {
     ) {
         var index = 0
         var started = false
+        /** glcn: when it was told to play, and when its picture last moved (uptime ms) — for the stall watch. */
+        var startedAt = 0L
+        var movedAt = 0L
     }
 
     private val main = Handler(Looper.getMainLooper())
@@ -140,7 +143,14 @@ object TrailerPool {
         holds = (holds + if (on) 1 else -1).coerceAtLeast(0)
         val p = player ?: return
         if (holds > 0) runCatching { p.pause() }
-        else request?.takeIf { it.started }?.let { runCatching { p.play() } }
+        else request?.takeIf { it.started }?.let { r ->
+            runCatching { p.play() }
+            r.movedAt = android.os.SystemClock.uptimeMillis()
+            // glcn: back from the page's lower part the web page sometimes ignored play(): loaded again where it was.
+            main.postDelayed({
+                if (request === r && holds == 0 && !isPlaying) loadedKey?.let { k -> runCatching { player?.loadVideo(k, lastSecond) } }
+            }, RESUME_CHECK_MS)
+        }
     }
 
     /** Get the player ready ahead of the first trailer (a page that may show one calls this). */
@@ -196,7 +206,7 @@ object TrailerPool {
             // The same trailer, handed on: it goes on from where it is, no new load.
             request = r
             applyMute(p, r.muted)
-            if (r.start) { r.started = true; if (isPlaying) r.onPlaying() else if (holds == 0) p.play() }
+            if (r.start) { r.started = true; markStarted(r); if (isPlaying) r.onPlaying() else if (holds == 0) p.play() }
             return
         }
         request?.let { old -> if (old.owner !== r.owner) runCatching { player?.pause() } }
@@ -208,7 +218,44 @@ object TrailerPool {
         val r = request?.takeIf { it.owner === owner } ?: return
         r.start = true
         val p = player ?: return
-        if (!r.started) { r.started = true; if (holds == 0) p.play() }
+        if (!r.started) { r.started = true; markStarted(r); if (holds == 0) p.play() }
+    }
+
+    private fun markStarted(r: Request) {
+        r.startedAt = android.os.SystemClock.uptimeMillis()
+        r.movedAt = r.startedAt
+        main.removeCallbacks(stallWatch)
+        main.postDelayed(stallWatch, STALL_TICK_MS)
+    }
+
+    /**
+     * glcn: a trailer YouTube never really plays (blocked outside its site, region, gone) sat as a dark band over
+     * the picture, waiting. If its picture has not moved for [STALL_MS] since it was told to play, the next key is
+     * tried, then it gives up and the page keeps its picture.
+     */
+    private val stallWatch: Runnable = object : Runnable {
+        override fun run() {
+            val r = request ?: return
+            if (!r.started) return
+            val now = android.os.SystemClock.uptimeMillis()
+            if (holds == 0 && now - r.movedAt >= STALL_MS) {
+                tv.own.owntv.player.LiveDiagnosticsLog.event("trailer did not play in ${STALL_MS / 1000}s — skipped")
+                val p = player
+                if (p != null && r.index < r.keys.lastIndex) {
+                    r.index++
+                    val key = r.keys[r.index]
+                    loadedKey = key
+                    r.movedAt = now
+                    runCatching { p.loadVideo(key, 0f) }
+                } else {
+                    request = null
+                    runCatching { p?.pause() }
+                    r.onDone()
+                    return
+                }
+            }
+            main.postDelayed(this, STALL_TICK_MS)
+        }
     }
 
     fun setMuted(owner: Any, muted: Boolean) {
@@ -334,7 +381,7 @@ object TrailerPool {
         val key = r.keys.getOrNull(r.index) ?: return
         loadedKey = key
         isPlaying = false
-        if (r.start && holds == 0) { r.started = true; p.loadVideo(key, r.startAt) } else p.cueVideo(key, r.startAt)
+        if (r.start && holds == 0) { r.started = true; markStarted(r); p.loadVideo(key, r.startAt) } else p.cueVideo(key, r.startAt)
     }
 
     private val listener = object : AbstractYouTubePlayerListener() {
@@ -342,7 +389,10 @@ object TrailerPool {
             player = youTubePlayer
             request?.let { load(youTubePlayer, it) }
         }
-        override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) { lastSecond = second; request?.onSecond?.invoke(second) }
+        override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
+            if (second != lastSecond && isPlaying) request?.movedAt = android.os.SystemClock.uptimeMillis()
+            lastSecond = second; request?.onSecond?.invoke(second)
+        }
         override fun onStateChange(youTubePlayer: YouTubePlayer, state: PlayerConstants.PlayerState) {
             isPlaying = state == PlayerConstants.PlayerState.PLAYING
             tv.own.owntv.glcn.FrameWatch.trailerOn = isPlaying
@@ -377,6 +427,9 @@ object TrailerPool {
     private const val AFTER_PLAYER_MS = 6_000L
     private const val HANDOVER_MS = 250L
     private const val RESUME_AFTER_MOVE_MS = 120L
+    private const val RESUME_CHECK_MS = 900L
+    private const val STALL_MS = 9_000L
+    private const val STALL_TICK_MS = 2_000L
 }
 
 /** glcn: a trailer's own shape, and a little more so a thin line at its edge never shows. */
