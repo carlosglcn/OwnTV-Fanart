@@ -15,6 +15,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -77,9 +78,18 @@ fun AmbientTrailer(
     androidx.compose.foundation.layout.BoxWithConstraints(modifier.clipToBounds()) {
         val ratio = if (maxHeight.value > 0f) maxWidth.value / maxHeight.value else VIDEO_RATIO
         val cover = maxOf(ratio / VIDEO_RATIO, VIDEO_RATIO / ratio).coerceIn(1f, 1.6f) * TRAILER_OVERSCAN
+        // glcn: fluidity — the player is laid out at most [TRAILER_RENDER_W] pixels wide and scaled up to the window.
+        // YouTube picks the video's quality from the player's size, so it streams and decodes a light ~540p picture,
+        // and the web page composes a quarter of the pixels; behind the page's soft edges the difference is not seen.
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val boxW = with(density) { maxWidth.toPx() }
+        val renderScale = if (boxW > TRAILER_RENDER_W) boxW / TRAILER_RENDER_W else 1f
+        val renderW = maxWidth / renderScale
+        val renderH = maxHeight / renderScale
         AndroidView(
             factory = { (view.parent as? ViewGroup)?.removeView(view); view },
-            modifier = Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha; scaleX = cover; scaleY = cover },
+            modifier = Modifier.align(androidx.compose.ui.Alignment.Center).requiredSize(renderW, renderH)
+                .graphicsLayer { this.alpha = alpha; scaleX = cover * renderScale; scaleY = cover * renderScale },
             onRelease = { (it.parent as? ViewGroup)?.removeView(it) },
         )
     }
@@ -362,6 +372,8 @@ object TrailerPool {
 /** glcn: a trailer's own shape, and a little more so a thin line at its edge never shows. */
 private const val VIDEO_RATIO = 16f / 9f
 private const val TRAILER_OVERSCAN = 1.03f
+// glcn: the trailer player's largest laid-out width in pixels (YouTube then serves ~540p); scaled up to the window.
+private const val TRAILER_RENDER_W = 960f
 
 /** glcn: how fast a trailer comes in over the picture once it plays. */
 private const val TRAILER_FADE_MS = 450
