@@ -330,11 +330,11 @@ internal fun LiveStagePane(
     fun Info(infoModifier: Modifier, tall: Boolean, showTop: Boolean = true, showSchedule: Boolean = true, rowSchedule: Boolean = false) {
         val now = nowNext?.now
         Box(infoModifier) {
-        Column(Modifier.fillMaxWidth().then(if (tall) Modifier.fillMaxHeight() else Modifier).padding(start = 4.mpx, end = 4.mpx, top = if (tall || !showTop) 0.mpx else 34.mpx)) {
+        Column(Modifier.fillMaxWidth().then(if (tall || rowSchedule) Modifier.fillMaxHeight() else Modifier).padding(start = 4.mpx, end = 4.mpx, top = if (tall || !showTop) 0.mpx else if (rowSchedule) 22.mpx else 34.mpx)) {
         if (showTop) Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             if (now != null) {
-                if (!tall) Text(now.title, style = stageText(42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (!tall) Text(now.title, style = stageText(if (rowSchedule) 34 else 42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = if (rowSchedule) 1 else 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     listOfNotNull(
                         detailsLine(now, nowNext.nowDetails).takeIf { it.isNotBlank() },
@@ -362,7 +362,7 @@ internal fun LiveStagePane(
         if (showTop) (now?.description?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
             tv.own.owntv.features.shell.components.DriftingSynopsis(
                 it,
-                modifier = Modifier.padding(top = 14.mpx).then(if (tall) Modifier.weight(1f, fill = false) else Modifier),
+                modifier = Modifier.padding(top = 14.mpx).then(if (tall || rowSchedule) Modifier.weight(1f, fill = false) else Modifier),
                 style = stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp),
                 color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
                 lines = if (tall) 6 else if (rowSchedule) 4 else 3,
@@ -411,7 +411,9 @@ internal fun LiveStagePane(
         // synopsis and what follows in one row — the programme's picture shows through at the bottom.
         Column(modifier.fillMaxHeight().padding(bottom = 110.mpx)) {
             Video(Modifier.fillMaxWidth())
-            Info(Modifier.fillMaxWidth(), tall = false, rowSchedule = true)
+            // The details take what is left under the video: the synopsis gives way (and drifts) so what follows
+            // is always on screen above the key hints.
+            Info(Modifier.fillMaxWidth().weight(1f), tall = false, rowSchedule = true)
         }
     } else {
         Column(modifier) {

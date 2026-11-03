@@ -74,3 +74,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🩺 Memory diary in the playback report: once a minute, off the main thread, a line when memory moves noticeably (or every 10 min), with what was going on — playing, trailer, picture cache, syncing.
 - 🐢 Stall watch: if the app stops answering for 3 s, what it was doing is written to the report (only while it is on screen).
 - 🛑 Memory brake: past a limit set by the device's memory (~490 MB on a SHIELD), the pictures kept in memory, the trailer, picture prefetch and chapter frames are let go — never what is playing; light mode is never switched on. All of it on one sleeping low-priority thread, unnoticeable even in long sessions.
+- 🩹 Live TV page: what follows is always on screen under the big video — the synopsis gives way (and drifts) instead of pushing it under the key hints; the title is one line there.
