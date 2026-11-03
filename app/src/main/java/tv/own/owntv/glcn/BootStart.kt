@@ -57,10 +57,16 @@ object AppForeground {
 /** glcn: the start-up half of [BootStart]. */
 class BootStartReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == QUICKBOOT) BootStart.startIfWanted(context)
+        // glcn: not at the very moment the box starts — Android is still bringing everything up then, and the app
+        // opening with it froze at times; a little later it opens into a settled system.
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == QUICKBOOT) {
+            val app = context.applicationContext
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ BootStart.startIfWanted(app) }, BOOT_DELAY_MS)
+        }
     }
 
     private companion object {
         const val QUICKBOOT = "android.intent.action.QUICKBOOT_POWERON"
+        const val BOOT_DELAY_MS = 40_000L
     }
 }

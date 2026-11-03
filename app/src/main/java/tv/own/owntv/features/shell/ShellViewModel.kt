@@ -111,7 +111,13 @@ class ShellViewModel(
 
     /** The Auto refresh settings — core's [tv.own.owntv.core.sync.AutoRefresh], shared with the phone. */
     fun checkAutoRefresh(includeStartup: Boolean) {
-        viewModelScope.launch { autoRefresh.check(includeStartup) }
+        viewModelScope.launch {
+            // glcn: the box has only just started (the first minutes after a restart, when Android itself is busiest
+            // and memory is tightest): the start-up syncs wait a little, so the app opens light.
+            val sinceBoot = android.os.SystemClock.elapsedRealtime()
+            if (includeStartup && sinceBoot < JUST_BOOTED_MS) kotlinx.coroutines.delay(JUST_BOOTED_MS - sinceBoot)
+            autoRefresh.check(includeStartup)
+        }
     }
 
     /**
@@ -349,3 +355,6 @@ class ShellViewModel(
         return profileDao.resolveExistingProfileId(preferred)
     }
 }
+
+/** glcn: how long after the box starts the start-up syncs wait for. */
+private const val JUST_BOOTED_MS = 3 * 60_000L

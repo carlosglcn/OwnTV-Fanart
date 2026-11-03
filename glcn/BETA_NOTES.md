@@ -89,3 +89,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🐇 Trailers lighter: they play only once a film's or show's page is open (no longer for every title the cursor rests on in the list), start after 4 s on the page, and the trailer player is let go 10 s after leaving instead of a minute.
 - 🧭 Memory diary also shows how much memory the whole box has free (the trailer's web page and other apps never show in the app's own figure), and the memory brake also steps in when the box runs short.
 - 🧩 Apps (test feature): holding OK on an app opens its menu and it stays open — the release of the same press no longer chose the first entry.
+- 🚀 Right after the box restarts: "Open when the TV turns on" waits 40 s before opening the app, and the start-up syncs (playlists, guide) wait until the box has been up 3 minutes — Android is busiest and shortest of memory then, and the app froze at times.
