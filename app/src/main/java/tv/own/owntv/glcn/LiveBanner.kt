@@ -98,9 +98,10 @@ private fun Bar(progress: Float, modifier: Modifier = Modifier) {
 @Composable
 private fun LeftRing(progress: Float, modifier: Modifier = Modifier) {
     val accent = stageAccent.accent
+    val track = hudInk.copy(alpha = 0.25f)
     Box(modifier.size(14.dp).drawBehind {
         val w = 2.dp.toPx()
-        drawCircle(hudInk.copy(alpha = 0.25f), style = Stroke(w))
+        drawCircle(track, style = Stroke(w))
         drawArc(accent, -90f, 360f * (1f - progress), false, topLeft = Offset(w / 2, w / 2), size = Size(size.width - w, size.height - w), style = Stroke(w, cap = StrokeCap.Round))
     })
 }
