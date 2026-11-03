@@ -657,7 +657,7 @@ fun LiveScreen(
             stageW = rest - listW
         } else {
             // The design's geometry.
-            colW = fx(350); sheetW = fx(450)
+            colW = fx(260); sheetW = fx(450) // glcn: a narrower category column (was 350)
             listW = if (separate) fx(620) else fx(846)
             stageW = if (separate) fx(766) else fx(912)
         }
@@ -967,9 +967,18 @@ fun LiveScreen(
                         onClick = onOpenGuide,
                         labelOnFocus = true,
                     )
+                    // glcn: how many matches are on right now, beside the icon ("⚽ 2"), read from the guide now and then.
+                    val liveMatches by androidx.compose.runtime.produceState(0) {
+                        while (true) {
+                            value = runCatching { vm.sportsNow().count { tv.own.owntv.core.live.SportsNow.isLive(it.programme) } }.getOrDefault(0)
+                            kotlinx.coroutines.delay(SPORTS_COUNT_MS)
+                        }
+                    }
                     tv.own.owntv.ui.stage.StageTool(
                         text = stringResource(R.string.glcn_sports_now),
                         icon = OwnTVIcon.SPORTS,
+                        value = liveMatches.takeIf { it > 0 }?.toString(),
+                        valueAccent = true,
                         onClick = { sportsOpen = true },
                         labelOnFocus = true,
                     )
@@ -1007,7 +1016,8 @@ fun LiveScreen(
                             )
                             layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(-extra, 0) }
                         },
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(start = glowRoom, end = glowRoom, bottom = 16.mpx),
+                        // glcn: room at the foot so the last row never sits on the edge of the TV (overscan).
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(start = glowRoom, end = glowRoom, bottom = 48.mpx),
                     ) {
                         items(
                             count = channels.itemCount,
@@ -2166,3 +2176,6 @@ private const val HEAD_WAIT_MS = 450L
 
 /** glcn: how long Live TV's key hints stay on screen after arriving. */
 private const val HINTS_SHOWN_MS = 7_000L
+
+/** glcn: how often the toolbar's live-match count is read again. */
+private const val SPORTS_COUNT_MS = 5 * 60_000L

@@ -160,7 +160,7 @@ internal fun LiveStageRow(
     StageRow(
         onClick = onClick,
         onLongClick = onLongClick,
-        height = 96.mpx,
+        height = 82.mpx,
         modifier = modifier.fillMaxWidth().onFocusChanged { if (it.hasFocus) onFocus() },
     ) { focused ->
         if (showNumber) {
@@ -174,14 +174,14 @@ internal fun LiveStageRow(
             )
         }
         // glcn: every logo on the same rounded glass tile, one size — "1" and "2" no longer tower over the others.
-        LivePlate(channel.displayLogoUrl, 92.mpx, 64.mpx, radius = 16.mpx)
+        LivePlate(channel.displayLogoUrl, 80.mpx, 56.mpx, radius = 14.mpx)
         Column(Modifier.weight(1f)) {
-            Text(name.name, style = stageText(22, 700), color = if (focused) StageColors.FxText else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(name.name, style = stageText(20, 700), color = if (focused) StageColors.FxText else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val title = now?.title ?: nowTitle
             if (title != null) {
-                Spacer(Modifier.height(2.mpx))
+                Spacer(Modifier.height(1.mpx))
                 Text(
-                    title, style = stageText(17, 400), color = if (focused) StageColors.FxLine else StageColors.Muted,
+                    title, style = stageText(16, 400), color = if (focused) StageColors.FxLine else StageColors.Muted,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -194,7 +194,7 @@ internal fun LiveStageRow(
                         append("  ")
                         append(next.title)
                     },
-                    style = stageText(15, 500), color = StageColors.FxLine.copy(alpha = 0.75f),
+                    style = stageText(14, 500), color = StageColors.FxLine.copy(alpha = 0.75f),
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -216,7 +216,7 @@ internal fun LiveStageRow(
 private fun TimeLeftRing(progress: Float, minutes: Long, focused: Boolean) {
     val track = if (focused) StageColors.FxLine.copy(alpha = 0.25f) else StageColors.Dim.copy(alpha = 0.3f)
     val fill = if (focused) StageColors.FxText else stageAccent.accent
-    Box(Modifier.size(46.mpx), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(40.mpx), contentAlignment = Alignment.Center) {
         androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
             val w = 3.5f * density
             val inset = w / 2
@@ -226,7 +226,7 @@ private fun TimeLeftRing(progress: Float, minutes: Long, focused: Boolean) {
             drawArc(fill, -90f, 360f * progress, false, tl, size, style = androidx.compose.ui.graphics.drawscope.Stroke(w, cap = androidx.compose.ui.graphics.StrokeCap.Round))
         }
         val label = if (minutes >= 60) "${minutes / 60}h" else "$minutes'"
-        Text(label, style = stageText(13, 700).copy(fontFeatureSettings = Tabular), color = if (focused) StageColors.FxText else StageColors.Muted, maxLines = 1)
+        Text(label, style = stageText(12, 700).copy(fontFeatureSettings = Tabular), color = if (focused) StageColors.FxText else StageColors.Muted, maxLines = 1)
     }
 }
 
@@ -387,18 +387,20 @@ internal fun LiveStagePane(
         if (showTop) Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             if (now != null) {
-                if (!tall) Text(now.title, style = stageText(if (rowSchedule) 34 else 42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = if (rowSchedule) 1 else 2, overflow = TextOverflow.Ellipsis)
+                if (!tall) Text(now.title, style = stageText(if (rowSchedule) 30 else 42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = if (rowSchedule) 1 else 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     listOfNotNull(
                         detailsLine(now, nowNext.nowDetails).takeIf { it.isNotBlank() },
+                        // glcn: Ficha — the time left sits with the times, not alone at the end of the bar.
+                        timeLeftText(minutesLeft(now)).takeIf { rowSchedule },
                         tv.own.owntv.ui.components.rememberTmdbRating(now.title, nowNext.nowDetails?.categories),
                     ).joinToString("  ·  "),
-                    style = stageText(19, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = if (tall) 0.mpx else 8.mpx, bottom = 16.mpx),
+                    style = stageText(if (rowSchedule) 17 else 19, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = if (tall) 0.mpx else if (rowSchedule) 6.mpx else 8.mpx, bottom = if (rowSchedule) 12.mpx else 16.mpx),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                     StageProgress(progressOf(now), Modifier.weight(1f))
-                    Text(timeLeftText(minutesLeft(now)), style = stageText(17, 400).copy(fontFeatureSettings = Tabular), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (!rowSchedule) Text(timeLeftText(minutesLeft(now)), style = stageText(17, 400).copy(fontFeatureSettings = Tabular), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -436,12 +438,12 @@ internal fun LiveStagePane(
             if (rowSchedule) {
                 // glcn: Ficha — what follows in one row across the column, so the picture under it stays in view.
                 Row(
-                    Modifier.fillMaxWidth().padding(top = if (showTop) 18.mpx else 0.mpx).offset(x = (-12).mpx).focusGroup(),
-                    horizontalArrangement = Arrangement.spacedBy(6.mpx),
+                    Modifier.fillMaxWidth().padding(top = if (showTop) 18.mpx else 0.mpx).focusGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(8.mpx),
                 ) {
-                    LiveScheduleItem(next, accentTime = true, onClick = { onOpenProgramme(next) }, modifier = Modifier.weight(1f).focusRequester(scheduleFocus).then(back))
+                    LiveScheduleItem(next, accentTime = true, onClick = { onOpenProgramme(next) }, modifier = Modifier.weight(1f).focusRequester(scheduleFocus).then(back), chip = true)
                     later.take(2).forEach { l ->
-                        LiveScheduleItem(l, accentTime = false, onClick = { onOpenProgramme(l) }, modifier = Modifier.weight(1f))
+                        LiveScheduleItem(l, accentTime = false, onClick = { onOpenProgramme(l) }, modifier = Modifier.weight(1f), chip = true)
                     }
                 }
             } else Column(
@@ -481,10 +483,14 @@ internal fun LiveStagePane(
  * time and full-colour title, later is muted. Focused = FILLED.
  */
 @Composable
-private fun LiveScheduleItem(p: XtEpgEntry, accentTime: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun LiveScheduleItem(p: XtEpgEntry, accentTime: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, chip: Boolean = false) {
     val formatTime = rememberSystemTimeFormatter()
     val a = stageAccent
-    StageSurface(onClick = onClick, radius = 12.mpx, modifier = modifier) { focused ->
+    StageSurface(
+        onClick = onClick, radius = 12.mpx, modifier = modifier,
+        // glcn: as a chip (Ficha's row of what follows) it sits on a faint glass pill.
+        idle = if (chip) Modifier.background(StageColors.ControlFill, RoundedCornerShape(12.mpx)) else Modifier,
+    ) { focused ->
         Text(
             buildAnnotatedString {
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold, fontFeatureSettings = Tabular, color = if (focused) a.onAccent else if (accentTime) a.accent else StageColors.Muted)) {
@@ -975,7 +981,7 @@ private fun LiveColumnItem(
             glyph?.let { tv.own.owntv.glcn.CategoryGlyphView(it, on ?: StageColors.Muted, size = 20.mpx, name = entry.label) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.mpx)) {
                 if (!tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) Text(
-                    entry.label, style = stageText(18.5f, 600),
+                    entry.label, style = stageText(17, 600),
                     color = on ?: if (selected) a.accent else stageTone(Color(0xFFCDD7D3), StageColors.ItemText),
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
