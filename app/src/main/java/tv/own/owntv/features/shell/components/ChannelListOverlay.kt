@@ -258,6 +258,8 @@ fun ChannelListOverlay(
                 contentPadding = PaddingValues(horizontal = 4.mpx, vertical = 4.mpx),
                 verticalArrangement = Arrangement.spacedBy(2.mpx),
             ) {
+                // glcn: every channel from one playlist → no playlist mark on each row (as on TV en directo).
+                val oneSource = channels.asSequence().map { it.sourceId }.distinct().take(2).count() <= 1
                 itemsIndexed(channels, key = { _, ch -> ch.id }) { index, ch ->
                     val isPlaying = index == playingIndex
                     val nowMs = remember { System.currentTimeMillis() }
@@ -268,7 +270,7 @@ fun ChannelListOverlay(
                         nowTitle = nowPlaying[ch.id],
                         isFavorite = ch.id in favoriteIds,
                         showNumber = showNumbers,
-                        mark = playlistMarks[ch.sourceId],
+                        mark = if (oneSource) null else playlistMarks[ch.sourceId],
                         onFocus = { focusedIndex = index },
                         onClick = { onSelect(ch) },
                         onLongClick = {},
@@ -372,6 +374,8 @@ internal fun ZapPreviewPanel(
     peek: ((ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?)? = null,
     /** glcn: a coming programme (and the one after it) picked in the schedule, shown instead of what is on. */
     showing: Pair<EpgProgrammeEntity, EpgProgrammeEntity?>? = null,
+    /** glcn: false where what follows is already listed beside it (the joined schedule). */
+    showNext: Boolean = true,
 ) {
     // glcn: the previous channel's programme goes at once — a stale poster for seconds was worse than none.
     var programme by remember(channel?.id) { mutableStateOf(channel?.let { peek?.invoke(it) }) }
@@ -410,7 +414,7 @@ internal fun ZapPreviewPanel(
             DriftingSynopsis(it, style = stageText(16, 400), color = StageColors.Body, lines = if (framed) 4 else bareLines)
         }
         // glcn: and what follows it.
-        next?.let { n ->
+        next?.takeIf { showNext }?.let { n ->
             Text(
                 stringResource(R.string.content_live_next) + " · " + fmt.format(java.util.Date(n.startMs)) + "  " + n.title,
                 style = stageText(16, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -470,9 +474,20 @@ internal fun ZapSchedulePanel(
             style = stageText(22, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(bottom = 12.mpx),
         )
-        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-            // Only as many rows as fit above the programme card, so none is cut in half.
-            val fit = if (joined) ((maxHeight - 180.mpx) / 56.mpx).toInt().coerceAtLeast(3) else rows.size
+        // glcn: joined — the programme first (picture, title, time, synopsis), then the evening under it; no gap.
+        if (joined && loadNow != null) {
+            val pick = rows.getOrNull(selected)
+            ZapPreviewPanel(
+                channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 14.mpx), framed = false, peek = peek,
+                bareAspect = 16f / 9f,
+                bareLines = 5,
+                showing = pick?.let { it to rows.getOrNull(selected + 1) },
+                showNext = false,
+            )
+        }
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(bottom = if (joined) 40.mpx else 0.mpx)) {
+            // Only as many rows as fit under the programme card, so none is cut in half.
+            val fit = if (joined) (maxHeight / 58.mpx).toInt().coerceAtLeast(1) else rows.size
             // glcn: the window follows the picked programme down the evening.
             val start = if (selected >= fit) selected - fit + 1 else 0
             Column(verticalArrangement = Arrangement.spacedBy(5.mpx)) {
@@ -509,17 +524,6 @@ internal fun ZapSchedulePanel(
             }
         }
             }
-        }
-        if (joined && loadNow != null) {
-            val pick = rows.getOrNull(selected)
-            ZapPreviewPanel(
-                // glcn: 16:9 like the programme pictures themselves — 21:9 cut posters and stills at the top and bottom.
-                channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 46.mpx), framed = false, peek = peek,
-                bareAspect = 16f / 9f,
-                // glcn: the free room between the schedule and the picture goes to the synopsis.
-                bareLines = 6,
-                showing = pick?.let { it to rows.getOrNull(selected + 1) },
-            )
         }
     }
 }

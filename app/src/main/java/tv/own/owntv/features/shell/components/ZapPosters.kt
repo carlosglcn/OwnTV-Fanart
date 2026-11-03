@@ -402,7 +402,14 @@ internal fun DriftingSynopsis(
             ),
     ) {
         Text(
-            text, style = style.copy(lineHeight = style.fontSize * 1.4f), color = color,
+            // glcn: every line exactly one step tall (no trimmed first line), so a line-at-a-time drift always rests on
+            // whole lines — the first line used to show cut at the top.
+            text, style = style.copy(
+                lineHeight = style.fontSize * 1.4f,
+                lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
+                    androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center, androidx.compose.ui.text.style.LineHeightStyle.Trim.None,
+                ),
+            ), color = color,
             modifier = Modifier.verticalScroll(scroll, enabled = false).padding(bottom = if (soft) 18.dp else 6.dp),
         )
     }
