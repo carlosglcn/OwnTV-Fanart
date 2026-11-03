@@ -916,18 +916,10 @@ internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, m
         if (!allowed) return@LaunchedEffect
         // glcn: the trailer that was playing on Home when this title was opened goes on, at once, from where it was.
         CinemaTrailer.takeHandoff(t)?.let { at -> startAt = at; ready = t; start = true; return@LaunchedEffect }
-        // glcn: the trailer waits until the remote has rested a moment — loading it while the page is being moved
-        // through made every step stutter. It is prepared, then started, only in a calm spell.
-        suspend fun calm(ms: Long) {
-            while (true) {
-                val quiet = android.os.SystemClock.uptimeMillis() - CinemaTrailer.lastKeyAt
-                if (quiet >= ms) return
-                delay(ms - quiet)
-            }
-        }
-        calm(TRAILER_WARM_MS)
+        // glcn: a few seconds after the page opens, whether the remote is moving or not: prepared first, then started.
+        delay(TRAILER_WARM_MS)
         ready = t
-        calm(CINEMA_TRAILER_MS)
+        delay(CINEMA_TRAILER_MS - TRAILER_WARM_MS)
         start = true
     }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { CinemaTrailer.playing = null } }
@@ -1062,7 +1054,7 @@ private fun cinemaJsonList(json: String?): List<String> {
 private const val KEN_BURNS_ZOOM = 0.12f
 private const val KEN_BURNS_MS = 24_000
 private const val CINEMA_AMBIENT = 0.16f
-private const val CINEMA_TRAILER_MS = 4_000L // glcn: a calm moment on the page first (was 2.2 s)
+private const val CINEMA_TRAILER_MS = 3_000L // glcn: a few seconds after the page opens (was 4 s after a calm spell)
 private const val TRAILER_WARM_MS = 900L
 private const val LIGHTS_DOWN_MS = 2_500L
 /** glcn: the trailer window's share of the screen's width, up on the right. */
