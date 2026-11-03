@@ -155,6 +155,7 @@ object TrailerPool {
         }.getOrNull() ?: return null
         val options = IFramePlayerOptions.Builder(app).controls(0).fullscreen(0).rel(0).ivLoadPolicy(3).ccLoadPolicy(0).build()
         if (runCatching { created.initialize(listener, options) }.isFailure) { runCatching { created.release() }; return null }
+        runCatching { guardRenderer(created) }
         // glcn: moved into another window (a title's page opens in its own), the video went on playing but its picture
         // did not follow — heard and not seen. On such a move a playing trailer is loaded again at the second it was at.
         created.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
@@ -232,6 +233,52 @@ object TrailerPool {
     }
 
     private fun allowed(): Boolean = !tv.own.owntv.glcn.LowRam.on
+
+    /**
+     * glcn: the web view's page runs in its own process; when that process stops answering, every command the player
+     * sends it (on the main thread) waits — the app froze until Android closed it. Android 10+ says when the page
+     * stops answering: it is ended there and then (from a background thread, since the main one is the one waiting),
+     * and its end is handled (the player let go) instead of taking the app down with it.
+     */
+    private fun guardRenderer(root: android.view.View) {
+        val web = findWebView(root) ?: return
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            web.setWebViewRenderProcessClient(watcher, object : android.webkit.WebViewRenderProcessClient() {
+                override fun onRenderProcessUnresponsive(view: android.webkit.WebView, renderer: android.webkit.WebViewRenderProcess?) {
+                    tv.own.owntv.player.LiveDiagnosticsLog.event("trailer page not answering — ended")
+                    runCatching { renderer?.terminate() }
+                }
+                override fun onRenderProcessResponsive(view: android.webkit.WebView, renderer: android.webkit.WebViewRenderProcess?) {}
+            })
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            val inner = web.webViewClient
+            web.webViewClient = GuardClient(inner) { main.post { free() } }
+        }
+    }
+
+    private val watcher: java.util.concurrent.Executor by lazy { java.util.concurrent.Executors.newSingleThreadExecutor() }
+
+    private fun findWebView(v: android.view.View): android.webkit.WebView? = when (v) {
+        is android.webkit.WebView -> v
+        is ViewGroup -> (0 until v.childCount).firstNotNullOfOrNull { findWebView(v.getChildAt(it)) }
+        else -> null
+    }
+
+    /** The player's own page client, with the page process's end handled: the trailer goes, the app stays. */
+    private class GuardClient(private val inner: android.webkit.WebViewClient, private val onGone: () -> Unit) : android.webkit.WebViewClient() {
+        override fun shouldOverrideUrlLoading(view: android.webkit.WebView, request: android.webkit.WebResourceRequest) = inner.shouldOverrideUrlLoading(view, request)
+        override fun onPageStarted(view: android.webkit.WebView, url: String?, favicon: android.graphics.Bitmap?) = inner.onPageStarted(view, url, favicon)
+        override fun onPageFinished(view: android.webkit.WebView, url: String?) = inner.onPageFinished(view, url)
+        override fun shouldInterceptRequest(view: android.webkit.WebView, request: android.webkit.WebResourceRequest) = inner.shouldInterceptRequest(view, request)
+        override fun onReceivedError(view: android.webkit.WebView, request: android.webkit.WebResourceRequest, error: android.webkit.WebResourceError) = inner.onReceivedError(view, request, error)
+        override fun onReceivedHttpError(view: android.webkit.WebView, request: android.webkit.WebResourceRequest, response: android.webkit.WebResourceResponse) = inner.onReceivedHttpError(view, request, response)
+        override fun onRenderProcessGone(view: android.webkit.WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+            tv.own.owntv.player.LiveDiagnosticsLog.event("trailer page process gone (crashed=${detail.didCrash()}) — player let go")
+            onGone()
+            return true
+        }
+    }
 
     /** glcn: whether a trailer player exists now (for the memory diary). */
     val active: Boolean get() = view != null

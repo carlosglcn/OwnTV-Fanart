@@ -75,3 +75,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🐢 Stall watch: if the app stops answering for 3 s, what it was doing is written to the report (only while it is on screen).
 - 🛑 Memory brake: past a limit set by the device's memory (~490 MB on a SHIELD), the pictures kept in memory, the trailer, picture prefetch and chapter frames are let go — never what is playing; light mode is never switched on. All of it on one sleeping low-priority thread, unnoticeable even in long sessions.
 - 🩹 Live TV page: what follows is always on screen under the big video — the synopsis gives way (and drifts) instead of pushing it under the key hints; the title is one line there.
+- 🧯 Trailer freezes: when the trailer's web page stops answering, it is ended at once (Android 10+) and the trailer let go, instead of the whole app freezing until Android closes it.
+- 📋 Playback report: the diagnostic lines come from the saved file, so what happened just before a freeze or a crash is in the report.
