@@ -969,6 +969,25 @@ internal fun VideoPlayerGroupRows(
                 onClick = { tv.own.owntv.glcn.LowRam.setPreviewOnOk(okContext, !tv.own.owntv.glcn.LowRam.previewOnOk) },
             )
         }
+        // glcn: how the programme on air shows on a live channel — Compact (as always), Card, Cinema or Side.
+        val bannerCtx = androidx.compose.ui.platform.LocalContext.current
+        val bannerLabels = listOf(
+            stringResource(R.string.glcn_live_banner_compact),
+            stringResource(R.string.glcn_live_banner_ficha),
+            stringResource(R.string.glcn_live_banner_cine),
+            stringResource(R.string.glcn_live_banner_lateral),
+        )
+        val bannerStyle = tv.own.owntv.glcn.LiveBanner.style
+        val bannerStyles = tv.own.owntv.glcn.LiveBanner.Style.entries
+        KeyedSettingRow(
+            icon = OwnTVIcon.LIVE_TV,
+            title = stringResource(R.string.glcn_live_banner_title),
+            desc = stringResource(R.string.glcn_live_banner_desc),
+            value = SettingValue.Stepper(bannerLabels[bannerStyle.ordinal]),
+            choices = bannerLabels, chosen = bannerStyle.ordinal, recommended = 0,
+            onClick = { tv.own.owntv.glcn.LiveBanner.set(bannerCtx, bannerStyles[(bannerStyle.ordinal + 1) % bannerStyles.size]) },
+            onStep = { d -> tv.own.owntv.glcn.LiveBanner.set(bannerCtx, bannerStyles[(bannerStyle.ordinal + d).coerceIn(0, bannerStyles.size - 1)]) },
+        )
         KeyedSettingRow(
             quickKey = "vp_timeshift",
             icon = OwnTVIcon.REWIND,

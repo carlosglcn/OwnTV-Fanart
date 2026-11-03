@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -188,6 +190,8 @@ fun PlayerHud(
     // (the EPG data lives in LiveViewModel, not the player). Rendered on the right edge whenever the
     // controls are visible, like the top-bar channel card; informational only, never focusable.
     liveEpgCard: (@Composable () -> Unit)? = null,
+    /** glcn: the programme on air drawn over the picture (Cine / Lateral banner, see [tv.own.owntv.glcn.LiveBanner]). */
+    liveBannerWide: (@Composable (Modifier) -> Unit)? = null,
     // Now/next lines for the channel-change banner (the playing channel's guide). Null = name only.
     zapGuide: (@Composable () -> Unit)? = null,
     // The channel a CH+/- step moved to. The banner names it at once; the engine's metadata still
@@ -833,6 +837,9 @@ fun PlayerHud(
             val rise = remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
             val riseSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(HUD_RISE_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
             LaunchedEffect(Unit) { rise.animateTo(1f, riseSpec) }
+            var barHeightPx by remember { mutableIntStateOf(0) } // glcn: the dock's height, for the Cine / Lateral banner
+            // glcn: rewound into the archive, the dock's own card is back (it shows the replayed programme).
+            val wideBanner by remember(liveBannerWide) { androidx.compose.runtime.derivedStateOf { liveBannerWide != null && tv.own.owntv.glcn.LiveBanner.wide && watchingWallMs?.invoke() == null } }
             val risen = Modifier.graphicsLayer { translationY = (1f - rise.value) * HUD_RISE_DP.dp.toPx(); alpha = 0.25f + 0.75f * rise.value }
             // Scrims: a FLAT semi-transparent panel behind the controls, feathered to transparent only at
             // the inner edge. A pure gradient faded out exactly where the chips and the Now/Next text sit,
@@ -887,6 +894,15 @@ fun PlayerHud(
             // Hide the transport (play/seek/prev/next) and bottom bar while an error is up — the error
             // overlay owns the screen with its own Retry, so the play/rewind/forward must not show behind it.
             if (error == null) {
+                // glcn: Cine / Lateral — the programme over the picture, clear of the dock (its height measured).
+                if (isLive && liveBannerWide != null && wideBanner) {
+                    val barDp = with(androidx.compose.ui.platform.LocalDensity.current) { barHeightPx.toDp() }
+                    if (tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.CINE) {
+                        liveBannerWide(Modifier.align(Alignment.BottomStart).then(risen).padding(bottom = barDp))
+                    } else {
+                        liveBannerWide(Modifier.align(Alignment.TopStart).then(risen).padding(start = 28.dp, top = 24.dp, bottom = barDp + 12.dp).fillMaxWidth(0.34f).fillMaxHeight())
+                    }
+                }
                 CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp), buffering = buffering) // glcn: clear of the now/next card's top edge
 
                 val reportDuration = duration.takeIf { it > 0 }?.let { formatTime(it) }
@@ -934,8 +950,8 @@ fun PlayerHud(
                     favorite = favorite, onToggleFavorite = onToggleFavorite,
                     onOpenDialog = { dialog = it }, onPip = onPip, onAudioMode = onAudioMode,
                     onMultiview = onMultiview, onRecordThis = onRecordThis, recordingThis = recordingThis, onBack = onBack,
-                    modifier = Modifier.align(Alignment.BottomStart).then(risen),
-                    side = if (isLive) liveEpgCard else null,
+                    modifier = Modifier.align(Alignment.BottomStart).then(risen).onSizeChanged { barHeightPx = it.height },
+                    side = if (isLive && !wideBanner) liveEpgCard else null,
                     header = if (isLive) {
                         { LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack) }
                     } else null,

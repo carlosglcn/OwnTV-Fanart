@@ -2410,7 +2410,9 @@ fun OwnTVShell(
                                     val art by androidx.compose.runtime.produceState<String?>(liveVm.peekArt(artChannel?.id, epg?.now?.startMs), artChannel?.id, epg?.now?.startMs) {
                                         value = artChannel?.let { liveVm.nowArtUrl(it, epg?.now?.startMs) }
                                     }
-                                    tv.own.owntv.features.shell.components.LiveEpgCardWithArt(epg = epg, art = art)
+                                    // glcn: the banner style chosen in Settings → Player (Compact is the one it always was).
+                                    if (tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.FICHA) tv.own.owntv.glcn.LiveBannerFicha(epg = epg, art = art)
+                                    else tv.own.owntv.features.shell.components.LiveEpgCardWithArt(epg = epg, art = art)
                                 } else {
                                     tv.own.owntv.features.shell.components.LiveEpgCard(
                                         epg = epg,
@@ -2419,6 +2421,21 @@ fun OwnTVShell(
                                         modifier = Modifier.alpha(0.85f),
                                     )
                                 }
+                            }
+                        }
+                    } else null,
+                    // glcn: Cine / Lateral banner — drawn by the player over the picture (not while rewound).
+                    liveBannerWide = if (isLiveChannel) {
+                        { m ->
+                            val epg by liveVm.nowNext.collectAsStateWithLifecycle()
+                            val watching by liveVm.watchingWallMs.collectAsStateWithLifecycle()
+                            val artChannel = previewChannel
+                            val art by androidx.compose.runtime.produceState<String?>(liveVm.peekArt(artChannel?.id, epg?.now?.startMs), artChannel?.id, epg?.now?.startMs) {
+                                value = artChannel?.let { liveVm.nowArtUrl(it, epg?.now?.startMs) }
+                            }
+                            if (watching == null) {
+                                if (tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.CINE) tv.own.owntv.glcn.LiveBannerCine(epg, art, m)
+                                else tv.own.owntv.glcn.LiveBannerLateral(epg, art, m)
                             }
                         }
                     } else null,
