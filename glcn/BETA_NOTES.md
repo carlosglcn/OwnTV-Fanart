@@ -111,3 +111,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎬 Title pages: the trailer now plays in its own larger window at the top left, above the title, and the picture stays whole behind; if a tall logo or a long synopsis leaves too little room there, it plays in the picture as before.
 - 🎬 Title page trailer window: nothing shows there until the video really plays (an empty frosted frame stood there while it loaded), no clipping around the video (it played badly or not at all), and a slow first start is given 15 s before it is skipped.
 - ☀️ The programme's info screen (ⓘ on a live channel) follows the light theme too — it was always dark.
+- 🪧 Cinema and Side banners: the control dock stays as low as with the Compact banner (it grew a tall empty row), so there is no big empty space at the foot and the banner has more room.

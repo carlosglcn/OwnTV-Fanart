@@ -951,7 +951,8 @@ fun PlayerHud(
                     onOpenDialog = { dialog = it }, onPip = onPip, onAudioMode = onAudioMode,
                     onMultiview = onMultiview, onRecordThis = onRecordThis, recordingThis = recordingThis, onBack = onBack,
                     modifier = Modifier.align(Alignment.BottomStart).then(risen).onSizeChanged { barHeightPx = it.height },
-                    side = if (isLive && !wideBanner) liveEpgCard else null,
+                    // glcn: Cine / Lateral — an empty side keeps the dock as low as with the card (without one it grew a tall empty row).
+                    side = if (isLive && !wideBanner) liveEpgCard else if (isLive) ({ }) else null,
                     header = if (isLive) {
                         { LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack) }
                     } else null,
