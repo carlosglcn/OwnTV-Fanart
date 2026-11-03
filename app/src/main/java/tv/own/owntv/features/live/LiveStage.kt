@@ -269,6 +269,17 @@ internal fun LiveStagePane(
     // glcn: [tv.own.owntv.glcn.LivePaneLayout.FICHA] — the programme's page first (title, a long synopsis, what follows)
     // with the video small in its top right corner; the older layout keeps the big video on top.
     val ficha = tv.own.owntv.glcn.LivePaneLayout.FICHA
+    // glcn: Ficha — a programme the guide gives no picture is looked up once (cached) by its title, so the video box
+    // still shows something of it; only after the focus has settled on the channel.
+    val artResolver: tv.own.owntv.core.metadata.ProgrammeArtResolver = org.koin.compose.koinInject()
+    val nowTitle = nowNext?.now?.title
+    val lentArt by androidx.compose.runtime.produceState<String?>(null, nowTitle, ficha) {
+        value = null
+        val t = nowTitle?.takeIf { ficha && it.isNotBlank() } ?: return@produceState
+        if (!nowNext?.nowDetails?.imageUrl.isNullOrBlank()) return@produceState
+        kotlinx.coroutines.delay(500)
+        value = runCatching { artResolver.detailsFor(t, nowNext?.nowDetails?.categories) }.getOrNull()?.backdropUrl
+    }
     @Composable
     fun Video(videoModifier: Modifier) {
         Box(
@@ -286,7 +297,7 @@ internal fun LiveStagePane(
             if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
             // glcn: Ficha — until the video plays (or with the preview off) the box shows the programme's picture, not a
             // black frame with the channel's number.
-            val still = nowNext?.nowDetails?.imageUrl?.takeIf { ficha && it.isNotBlank() && (!playing || loading) }
+            val still = (nowNext?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() } ?: lentArt)?.takeIf { ficha && (!playing || loading) }
             if (still != null) {
                 tv.own.owntv.ui.components.ProgrammeArt(url = still, modifier = Modifier.fillMaxSize(), tolerance = 10f)
                 Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.45f), 0.5f to Color.Transparent)))
@@ -296,7 +307,7 @@ internal fun LiveStagePane(
                 if (loading) Box(Modifier.fillMaxSize().background(Color.Black))
                 ChannelLogoTile(
                     logoUrl = channel.displayLogoUrl,
-                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f).graphicsLayer { alpha = 0.34f },
+                    modifier = (if (ficha) Modifier.align(Alignment.Center).fillMaxWidth(0.34f).fillMaxHeight(0.34f) else Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f)).graphicsLayer { alpha = if (ficha) 0.5f else 0.34f },
                     fill = Color.Transparent,
                 ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(56.mpx)) }
                 Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.5f to Color.Transparent)))
