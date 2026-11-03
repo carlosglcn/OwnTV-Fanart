@@ -1,5 +1,10 @@
 package tv.own.owntv.glcn
 
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.Key
 import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.animateColorAsState
@@ -180,7 +185,20 @@ private fun AppMenu(app: AppShortcuts.App, onDismiss: () -> Unit) {
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) { androidx.compose.runtime.withFrameNanos { }; runCatching { first.requestFocus() } }
     tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = onDismiss, stageLayout = true) {
-        Box(Modifier.fillMaxSize().modalScrim().focusGroup(), contentAlignment = Alignment.Center) {
+        // glcn: the menu opens on a held OK; the release of that same press reached the menu and chose its first
+        // entry at once (the menu vanished). OK counts here only after a press that started inside the menu.
+        var armed by remember { mutableStateOf(false) }
+        Box(
+            Modifier.fillMaxSize().modalScrim()
+                .onPreviewKeyEvent { e ->
+                    val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
+                    if (!ok) return@onPreviewKeyEvent false
+                    if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) armed = true
+                    !armed
+                }
+                .focusGroup(),
+            contentAlignment = Alignment.Center,
+        ) {
             tv.own.owntv.ui.stage.StageMenu(Modifier.width(560.mpx)) {
                 tv.own.owntv.ui.stage.StageMenuHeader(title = app.label, subtitle = null)
                 tv.own.owntv.ui.stage.StageMenuItem(
