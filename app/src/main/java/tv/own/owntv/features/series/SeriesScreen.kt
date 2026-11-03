@@ -691,7 +691,7 @@ private fun SeriesGrid(
             val toolTop = heroTop + heroH
             Box(Modifier.fillMaxSize().then(if (categoriesOpen) Modifier.graphicsLayer { alpha = 0.36f } else Modifier)) {
                 tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl.takeIf { tv.own.owntv.features.home.CinemaTrailer.playing == null }, Modifier.matchParentSize())
-                VodCinematicBackdrop(titleInfo?.backdropUrl, series = true, Modifier.align(Alignment.TopEnd), trailer = selectedMeta?.trailerKey.takeIf { metadataMode.enrich }, trailerTitle = selectedSeries?.name, focusKey = selectedSeries?.id)
+                VodCinematicBackdrop(titleInfo?.backdropUrl, series = true, Modifier.align(Alignment.TopEnd), trailer = null, trailerTitle = selectedSeries?.name, focusKey = selectedSeries?.id) // glcn: trailers on the show's page only
                 VodHeader(
                     section = stringResource(R.string.common_nav_series), category = headerLabel, count = vodCount(true, count).takeUnless { sealed },
                     showChevron = true, modifier = Modifier.padding(start = fx(84), top = 52.mpx - lift * 0.7f).width(fx(900)),

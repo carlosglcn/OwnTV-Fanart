@@ -1051,7 +1051,7 @@ private fun cinemaJsonList(json: String?): List<String> {
 private const val KEN_BURNS_ZOOM = 0.12f
 private const val KEN_BURNS_MS = 24_000
 private const val CINEMA_AMBIENT = 0.16f
-private const val CINEMA_TRAILER_MS = 2_200L
+private const val CINEMA_TRAILER_MS = 4_000L // glcn: a calm moment on the page first (was 2.2 s)
 private const val TRAILER_WARM_MS = 900L
 private const val LIGHTS_DOWN_MS = 2_500L
 /** glcn: the trailer window's share of the screen's width, up on the right. */
