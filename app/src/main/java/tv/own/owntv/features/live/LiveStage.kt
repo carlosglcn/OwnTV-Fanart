@@ -4,6 +4,7 @@ import tv.own.owntv.glcn.groupGlyph
 import tv.own.owntv.ui.theme.stageTone
 import tv.own.owntv.ui.theme.stageShadow
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -241,10 +242,16 @@ internal fun LivePlate(
     height: androidx.compose.ui.unit.Dp,
     radius: androidx.compose.ui.unit.Dp = StageRadii.Plate,
 ) {
-    Box(Modifier.size(width, height).clip(RoundedCornerShape(radius))) {
-        // glcn: the page's own lightness, so a white logo gets a dark plate in the light theme (it vanished there).
-        val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
-        ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize(), fill = StageColors.ControlFill, surfaceLuminance = if (light) 0.9f else 0.02f) {
+    // glcn: a visible glass tile with the logo set inside it (room on every side), so every channel's logo reads the same
+    // size — a bare "1" or "2" filled its whole box and towered over the others.
+    val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    Box(
+        Modifier.size(width, height).clip(RoundedCornerShape(radius))
+            .background(if (light) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.07f))
+            .border(1.mpx, if (light) Color.Black.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.08f), RoundedCornerShape(radius)),
+        contentAlignment = Alignment.Center,
+    ) {
+        ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize().padding(horizontal = width * 0.16f, vertical = height * 0.18f), fill = Color.Transparent, surfaceLuminance = if (light) 0.9f else 0.02f) {
             OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.align(Alignment.Center).size(height * 0.5f))
         }
     }

@@ -683,7 +683,11 @@ fun LiveScreen(
                 // image and keeps the text over it readable.
                 val ctx = androidx.compose.ui.platform.LocalContext.current
                 val blurred = androidx.compose.runtime.remember(backdrop) {
-                    coil3.request.ImageRequest.Builder(ctx).data(backdrop).size(48, 27).build()
+                    // Its own cache entry and an exact tiny size: the full picture already in the cache was handed back
+                    // instead, sharp, behind the list.
+                    coil3.request.ImageRequest.Builder(ctx).data(backdrop).size(48, 27)
+                        .precision(coil3.size.Precision.EXACT)
+                        .memoryCacheKey("$backdrop#ambient48").build()
                 }
                 // glcn: over the whole screen, softly — one ambient light for the list and the column alike, as the
                 // home screens of the big TV systems do; strongest behind the column, faint behind the list.
