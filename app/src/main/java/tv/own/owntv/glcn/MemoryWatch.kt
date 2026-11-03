@@ -86,17 +86,25 @@ object MemoryWatch {
             if (now < nextSample) continue
             nextSample = now + SAMPLE_MS
             val m = MemoryBreakdown.read() ?: continue
+            // glcn: the whole box too — the trailer's web page and other apps use memory this process's figure never
+            // shows; when the box runs short the app suffers even with a small figure of its own.
+            val sys = runCatching {
+                val am = app.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
+            }.getOrNull()
+            val freeMb = sys?.let { (it.availMem / (1024 * 1024)).toInt() } ?: -1
+            val boxShort = sys?.let { it.lowMemory || it.availMem < it.threshold * 3 / 2 } == true
             val mb = m.totalPssMb
-            val moved = lastLoggedMb == 0 || kotlin.math.abs(mb - lastLoggedMb) >= maxOf(MIN_STEP_MB, lastLoggedMb * STEP_PCT / 100)
+            val moved = boxShort || lastLoggedMb == 0 || kotlin.math.abs(mb - lastLoggedMb) >= maxOf(MIN_STEP_MB, lastLoggedMb * STEP_PCT / 100)
             if (moved || now - lastLineAt >= QUIET_LINE_MS) {
-                LiveDiagnosticsLog.event("memory · ${m.line()} · ${context()}")
+                LiveDiagnosticsLog.event("memory · ${m.line()} · box free $freeMb MB${if (boxShort) " (short)" else ""} · ${context()}")
                 lastLoggedMb = mb
                 lastLineAt = now
             }
-            if (mb >= brakeMb && now - lastBrakeAt >= BRAKE_GAP_MS) {
+            if ((mb >= brakeMb || boxShort) && now - lastBrakeAt >= BRAKE_GAP_MS) {
                 lastBrakeAt = now
-                brake(app, mb, brakeMb)
-            } else if (tight && mb < brakeMb * 85 / 100) {
+                brake(app, mb, brakeMb, boxShort)
+            } else if (tight && !boxShort && mb < brakeMb * 85 / 100) {
                 tight = false
             }
         }
@@ -117,13 +125,13 @@ object MemoryWatch {
         if (!AppForeground.visible) add("in background")
     }.joinToString(" · ")
 
-    private fun brake(app: Context, mb: Int, brakeMb: Int) {
+    private fun brake(app: Context, mb: Int, brakeMb: Int, boxShort: Boolean) {
         tight = true
         main.post {
             tv.own.owntv.ui.components.TrailerPool.free()
             runCatching { SingletonImageLoader.get(app).memoryCache?.clear() }
         }
-        LiveDiagnosticsLog.event("memory brake at $mb MB (limit $brakeMb): pictures in memory, trailer and prefetch let go")
+        LiveDiagnosticsLog.event("memory brake at $mb MB (limit $brakeMb)${if (boxShort) ", box short" else ""}: pictures in memory, trailer and prefetch let go")
     }
 
     private const val TICK_MS = 1_000L

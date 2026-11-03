@@ -1227,15 +1227,18 @@
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/LowRam.kt	glcn_lowram
 1	technical	app/src/main/java/tv/own/owntv/glcn/LowRam.kt	jank-watch
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/LowRam.kt	preview_on_ok
+2	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}
+1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	(short)
 1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	,
+1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	, box short
 1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	browsing
 1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	glcn-watch
 1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	in background
 1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	main thread answering again
 1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	main thread stalled ${silent}ms · $stack
-1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	memory brake at $mb MB (limit $brakeMb): pictures in memory, trailer and prefetch let go
-1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	memory · ${m.line()} · ${context()}
+1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	memory brake at $mb MB (limit $brakeMb)${if (boxShort) ", box short" else ""}: pictures in memory, trailer and prefetch let go
+1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	memory · ${m.line()} · box free $freeMb MB${if (boxShort) " (short)" else ""} · ${context()}
 1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	pictures ${cache.size / (1024 * 1024)}/${cache.maxSize / (1024 * 1024)} MB
 1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	playing
 1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	syncing $it

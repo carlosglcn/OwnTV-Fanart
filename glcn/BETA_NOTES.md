@@ -87,3 +87,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎬 Trailers behind a title: while the trailer plays the still picture goes away (no more band at the side or another scene under it), the video's edges melt into the page and the page's tint steps aside meanwhile.
 - 🎯 Films: closing a film's page drawn in place no longer hands the focus (and the selection) to the first film for a moment — back lands on the film you opened.
 - 🐇 Trailers lighter: they play only once a film's or show's page is open (no longer for every title the cursor rests on in the list), start after 4 s on the page, and the trailer player is let go 10 s after leaving instead of a minute.
+- 🧭 Memory diary also shows how much memory the whole box has free (the trailer's web page and other apps never show in the app's own figure), and the memory brake also steps in when the box runs short.
