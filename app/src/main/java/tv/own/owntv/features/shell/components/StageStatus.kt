@@ -172,30 +172,20 @@ fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColo
         // Unclipped (the GradientTextures glows clip to the node, which drew a hard box); a few hundred
         // pixels, so a brush is fine here. Drawn as a circle squashed to an oval around the block.
         modifier = Modifier.drawBehind {
+            // glcn: one glass chip around the clock, date and weather in both themes — over a bright backdrop the
+            // date and weather lines were lost (the soft dark glow was not enough). Drawn outside the block's bounds,
+            // so the layout stays exactly the same and nothing beside it moves.
+            val dx = 16.mpx.toPx()
+            val dy = 10.mpx.toPx()
+            val cr = androidx.compose.ui.geometry.CornerRadius(18.mpx.toPx())
+            val tl = Offset(-dx, -dy)
+            val sz = androidx.compose.ui.geometry.Size(size.width + 2 * dx, size.height + 2 * dy)
             if (light) {
-                val dx = 16.mpx.toPx()
-                val dy = 10.mpx.toPx()
-                val cr = androidx.compose.ui.geometry.CornerRadius(18.mpx.toPx())
-                val tl = Offset(-dx, -dy)
-                val sz = androidx.compose.ui.geometry.Size(size.width + 2 * dx, size.height + 2 * dy)
                 drawRoundRect(Color.White.copy(alpha = CLOCK_CHIP_ALPHA), tl, sz, cr)
                 drawRoundRect(rim, tl, sz, cr, style = androidx.compose.ui.graphics.drawscope.Stroke(1.mpx.toPx()))
-                return@drawBehind
-            }
-            val r = size.height * 1.2f
-
-            scale(scaleX = (size.width * 0.8f) / r, scaleY = 1f, pivot = center) {
-                drawCircle(
-                    Brush.radialGradient(
-                        0f to Color.Black.copy(alpha = 0.5f),
-                        0.55f to Color.Black.copy(alpha = 0.26f),
-                        1f to Color.Transparent,
-                        center = center,
-                        radius = r,
-                    ),
-                    radius = r,
-                    center = center,
-                )
+            } else {
+                drawRoundRect(Color(0xFF0B1418).copy(alpha = CLOCK_DARK_CHIP_ALPHA), tl, sz, cr)
+                drawRoundRect(Color.White.copy(alpha = 0.08f), tl, sz, cr, style = androidx.compose.ui.graphics.drawscope.Stroke(1.mpx.toPx()))
             }
         },
     ) {
@@ -237,3 +227,6 @@ fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColo
 private const val CLOCK_SUB_ALPHA = 0.88f
 /** glcn: the light theme's chip behind the clock — nearly solid, so a bright picture or a video's own text behind never shows through. */
 private const val CLOCK_CHIP_ALPHA = 0.94f
+
+/** glcn: the dark theme's chip behind the clock, date and weather. */
+private const val CLOCK_DARK_CHIP_ALPHA = 0.55f
