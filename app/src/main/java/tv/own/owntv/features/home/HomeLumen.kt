@@ -313,6 +313,7 @@ fun LumenHome(
                         key, Modifier.fillMaxSize(), start = ambientStart, muted = !CinemaTrailer.sound,
                         onSecond = { CinemaTrailer.second = it },
                         onPlaying = { CinemaTrailer.playing = key to shown?.title.orEmpty() },
+                        onPaused = { CinemaTrailer.playing = null },
                     ) { ambientKey = null }
                 }
                 if (CinemaTrailer.playing?.first == key) TrailerSoundHint(Modifier.align(Alignment.TopEnd).padding(end = 56.mpx, top = TRAILER_HINT_TOP))

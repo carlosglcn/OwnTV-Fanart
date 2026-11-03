@@ -47,6 +47,8 @@ fun AmbientTrailer(
     /** glcn: how far it has played, for that carry-over. */
     onSecond: (Float) -> Unit = {},
     onPlaying: () -> Unit = {},
+    /** glcn: it stopped showing a moving picture (paused, buffering) — YouTube's own overlays would show: hidden. */
+    onPaused: () -> Unit = {},
     onDone: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -57,6 +59,7 @@ fun AmbientTrailer(
     if (view == null) { LaunchedEffect(Unit) { onDone() }; return }
     val secondNow by rememberUpdatedState(onSecond)
     val playingNow by rememberUpdatedState(onPlaying)
+    val pausedNow by rememberUpdatedState(onPaused)
     val doneNow by rememberUpdatedState(onDone)
     val owner = remember { Any() }
     DisposableEffect(stored) {
@@ -65,6 +68,7 @@ fun AmbientTrailer(
                 owner = owner, keys = keys, startAt = startAt, start = start, muted = muted,
                 onSecond = { secondNow(it) },
                 onPlaying = { playing = true; playingNow() },
+                onPaused = { playing = false; pausedNow() },
                 onDone = { playing = false; doneNow() },
             ),
         )
@@ -110,6 +114,7 @@ object TrailerPool {
         var muted: Boolean,
         val onSecond: (Float) -> Unit,
         val onPlaying: () -> Unit,
+        val onPaused: () -> Unit,
         val onDone: () -> Unit,
     ) {
         var index = 0
@@ -350,6 +355,9 @@ object TrailerPool {
             }
             when (state) {
                 PlayerConstants.PlayerState.PLAYING -> if (r.started) r.onPlaying()
+                // glcn: paused or waiting, YouTube draws its title bar, its logo and "More videos" over the picture —
+                // the trailer is hidden until it moves again (the page's picture shows meanwhile).
+                PlayerConstants.PlayerState.PAUSED, PlayerConstants.PlayerState.BUFFERING -> if (r.started) r.onPaused()
                 PlayerConstants.PlayerState.ENDED -> { request = null; r.onDone() }
                 else -> Unit
             }
@@ -373,7 +381,7 @@ object TrailerPool {
 
 /** glcn: a trailer's own shape, and a little more so a thin line at its edge never shows. */
 private const val VIDEO_RATIO = 16f / 9f
-private const val TRAILER_OVERSCAN = 1.03f
+private const val TRAILER_OVERSCAN = 1.08f // glcn: enough to keep YouTube's corner marks out of the window
 // glcn: the trailer player's largest laid-out width in pixels (YouTube then serves ~540p); scaled up to the window.
 private const val TRAILER_RENDER_W = 960f
 

@@ -931,6 +931,7 @@ internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, m
                 key, Modifier.fillMaxSize(), start = start, muted = !CinemaTrailer.sound, startAt = startAt,
                 onSecond = { CinemaTrailer.second = it },
                 onPlaying = { CinemaTrailer.playing = key to title.orEmpty() },
+                onPaused = { CinemaTrailer.playing = null },
             ) { ready = null; CinemaTrailer.playing = null }
         }
         // The one hint while it plays: Play/Pause for its sound.
