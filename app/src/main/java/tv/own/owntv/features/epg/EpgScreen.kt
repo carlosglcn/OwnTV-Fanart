@@ -1118,6 +1118,15 @@ private fun GuideBackdrop(url: String?, modifier: Modifier = Modifier) {
         Box(
             Modifier.fillMaxSize().backdropLeftWash(0f to 0.80f, 0.35f to 0.40f, 0.70f to 0.10f, 1f to 0f),
         )
+        // glcn: darker towards the foot, where the synopsis and the key hints sit over the picture.
+        val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
+        Box(
+            Modifier.fillMaxSize().background(
+                androidx.compose.ui.graphics.Brush.verticalGradient(
+                    0.35f to page.copy(alpha = 0f), 0.65f to page.copy(alpha = 0.55f), 1f to page.copy(alpha = 0.85f),
+                ),
+            ),
+        )
     }
 }
 
