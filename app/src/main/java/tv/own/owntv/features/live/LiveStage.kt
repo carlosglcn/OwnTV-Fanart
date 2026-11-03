@@ -315,6 +315,8 @@ internal fun LiveStagePane(
         if (!nowNext?.nowDetails?.imageUrl.isNullOrBlank()) return@produceState
         kotlinx.coroutines.delay(500)
         value = runCatching { artResolver.detailsFor(t, nowNext?.nowDetails?.categories) }.getOrNull()?.backdropUrl
+        // glcn: shared with the screen, so the lent picture is the ambient backdrop too, not only in the video box.
+        tv.own.owntv.glcn.LentLiveArt.set(t, value)
     }
     @Composable
     fun Video(videoModifier: Modifier) {

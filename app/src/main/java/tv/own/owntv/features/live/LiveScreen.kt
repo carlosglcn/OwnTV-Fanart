@@ -673,6 +673,8 @@ fun LiveScreen(
         // nothing frames it: it fades into the page towards the left and the top, behind the text.
         if (!cinematic && lockedKey == null && previewShown) {
             val backdrop = nowNext?.takeIf { it.now != null }?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() }
+                // glcn: a programme the guide gives no picture borrows the one looked up by its title, behind as well.
+                ?: tv.own.owntv.glcn.LentLiveArt.forTitle(nowNext?.now?.title)
             if (backdrop != null && tv.own.owntv.glcn.LivePaneLayout.FICHA) {
                 // glcn: Ficha.
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
