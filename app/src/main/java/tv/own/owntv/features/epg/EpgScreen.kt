@@ -1,5 +1,6 @@
 package tv.own.owntv.features.epg
 
+import androidx.compose.foundation.background
 import tv.own.owntv.ui.stage.backdropLeftWash
 import tv.own.owntv.ui.theme.dissolveEdges
 import androidx.activity.compose.BackHandler
@@ -1118,7 +1119,8 @@ private fun GuideBackdrop(url: String?, modifier: Modifier = Modifier) {
         Box(
             Modifier.fillMaxSize().backdropLeftWash(0f to 0.80f, 0.35f to 0.40f, 0.70f to 0.10f, 1f to 0f),
         )
-        // glcn: darker towards the foot, where the synopsis and the key hints sit over the picture.
+        // glcn: towards the foot, where the synopsis and the key hints sit over the picture, it melts into the page's own
+        // colour — dark under white text in the dark theme, light under dark text in the light one.
         val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
         Box(
             Modifier.fillMaxSize().background(
