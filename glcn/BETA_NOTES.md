@@ -97,3 +97,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Live TV: when the guide has no picture for a programme, the one found by its title now also lights the screen's backdrop, not only the video box.
 - 🎬 Title page trailer: it starts about 3 seconds after the page opens, whether you move around it or not; when it ends, the page goes back to its usual backdrop.
 - ⚡ Lighter trailers: the trailer player is drawn at a smaller size and scaled up to its window, so YouTube sends a light picture (~540p) and the box decodes and draws a quarter of the pixels — smoother pages, less memory; behind the page's soft edges it looks the same.
+- 📈 Smoothness meter: the playback report now says, minute by minute, how smoothly each screen was drawn (frames, how many missed the 60 fps beat, the worst one and whether a trailer was playing) — so the slow spots are fixed by measurement.
+- 🚀 Fanart's own screens are now compiled ahead on the box (they were missing from the app's start-up profile): fewer stutters on the first scrolls after installing — Android applies it in the background, so it shows fully after a while.

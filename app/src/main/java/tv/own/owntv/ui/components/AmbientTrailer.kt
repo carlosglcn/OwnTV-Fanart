@@ -228,6 +228,7 @@ object TrailerPool {
     /** Let the player go now, its memory with it; the next trailer makes a new one. */
     fun free() {
         wasPlaying = true
+        tv.own.owntv.glcn.FrameWatch.trailerOn = false
         main.removeCallbacks(idleFree)
         val v = view ?: return
         val r = request
@@ -339,6 +340,7 @@ object TrailerPool {
         override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) { lastSecond = second; request?.onSecond?.invoke(second) }
         override fun onStateChange(youTubePlayer: YouTubePlayer, state: PlayerConstants.PlayerState) {
             isPlaying = state == PlayerConstants.PlayerState.PLAYING
+            tv.own.owntv.glcn.FrameWatch.trailerOn = isPlaying
             if (state == PlayerConstants.PlayerState.ENDED) loadedKey = null
             val r = request ?: return
             // glcn: moved to another page (another window), the web view pauses the video by itself — a trailer that is

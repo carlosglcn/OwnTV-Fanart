@@ -74,6 +74,11 @@ fun OwnTVPopup(
             parent = parent.parent
         }
         val dialogWindow = provider?.window
+        // glcn: this window's frame timings too (a title's page is drawn here).
+        DisposableEffect(dialogWindow) {
+            dialogWindow?.let { tv.own.owntv.glcn.FrameWatch.attach(it, popup = true) }
+            onDispose { dialogWindow?.let { tv.own.owntv.glcn.FrameWatch.detach(it, popup = true) } }
+        }
         DisposableEffect(dialogWindow) {
             val previousMode = dialogWindow?.attributes?.softInputMode
             dialogWindow?.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)

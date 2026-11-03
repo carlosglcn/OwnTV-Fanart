@@ -85,6 +85,8 @@ object MemoryWatch {
             // Memory diary and brake, once a minute.
             if (now < nextSample) continue
             nextSample = now + SAMPLE_MS
+            // glcn: how smoothly the last minute was drawn, per screen (nothing when nothing was drawn).
+            FrameWatch.drain().takeIf { it.isNotEmpty() }?.let { LiveDiagnosticsLog.event("frames · $it") }
             val m = MemoryBreakdown.read() ?: continue
             // glcn: the whole box too — the trailer's web page and other apps use memory this process's figure never
             // shows; when the box runs short the app suffers even with a small figure of its own.

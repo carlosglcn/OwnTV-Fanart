@@ -214,6 +214,7 @@ open class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        tv.own.owntv.glcn.FrameWatch.detach(this)
         tv.own.owntv.ui.components.TrailerPool.free() // glcn: the trailer player was made on this activity
         super.onDestroy()
     }
@@ -233,6 +234,7 @@ open class MainActivity : ComponentActivity() {
         // postSplashScreenTheme (Theme.OwnTV), so the activity ends up in the same theme as before.
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        tv.own.owntv.glcn.FrameWatch.attach(this) // glcn: frame timing per screen, into the report
         // glcn: the app went down last time — show what happened (and let it be shared) before anything else runs.
         // (The application has already opened the report in its own process; this window steps aside.)
         if (tv.own.owntv.glcn.CrashScreen.pending(this)) {

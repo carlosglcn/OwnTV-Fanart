@@ -717,6 +717,7 @@
 1	performance	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	epg-preload
 1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	infoShift
 1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	infoShiftMpv
+1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	player
 1	performance	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	shell-composed
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	srt
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	ssa
@@ -1221,6 +1222,15 @@
 2	technical	app/src/main/java/tv/own/owntv/glcn/FanartDream.kt	★ %.1f
 2	empty	app/src/main/java/tv/own/owntv/glcn/FrameMeter.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameMeter.kt	frame-meter
+2	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	\0
+1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	$name ${t.frames}f ${pct}% slow
+1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	$screen·popup
+1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	(trailer)
+1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	, ${t.janky} >${JANK_MS}ms
+1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	, worst ${t.worstMs}ms
+1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	glcn-frames
+1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	start
+1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	·
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	glcn_hidden_categories
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	keys
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	playlist:$id
@@ -1240,6 +1250,7 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	,
 1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	, box short
 1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	browsing
+1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	frames · $it
 1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	glcn-watch
 1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	in background
 1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	main thread answering again

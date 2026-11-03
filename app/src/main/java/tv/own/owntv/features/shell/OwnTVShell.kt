@@ -1107,6 +1107,8 @@ fun OwnTVShell(
     // too (but never while fullscreen/mini plays).
     // The preview runs on the ExoPlayer live engine, not mpv: stopping only mpv here (as when the preview
     // was mpv) left it decoding and holding a provider connection after a shortcut or deep link out.
+    // glcn: which screen the frame timings belong to.
+    LaunchedEffect(selectedSection, playerMode) { tv.own.owntv.glcn.FrameWatch.screen = if (playerMode != PlayerMode.NONE) "player" else selectedSection.name }
     LaunchedEffect(selectedSection, playerMode) {
         if (selectedSection != MainSection.LIVE_TV && selectedSection != MainSection.EPG && playerMode == PlayerMode.NONE) liveVm.stopPreview()
         if (selectedSection != MainSection.HOME || playerMode != PlayerMode.NONE) homeVm.stopPreview()
