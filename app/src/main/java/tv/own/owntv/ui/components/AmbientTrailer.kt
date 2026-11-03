@@ -353,7 +353,7 @@ object TrailerPool {
         }
     }
 
-    private const val IDLE_FREE_MS = 10_000L // glcn: let go soon after a page closes (its web page is heavy)
+    private const val IDLE_FREE_MS = 90_000L // glcn: kept warm between pages (making a new one was the slow start); the memory brake lets it go when memory is short
     private const val AFTER_PLAYER_MS = 6_000L
     private const val HANDOVER_MS = 250L
     private const val RESUME_AFTER_MOVE_MS = 120L

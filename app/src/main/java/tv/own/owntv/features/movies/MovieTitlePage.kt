@@ -118,6 +118,12 @@ internal fun MovieTitlePage(
     val lowerAt by androidx.compose.animation.core.animateFloatAsState(
         if (lower) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(LOWER_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)), label = "titleLower",
     )
+    // glcn: with the lower part open (cast, versions…) the trailer behind is covered — it waits, paused, so moving
+    // through that part is not slowed by a video nobody sees.
+    androidx.compose.runtime.DisposableEffect(lower) {
+        if (lower) tv.own.owntv.ui.components.TrailerPool.hold(true)
+        onDispose { if (lower) tv.own.owntv.ui.components.TrailerPool.hold(false) }
+    }
     val lowerFocus = remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf<String?>(null) }
     // glcn: the film's other videos — teasers, clips, featurettes, behind the scenes — each full screen with sound.

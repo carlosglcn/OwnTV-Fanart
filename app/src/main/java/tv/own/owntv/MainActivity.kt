@@ -222,6 +222,7 @@ open class MainActivity : ComponentActivity() {
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         tv.own.owntv.glcn.UiSounds.onKey(event)
         tv.own.owntv.player.KeyLog.onKey(event) // glcn: the last presses, for the playback report
+        if (event.action == android.view.KeyEvent.ACTION_DOWN) tv.own.owntv.features.home.CinemaTrailer.lastKeyAt = android.os.SystemClock.uptimeMillis() // glcn: trailers wait for a calm moment
         tv.own.owntv.ui.stage.FocusMotion.onKey(event) // glcn: which way the focus went, for the card's lean
         if (tv.own.owntv.glcn.BackHold.onKey(event)) return true
         return super.dispatchKeyEvent(event)

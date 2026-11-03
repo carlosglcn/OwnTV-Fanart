@@ -916,9 +916,18 @@ internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, m
         if (!allowed) return@LaunchedEffect
         // glcn: the trailer that was playing on Home when this title was opened goes on, at once, from where it was.
         CinemaTrailer.takeHandoff(t)?.let { at -> startAt = at; ready = t; start = true; return@LaunchedEffect }
-        delay(TRAILER_WARM_MS)
+        // glcn: the trailer waits until the remote has rested a moment — loading it while the page is being moved
+        // through made every step stutter. It is prepared, then started, only in a calm spell.
+        suspend fun calm(ms: Long) {
+            while (true) {
+                val quiet = android.os.SystemClock.uptimeMillis() - CinemaTrailer.lastKeyAt
+                if (quiet >= ms) return
+                delay(ms - quiet)
+            }
+        }
+        calm(TRAILER_WARM_MS)
         ready = t
-        delay(CINEMA_TRAILER_MS - TRAILER_WARM_MS)
+        calm(CINEMA_TRAILER_MS)
         start = true
     }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { CinemaTrailer.playing = null } }
@@ -971,6 +980,8 @@ internal fun rememberFocusMeta(info: HomeFocusInfo?): tv.own.owntv.core.database
  * pressing the card; any other key quietens it. Home's root passes its keys through [onKey].
  */
 internal object CinemaTrailer {
+    /** glcn: when the remote was last pressed (uptime ms) — a trailer starts only after a calm moment. */
+    @Volatile var lastKeyAt = 0L
     /** The trailer playing silently behind the page (key, title), or null. */
     var playing by mutableStateOf<Pair<String, String>?>(null)
     var full by mutableStateOf<Pair<String, String>?>(null)
