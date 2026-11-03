@@ -81,3 +81,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Live TV page: until the video plays (or with the preview off) the video box shows the programme's picture instead of a black frame with the channel number; the picture at the bottom is quieter so the text over it reads.
 - 👋 Who's watching: easier to read (darker over the picture, bigger subtitle), "Add profile" the same size and shape as the profiles (dashed, with a "+"), names on one line and the group centred with equal gaps, the focused profile with a thick rim and a glow in its colour, and a plain clock (time and date).
 - 🪶 Who's watching: smaller and lighter — smaller profiles, names and greeting, a softer glow, and "Add profile" as a small button under the profiles instead of a big tile.
+- 🌫️ Live TV page: behind the column, the programme's picture as a soft blur of its colours instead of a second copy of the image.

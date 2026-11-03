@@ -669,18 +669,26 @@ fun LiveScreen(
         if (!cinematic && lockedKey == null && previewShown) {
             val backdrop = nowNext?.takeIf { it.now != null }?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() }
             if (backdrop != null && tv.own.owntv.glcn.LivePaneLayout.FICHA) {
-                // glcn: Ficha — the picture whole across the column's top, the video tile over its right corner; it
-                // darkens strongly towards the left, where the title and synopsis sit, and melts into the page below.
+                // glcn: Ficha.
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
                 val light = page.luminance() > 0.5f
                 val artW = stageW + margin
-                // The picture whole (16:9, not cropped) against the bottom of the column, so it fills the page under the
-                // schedule; it fades out upwards, where the title, the text and the video sit.
-                Box(Modifier.align(Alignment.BottomEnd).width(artW).height(artW * 9f / 16f)) {
-                    // Quieter than before: the picture is in the video box too now, and the text and key hints over it must read.
-                    tv.own.owntv.ui.components.ProgrammeArt(url = backdrop, modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.3f else 0.45f })
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.25f to page.copy(alpha = if (light) 0.8f else 0.6f), 0.55f to page.copy(alpha = 0f))))
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.48f to page.copy(alpha = 0.72f), 0.72f to page.copy(alpha = 0f), 0.88f to page.copy(alpha = 0f), 1f to page.copy(alpha = 0.75f))))
+                // glcn: the picture itself is in the video box; behind the column it is only its colour — the same
+                // picture shrunk to a few pixels and spread over the whole column, a soft blur that never repeats the
+                // image and keeps the text over it readable.
+                val ctx = androidx.compose.ui.platform.LocalContext.current
+                val blurred = androidx.compose.runtime.remember(backdrop) {
+                    coil3.request.ImageRequest.Builder(ctx).data(backdrop).size(48, 27).build()
+                }
+                Box(Modifier.align(Alignment.TopEnd).padding(top = 96.mpx).width(artW).fillMaxHeight()) {
+                    coil3.compose.AsyncImage(
+                        model = blurred, contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
+                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.35f else 0.6f },
+                    )
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.18f to page.copy(alpha = 0.35f), 0.5f to page.copy(alpha = 0f))))
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.12f to page.copy(alpha = 0.2f), 0.75f to page.copy(alpha = 0.25f), 1f to page.copy(alpha = 0.8f))))
                 }
             } else if (backdrop != null) {
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
