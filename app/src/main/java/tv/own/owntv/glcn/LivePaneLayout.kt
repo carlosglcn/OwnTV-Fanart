@@ -7,4 +7,6 @@ package tv.own.owntv.glcn
  */
 object LivePaneLayout {
     const val FICHA = true
+    /** glcn: Ficha — the video's share of the column's width (smaller, so more of the synopsis reads at once). */
+    const val FICHA_VIDEO_W = 0.8f
 }

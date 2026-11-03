@@ -676,32 +676,30 @@ fun LiveScreen(
                 // glcn: a programme the guide gives no picture borrows the one looked up by its title, behind as well.
                 ?: tv.own.owntv.glcn.LentLiveArt.forTitle(nowNext?.now?.title)
             if (backdrop != null && tv.own.owntv.glcn.LivePaneLayout.FICHA) {
-                // glcn: Ficha.
+                // glcn: Ficha — the programme's picture only behind the text under the video, softly blurred (a small
+                // copy scaled up) and dimmed into the page at its edges, so the words over it read at a glance.
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
                 val light = page.luminance() > 0.5f
-                val artW = stageW + margin
-                // glcn: the picture itself is in the video box; behind the column it is only its colour — the same
-                // picture shrunk to a few pixels and spread over the whole column, a soft blur that never repeats the
-                // image and keeps the text over it readable.
                 val ctx = androidx.compose.ui.platform.LocalContext.current
-                val blurred = androidx.compose.runtime.remember(backdrop) {
-                    // Its own cache entry and an exact tiny size: the full picture already in the cache was handed back
-                    // instead, sharp, behind the list.
-                    coil3.request.ImageRequest.Builder(ctx).data(backdrop).size(48, 27)
+                val soft = androidx.compose.runtime.remember(backdrop) {
+                    // Its own cache entry and an exact small size: the sharp picture already cached was handed back.
+                    coil3.request.ImageRequest.Builder(ctx).data(backdrop).size(160, 90)
                         .precision(coil3.size.Precision.EXACT)
-                        .memoryCacheKey("$backdrop#ambient48").build()
+                        .memoryCacheKey("$backdrop#soft160").build()
                 }
-                // glcn: over the whole screen, softly — one ambient light for the list and the column alike, as the
-                // home screens of the big TV systems do; strongest behind the column, faint behind the list.
-                Box(Modifier.fillMaxSize()) {
+                val roomTop = 120.mpx + stageW * tv.own.owntv.glcn.LivePaneLayout.FICHA_VIDEO_W * 9f / 16f
+                val artW = stageW + margin
+                Box(Modifier.align(Alignment.BottomEnd).width(artW).height((maxHeight - roomTop + 40.mpx).coerceAtLeast(1.dp))) {
                     coil3.compose.AsyncImage(
-                        model = blurred, contentDescription = null,
+                        model = soft, contentDescription = null,
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                         filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
-                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.3f else 0.55f },
+                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.4f else 0.6f },
                     )
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page.copy(alpha = 0.8f), 0.45f to page.copy(alpha = 0.55f), 0.7f to page.copy(alpha = 0.1f), 1f to page.copy(alpha = 0f))))
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page.copy(alpha = 0.6f), 0.18f to page.copy(alpha = 0.15f), 0.75f to page.copy(alpha = 0.2f), 1f to page.copy(alpha = 0.8f))))
+                    // A general dim so white (or dark) text always reads, then the edges melt into the page.
+                    Box(Modifier.fillMaxSize().background(page.copy(alpha = if (light) 0.45f else 0.4f)))
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.25f to page.copy(alpha = 0f))))
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.3f to page.copy(alpha = 0f), 0.8f to page.copy(alpha = 0f), 1f to page.copy(alpha = 0.85f))))
                 }
             } else if (backdrop != null) {
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
