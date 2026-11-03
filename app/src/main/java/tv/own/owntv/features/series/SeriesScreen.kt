@@ -460,6 +460,7 @@ private fun SeriesGrid(
     fun focusCurrentTitleNow(): Boolean =
         runCatching { gridSelFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { contextFocus.requestFocus() }.getOrDefault(false) ||
+            runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
     fun focusCurrentTitle(): Boolean {
         // glcn: Runway — only the posters around the centre exist, so the remembered title (coming back from its page
         // or the player) may not be there yet: centre the row on it first, then focus it a frame or two later.
@@ -474,7 +475,6 @@ private fun SeriesGrid(
         }
         return focusCurrentTitleNow()
     }
-            runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
     // From the categories to the shows: the remembered one, else the first; a locked one's Enter PIN button; else the search field.
     fun focusTitles() {
         val targetId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: selectedSeries?.id else selectedSeries?.id
