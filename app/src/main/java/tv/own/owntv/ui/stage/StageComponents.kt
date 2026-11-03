@@ -381,6 +381,8 @@ fun StageTool(
     valueAccent: Boolean = false,
     /** `.danger`: a destructive action in red ("Clear watch history"). */
     danger: Boolean = false,
+    /** glcn: an icon-only pill whose [text] shows only while it is focused — a lighter toolbar. */
+    labelOnFocus: Boolean = false,
 ) {
     val a = stageAccent
     val r = StageRadii.Tool
@@ -397,7 +399,7 @@ fun StageTool(
         ) {
             val color = if (focused) a.onAccent else if (danger) StageColors.Danger else StageColors.Muted
             if (icon != null) StageIcon(icon, color, 20.mpx)
-            if (text != null) Text(text, style = stageText(18, 700), color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (text != null && (!labelOnFocus || focused || icon == null)) Text(text, style = stageText(18, 700), color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (value != null) Text(value, style = stageText(18, 700), color = if (focused) a.onAccent else if (valueAccent) a.accent else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (trailingIcon != null) StageIcon(trailingIcon, color, 20.mpx)
         }

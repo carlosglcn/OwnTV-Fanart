@@ -663,6 +663,11 @@ fun LiveScreen(
         }
         val listX = if (separate) margin + colW + gapCat else margin
         val listWidth = if (previewShown) listW else row - (listX - margin)
+        // glcn: one playlist behind every channel loaded here → no playlist mark on each row.
+        val singleLiveSource = channels.itemSnapshotList.items.asSequence().map { it.sourceId }.distinct().take(2).count() <= 1
+        // glcn: the key hints show for a few seconds on arriving (and on each category), then step aside.
+        var hintsVisible by remember { mutableStateOf(true) }
+        LaunchedEffect(selectedKey) { hintsVisible = true; kotlinx.coroutines.delay(HINTS_SHOWN_MS); hintsVisible = false }
 
         // glcn: the programme's picture is the screen's own backdrop, from the bottom right corner —
         // nothing frames it: it fades into the page towards the left and the top, behind the text.
@@ -680,15 +685,17 @@ fun LiveScreen(
                 val blurred = androidx.compose.runtime.remember(backdrop) {
                     coil3.request.ImageRequest.Builder(ctx).data(backdrop).size(48, 27).build()
                 }
-                Box(Modifier.align(Alignment.TopEnd).padding(top = 96.mpx).width(artW).fillMaxHeight()) {
+                // glcn: over the whole screen, softly — one ambient light for the list and the column alike, as the
+                // home screens of the big TV systems do; strongest behind the column, faint behind the list.
+                Box(Modifier.fillMaxSize()) {
                     coil3.compose.AsyncImage(
                         model = blurred, contentDescription = null,
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                         filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
-                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.35f else 0.6f },
+                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.3f else 0.55f },
                     )
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.18f to page.copy(alpha = 0.35f), 0.5f to page.copy(alpha = 0f))))
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.12f to page.copy(alpha = 0.2f), 0.75f to page.copy(alpha = 0.25f), 1f to page.copy(alpha = 0.8f))))
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page.copy(alpha = 0.8f), 0.45f to page.copy(alpha = 0.55f), 0.7f to page.copy(alpha = 0.1f), 1f to page.copy(alpha = 0f))))
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page.copy(alpha = 0.6f), 0.18f to page.copy(alpha = 0.15f), 0.75f to page.copy(alpha = 0.2f), 1f to page.copy(alpha = 0.8f))))
                 }
             } else if (backdrop != null) {
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
@@ -947,16 +954,20 @@ fun LiveScreen(
                         text = stringResource(R.string.content_category_browser_title),
                         icon = OwnTVIcon.FOLDER,
                         onClick = { categoriesOpen = true },
+                        labelOnFocus = true,
                     )
+                    // glcn: icon pills, their names shown on focus — a lighter toolbar.
                     tv.own.owntv.ui.stage.StageTool(
                         text = stringResource(R.string.content_live_guide_view),
                         icon = OwnTVIcon.GRID,
                         onClick = onOpenGuide,
+                        labelOnFocus = true,
                     )
                     tv.own.owntv.ui.stage.StageTool(
                         text = stringResource(R.string.glcn_sports_now),
                         icon = OwnTVIcon.SPORTS,
                         onClick = { sportsOpen = true },
+                        labelOnFocus = true,
                     )
                 }
                 Spacer(Modifier.height(20.mpx))
@@ -1017,7 +1028,9 @@ fun LiveScreen(
                                     nowTitle = nowPlaying[channel.id],
                                     isFavorite = favoriteIds.contains(channel.id),
                                     showNumber = showChannelNumbers,
-                                    mark = playlistMarks[channel.sourceId],
+                                    // glcn: no playlist mark when every channel here comes from the same playlist.
+                                    mark = if (singleLiveSource) null else playlistMarks[channel.sourceId],
+                                    next = if (isPreviewed && nowNextFor == channel.id) nowNext?.next else null,
                                     modifier = Modifier.staggerAt(index, rowsGate, step = 40, cap = 9).gridFocusTarget(
                                         itemId = channel.id, index = index,
                                         contextId = contextChannelId, contextFocus = contextFocus,
@@ -1082,10 +1095,12 @@ fun LiveScreen(
             }
 
             // Under the preview, bottom right, so the list runs down to the bottom edge.
+            // glcn: shown for a few seconds on arriving, and again after the remote has rested a while — not always.
             if (lockedKey == null && previewShown) {
+                val hintsAlpha by androidx.compose.animation.core.animateFloatAsState(if (hintsVisible) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(400), label = "liveHints")
                 tv.own.owntv.ui.stage.StageKeyHints(
                     liveHints,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(end = margin, bottom = 40.mpx),
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(end = margin, bottom = 40.mpx).graphicsLayer { alpha = hintsAlpha },
                 )
             }
         }
@@ -2144,3 +2159,6 @@ private const val PLAYER_MENU_GLASS = 0.94f
 
 /** glcn: how long the player's options sheet waits for its programme head before coming in anyway. */
 private const val HEAD_WAIT_MS = 450L
+
+/** glcn: how long Live TV's key hints stay on screen after arriving. */
+private const val HINTS_SHOWN_MS = 7_000L

@@ -152,7 +152,10 @@ internal fun LiveStageRow(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
     trailing: (@Composable () -> Unit)? = null,
+    /** glcn: what follows on this channel — shown under the programme on the focused row only. */
+    next: XtEpgEntry? = null,
 ) {
+    val formatTime = rememberSystemTimeFormatter()
     StageRow(
         onClick = onClick,
         onLongClick = onLongClick,
@@ -160,43 +163,69 @@ internal fun LiveStageRow(
         modifier = modifier.fillMaxWidth().onFocusChanged { if (it.hasFocus) onFocus() },
     ) { focused ->
         if (showNumber) {
+            // glcn: the number quieter — the logo and the name carry the row.
             Text(
                 channel.number?.toString().orEmpty(),
-                style = stageText(20, 600).copy(textAlign = TextAlign.End, fontFeatureSettings = Tabular),
-                color = if (focused) stageTone(Color(0xFFE6F2EE), StageColors.FxLine) else StageColors.Dim,
+                style = stageText(17, 600).copy(textAlign = TextAlign.End, fontFeatureSettings = Tabular),
+                color = if (focused) stageTone(Color(0xFFE6F2EE), StageColors.FxLine) else StageColors.Dim.copy(alpha = 0.7f),
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.width(50.mpx),
+                modifier = Modifier.width(40.mpx),
             )
         }
-        // glcn: bigger logos — on a 75" screen the old 76×54 read as dots.
-        LivePlate(channel.displayLogoUrl, 104.mpx, 74.mpx)
+        // glcn: every logo on the same rounded glass tile, one size — "1" and "2" no longer tower over the others.
+        LivePlate(channel.displayLogoUrl, 92.mpx, 64.mpx, radius = 16.mpx)
         Column(Modifier.weight(1f)) {
             Text(name.name, style = stageText(22, 700), color = if (focused) StageColors.FxText else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val title = now?.title ?: nowTitle
             if (title != null) {
-                val left = now?.let { timeLeftText(minutesLeft(it)) }
                 Spacer(Modifier.height(2.mpx))
                 Text(
-                    buildAnnotatedString {
-                        append(title)
-                        if (left != null) withStyle(SpanStyle(color = (if (focused) StageColors.FxLine else StageColors.Muted).copy(alpha = 0.6f))) { append(" · $left") }
-                    },
-                    style = stageText(17, 400), color = if (focused) StageColors.FxLine else StageColors.Muted,
+                    title, style = stageText(17, 400), color = if (focused) StageColors.FxLine else StageColors.Muted,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (now != null) {
-                Spacer(Modifier.height(8.mpx))
-                StageProgress(progressOf(now), Modifier.width(300.mpx), flat = true)
+            // glcn: the focused row also says what comes next, so two channels can be compared without looking right.
+            if (focused && next != null) {
+                Spacer(Modifier.height(2.mpx))
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, fontFeatureSettings = Tabular)) { append(formatTime(next.startMs)) }
+                        append("  ")
+                        append(next.title)
+                    },
+                    style = stageText(15, 500), color = StageColors.FxLine.copy(alpha = 0.75f),
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
             }
         }
         if (trailing != null) trailing()
-        else Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
+        else Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
             name.tags.forEach { StageTag(it) }
             if (channel.catchup) OwnTVIcon(OwnTVIcon.REWIND, StageColors.Dim, Modifier.size(22.mpx))
             if (isFavorite) OwnTVIcon(OwnTVIcon.FAVORITE, stageAccent.accent, Modifier.size(22.mpx), filled = true)
             mark?.let { StagePlaylistMark(it) }
+            // glcn: how much is left as a small ring with the minutes in it, instead of a cut-off "quedan …" and a thin line.
+            if (now != null) TimeLeftRing(progressOf(now), minutesLeft(now), focused)
         }
+    }
+}
+
+/** glcn: a 44 ring filling as the programme runs, the minutes left in it ("56'", "2h"). */
+@Composable
+private fun TimeLeftRing(progress: Float, minutes: Long, focused: Boolean) {
+    val track = if (focused) StageColors.FxLine.copy(alpha = 0.25f) else StageColors.Dim.copy(alpha = 0.3f)
+    val fill = if (focused) StageColors.FxText else stageAccent.accent
+    Box(Modifier.size(46.mpx), contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+            val w = 3.5f * density
+            val inset = w / 2
+            val size = androidx.compose.ui.geometry.Size(this.size.width - w, this.size.height - w)
+            val tl = androidx.compose.ui.geometry.Offset(inset, inset)
+            drawArc(track, 0f, 360f, false, tl, size, style = androidx.compose.ui.graphics.drawscope.Stroke(w))
+            drawArc(fill, -90f, 360f * progress, false, tl, size, style = androidx.compose.ui.graphics.drawscope.Stroke(w, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+        }
+        val label = if (minutes >= 60) "${minutes / 60}h" else "$minutes'"
+        Text(label, style = stageText(13, 700).copy(fontFeatureSettings = Tabular), color = if (focused) StageColors.FxText else StageColors.Muted, maxLines = 1)
     }
 }
 
@@ -497,6 +526,16 @@ internal data class CategoryPlaylists(
 internal val LocalCategoryPlaylists = androidx.compose.runtime.staticCompositionLocalOf<CategoryPlaylists?> { null }
 
 /** A category as the Stage sheet / column shows it: the rail item, its parsed name and its count. */
+/** glcn: a group's name without web addresses, "@" handles' at-signs, or the separators left around them. */
+internal fun cleanGroupLabel(label: String): String {
+    val cleaned = label
+        .replace(Regex("""https?://\S+|www\.\S+"""), " ")
+        .replace(Regex("""(^|\s)@(\w)"""), "$1$2")
+        .replace(Regex("""\s{2,}"""), " ")
+        .trim(' ', '|', '-', '–', '·', ':', '/', ',')
+    return cleaned.ifBlank { label }
+}
+
 internal data class LiveCategoryEntry(
     val item: LiveRailItem,
     val label: String,
@@ -536,6 +575,8 @@ internal fun liveCategoryEntries(railItems: List<LiveRailItem>, railCounts: Map<
     val groupCountry = ProviderTags.sharedCountry(entries.mapNotNull { it.name })
     // A group keeps its "UK|" unless the heading below says it for every group.
     val labelled = entries.map { e -> e.name?.let { e.copy(label = ProviderTags.groupLabel(it, groupCountry)) } ?: e }
+        // glcn: groups named with an address or a handle ("@LaQuay https://github.com/LaQuay/…") show just the name.
+        .map { e -> e.copy(label = cleanGroupLabel(e.label)) }
     val heading = (if (groupCountry != null) stringResource(R.string.content_live_groups_country, groupCountry) else stringResource(R.string.content_live_groups))
         .uppercase(androidx.compose.ui.text.intl.Locale.current.platformLocale)
     return labelled to heading
