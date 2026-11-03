@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
@@ -111,7 +112,7 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
             if (url != null) coil3.compose.AsyncImage(
                 model = url, contentDescription = null,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.55f },
+                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.5f },
             )
         }
         // Dark at the foot and the edges, so the names and the aurora read over any picture.
@@ -120,11 +121,14 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
             1f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.75f),
             radius = 1600f,
         )))
+        // glcn: darker through the middle and the foot, where the greeting and the names sit — white text over a light,
+        // greyish picture was hard to read from the sofa.
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
-            0.45f to androidx.compose.ui.graphics.Color.Transparent,
-            1f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.7f),
+            0f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.3f),
+            0.4f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.55f),
+            1f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.85f),
         )))
-        tv.own.owntv.player.PlayerClock(watchingMs = null, modifier = Modifier.align(Alignment.TopEnd).padding(top = 32.dp, end = 44.dp))
+        GateClock(Modifier.align(Alignment.TopEnd).padding(top = 32.dp, end = 44.dp))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             val hour = remember { java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY) }
             val greet = when (hour) { in 6..12 -> R.string.glcn_greet_morning; in 13..20 -> R.string.glcn_greet_afternoon; else -> R.string.glcn_greet_evening }
@@ -133,11 +137,12 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
                 color = androidx.compose.ui.graphics.Color.White, modifier = Modifier.staggerIn(0),
             )
             Text(
-                stringResource(R.string.profiles_gate_title), style = tv.own.owntv.ui.theme.stageText(26, 600),
-                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f), modifier = Modifier.staggerIn(60).padding(top = 6.dp),
+                stringResource(R.string.profiles_gate_title), style = tv.own.owntv.ui.theme.stageText(32, 600),
+                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.88f), modifier = Modifier.staggerIn(60).padding(top = 8.dp),
             )
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(36.dp),
+                verticalAlignment = Alignment.Top,
                 // glcn: room inside the row for the focused tile's growth (the list clips to its own bounds).
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 72.dp, vertical = 44.dp),
                 modifier = Modifier.focusGroup(),
@@ -176,7 +181,7 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
 @Composable
 private fun ProfileTile(profile: ProfileEntity, continueTitle: String?, modifier: Modifier = Modifier, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val grow by androidx.compose.animation.core.animateFloatAsState(if (focused) 1.12f else 1f, androidx.compose.animation.core.spring(stiffness = 420f, dampingRatio = 0.7f), label = "tileGrow")
+    val grow by androidx.compose.animation.core.animateFloatAsState(if (focused) 1.15f else 1f, androidx.compose.animation.core.spring(stiffness = 420f, dampingRatio = 0.7f), label = "tileGrow")
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(200.dp)) {
         tv.own.owntv.ui.stage.StageSurface(
             onClick = onClick,
@@ -189,10 +194,15 @@ private fun ProfileTile(profile: ProfileEntity, continueTitle: String?, modifier
             contentAlignment = Alignment.Center,
         ) { f ->
             LaunchedEffect(f) { focused = f }
+            val glow = tv.own.owntv.ui.components.avatarColor(profile.avatarId)
             Box(
-                Modifier.size(120.dp).then(
-                    if (f) Modifier.border(3.dp, androidx.compose.ui.graphics.Color.White, androidx.compose.foundation.shape.RoundedCornerShape(36.dp)).padding(6.dp) else Modifier.padding(6.dp),
-                ),
+                Modifier.size(120.dp)
+                    // glcn: the focused profile glows in its own colour (rings drawn inside the tile's room, so nothing
+                    // clips them) and wears a thick white rim — a thin one was lost from the sofa.
+                    .then(if (f) Modifier.drawBehind { drawGlow(glow, 36.dp.toPx()) } else Modifier)
+                    .then(
+                        if (f) Modifier.border(5.dp, androidx.compose.ui.graphics.Color.White, androidx.compose.foundation.shape.RoundedCornerShape(36.dp)).padding(7.dp) else Modifier.padding(7.dp),
+                    ),
                 contentAlignment = Alignment.TopEnd,
             ) {
                 OwnTVAvatar(avatarId = profile.avatarId, imagePath = profile.avatarPath.orEmpty(), modifier = Modifier.fillMaxSize())
@@ -226,25 +236,78 @@ private fun ProfileTile(profile: ProfileEntity, continueTitle: String?, modifier
     }
 }
 
+/**
+ * glcn: "Add profile" the same size and shape as a profile — a dashed rounded square with a "+" — on the same line as
+ * the names, growing and taking the white rim when focused like the others.
+ */
 @Composable
 private fun AddTile(onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    var focused by remember { mutableStateOf(false) }
+    val grow by androidx.compose.animation.core.animateFloatAsState(if (focused) 1.15f else 1f, androidx.compose.animation.core.spring(stiffness = 420f, dampingRatio = 0.7f), label = "addGrow")
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(200.dp)) {
         tv.own.owntv.ui.stage.StageSurface(
             onClick = onClick,
-            radius = 24.dp,
-            modifier = Modifier.size(132.dp),
-            focusStyle = tv.own.owntv.ui.stage.StageFocus.FX,
+            radius = 30.dp,
+            modifier = Modifier.size(140.dp).graphicsLayer { scaleX = grow; scaleY = grow },
+            focusDecor = false,
             contentAlignment = Alignment.Center,
-        ) { _ ->
+        ) { f ->
+            LaunchedEffect(f) { focused = f }
             Box(
-                modifier = Modifier.size(104.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.10f)),
+                Modifier.size(120.dp).padding(7.dp).drawBehind {
+                    val r = androidx.compose.ui.geometry.CornerRadius(30.dp.toPx())
+                    if (f) {
+                        drawRoundRect(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.12f), cornerRadius = r)
+                        drawRoundRect(androidx.compose.ui.graphics.Color.White, cornerRadius = r, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 5.dp.toPx()))
+                    } else {
+                        drawRoundRect(
+                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.55f), cornerRadius = r,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                width = 3.dp.toPx(),
+                                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(14.dp.toPx(), 10.dp.toPx())),
+                            ),
+                        )
+                    }
+                },
                 contentAlignment = Alignment.Center,
             ) {
-                OwnTVIcon(OwnTVIcon.ADD, tint = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.75f), modifier = Modifier.size(40.dp))
+                OwnTVIcon(OwnTVIcon.ADD, tint = androidx.compose.ui.graphics.Color.White.copy(alpha = if (f) 1f else 0.8f), modifier = Modifier.size(44.dp))
             }
         }
-        Spacer(Modifier.height(10.dp))
-        Text(stringResource(R.string.profiles_add), style = tv.own.owntv.ui.theme.stageText(30, 600), color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f))
+        Spacer(Modifier.height(16.dp))
+        Text(
+            stringResource(R.string.profiles_add), style = tv.own.owntv.ui.theme.stageText(30, if (focused) 800 else 600),
+            color = androidx.compose.ui.graphics.Color.White.copy(alpha = if (focused) 1f else 0.75f), textAlign = TextAlign.Center, maxLines = 1,
+        )
+        // The same room under the name as a profile's "Continue: …" line, so every name sits on one line.
+        Spacer(Modifier.padding(top = 4.dp).height(48.dp))
+    }
+}
+
+/** glcn: a soft glow in [color] around a rounded square, as rings fading outwards. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawGlow(color: androidx.compose.ui.graphics.Color, radius: Float) {
+    val steps = 5
+    for (k in steps downTo 1) {
+        val grow = k * 2.dp.toPx()
+        drawRoundRect(
+            color.copy(alpha = 0.10f),
+            topLeft = androidx.compose.ui.geometry.Offset(-grow, -grow),
+            size = androidx.compose.ui.geometry.Size(size.width + 2 * grow, size.height + 2 * grow),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius + grow),
+        )
+    }
+}
+
+/** glcn: the gate's clock — the time and the date, no label, smaller than the greeting. */
+@Composable
+private fun GateClock(modifier: Modifier = Modifier) {
+    val formatTime = tv.own.owntv.ui.format.rememberSystemTimeFormatter()
+    val formatDate = tv.own.owntv.ui.format.rememberBestDateFormatter("EEEdMMM")
+    var now by remember { androidx.compose.runtime.mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(10_000); now = System.currentTimeMillis() } }
+    Column(horizontalAlignment = Alignment.End, modifier = modifier) {
+        Text(formatTime(now), style = tv.own.owntv.ui.theme.stageText(30, 700), color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f))
+        Text(formatDate(now), style = tv.own.owntv.ui.theme.stageText(17, 500), color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.65f))
     }
 }
 

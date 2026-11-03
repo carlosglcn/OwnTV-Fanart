@@ -77,3 +77,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🩹 Live TV page: what follows is always on screen under the big video — the synopsis gives way (and drifts) instead of pushing it under the key hints; the title is one line there.
 - 🧯 Trailer freezes: when the trailer's web page stops answering, it is ended at once (Android 10+) and the trailer let go, instead of the whole app freezing until Android closes it.
 - 📋 Playback report: the diagnostic lines come from the saved file, so what happened just before a freeze or a crash is in the report.
+- 🎯 Runway: coming back from a film's or a show's page keeps the focus on that title instead of jumping to the first.
+- 🖼️ Live TV page: until the video plays (or with the preview off) the video box shows the programme's picture instead of a black frame with the channel number; the picture at the bottom is quieter so the text over it reads.
+- 👋 Who's watching: easier to read (darker over the picture, bigger subtitle), "Add profile" the same size and shape as the profiles (dashed, with a "+"), names on one line and the group centred with equal gaps, the focused profile with a thick rim and a glow in its colour, and a plain clock (time and date).

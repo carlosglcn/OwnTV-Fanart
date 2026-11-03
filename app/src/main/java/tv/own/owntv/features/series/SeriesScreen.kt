@@ -457,7 +457,21 @@ private fun SeriesGrid(
 
     // The show the cursor was on: after a long-press it carries contextFocus instead of gridSelFocus
     // (gridFocusTarget prefers it), so both are tried before the first show (fix playbook 6).
-    fun focusCurrentTitle(): Boolean =
+    fun focusCurrentTitle(): Boolean {
+        // glcn: Runway — only the posters around the centre exist, so the remembered title (coming back from its page
+        // or the player) may not be there yet: centre the row on it first, then focus it a frame or two later.
+        if (runway && series.itemCount > 0) {
+            val tid = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: selectedSeries?.id else selectedSeries?.id
+            val idx = tid?.let { id -> series.itemSnapshotList.items.indexOfFirst { it.id == id } } ?: -1
+            if (idx >= 0 && idx != runwayAt) {
+                runwayAt = idx
+                scope.launch { withFrameNanos { }; withFrameNanos { }; runCatching { gridSelFocus.requestFocus() } }
+                return true
+            }
+        }
+        return focusCurrentTitleNow()
+    }
+    fun focusCurrentTitleNow(): Boolean =
         runCatching { gridSelFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { contextFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)

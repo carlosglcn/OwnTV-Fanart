@@ -284,7 +284,13 @@ internal fun LiveStagePane(
             // glcn: until the video plays — and while a new channel loads — the frame holds the channel's logo alone;
             // the programme's picture is already the screen's backdrop.
             if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
-            if (channel != null && (!playing || loading)) {
+            // glcn: Ficha — until the video plays (or with the preview off) the box shows the programme's picture, not a
+            // black frame with the channel's number.
+            val still = nowNext?.nowDetails?.imageUrl?.takeIf { ficha && it.isNotBlank() && (!playing || loading) }
+            if (still != null) {
+                tv.own.owntv.ui.components.ProgrammeArt(url = still, modifier = Modifier.fillMaxSize(), tolerance = 10f)
+                Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.45f), 0.5f to Color.Transparent)))
+            } else if (channel != null && (!playing || loading)) {
                 // The channel's logo, large and soft toward the right — you can tell which channel it is
                 // without it competing with the programme.
                 if (loading) Box(Modifier.fillMaxSize().background(Color.Black))

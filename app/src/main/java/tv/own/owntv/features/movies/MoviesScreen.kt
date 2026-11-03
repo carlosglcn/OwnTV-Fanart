@@ -396,7 +396,21 @@ fun MoviesScreen(
 
     // The title the cursor was on: after a long-press it carries contextFocus instead of selFocus
     // (gridFocusTarget prefers it), so both are tried before the first title (fix playbook 6).
-    fun focusCurrentTitle(): Boolean =
+    fun focusCurrentTitle(): Boolean {
+        // glcn: Runway — only the posters around the centre exist, so the remembered title (coming back from its page
+        // or the player) may not be there yet: centre the row on it first, then focus it a frame or two later.
+        if (runway && movies.itemCount > 0) {
+            val tid = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: selectedMovie?.id else selectedMovie?.id
+            val idx = tid?.let { id -> movies.itemSnapshotList.items.indexOfFirst { it.id == id } } ?: -1
+            if (idx >= 0 && idx != runwayAt) {
+                runwayAt = idx
+                scope.launch { withFrameNanos { }; withFrameNanos { }; runCatching { selFocus.requestFocus() } }
+                return true
+            }
+        }
+        return focusCurrentTitleNow()
+    }
+    fun focusCurrentTitleNow(): Boolean =
         runCatching { selFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { contextFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)

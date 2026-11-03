@@ -677,7 +677,8 @@ fun LiveScreen(
                 // The picture whole (16:9, not cropped) against the bottom of the column, so it fills the page under the
                 // schedule; it fades out upwards, where the title, the text and the video sit.
                 Box(Modifier.align(Alignment.BottomEnd).width(artW).height(artW * 9f / 16f)) {
-                    tv.own.owntv.ui.components.ProgrammeArt(url = backdrop, modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.45f else 0.9f })
+                    // Quieter than before: the picture is in the video box too now, and the text and key hints over it must read.
+                    tv.own.owntv.ui.components.ProgrammeArt(url = backdrop, modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.3f else 0.45f })
                     Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.25f to page.copy(alpha = if (light) 0.8f else 0.6f), 0.55f to page.copy(alpha = 0f))))
                     Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.48f to page.copy(alpha = 0.72f), 0.72f to page.copy(alpha = 0f), 0.88f to page.copy(alpha = 0f), 1f to page.copy(alpha = 0.75f))))
                 }
