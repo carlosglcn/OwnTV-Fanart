@@ -112,7 +112,7 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
             if (url != null) coil3.compose.AsyncImage(
                 model = url, contentDescription = null,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.5f },
+                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.38f },
             )
         }
         // Dark at the foot and the edges, so the names and the aurora read over any picture.
@@ -133,18 +133,18 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
             val hour = remember { java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY) }
             val greet = when (hour) { in 6..12 -> R.string.glcn_greet_morning; in 13..20 -> R.string.glcn_greet_afternoon; else -> R.string.glcn_greet_evening }
             Text(
-                stringResource(greet), style = tv.own.owntv.ui.theme.stageText(58, 800),
+                stringResource(greet), style = tv.own.owntv.ui.theme.stageText(46, 800),
                 color = androidx.compose.ui.graphics.Color.White, modifier = Modifier.staggerIn(0),
             )
             Text(
-                stringResource(R.string.profiles_gate_title), style = tv.own.owntv.ui.theme.stageText(32, 600),
+                stringResource(R.string.profiles_gate_title), style = tv.own.owntv.ui.theme.stageText(24, 600),
                 color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.88f), modifier = Modifier.staggerIn(60).padding(top = 8.dp),
             )
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(36.dp),
+                horizontalArrangement = Arrangement.spacedBy(28.dp),
                 verticalAlignment = Alignment.Top,
                 // glcn: room inside the row for the focused tile's growth (the list clips to its own bounds).
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 72.dp, vertical = 44.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 72.dp, vertical = 30.dp),
                 modifier = Modifier.focusGroup(),
             ) {
                 items(profiles, key = { it.id }) { p ->
@@ -159,8 +159,13 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
                         )
                     }
                 }
-                item { Box(Modifier.staggerIn(120 + profiles.size * GATE_STAGGER_MS)) { AddTile(onClick = onAddProfile) } }
             }
+            // glcn: adding a profile is a small quiet button under the profiles, not a tile of its own among them.
+            tv.own.owntv.ui.stage.StageButton(
+                stringResource(R.string.profiles_add), onClick = onAddProfile,
+                icon = OwnTVIcon.ADD, height = 44.dp, textSize = 17,
+                modifier = Modifier.staggerIn(120 + profiles.size * GATE_STAGGER_MS),
+            )
         }
     }
 
@@ -181,12 +186,12 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
 @Composable
 private fun ProfileTile(profile: ProfileEntity, continueTitle: String?, modifier: Modifier = Modifier, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val grow by androidx.compose.animation.core.animateFloatAsState(if (focused) 1.15f else 1f, androidx.compose.animation.core.spring(stiffness = 420f, dampingRatio = 0.7f), label = "tileGrow")
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(200.dp)) {
+    val grow by androidx.compose.animation.core.animateFloatAsState(if (focused) 1.1f else 1f, androidx.compose.animation.core.spring(stiffness = 420f, dampingRatio = 0.7f), label = "tileGrow")
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(170.dp)) {
         tv.own.owntv.ui.stage.StageSurface(
             onClick = onClick,
-            radius = 30.dp,
-            modifier = modifier.size(140.dp)
+            radius = 24.dp,
+            modifier = modifier.size(108.dp)
                 // glcn: no glow drawn round the tile any more — whatever holds the row clipped it to a rectangle with
                 // straight edges; the screen's aurora already takes the focused profile's colour.
                 .graphicsLayer { scaleX = grow; scaleY = grow },
@@ -196,101 +201,52 @@ private fun ProfileTile(profile: ProfileEntity, continueTitle: String?, modifier
             LaunchedEffect(f) { focused = f }
             val glow = tv.own.owntv.ui.components.avatarColor(profile.avatarId)
             Box(
-                Modifier.size(120.dp)
-                    // glcn: the focused profile glows in its own colour (rings drawn inside the tile's room, so nothing
-                    // clips them) and wears a thick white rim — a thin one was lost from the sofa.
-                    .then(if (f) Modifier.drawBehind { drawGlow(glow, 36.dp.toPx()) } else Modifier)
+                Modifier.size(94.dp)
+                    // glcn: the focused profile glows softly in its own colour and wears a white rim.
+                    .then(if (f) Modifier.drawBehind { drawGlow(glow, 28.dp.toPx()) } else Modifier)
                     .then(
-                        if (f) Modifier.border(5.dp, androidx.compose.ui.graphics.Color.White, androidx.compose.foundation.shape.RoundedCornerShape(36.dp)).padding(7.dp) else Modifier.padding(7.dp),
+                        if (f) Modifier.border(3.dp, androidx.compose.ui.graphics.Color.White, androidx.compose.foundation.shape.RoundedCornerShape(28.dp)).padding(5.dp) else Modifier.padding(5.dp),
                     ),
                 contentAlignment = Alignment.TopEnd,
             ) {
                 OwnTVAvatar(avatarId = profile.avatarId, imagePath = profile.avatarPath.orEmpty(), modifier = Modifier.fillMaxSize())
                 // glcn: a TV profile wears a little TV at its foot.
                 if (tv.own.owntv.glcn.TvProfiles.isTv(profile.id)) Box(
-                    Modifier.align(Alignment.BottomEnd).size(34.dp).clip(CircleShape).background(tv.own.owntv.ui.theme.stageAccent.accent),
+                    Modifier.align(Alignment.BottomEnd).size(24.dp).clip(CircleShape).background(tv.own.owntv.ui.theme.stageAccent.accent),
                     contentAlignment = Alignment.Center,
-                ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = tv.own.owntv.ui.theme.stageAccent.onAccent, modifier = Modifier.size(20.dp)) }
+                ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = tv.own.owntv.ui.theme.stageAccent.onAccent, modifier = Modifier.size(14.dp)) }
                 if (profile.pinHash != null) {
-                    Box(Modifier.size(26.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(22.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
                         OwnTVIcon(OwnTVIcon.LOCK, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(14.dp))
                     }
                 }
             }
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(14.dp))
         Text(
-            profile.name, style = tv.own.owntv.ui.theme.stageText(30, if (focused) 800 else 600),
+            profile.name, style = tv.own.owntv.ui.theme.stageText(22, if (focused) 800 else 600),
             color = androidx.compose.ui.graphics.Color.White.copy(alpha = if (focused) 1f else 0.75f), textAlign = TextAlign.Center, maxLines = 1,
         )
         if (profile.isKids) {
-            Text(stringResource(R.string.profiles_kids_badge), style = tv.own.owntv.ui.theme.stageText(20, 500), color = tv.own.owntv.ui.theme.stageAccent.accent)
+            Text(stringResource(R.string.profiles_kids_badge), style = tv.own.owntv.ui.theme.stageText(16, 500), color = tv.own.owntv.ui.theme.stageAccent.accent)
         }
         val line = if (focused && continueTitle != null) stringResource(R.string.glcn_gate_continue, continueTitle) else ""
         Text(
-            line, style = tv.own.owntv.ui.theme.stageText(18, 500),
+            line, style = tv.own.owntv.ui.theme.stageText(15, 500),
             color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f), textAlign = TextAlign.Center,
             maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp).height(48.dp),
+            modifier = Modifier.padding(top = 4.dp).height(40.dp),
         )
-    }
-}
-
-/**
- * glcn: "Add profile" the same size and shape as a profile — a dashed rounded square with a "+" — on the same line as
- * the names, growing and taking the white rim when focused like the others.
- */
-@Composable
-private fun AddTile(onClick: () -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    val grow by androidx.compose.animation.core.animateFloatAsState(if (focused) 1.15f else 1f, androidx.compose.animation.core.spring(stiffness = 420f, dampingRatio = 0.7f), label = "addGrow")
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(200.dp)) {
-        tv.own.owntv.ui.stage.StageSurface(
-            onClick = onClick,
-            radius = 30.dp,
-            modifier = Modifier.size(140.dp).graphicsLayer { scaleX = grow; scaleY = grow },
-            focusDecor = false,
-            contentAlignment = Alignment.Center,
-        ) { f ->
-            LaunchedEffect(f) { focused = f }
-            Box(
-                Modifier.size(120.dp).padding(7.dp).drawBehind {
-                    val r = androidx.compose.ui.geometry.CornerRadius(30.dp.toPx())
-                    if (f) {
-                        drawRoundRect(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.12f), cornerRadius = r)
-                        drawRoundRect(androidx.compose.ui.graphics.Color.White, cornerRadius = r, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 5.dp.toPx()))
-                    } else {
-                        drawRoundRect(
-                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.55f), cornerRadius = r,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                width = 3.dp.toPx(),
-                                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(14.dp.toPx(), 10.dp.toPx())),
-                            ),
-                        )
-                    }
-                },
-                contentAlignment = Alignment.Center,
-            ) {
-                OwnTVIcon(OwnTVIcon.ADD, tint = androidx.compose.ui.graphics.Color.White.copy(alpha = if (f) 1f else 0.8f), modifier = Modifier.size(44.dp))
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        Text(
-            stringResource(R.string.profiles_add), style = tv.own.owntv.ui.theme.stageText(30, if (focused) 800 else 600),
-            color = androidx.compose.ui.graphics.Color.White.copy(alpha = if (focused) 1f else 0.75f), textAlign = TextAlign.Center, maxLines = 1,
-        )
-        // The same room under the name as a profile's "Continue: …" line, so every name sits on one line.
-        Spacer(Modifier.padding(top = 4.dp).height(48.dp))
     }
 }
 
 /** glcn: a soft glow in [color] around a rounded square, as rings fading outwards. */
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawGlow(color: androidx.compose.ui.graphics.Color, radius: Float) {
-    val steps = 5
+    val steps = 3
     for (k in steps downTo 1) {
         val grow = k * 2.dp.toPx()
         drawRoundRect(
-            color.copy(alpha = 0.10f),
+            color.copy(alpha = 0.14f),
             topLeft = androidx.compose.ui.geometry.Offset(-grow, -grow),
             size = androidx.compose.ui.geometry.Size(size.width + 2 * grow, size.height + 2 * grow),
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius + grow),
