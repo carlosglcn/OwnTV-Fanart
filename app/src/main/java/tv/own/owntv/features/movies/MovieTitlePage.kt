@@ -164,7 +164,7 @@ internal fun MovieTitlePage(
                 .focusGroup(),
         ) {
             if (!inPlace) {
-                tv.own.owntv.ui.components.ArtTint(info.backdropUrl, Modifier.fillMaxSize(), strength = 0.7f)
+                tv.own.owntv.ui.components.ArtTint(info.backdropUrl.takeIf { tv.own.owntv.features.home.CinemaTrailer.playing == null }, Modifier.fillMaxSize(), strength = 0.7f)
                 // The picture — or its trailer — edge to edge.
                 tv.own.owntv.features.shell.components.VodCinematicBackdrop(
                     info.backdropUrl, series = false, Modifier.align(Alignment.TopEnd),

@@ -304,7 +304,7 @@ internal fun VodCinematicBackdrop(
     val imageBottom = stepped(edgeBottom + (vidBottom - edgeBottom) * hole)
     Box(sized) {
         tv.own.owntv.features.home.FocusTrailer(
-            trailer, trailerTitle, focusKey, Modifier.fillMaxSize().insetFraction(vidStart, vidBottom), dissolve = false,
+            trailer, trailerTitle, focusKey, Modifier.fillMaxSize().insetFraction(vidStart, vidBottom), dissolve = true,
         )
         Box(
             Modifier.fillMaxSize().dissolveEdges(start = imageStart, bottom = imageBottom)
@@ -316,7 +316,10 @@ internal fun VodCinematicBackdrop(
                         alpha = h, blendMode = androidx.compose.ui.graphics.BlendMode.DstOut,
                     )
                 }
-                .graphicsLayer { alpha = hold },
+                // glcn: while the trailer plays the still picture goes altogether — around the video it showed a
+                // different frame (a band at the side, another scene underneath); the video's own edges melt into
+                // the page instead, and the page's tint steps aside meanwhile (see ArtTint's callers).
+                .graphicsLayer { alpha = hold * (1f - hole) },
         ) {
             Crossfade(targetState = settled, animationSpec = ownTvTween(420), label = "vodBackdrop") { u ->
                 if (!u.isNullOrBlank()) {

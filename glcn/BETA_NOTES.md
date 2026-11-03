@@ -84,3 +84,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌫️ Live TV page: behind the column, the programme's picture as a soft blur of its colours instead of a second copy of the image.
 - 🔎 Live TV page: a programme the guide has no picture for is looked up by its title (once, cached) for the video box; with nothing found, the channel's logo sits small in the middle.
 - 🌒 Guide: the programme's picture darkens towards its foot, so the synopsis and key hints over it read.
+- 🎬 Trailers behind a title: while the trailer plays the still picture goes away (no more band at the side or another scene under it), the video's edges melt into the page and the page's tint steps aside meanwhile.
+- 🎯 Films: closing a film's page drawn in place no longer hands the focus (and the selection) to the first film for a moment — back lands on the film you opened.

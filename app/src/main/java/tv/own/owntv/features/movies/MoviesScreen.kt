@@ -627,7 +627,9 @@ fun MoviesScreen(
         )
     }
     val inPlaceTitle = cinematic && titleMovie != null && titleMovie?.id == selectedMovie?.id
-    // Back from the page drawn here: the focus goes back to the film it was opened from.
+    // Back from the page drawn here: the focus goes back to the film it was opened from. glcn: while the page is open
+    // and until the focus is put back, a poster that catches the focus on its own (Compose hands it to the first one
+    // when the page's buttons go) does not become the selected film — that sent the focus back to the first film.
     val wasInPlace = remember { booleanArrayOf(false) }
     LaunchedEffect(inPlaceTitle) {
         if (inPlaceTitle) wasInPlace[0] = true
@@ -657,7 +659,7 @@ fun MoviesScreen(
             val heroH = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 464.mpx - (short - lift)
             val toolTop = heroTop + heroH
             Box(Modifier.fillMaxSize().then(if (categoriesOpen) Modifier.graphicsLayer { alpha = 0.36f } else Modifier)) {
-                tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl, Modifier.matchParentSize())
+                tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl.takeIf { tv.own.owntv.features.home.CinemaTrailer.playing == null }, Modifier.matchParentSize())
                 VodCinematicBackdrop(titleInfo?.backdropUrl, series = false, Modifier.align(Alignment.TopEnd), trailer = selectedMeta?.trailerKey.takeIf { metadataMode.enrich }, trailerTitle = selectedMovie?.name, focusKey = selectedMovie?.id)
                 VodHeader(
                     section = stringResource(R.string.common_nav_movies), category = headerLabel, count = vodCount(false, count).takeUnless { sealed },
@@ -729,7 +731,7 @@ fun MoviesScreen(
                                                 selectedId = targetMovieId, selectedFocus = selFocus,
                                                 firstItemFocus = firstItemFocus,
                                             )
-                                            .onFocusChanged { if (it.isFocused) { onMovieFocus(movie); runwayAt = index } }
+                                            .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); runwayAt = index } }
                                             .onPreviewKeyEvent { e ->
                                                 if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true } else false
                                             },
@@ -775,7 +777,7 @@ fun MoviesScreen(
                                                     selectedId = targetMovieId, selectedFocus = selFocus,
                                                     firstItemFocus = firstItemFocus,
                                                 )
-                                                .onFocusChanged { if (it.isFocused) { onMovieFocus(movie); glide.focused(index) } }
+                                                .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); glide.focused(index) } }
                                                 .onPreviewKeyEvent { e ->
                                                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                     when (e.key) {

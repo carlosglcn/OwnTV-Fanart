@@ -94,7 +94,7 @@ internal fun SeriesTitleCover(
             }
             .focusGroup(),
     ) {
-        tv.own.owntv.ui.components.ArtTint(info.backdropUrl, Modifier.fillMaxSize(), strength = 0.7f)
+        tv.own.owntv.ui.components.ArtTint(info.backdropUrl.takeIf { tv.own.owntv.features.home.CinemaTrailer.playing == null }, Modifier.fillMaxSize(), strength = 0.7f)
         tv.own.owntv.features.shell.components.VodCinematicBackdrop(
             info.backdropUrl ?: info.posterUrl, series = true, Modifier.align(Alignment.TopEnd),
             trailer = trailerKey, trailerTitle = info.title, focusKey = seriesId,

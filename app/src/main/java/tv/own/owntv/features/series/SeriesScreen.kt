@@ -690,7 +690,7 @@ private fun SeriesGrid(
             val heroH = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 464.mpx - (short - lift)
             val toolTop = heroTop + heroH
             Box(Modifier.fillMaxSize().then(if (categoriesOpen) Modifier.graphicsLayer { alpha = 0.36f } else Modifier)) {
-                tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl, Modifier.matchParentSize())
+                tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl.takeIf { tv.own.owntv.features.home.CinemaTrailer.playing == null }, Modifier.matchParentSize())
                 VodCinematicBackdrop(titleInfo?.backdropUrl, series = true, Modifier.align(Alignment.TopEnd), trailer = selectedMeta?.trailerKey.takeIf { metadataMode.enrich }, trailerTitle = selectedSeries?.name, focusKey = selectedSeries?.id)
                 VodHeader(
                     section = stringResource(R.string.common_nav_series), category = headerLabel, count = vodCount(true, count).takeUnless { sealed },
