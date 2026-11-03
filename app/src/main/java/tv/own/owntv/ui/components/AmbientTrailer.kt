@@ -428,7 +428,7 @@ object TrailerPool {
     private const val HANDOVER_MS = 250L
     private const val RESUME_AFTER_MOVE_MS = 120L
     private const val RESUME_CHECK_MS = 900L
-    private const val STALL_MS = 9_000L
+    private const val STALL_MS = 15_000L // glcn: a slow start (first buffering) is not a stall
     private const val STALL_TICK_MS = 2_000L
 }
 

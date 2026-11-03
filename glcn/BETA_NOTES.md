@@ -109,3 +109,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ➡️ Channel list in the player: ▶ now steps into the coming programmes beside the list (▲▼ to walk them, each shown above with its picture and synopsis; ◀ back to the channels; ▶ again changes the view).
 - 🪧 Compact live banner: a programme without a picture shows the same short card (it showed a taller one with the synopsis).
 - 🎬 Title pages: the trailer now plays in its own larger window at the top left, above the title, and the picture stays whole behind; if a tall logo or a long synopsis leaves too little room there, it plays in the picture as before.
+- 🎬 Title page trailer window: nothing shows there until the video really plays (an empty frosted frame stood there while it loaded), no clipping around the video (it played badly or not at all), and a slow first start is given 15 s before it is skipped.
