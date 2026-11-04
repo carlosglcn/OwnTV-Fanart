@@ -633,7 +633,14 @@ fun MoviesScreen(
     val wasInPlace = remember { booleanArrayOf(false) }
     LaunchedEffect(inPlaceTitle) {
         if (inPlaceTitle) wasInPlace[0] = true
-        else if (wasInPlace[0]) { wasInPlace[0] = false; withFrameNanos { }; focusCurrentTitle() }
+        else if (wasInPlace[0]) {
+            // glcn: the guard stays on until the focus is back on the film (the Runway puts it there a couple of
+            // frames later); lifted first, a poster grabbing the focus meanwhile became the selected film again.
+            withFrameNanos { }
+            focusCurrentTitle()
+            repeat(4) { withFrameNanos { } }
+            wasInPlace[0] = false
+        }
     }
     val listAlpha by androidx.compose.animation.core.animateFloatAsState(if (inPlaceTitle) 0f else 1f, tv.own.owntv.ui.theme.ownTvTween(260), label = "titleListFade")
     fun openCategories() { if (cinematic) categoriesOpen = true else runCatching { railFocus.requestFocus() } }

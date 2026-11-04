@@ -901,8 +901,7 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
  */
 @Composable
 internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, modifier: Modifier = Modifier, dissolve: Boolean = true) {
-    // glcn: and not while the memory brake is on — a trailer then would only stutter the page.
-    val allowed = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on && tv.own.owntv.glcn.DockPrefs.autoTrailers && !CinemaTrailer.blocked && !tv.own.owntv.glcn.MemoryWatch.tight
+    val allowed = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on && tv.own.owntv.glcn.DockPrefs.autoTrailers && !CinemaTrailer.blocked
     var ready by remember { mutableStateOf<String?>(null) }
     var start by remember { mutableStateOf(false) }
     val stop = CinemaTrailer.stopTick
