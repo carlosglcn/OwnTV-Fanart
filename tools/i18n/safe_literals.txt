@@ -1388,9 +1388,12 @@
 1	technical	app/src/main/java/tv/own/owntv/player/RecordingBadge.kt	recPulse
 1	technical	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	ambientTrailer
+1	technical	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	held
+1	technical	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	released
 1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer did not play in ${STALL_MS / 1000}s — skipped
 1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer page not answering — ended
 1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer page process gone (crashed=${detail.didCrash()}) — player let go
+1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer: ${if (on) "held" else "released"} (holds $holds)
 1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer: YouTube error $error on ${r.index + 1}/${r.keys.size}
 1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer: load ${r.index + 1}/${r.keys.size}
 1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer: memory short, no player yet

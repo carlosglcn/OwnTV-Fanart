@@ -155,6 +155,7 @@ object TrailerPool {
     /** glcn: pause the trailer while something else plays ([on] = true), and let it go on once that ends. */
     fun hold(on: Boolean) {
         holds = (holds + if (on) 1 else -1).coerceAtLeast(0)
+        tv.own.owntv.player.LiveDiagnosticsLog.event("trailer: ${if (on) "held" else "released"} (holds $holds)")
         val p = player ?: return
         if (holds > 0) runCatching { p.pause() }
         else request?.takeIf { it.started }?.let { r ->

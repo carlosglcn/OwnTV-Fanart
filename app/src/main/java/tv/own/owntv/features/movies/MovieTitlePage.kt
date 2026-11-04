@@ -123,8 +123,11 @@ internal fun MovieTitlePage(
     // glcn: with the lower part open (cast, versions…) the trailer behind is covered — it waits, paused, so moving
     // through that part is not slowed by a video nobody sees.
     androidx.compose.runtime.DisposableEffect(lower) {
-        if (lower) tv.own.owntv.ui.components.TrailerPool.hold(true)
-        onDispose { if (lower) tv.own.owntv.ui.components.TrailerPool.hold(false) }
+        // glcn: the value as it was when the hold was taken — read at dispose time, `lower` was already false, the
+        // hold was never given back, and every trailer after the first visit to the cast stayed paused for good.
+        val held = lower
+        if (held) tv.own.owntv.ui.components.TrailerPool.hold(true)
+        onDispose { if (held) tv.own.owntv.ui.components.TrailerPool.hold(false) }
     }
     val lowerFocus = remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf<String?>(null) }
