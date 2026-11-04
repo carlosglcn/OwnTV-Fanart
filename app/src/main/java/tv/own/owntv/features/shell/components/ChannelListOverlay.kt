@@ -474,6 +474,24 @@ internal fun ZapSchedulePanel(
         rows = runCatching { loadSchedule(channel) }.getOrDefault(emptyList())
         onRowCount(rows.size)
     }
+    // glcn: the schedule's rows are the guide's light ones (no synopsis); the coming programmes are read whole in the
+    // background — synopsis and picture — and their pictures fetched, so picking one with ▶ ▲ ▼ shows it at once.
+    val nowArt: tv.own.owntv.core.live.NowArt = org.koin.compose.koinInject()
+    val full = remember(channel?.id) { androidx.compose.runtime.mutableStateMapOf<Long, EpgProgrammeEntity>() }
+    val prefetchCtx = androidx.compose.ui.platform.LocalContext.current
+    if (joined) LaunchedEffect(channel?.id, rows) {
+        val c = channel ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(300)
+        val loader = coil3.SingletonImageLoader.get(prefetchCtx)
+        for (row in rows.take(8)) {
+            if (row.startMs in full) continue
+            val whole = runCatching { nowArt.now(c, row.startMs + 1) }.getOrNull()?.takeIf { it.startMs == row.startMs } ?: continue
+            full[row.startMs] = whole
+            whole.imageUrl?.takeIf { it.isNotBlank() }?.let { url ->
+                loader.enqueue(coil3.request.ImageRequest.Builder(prefetchCtx).data(url).size(coil3.size.Size(640, 360)).build())
+            }
+        }
+    }
     val ch = channel ?: return
     if (rows.isEmpty()) return
     val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
@@ -505,7 +523,7 @@ internal fun ZapSchedulePanel(
                 channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 14.mpx), framed = false, peek = peek,
                 bareAspect = 16f / 9f,
                 bareLines = 5,
-                showing = pick?.let { it to rows.getOrNull(selected + 1) },
+                showing = pick?.let { (full[it.startMs] ?: it) to rows.getOrNull(selected + 1) },
                 showNext = false,
             )
         }
