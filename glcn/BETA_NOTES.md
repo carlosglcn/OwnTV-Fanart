@@ -134,3 +134,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏠 TV home screen (Android TV rows): with several profiles the row is now called after what it shows — "Recent channels" (Últimos canales) — with the profile's name when there are several ("Últimos canales · Carlos"), and rows left over from a reinstall or a deleted profile are cleared.
 - 🔤 About: the "Own" of the wordmark reads on the light theme (it was cream on white).
 - 🐛 Trailers stopped for good after visiting a film's cast once: the pause taken while the lower part was open was never given back, so every later trailer loaded and waited paused. Fixed (found thanks to the new trailer log).
+- 🪧 Card banner, new layout: the channel and all the controls share the top line, the programme sits under them (picture, title, ring, synopsis) and the next three programmes fill the right side as a short list — two bands instead of three, much lower.

@@ -410,6 +410,9 @@ internal fun BottomBar(
     header: (@Composable () -> Unit)? = null,
     /** glcn: live TV — the programme on air, at the dock's right. */
     side: (@Composable () -> Unit)? = null,
+    /** glcn: Ficha banner — the tools beside the channel on its line, and [belowHeader] under them. */
+    toolsUp: Boolean = false,
+    belowHeader: (@Composable () -> Unit)? = null,
 ) {
     // Changes only while rewound into the archive. The film position is read lower still, by
     // [VodTimeline], so the tool buttons do not redraw every second.
@@ -417,62 +420,9 @@ internal fun BottomBar(
     // Only whether one runs: the countdown itself ticks every second, and this bar must not.
     val sleepLeft = org.koin.compose.koinInject<SleepTimer>().remainingMs.collectAsStateWithLifecycle()
     val sleepRunning by androidx.compose.runtime.remember { androidx.compose.runtime.derivedStateOf { sleepLeft.value != null } }
-    val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
-        if (header != null) {
-            // glcn: live TV — the channel on the left, the programme on air with its picture on the right,
-            // then every control in one full-width row below.
-            if (side != null) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { header() }
-                    Spacer(Modifier.width(18.dp))
-                    Box(Modifier.widthIn(max = 540.dp)) { side() }
-                }
-            } else header()
-            // glcn: on a channel with an archive the timeline below takes this line's place — no extra row.
-            if (onScrubLive == null || side == null) {
-                Box(Modifier.fillMaxWidth().padding(vertical = if (side != null) 2.dp else 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
-            } else Spacer(Modifier.height(8.dp))
-        }
-        // Band A — the instrument. The times are the bar's own end caps now; the separate time row is
-        // gone, and on live the right cap is the state badge instead of a clock.
-        when {
-            // Catch-up live channel → a scrubbable live timeline (last LIVE_WINDOW up to the live edge).
-            onScrubLive != null -> {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) {
-                        // The live edge is now; the offset says how far behind it the picture is.
-                        LiveTimelineBar(
-                            offsetSec = timeshiftOffsetSec ?: 0,
-                            programmes = liveProgrammes,
-                            liveEdgeMs = System.currentTimeMillis(),
-                            onScrub = onScrubLive,
-                            focusRequester = seekFocus,
-                            gaps = liveGaps,
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    LiveStateBadge(timeshiftOffsetSec)
-                }
-                Spacer(Modifier.height(10.dp))
-            }
-            !isLive && duration > 0 -> {
-                VodTimeline(player, position, duration, seekFocus)
-                Spacer(Modifier.height(10.dp))
-            }
-            // A live channel with no archive has no timeline to scrub, but it still has a state to
-            // report — and the badge no longer lives in the top bar.
-            // glcn: with the programme card beside the channel, the state badge sits in the tools row instead.
-            isLive && side == null -> {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { LiveStateBadge(timeshiftOffsetSec) }
-                Spacer(Modifier.height(10.dp))
-            }
-        }
-        // Band B — the tools. Each cluster hugs its own screen edge and the gap between them is the
-        // slack a focused button expands into, so growth is always toward the centre: the left cluster
-        // pushes only the buttons to its right, the right cluster only those to its left. Walk either
-        // cluster outward-in and nothing you have already passed ever moves.
-        // glcn: the tool's name in one fixed place, one focus box that slides between the tools, and the row
-        // wrapping round — ◀ from the first tool reaches Info at the far end, ▶ from the last returns.
+    // glcn: the tools as one piece, so a banner style can put them beside the channel ([toolsUp]).
+    val tools: @Composable (Modifier) -> Unit = { toolsModifier ->
+        Column(toolsModifier) {
         val toolFocus = androidx.compose.runtime.remember { ToolFocusState() }
         val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
         ToolLabelLine(toolFocus)
@@ -658,6 +608,74 @@ internal fun BottomBar(
         }
         }
         }
+        }
+    }
+    val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
+        if (header != null && toolsUp) {
+            // glcn: Ficha banner — the channel and every control on one line, the programme under it.
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                Box(Modifier.widthIn(max = 520.dp)) { header() }
+                Spacer(Modifier.width(24.dp))
+                tools(Modifier.weight(1f))
+            }
+            Box(Modifier.fillMaxWidth().padding(vertical = 8.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
+            belowHeader?.invoke()
+        } else if (header != null) {
+            // glcn: live TV — the channel on the left, the programme on air with its picture on the right,
+            // then every control in one full-width row below.
+            if (side != null) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) { header() }
+                    Spacer(Modifier.width(18.dp))
+                    Box(Modifier.widthIn(max = 540.dp)) { side() }
+                }
+            } else header()
+            // glcn: on a channel with an archive the timeline below takes this line's place — no extra row.
+            if (onScrubLive == null || side == null) {
+                Box(Modifier.fillMaxWidth().padding(vertical = if (side != null) 2.dp else 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
+            } else Spacer(Modifier.height(8.dp))
+        }
+        // Band A — the instrument. The times are the bar's own end caps now; the separate time row is
+        // gone, and on live the right cap is the state badge instead of a clock.
+        when {
+            // Catch-up live channel → a scrubbable live timeline (last LIVE_WINDOW up to the live edge).
+            onScrubLive != null -> {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) {
+                        // The live edge is now; the offset says how far behind it the picture is.
+                        LiveTimelineBar(
+                            offsetSec = timeshiftOffsetSec ?: 0,
+                            programmes = liveProgrammes,
+                            liveEdgeMs = System.currentTimeMillis(),
+                            onScrub = onScrubLive,
+                            focusRequester = seekFocus,
+                            gaps = liveGaps,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    LiveStateBadge(timeshiftOffsetSec)
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+            !isLive && duration > 0 -> {
+                VodTimeline(player, position, duration, seekFocus)
+                Spacer(Modifier.height(10.dp))
+            }
+            // A live channel with no archive has no timeline to scrub, but it still has a state to
+            // report — and the badge no longer lives in the top bar.
+            // glcn: with the programme card beside the channel, the state badge sits in the tools row instead.
+            isLive && side == null -> {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { LiveStateBadge(timeshiftOffsetSec) }
+                Spacer(Modifier.height(10.dp))
+            }
+        }
+        // Band B — the tools. Each cluster hugs its own screen edge and the gap between them is the
+        // slack a focused button expands into, so growth is always toward the centre: the left cluster
+        // pushes only the buttons to its right, the right cluster only those to its left. Walk either
+        // cluster outward-in and nothing you have already passed ever moves.
+        // glcn: the tool's name in one fixed place, one focus box that slides between the tools, and the row
+        // wrapping round — ◀ from the first tool reaches Info at the far end, ▶ from the last returns.
+        if (!toolsUp) tools(Modifier)
     }
     Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = if (side != null) 6.dp else 20.dp), bare = side != null) { body() }
 }

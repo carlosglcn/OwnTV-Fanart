@@ -172,8 +172,19 @@ fun LiveBannerFicha(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifie
                     style = stageText(15, 400), color = hudInk.copy(alpha = 0.88f), lines = 2,
                 )
             }
-            if (f.upcoming.isNotEmpty()) Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                f.upcoming.take(3).forEachIndexed { i, (t, title) -> NextChip(t, title, Modifier.weight(1f, fill = false), first = i == 0) }
+
+        }
+        // What follows, as a short list in the room on the right.
+        if (f.upcoming.isNotEmpty()) {
+            Box(Modifier.width(1.dp).height(72.dp).background(hudInk.copy(alpha = 0.12f)))
+            Column(Modifier.width(280.dp)) {
+                Label(stringResource(R.string.content_live_next), hudInk.copy(alpha = 0.6f))
+                f.upcoming.take(3).forEachIndexed { i, (t, title) ->
+                    Row(Modifier.padding(top = 3.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(t, style = stageText(15, 700), color = if (i == 0) stageAccent.accent else hudInk.copy(alpha = 0.65f), maxLines = 1, modifier = Modifier.width(50.dp))
+                        Text(title, style = stageText(15, if (i == 0) 600 else 500), color = hudInk.copy(alpha = if (i == 0) 1f else 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
             }
         }
     }

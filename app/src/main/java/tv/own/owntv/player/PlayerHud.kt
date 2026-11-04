@@ -984,21 +984,16 @@ fun PlayerHud(
                             },
                         )
                         .onSizeChanged { barHeightPx = it.height },
+                    // glcn: Ficha — the channel and the controls on one line, the programme under them.
+                    toolsUp = isLive && wideBanner && bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.FICHA,
+                    belowHeader = if (isLive && wideBanner && bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.FICHA) liveBannerWide?.let { b -> { b(Modifier) } } else null,
                     // glcn: the other styles keep an empty side, so the dock stays as low as with the card.
                     side = if (isLive && !wideBanner) liveEpgCard else if (isLive) ({ }) else null,
                     header = when {
                         !isLive -> null
                         // Cine and Lateral: the channel is elsewhere (top left / the column).
                         wideBanner && bannerStyle != tv.own.owntv.glcn.LiveBanner.Style.FICHA -> null
-                        wideBanner && liveBannerWide != null -> {
-                            {
-                                Column {
-                                    LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack)
-                                    Spacer(Modifier.height(6.dp))
-                                    liveBannerWide(Modifier)
-                                }
-                            }
-                        }
+                        wideBanner && liveBannerWide != null -> { { LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack) } }
                         else -> { { LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack) } }
                     },
                 )
