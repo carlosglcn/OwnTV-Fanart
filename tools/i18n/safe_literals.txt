@@ -1232,6 +1232,7 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	glcn-frames
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	start
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	·
+1	url	app/src/main/java/tv/own/owntv/glcn/GitHubStar.kt	https://$GLCN_REPO
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	glcn_hidden_categories
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	keys
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/HiddenCategories.kt	playlist:$id
