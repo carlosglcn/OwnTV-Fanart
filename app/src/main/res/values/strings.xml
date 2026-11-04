@@ -5,8 +5,8 @@
     <string name="content_search_series">Search series…</string>
     <string name="glcn_star_action">Star on GitHub</string>
     <string name="glcn_star_title">Do you like OwnTV Fanart?</string>
-    <string name="glcn_star_body">A ⭐ on GitHub helps more people discover it. Thank you!</string>
-    <string name="glcn_star_scan">Scan it with your phone and tap the Star button.</string>
+    <string name="glcn_star_body">Support the project with a ⭐ on GitHub. Thank you!</string>
+    <string name="glcn_star_scan">Scan the QR code with your phone.</string>
     <string name="glcn_star_qr">QR code to this project on GitHub</string>
     <string name="glcn_star_close">Close</string>
 </resources>

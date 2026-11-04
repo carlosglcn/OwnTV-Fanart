@@ -5,8 +5,8 @@
     <string name="content_search_series">Buscar series…</string>
     <string name="glcn_star_action">Estrella en GitHub</string>
     <string name="glcn_star_title">¿Te gusta OwnTV Fanart?</string>
-    <string name="glcn_star_body">Una ⭐ en GitHub ayuda a que más gente la descubra. ¡Gracias!</string>
-    <string name="glcn_star_scan">Escanéalo con el móvil y pulsa el botón Star.</string>
+    <string name="glcn_star_body">Apoya el proyecto con una ⭐ en GitHub. ¡Gracias!</string>
+    <string name="glcn_star_scan">Escanea el QR con el móvil.</string>
     <string name="glcn_star_qr">Código QR de este proyecto en GitHub</string>
     <string name="glcn_star_close">Cerrar</string>
 </resources>
