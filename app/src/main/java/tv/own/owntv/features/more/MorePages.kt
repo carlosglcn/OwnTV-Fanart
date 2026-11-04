@@ -807,7 +807,8 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
             BrandMark(rememberAppliedIcon(), 150.mpx)
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
-                    Wordmark(300.mpx)
+                    // glcn: "Own" in the page's ink on the light theme (cream on white could not be read).
+                    Wordmark(300.mpx, own = if (tv.own.owntv.ui.theme.LocalStagePalette.current.isLight) StageColors.Text else tv.own.owntv.ui.components.WordmarkCream)
                     Text("Fanart", style = stageText(46, 800), color = Color(0xFFFF966E))
                 }
                 Row(Modifier.padding(top = 16.mpx), horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {

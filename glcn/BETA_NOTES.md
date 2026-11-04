@@ -132,3 +132,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📏 Card banner more compact: smaller picture and title, a 2-line synopsis and slimmer chips, so the panel takes much less of the screen.
 - ⭐ About: "Star on GitHub" opens a QR to scan with your phone (no pop-ups on the TV)
 - 🏠 TV home screen (Android TV rows): with several profiles each "Recent Live" row now carries the profile's name ("Recent Live · Carlos"), and rows left over from a reinstall or a deleted profile are cleared.
+- 🔤 About: the "Own" of the wordmark reads on the light theme (it was cream on white).
