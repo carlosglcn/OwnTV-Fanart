@@ -1385,10 +1385,17 @@
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHudControls.kt	· $it
 1	technical	app/src/main/java/tv/own/owntv/player/RecordingBadge.kt	rec
 1	technical	app/src/main/java/tv/own/owntv/player/RecordingBadge.kt	recPulse
+1	technical	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	ambientTrailer
 1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer did not play in ${STALL_MS / 1000}s — skipped
 1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer page not answering — ended
 1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer page process gone (crashed=${detail.didCrash()}) — player let go
+1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer: YouTube error $error on ${r.index + 1}/${r.keys.size}
+1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer: load ${r.index + 1}/${r.keys.size}
+1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer: memory short, no player yet
+1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer: no player available — skipped
+1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer: playing after ${(android.os.SystemClock.uptimeMillis() - r.startedAt) / 100 / 10.0}s
+1	log	app/src/main/java/tv/own/owntv/ui/components/AmbientTrailer.kt	trailer: waiting after a film
 1	file-path	app/src/main/java/tv/own/owntv/ui/components/BackgroundImageChooserDialog.kt	background_${System.currentTimeMillis()}.$ext
 1	file-path	app/src/main/java/tv/own/owntv/ui/components/BackgroundImageChooserDialog.kt	png
 1	log	app/src/main/java/tv/own/owntv/ui/components/BackgroundPicture.kt	BgImage

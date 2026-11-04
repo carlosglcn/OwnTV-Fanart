@@ -148,7 +148,7 @@ fun clockColor(stored: String, default: Color): Color = when (stored) {
 fun StageClock(weatherInfo: WeatherInfo?, fahrenheit: Boolean, colors: ClockColors) {
     val timeColor = clockColor(colors.time, StageColors.Text)
     // glcn: the date and weather default to near-white in the dark theme — grey 400 vanished over a bright backdrop.
-    val subDefault = if (LocalStagePalette.current.isLight) StageColors.Body else StageColors.Text.copy(alpha = CLOCK_SUB_ALPHA)
+    val subDefault = if (LocalStagePalette.current.isLight) StageColors.Text.copy(alpha = 0.82f) else StageColors.Text.copy(alpha = CLOCK_SUB_ALPHA)
     val dateColor = clockColor(colors.date, subDefault)
     val weatherColor = clockColor(colors.weather, subDefault)
     val context = LocalContext.current

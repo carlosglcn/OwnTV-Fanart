@@ -121,3 +121,7 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
   - Card: a wide glass band just above the controls, tinted with the programme's colour — large picture, title with its time-left ring, 3-line synopsis and the next three programmes as chips.
   - Cinema: words only over a soft dark shade on the lower third (dark in both themes) — a very large title, times and kind, a 2-line synopsis, what follows on the right and the programme's line with its start and end at either end.
   - Side: a full-height glass column like a small guide — picture, title, ring and times, a long synopsis and the next five programmes with their times.
+- 🎬 Title page trailer window: a small dark screen with rounded corners (the trailer's own black bars belong to it) instead of a pale fade around a dark picture; shown only once the video plays.
+- 🔁 Trailers: when no player is available at that moment (just after a film, memory short for a moment) it is asked again a few times instead of giving up for that page.
+- 🩺 Playback report: each trailer's story — loaded, playing after how long, YouTube's error code, stalled or skipped and why — so the ones that do not play can be traced.
+- 🕒 Light theme: the date and weather under the clock darker still.

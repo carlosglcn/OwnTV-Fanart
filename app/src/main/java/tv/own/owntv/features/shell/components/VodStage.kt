@@ -358,23 +358,25 @@ internal fun VodCinematicBackdrop(
         )
         }
         if (leftWindow) {
-            // glcn: the trailer's own window at the top left, over the page — rounded, its edges melting into the page.
-            val pageColor = tv.own.owntv.ui.theme.LocalStagePalette.current.page
-            // Nothing shows until the video really plays (an empty frame stood there while it loaded), and no clip
-            // around the web view: a clipped video surface played badly or not at all on the box.
+            // glcn: the trailer's own window at the top left, over the page. A small dark screen with rounded corners, shown only once the video plays (nothing while it loads): the
+            // trailer's own black bars belong to it, instead of a pale fade around a dark picture. No clip around the
+            // web view (a clipped video surface played badly on the box): the video sits inside the screen's margin.
             val winPlaying = tv.own.owntv.features.home.CinemaTrailer.playing?.first == trailer
-            val edgeAlpha by androidx.compose.animation.core.animateFloatAsState(if (winPlaying) 1f else 0f, ownTvTween(TRAILER_HOLE_MS), label = "trailerWindowEdges")
+            val screenAlpha by androidx.compose.animation.core.animateFloatAsState(if (winPlaying) 1f else 0f, ownTvTween(TRAILER_HOLE_MS), label = "trailerWindowEdges")
             Box(
                 Modifier
                     .offset { androidx.compose.ui.unit.IntOffset((winLeft - boxRoot.x).toInt(), (winTop - boxRoot.y).toInt()) }
                     .size(with(density) { winW.toDp() }, with(density) { winH.toDp() }),
             ) {
-                tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize(), dissolve = false)
-                if (edgeAlpha > 0.01f) Box(Modifier.fillMaxSize().graphicsLayer { alpha = edgeAlpha }.drawBehind {
-                    val e = 0.14f
-                    drawRect(Brush.horizontalGradient(0f to pageColor.copy(alpha = 0.85f), e to pageColor.copy(alpha = 0f), 1f - e to pageColor.copy(alpha = 0f), 1f to pageColor.copy(alpha = 0.85f)))
-                    drawRect(Brush.verticalGradient(0f to pageColor.copy(alpha = 0.85f), e to pageColor.copy(alpha = 0f), 1f - e to pageColor.copy(alpha = 0f), 1f to pageColor.copy(alpha = 0.85f)))
-                })
+                Box(
+                    Modifier.fillMaxSize().graphicsLayer { alpha = screenAlpha }
+                        .drawBehind {
+                            val r = 20.mpx.toPx()
+                            drawRoundRect(Color.Black.copy(alpha = 0.35f), topLeft = androidx.compose.ui.geometry.Offset(0f, 10.mpx.toPx()), size = size, cornerRadius = androidx.compose.ui.geometry.CornerRadius(r + 6.mpx.toPx()))
+                            drawRoundRect(Color.Black, cornerRadius = androidx.compose.ui.geometry.CornerRadius(r))
+                        },
+                )
+                tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize().padding(10.mpx), dissolve = false)
             }
         }
     }
