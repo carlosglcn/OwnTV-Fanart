@@ -130,3 +130,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
   - Cinema: no panel — the channel small in the top left, the large title and synopsis over a dark shade, the timeline, and a bare row of controls; dark with white text in both themes.
   - Side: a full-height glass column on the left with the channel, programme, synopsis and the next five; the controls sit beside it, the rest of the picture left free.
 - 📏 Card banner more compact: smaller picture and title, a 2-line synopsis and slimmer chips, so the panel takes much less of the screen.
+- ⭐ About: "Star on GitHub" opens a QR to scan with your phone (no pop-ups on the TV)

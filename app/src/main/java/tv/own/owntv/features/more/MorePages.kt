@@ -794,6 +794,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
     val checkedAt by vm.lastUpdateCheckAt.collectAsStateWithLifecycle()
     var showUpdate by remember { mutableStateOf(false) }
     var showToken by remember { mutableStateOf(false) }
+    var showStar by remember { mutableStateOf(false) }
     val updateFocus = remember { FocusRequester() }
     var updateWasOpen by remember { mutableStateOf(false) }
     LaunchedEffect(showUpdate) { if (showUpdate) updateWasOpen = true else if (updateWasOpen) { updateWasOpen = false; withFrameNanos { }; runCatching { updateFocus.requestFocus() } } }
@@ -889,6 +890,8 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
             val languages = SupportedLocales.all.count { it.packaged }
             StageTool(pluralStringResource(R.plurals.more_about_languages, languages, languages), onClick = onOpenLanguage, icon = OwnTVIcon.LIST, boxed = true, modifier = Modifier.focusRequester(entry))
             StageTool(stringResource(R.string.settings_check_updates), onClick = { showUpdate = true }, icon = OwnTVIcon.REFRESH, boxed = true, modifier = Modifier.focusRequester(updateFocus))
+            // glcn: a star on GitHub, as a QR for the phone (the TV has no browser).
+            StageTool(stringResource(R.string.glcn_star_action), onClick = { showStar = true }, icon = OwnTVIcon.STAR, boxed = true)
             // glcn: the beta's updates come from a private repository; its token is pasted here once.
             if (BuildConfig.GLCN_BETA) {
                 StageTool(stringResource(R.string.glcn_beta_token), onClick = { showToken = true }, icon = OwnTVIcon.PENCIL, boxed = true,
@@ -898,6 +901,9 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
     }
     if (showUpdate) {
         UpdateDialog(onDismiss = { showUpdate = false }, checkOnOpen = true)
+    }
+    if (showStar) {
+        tv.own.owntv.glcn.GitHubStarPopup(onDismiss = { showStar = false })
     }
     if (showToken) {
         tv.own.owntv.ui.components.TextInputDialog(
