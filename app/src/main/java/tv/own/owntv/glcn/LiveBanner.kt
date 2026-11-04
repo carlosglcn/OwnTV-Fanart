@@ -137,11 +137,11 @@ private fun facts(epg: EpgNowNext): Facts? {
 @Composable
 private fun NextChip(time: String, title: String, modifier: Modifier = Modifier, first: Boolean = false) {
     Row(
-        modifier.clip(RoundedCornerShape(10.dp)).background(hudInk.copy(alpha = 0.10f)).padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier.clip(RoundedCornerShape(8.dp)).background(hudInk.copy(alpha = 0.10f)).padding(horizontal = 10.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(time, style = stageText(16, 700), color = if (first) stageAccent.accent else hudInk.copy(alpha = 0.7f), maxLines = 1)
-        Text(title, style = stageText(16, 500), color = hudInk.copy(alpha = if (first) 1f else 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(time, style = stageText(14, 700), color = if (first) stageAccent.accent else hudInk.copy(alpha = 0.7f), maxLines = 1)
+        Text(title, style = stageText(14, 500), color = hudInk.copy(alpha = if (first) 1f else 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -155,24 +155,24 @@ fun LiveBannerFicha(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifie
     val f = epg?.let { facts(it) } ?: return
     // glcn: drawn inside the bar's own glass panel (the player wraps the channel, this and the controls in one).
     Row(
-        modifier.fillMaxWidth().padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically,
+        modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (!art.isNullOrBlank()) tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.width(300.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)))
+        if (!art.isNullOrBlank()) tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.width(196.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)))
         Column(Modifier.weight(1f)) {
             Label(stringResource(R.string.content_live_now), stageAccent.accent)
-            Text(f.title, style = stageText(30, 700), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                LeftRing(f.progress, Modifier.size(16.dp))
-                Text(f.meta, style = stageText(17, 400), color = hudInk.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(f.title, style = stageText(24, 700), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(Modifier.padding(top = 1.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LeftRing(f.progress, Modifier.size(14.dp))
+                Text(f.meta, style = stageText(15, 400), color = hudInk.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             f.synopsis?.let {
                 tv.own.owntv.features.shell.components.DriftingSynopsis(
-                    it, modifier = Modifier.padding(top = 6.dp),
-                    style = stageText(16, 400), color = hudInk.copy(alpha = 0.88f), lines = 3,
+                    it, modifier = Modifier.padding(top = 4.dp),
+                    style = stageText(15, 400), color = hudInk.copy(alpha = 0.88f), lines = 2,
                 )
             }
-            if (f.upcoming.isNotEmpty()) Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (f.upcoming.isNotEmpty()) Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 f.upcoming.take(3).forEachIndexed { i, (t, title) -> NextChip(t, title, Modifier.weight(1f, fill = false), first = i == 0) }
             }
         }

@@ -129,3 +129,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
   - Card: one glass panel at the foot holds the channel, the programme (large picture, title, ring, synopsis, next three) and the controls.
   - Cinema: no panel — the channel small in the top left, the large title and synopsis over a dark shade, the timeline, and a bare row of controls; dark with white text in both themes.
   - Side: a full-height glass column on the left with the channel, programme, synopsis and the next five; the controls sit beside it, the rest of the picture left free.
+- 📏 Card banner more compact: smaller picture and title, a 2-line synopsis and slimmer chips, so the panel takes much less of the screen.
