@@ -153,10 +153,9 @@ private fun NextChip(time: String, title: String, modifier: Modifier = Modifier,
 @Composable
 fun LiveBannerFicha(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier) {
     val f = epg?.let { facts(it) } ?: return
+    // glcn: drawn inside the bar's own glass panel (the player wraps the channel, this and the controls in one).
     Row(
-        modifier.fillMaxWidth().padding(horizontal = 28.dp)
-            .clip(RoundedCornerShape(20.dp)).background(hudShade(0.72f)).background(stageAccent.accent.copy(alpha = 0.08f))
-            .padding(16.dp),
+        modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
         if (!art.isNullOrBlank()) tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.width(300.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)))
@@ -232,7 +231,8 @@ fun LiveBannerCine(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier
 @Composable
 fun LiveBannerLateral(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier) {
     val f = epg?.let { facts(it) } ?: return
-    Column(modifier.clip(RoundedCornerShape(22.dp)).background(hudShade(0.82f)).padding(20.dp)) {
+    // glcn: inside the player's full-height glass column, under the channel.
+    Column(modifier) {
         if (!art.isNullOrBlank()) tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)))
         Spacer(Modifier.height(14.dp))
         Label(stringResource(R.string.content_live_now), stageAccent.accent)

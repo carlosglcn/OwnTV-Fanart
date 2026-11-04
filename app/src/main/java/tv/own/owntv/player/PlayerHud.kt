@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.offset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
+import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -841,6 +842,8 @@ fun PlayerHud(
             // glcn: rewound into the archive, the dock's own card is back (it shows the replayed programme).
             val wideBanner by remember(liveBannerWide) { androidx.compose.runtime.derivedStateOf { liveBannerWide != null && tv.own.owntv.glcn.LiveBanner.wide && watchingWallMs?.invoke() == null } }
             val risen = Modifier.graphicsLayer { translationY = (1f - rise.value) * HUD_RISE_DP.dp.toPx(); alpha = 0.25f + 0.75f * rise.value }
+            // glcn: Cine banner — the shade and the controls stay dark with white ink in both themes (over the picture).
+            val cinePalette = if (isLive && wideBanner && tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.CINE) tv.own.owntv.ui.theme.StagePalette.Dark else tv.own.owntv.ui.theme.LocalStagePalette.current
             // Scrims: a FLAT semi-transparent panel behind the controls, feathered to transparent only at
             // the inner edge. A pure gradient faded out exactly where the chips and the Now/Next text sit,
             // so those washed out on bright scenes; a hard-edged band would instead draw a visible seam
@@ -853,6 +856,7 @@ fun PlayerHud(
                     1.0f to Color.Transparent,
                 ))
             // glcn: live TV's bar has no panel of its own any more — this shade carries its text, a little deeper.
+            androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.theme.LocalStagePalette provides cinePalette) {
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(if (isLive) 280.dp else 260.dp).graphicsLayer { alpha = rise.value }
                 .gradientWash(
                     vertical = true,
@@ -860,6 +864,7 @@ fun PlayerHud(
                     0.4f to hudShade(if (isLive) 0.74f else 0.68f),
                     1.0f to hudShade(if (isLive) 0.88f else 0.78f),
                 ))
+            }
 
             // The active engine (MPV/EXO) leads the mini chips so users can always tell which player is on.
             // One unified strip: back · logo · chips-over-channel-name · Now/Next guide. The channel name
@@ -895,14 +900,26 @@ fun PlayerHud(
             // overlay owns the screen with its own Retry, so the play/rewind/forward must not show behind it.
             if (error == null) {
                 // glcn: Cine / Lateral — the programme over the picture, clear of the dock (its height measured).
+                // glcn: each banner style lays the whole bar out its own way (see the BottomBar call below):
+                // Cine — words over the picture above a bare row of controls, the channel small in the top left;
+                // Lateral — everything but the controls in a full-height column on the left, the controls beside it;
+                // Ficha — one glass panel holding the channel, the programme and the controls (drawn in the bar).
+                val bannerStyle = tv.own.owntv.glcn.LiveBanner.style
                 if (isLive && liveBannerWide != null && wideBanner) {
                     val barDp = with(androidx.compose.ui.platform.LocalDensity.current) { barHeightPx.toDp() }
-                    if (tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.CINE) {
+                    if (bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.CINE) {
                         liveBannerWide(Modifier.align(Alignment.BottomStart).then(risen).padding(bottom = barDp))
-                    } else if (tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.FICHA) {
-                        liveBannerWide(Modifier.align(Alignment.BottomStart).then(risen).padding(bottom = barDp + 8.dp))
-                    } else {
-                        liveBannerWide(Modifier.align(Alignment.TopStart).then(risen).padding(start = 28.dp, top = 24.dp, bottom = barDp + 12.dp).fillMaxWidth(0.30f).fillMaxHeight())
+                        CineChannelTag(player, Modifier.align(Alignment.TopStart).then(risen).padding(start = 56.dp, top = 36.dp))
+                    } else if (bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.LATERAL) {
+                        Column(
+                            Modifier.align(Alignment.TopStart).then(risen).padding(start = 24.dp, top = 24.dp, bottom = 24.dp)
+                                .fillMaxWidth(LATERAL_SHARE).fillMaxHeight()
+                                .clip(RoundedCornerShape(24.dp)).background(hudShade(0.84f)).padding(18.dp),
+                        ) {
+                            LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack)
+                            Spacer(Modifier.height(14.dp))
+                            liveBannerWide(Modifier.weight(1f))
+                        }
                     }
                 }
                 CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp), buffering = buffering) // glcn: clear of the now/next card's top edge
@@ -910,6 +927,7 @@ fun PlayerHud(
                 val reportDuration = duration.takeIf { it > 0 }?.let { formatTime(it) }
                 val reportSavedMessage = stringResource(R.string.player_report_saved)
 
+                androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.theme.LocalStagePalette provides cinePalette) {
                 BottomBar(
                     seekFocus = seekFocus,
                     player = player, isLive = isLive, position = { position.value }, duration = duration,
@@ -952,13 +970,39 @@ fun PlayerHud(
                     favorite = favorite, onToggleFavorite = onToggleFavorite,
                     onOpenDialog = { dialog = it }, onPip = onPip, onAudioMode = onAudioMode,
                     onMultiview = onMultiview, onRecordThis = onRecordThis, recordingThis = recordingThis, onBack = onBack,
-                    modifier = Modifier.align(Alignment.BottomStart).then(risen).onSizeChanged { barHeightPx = it.height },
-                    // glcn: Cine / Lateral — an empty side keeps the dock as low as with the card (without one it grew a tall empty row).
+                    modifier = Modifier.align(Alignment.BottomStart).then(risen)
+                        .then(
+                            when {
+                                !(isLive && wideBanner) -> Modifier
+                                // Lateral: the controls beside the column, not under it.
+                                bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.LATERAL ->
+                                    Modifier.padding(start = with(androidx.compose.ui.platform.LocalConfiguration.current) { screenWidthDp.dp } * LATERAL_SHARE + 24.dp)
+                                // Ficha: one glass panel round the channel, the programme and the controls.
+                                bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.FICHA ->
+                                    Modifier.padding(start = 20.dp, end = 20.dp, bottom = 16.dp).clip(RoundedCornerShape(26.dp)).background(hudShade(0.78f)).padding(vertical = 6.dp)
+                                else -> Modifier
+                            },
+                        )
+                        .onSizeChanged { barHeightPx = it.height },
+                    // glcn: the other styles keep an empty side, so the dock stays as low as with the card.
                     side = if (isLive && !wideBanner) liveEpgCard else if (isLive) ({ }) else null,
-                    header = if (isLive) {
-                        { LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack) }
-                    } else null,
+                    header = when {
+                        !isLive -> null
+                        // Cine and Lateral: the channel is elsewhere (top left / the column).
+                        wideBanner && bannerStyle != tv.own.owntv.glcn.LiveBanner.Style.FICHA -> null
+                        wideBanner && liveBannerWide != null -> {
+                            {
+                                Column {
+                                    LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack)
+                                    Spacer(Modifier.height(12.dp))
+                                    liveBannerWide(Modifier)
+                                }
+                            }
+                        }
+                        else -> { { LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack) } }
+                    },
                 )
+                }
             }
         }
 
@@ -1210,3 +1254,17 @@ private const val HUD_RISE_DP = 90
 
 /** glcn: how long a film stays paused, with the controls gone, before the pause screen comes up. */
 private const val PAUSE_SCREEN_AFTER_MS = 5_000L
+
+/** glcn: Lateral banner — the column's share of the screen's width. */
+private const val LATERAL_SHARE = 0.30f
+
+/** glcn: Cine banner — the channel, small, in the top left ("#7  Movistar Plus HD"). */
+@Composable
+private fun CineChannelTag(player: PlaybackEngine, modifier: Modifier = Modifier) {
+    val meta by player.currentMeta.collectAsStateWithLifecycle()
+    val name = meta.title?.takeIf { it.isNotBlank() } ?: return
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        meta.subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, style = tv.own.owntv.ui.theme.stageText(20, 600), color = Color.White.copy(alpha = 0.7f), maxLines = 1) }
+        Text(name, style = tv.own.owntv.ui.theme.stageText(22, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}

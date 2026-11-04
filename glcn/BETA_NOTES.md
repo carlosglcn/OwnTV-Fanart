@@ -125,3 +125,7 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔁 Trailers: when no player is available at that moment (just after a film, memory short for a moment) it is asked again a few times instead of giving up for that page.
 - 🩺 Playback report: each trailer's story — loaded, playing after how long, YouTube's error code, stalled or skipped and why — so the ones that do not play can be traced.
 - 🕒 Light theme: the date and weather under the clock darker still.
+- 🪧 Live banners now lay out the whole bar, not just a card over it (Compact unchanged):
+  - Card: one glass panel at the foot holds the channel, the programme (large picture, title, ring, synopsis, next three) and the controls.
+  - Cinema: no panel — the channel small in the top left, the large title and synopsis over a dark shade, the timeline, and a bare row of controls; dark with white text in both themes.
+  - Side: a full-height glass column on the left with the channel, programme, synopsis and the next five; the controls sit beside it, the rest of the picture left free.
