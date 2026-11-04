@@ -112,3 +112,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎬 Title page trailer window: nothing shows there until the video really plays (an empty frosted frame stood there while it loaded), no clipping around the video (it played badly or not at all), and a slow first start is given 15 s before it is skipped.
 - ☀️ The programme's info screen (ⓘ on a live channel) follows the light theme too — it was always dark.
 - 🪧 Cinema and Side banners: the control dock stays as low as with the Compact banner (it grew a tall empty row), so there is no big empty space at the foot and the banner has more room.
+- 🔇 Menu sounds are started on their own thread: with the box busy (a trailer starting, memory short) a sound could freeze a key press for seconds (5.7 s seen in a report).

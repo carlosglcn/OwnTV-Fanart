@@ -24,6 +24,13 @@ object UiSounds {
 
     private const val RATE = 44_100
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    /**
+     * glcn: the sounds are started on their own quiet thread, never on the main one — stopping and restarting an
+     * AudioTrack waits on the audio server, and while the box was busy (a trailer starting, memory short) that wait
+     * froze a key press for seconds (5.7 s seen in a report). One thread, so the sounds stay in order.
+     */
+    private val soundThread by lazy { android.os.HandlerThread("glcn-sounds").apply { start() } }
+    private val soundHandler by lazy { android.os.Handler(soundThread.looper) }
 
     /** 0 off, 1 soft, 2 normal. */
     @Volatile var level: Int = 0
@@ -46,8 +53,11 @@ object UiSounds {
         }
 
     private fun dropTracks() {
-        listOf(move, select, back).forEach { runCatching { it?.release() } }
-        move = null; select = null; back = null
+        // On the sounds' own thread, after anything still being played there.
+        soundHandler.post {
+            listOf(move, select, back).forEach { runCatching { it?.release() } }
+            move = null; select = null; back = null
+        }
     }
 
     /** Plays the OK sound once, so a new style is heard as soon as it is chosen. */
@@ -125,9 +135,11 @@ object UiSounds {
      * until the app restarted. Now a failed or dead track is rebuilt and tried once more.
      */
     private fun play(kind: Kind) {
-        if (!tryPlay(trackFor(kind))) {
-            forget(kind)
-            tryPlay(trackFor(kind))
+        soundHandler.post {
+            if (!tryPlay(trackFor(kind))) {
+                forget(kind)
+                tryPlay(trackFor(kind))
+            }
         }
     }
 
