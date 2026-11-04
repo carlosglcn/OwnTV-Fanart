@@ -1057,7 +1057,7 @@ private fun cinemaJsonList(json: String?): List<String> {
 private const val KEN_BURNS_ZOOM = 0.12f
 private const val KEN_BURNS_MS = 24_000
 private const val CINEMA_AMBIENT = 0.16f
-private const val CINEMA_TRAILER_MS = 3_000L // glcn: a few seconds after the page opens (was 4 s after a calm spell)
+private const val CINEMA_TRAILER_MS = 1_800L // glcn: it starts unseen and shows once YouTube's own overlays have gone (~4 s later)
 private const val TRAILER_WARM_MS = 1_400L // glcn: after the page has opened (was 900 ms, during its entrance)
 private const val TRAILER_AFTER_OPEN_MS = 800L
 private const val LIGHTS_DOWN_MS = 2_500L

@@ -432,8 +432,11 @@ object TrailerPool {
             }
             when (state) {
                 PlayerConstants.PlayerState.PLAYING -> if (r.started) {
-                    if (!r.loggedPlay) { r.loggedPlay = true; tv.own.owntv.player.LiveDiagnosticsLog.event("trailer: playing after ${(android.os.SystemClock.uptimeMillis() - r.startedAt) / 100 / 10.0}s") }
-                    r.onPlaying()
+                    val first = !r.loggedPlay
+                    if (first) { r.loggedPlay = true; tv.own.owntv.player.LiveDiagnosticsLog.event("trailer: playing after ${(android.os.SystemClock.uptimeMillis() - r.startedAt) / 100 / 10.0}s") }
+                    // glcn: YouTube lays its title, channel, Share and logo over the first seconds of a video (and again
+                    // for a moment after a pause); the trailer is shown only once they have gone.
+                    main.postDelayed({ if (request === r && isPlaying) r.onPlaying() }, if (first) OVERLAY_START_MS else OVERLAY_RESUME_MS)
                 }
                 // glcn: paused or waiting, YouTube draws its title bar, its logo and "More videos" over the picture —
                 // the trailer is hidden until it moves again (the page's picture shows meanwhile).
@@ -459,6 +462,8 @@ object TrailerPool {
     private const val HANDOVER_MS = 250L
     private const val RESUME_AFTER_MOVE_MS = 120L
     private const val RESUME_CHECK_MS = 900L
+    private const val OVERLAY_START_MS = 3_800L
+    private const val OVERLAY_RESUME_MS = 2_500L
     private const val STALL_MS = 15_000L // glcn: a slow start (first buffering) is not a stall
     private const val STALL_TICK_MS = 2_000L
 }
