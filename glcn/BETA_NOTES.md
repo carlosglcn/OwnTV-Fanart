@@ -113,3 +113,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ☀️ The programme's info screen (ⓘ on a live channel) follows the light theme too — it was always dark.
 - 🪧 Cinema and Side banners: the control dock stays as low as with the Compact banner (it grew a tall empty row), so there is no big empty space at the foot and the banner has more room.
 - 🔇 Menu sounds are started on their own thread: with the box busy (a trailer starting, memory short) a sound could freeze a key press for seconds (5.7 s seen in a report).
+- 🎞️ Trailers wait for the title page to finish opening before the YouTube player is prepared (preparing it during the page's entrance stuttered it for seconds); they still start about 3 s after opening, and not at all while memory is short.

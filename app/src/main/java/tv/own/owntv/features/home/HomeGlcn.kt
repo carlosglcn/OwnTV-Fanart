@@ -901,14 +901,17 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
  */
 @Composable
 internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, modifier: Modifier = Modifier, dissolve: Boolean = true) {
-    val allowed = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on && tv.own.owntv.glcn.DockPrefs.autoTrailers && !CinemaTrailer.blocked
+    // glcn: and not while the memory brake is on — a trailer then would only stutter the page.
+    val allowed = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on && tv.own.owntv.glcn.DockPrefs.autoTrailers && !CinemaTrailer.blocked && !tv.own.owntv.glcn.MemoryWatch.tight
     var ready by remember { mutableStateOf<String?>(null) }
     var start by remember { mutableStateOf(false) }
     val stop = CinemaTrailer.stopTick
     var startAt by remember { mutableStateOf(0f) }
     // glcn: the trailer player is got ready as soon as a page that can show one is up (see TrailerPool).
     val warmContext = androidx.compose.ui.platform.LocalContext.current
-    LaunchedEffect(allowed) { if (allowed) tv.own.owntv.ui.components.TrailerPool.warm(warmContext) }
+    // glcn: only once the page has finished opening (its entrance, logo and picture) — making the web page during
+    // the entrance is what stuttered it for seconds.
+    LaunchedEffect(allowed) { if (allowed) { delay(TRAILER_AFTER_OPEN_MS); tv.own.owntv.ui.components.TrailerPool.warm(warmContext) } }
     LaunchedEffect(focusKey, trailerKey, stop, allowed) {
         ready = null; start = false; startAt = 0f
         CinemaTrailer.playing = null
@@ -919,7 +922,7 @@ internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, m
         // glcn: a few seconds after the page opens, whether the remote is moving or not: prepared first, then started.
         delay(TRAILER_WARM_MS)
         ready = t
-        delay(CINEMA_TRAILER_MS - TRAILER_WARM_MS)
+        delay((CINEMA_TRAILER_MS - TRAILER_WARM_MS).coerceAtLeast(0L))
         start = true
     }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { CinemaTrailer.playing = null } }
@@ -1056,7 +1059,8 @@ private const val KEN_BURNS_ZOOM = 0.12f
 private const val KEN_BURNS_MS = 24_000
 private const val CINEMA_AMBIENT = 0.16f
 private const val CINEMA_TRAILER_MS = 3_000L // glcn: a few seconds after the page opens (was 4 s after a calm spell)
-private const val TRAILER_WARM_MS = 900L
+private const val TRAILER_WARM_MS = 1_400L // glcn: after the page has opened (was 900 ms, during its entrance)
+private const val TRAILER_AFTER_OPEN_MS = 800L
 private const val LIGHTS_DOWN_MS = 2_500L
 /** glcn: the trailer window's share of the screen's width, up on the right. */
 internal const val TRAILER_WINDOW_WIDTH = 0.62f
