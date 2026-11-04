@@ -2411,8 +2411,7 @@ fun OwnTVShell(
                                         value = artChannel?.let { liveVm.nowArtUrl(it, epg?.now?.startMs) }
                                     }
                                     // glcn: the banner style chosen in Settings → Player (Compact is the one it always was).
-                                    if (tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.FICHA) tv.own.owntv.glcn.LiveBannerFicha(epg = epg, art = art)
-                                    else tv.own.owntv.features.shell.components.LiveEpgCardWithArt(epg = epg, art = art)
+                                    tv.own.owntv.features.shell.components.LiveEpgCardWithArt(epg = epg, art = art)
                                 } else {
                                     tv.own.owntv.features.shell.components.LiveEpgCard(
                                         epg = epg,
@@ -2434,8 +2433,11 @@ fun OwnTVShell(
                                 value = artChannel?.let { liveVm.nowArtUrl(it, epg?.now?.startMs) }
                             }
                             if (watching == null) {
-                                if (tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.CINE) tv.own.owntv.glcn.LiveBannerCine(epg, art, m)
-                                else tv.own.owntv.glcn.LiveBannerLateral(epg, art, m)
+                                when (tv.own.owntv.glcn.LiveBanner.style) {
+                                    tv.own.owntv.glcn.LiveBanner.Style.CINE -> tv.own.owntv.glcn.LiveBannerCine(epg, art, m)
+                                    tv.own.owntv.glcn.LiveBanner.Style.FICHA -> tv.own.owntv.glcn.LiveBannerFicha(epg, art, m)
+                                    else -> tv.own.owntv.glcn.LiveBannerLateral(epg, art, m)
+                                }
                             }
                         }
                     } else null,

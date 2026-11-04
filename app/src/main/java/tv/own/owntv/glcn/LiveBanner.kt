@@ -67,7 +67,7 @@ object LiveBanner {
     }
 
     /** True when the banner is drawn over the picture by the player itself, not in the dock beside the channel. */
-    val wide: Boolean get() = style == Style.CINE || style == Style.LATERAL
+    val wide: Boolean get() = style != Style.COMPACT
 
     private fun prefs(context: Context) = context.applicationContext.getSharedPreferences("glcn_live_banner", Context.MODE_PRIVATE)
     private const val KEY = "style"
@@ -106,7 +106,10 @@ private fun LeftRing(progress: Float, modifier: Modifier = Modifier) {
     })
 }
 
-private class Facts(val title: String, val meta: String, val progress: Float, val synopsis: String?, val nextLine: String?)
+private class Facts(
+    val title: String, val meta: String, val progress: Float, val synopsis: String?, val nextLine: String?,
+    val start: String, val stop: String, val ring: String, val upcoming: List<Pair<String, String>>,
+)
 
 @Composable
 private fun facts(epg: EpgNowNext): Facts? {
@@ -120,95 +123,140 @@ private fun facts(epg: EpgNowNext): Facts? {
     else stringResource(R.string.content_live_time_range, formatTime(now.startMs), formatTime(now.stopMs))
     val meta = listOfNotNull(time, epg.nowDetails?.categoryList?.take(2)?.joinToString(", ")?.takeIf { it.isNotBlank() }).joinToString("  ·  ")
     val nextLine = epg.next?.let { formatTime(it.startMs) + "  " + it.title }
-    return Facts(now.title, meta, progress, now.description?.takeIf { it.isNotBlank() }, nextLine)
+    // What follows: the next one and those after it, a programme listed twice shown once.
+    val upcoming = (listOfNotNull(epg.next) + epg.upcoming)
+        .distinctBy { it.startMs to it.title }
+        .filter { it.startMs >= now.stopMs - 60_000L }
+        .take(6)
+        .map { formatTime(it.startMs) to it.title }
+    val ring = stringResource(R.string.content_live_time_range, formatTime(now.startMs), formatTime(now.stopMs))
+    return Facts(now.title, meta, progress, now.description?.takeIf { it.isNotBlank() }, nextLine, formatTime(now.startMs), formatTime(now.stopMs), ring, upcoming)
 }
 
-/** Ficha — in the dock beside the channel: a larger picture, the title, a ring of time left, the synopsis, what follows. */
+/** A coming programme as a small glass chip: its time in the accent, then its title. */
+@Composable
+private fun NextChip(time: String, title: String, modifier: Modifier = Modifier, first: Boolean = false) {
+    Row(
+        modifier.clip(RoundedCornerShape(10.dp)).background(hudInk.copy(alpha = 0.10f)).padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(time, style = stageText(16, 700), color = if (first) stageAccent.accent else hudInk.copy(alpha = 0.7f), maxLines = 1)
+        Text(title, style = stageText(16, 500), color = hudInk.copy(alpha = if (first) 1f else 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
+ * Ficha — a wide glass band just above the controls, tinted with the programme's colour: the picture large on the
+ * left; the title with its ring and times, a 3-line synopsis and what follows as three chips on the right. Everything
+ * at a glance, the top of the picture left clear.
+ */
 @Composable
 fun LiveBannerFicha(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier) {
     val f = epg?.let { facts(it) } ?: return
     Row(
-        modifier.clip(RoundedCornerShape(14.dp)).background(stageAccent.accent.copy(alpha = 0.10f)).background(hudShade(0.35f)).padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier.fillMaxWidth().padding(horizontal = 28.dp)
+            .clip(RoundedCornerShape(20.dp)).background(hudShade(0.72f)).background(stageAccent.accent.copy(alpha = 0.08f))
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (!art.isNullOrBlank()) tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.size(width = 168.dp, height = 94.dp).clip(RoundedCornerShape(10.dp)))
-        Column(Modifier.width(330.dp)) {
+        if (!art.isNullOrBlank()) tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.width(300.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)))
+        Column(Modifier.weight(1f)) {
             Label(stringResource(R.string.content_live_now), stageAccent.accent)
-            Text(f.title, style = stageText(24, 700), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                LeftRing(f.progress)
-                Text(f.meta, style = stageText(16, 400), color = hudInk.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(f.title, style = stageText(30, 700), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LeftRing(f.progress, Modifier.size(16.dp))
+                Text(f.meta, style = stageText(17, 400), color = hudInk.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             f.synopsis?.let {
                 tv.own.owntv.features.shell.components.DriftingSynopsis(
-                    it, modifier = Modifier.padding(top = 4.dp),
-                    style = stageText(15, 400), color = hudInk.copy(alpha = 0.85f), lines = 3,
+                    it, modifier = Modifier.padding(top = 6.dp),
+                    style = stageText(16, 400), color = hudInk.copy(alpha = 0.88f), lines = 3,
                 )
             }
-            f.nextLine?.let {
-                Row(Modifier.padding(top = 5.dp).clip(RoundedCornerShape(6.dp)).background(hudInk.copy(alpha = 0.12f)).padding(horizontal = 8.dp, vertical = 2.dp)) {
-                    Text(it, style = stageText(15, 500), color = hudInk.copy(alpha = 0.9f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
+            if (f.upcoming.isNotEmpty()) Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                f.upcoming.take(3).forEachIndexed { i, (t, title) -> NextChip(t, title, Modifier.weight(1f, fill = false), first = i == 0) }
             }
         }
     }
 }
 
-/** Cine — no panel: large text straight over the darkened foot of the picture, what follows on the right. */
+/**
+ * Cine — words only, no boxes: a soft dark shade over the lower third of the picture (dark in both themes, the words
+ * white over it), a very large title, its times and kind, a 2-line synopsis, what follows on the right, and the
+ * programme's line with its start and end at the two ends, like a film's timeline.
+ */
 @Composable
 fun LiveBannerCine(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier) {
     val f = epg?.let { facts(it) } ?: return
-    // Its own soft shade from the picture down to the dock, so the large text reads over any picture.
+    val ink = Color.White
+    val accent = stageAccent.accent
     Column(
         modifier.fillMaxWidth()
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Transparent, 0.4f to hudShade(0.55f), 1f to hudShade(0.74f)))
-            .padding(start = 48.dp, end = 48.dp, top = 48.dp, bottom = 6.dp),
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Transparent, 0.45f to Color.Black.copy(alpha = 0.42f), 1f to Color.Black.copy(alpha = 0.62f)))
+            .padding(start = 56.dp, end = 56.dp, top = 64.dp, bottom = 10.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) {
-                Label(stringResource(R.string.content_live_now), stageAccent.accent)
-                Text(f.title, style = stageText(40, 700), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(f.meta, style = stageText(18, 400), color = hudInk.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(stringResource(R.string.content_live_now).uppercase(), style = stageText(15, 500).copy(letterSpacing = 1.4.sp), color = accent, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(f.title, style = stageText(52, 800), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(f.meta, style = stageText(19, 500), color = ink.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 f.synopsis?.let {
                     tv.own.owntv.features.shell.components.DriftingSynopsis(
-                        it, modifier = Modifier.padding(top = 6.dp).fillMaxWidth(0.85f),
-                        style = stageText(17, 400), color = hudInk.copy(alpha = 0.85f), lines = 2,
+                        it, modifier = Modifier.padding(top = 8.dp).fillMaxWidth(0.8f),
+                        style = stageText(18, 400), color = ink.copy(alpha = 0.88f), lines = 2,
                     )
                 }
             }
-            if (f.nextLine != null) {
-                Spacer(Modifier.width(24.dp))
-                Column(Modifier.width(260.dp).clip(RoundedCornerShape(10.dp)).background(hudInk.copy(alpha = 0.10f)).padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    Label(stringResource(R.string.content_live_next), hudInk.copy(alpha = 0.6f))
-                    Text(f.nextLine, style = stageText(16, 500), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            f.upcoming.firstOrNull()?.let { (t, title) ->
+                Spacer(Modifier.width(32.dp))
+                Column(Modifier.width(280.dp), horizontalAlignment = Alignment.End) {
+                    Text(stringResource(R.string.content_live_next).uppercase(), style = stageText(14, 500).copy(letterSpacing = 1.2.sp), color = ink.copy(alpha = 0.6f), fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text(t + "  " + title, style = stageText(18, 600), color = ink, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.End)
                 }
             }
         }
-        Bar(f.progress, Modifier.padding(top = 10.dp))
+        Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(f.start, style = stageText(15, 600), color = ink.copy(alpha = 0.75f), maxLines = 1)
+            Box(Modifier.weight(1f).height(3.dp).clip(RoundedCornerShape(2.dp)).background(ink.copy(alpha = 0.25f)).drawBehind {
+                drawRoundRect(accent, size = Size(size.width * f.progress, size.height), cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
+            })
+            Text(f.stop, style = stageText(15, 600), color = ink.copy(alpha = 0.75f), maxLines = 1)
+        }
     }
 }
 
-/** Lateral — a column on the left: the picture, the title, a longer synopsis and what follows; the video stays in view. */
+/**
+ * Lateral — a full-height glass column on the left, like a small guide: the picture, the title, ring and times, a
+ * long synopsis that never runs under the rest, and the next hours' programmes with their times.
+ */
 @Composable
 fun LiveBannerLateral(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier) {
     val f = epg?.let { facts(it) } ?: return
-    Column(modifier.clip(RoundedCornerShape(18.dp)).background(hudShade(0.78f)).padding(18.dp)) {
-        if (!art.isNullOrBlank()) tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)))
-        Spacer(Modifier.height(12.dp))
+    Column(modifier.clip(RoundedCornerShape(22.dp)).background(hudShade(0.82f)).padding(20.dp)) {
+        if (!art.isNullOrBlank()) tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)))
+        Spacer(Modifier.height(14.dp))
         Label(stringResource(R.string.content_live_now), stageAccent.accent)
         Text(f.title, style = stageText(28, 700), color = hudInk, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(f.meta, style = stageText(16, 400), color = hudInk.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Bar(f.progress, Modifier.padding(vertical = 8.dp))
+        Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LeftRing(f.progress, Modifier.size(16.dp))
+            Text(f.meta, style = stageText(16, 400), color = hudInk.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
         f.synopsis?.let {
             tv.own.owntv.features.shell.components.DriftingSynopsis(
-                it, modifier = Modifier.weight(1f, fill = false),
-                style = stageText(16, 400), color = hudInk.copy(alpha = 0.85f), lines = 8,
+                it, modifier = Modifier.padding(top = 10.dp).weight(1f, fill = false),
+                style = stageText(16, 400), color = hudInk.copy(alpha = 0.88f), lines = 8,
             )
         }
-        f.nextLine?.let {
-            Spacer(Modifier.height(10.dp))
+        if (f.upcoming.isNotEmpty()) {
+            Box(Modifier.padding(vertical = 12.dp).fillMaxWidth().height(1.dp).background(hudInk.copy(alpha = 0.12f)))
             Label(stringResource(R.string.content_live_next), hudInk.copy(alpha = 0.6f))
-            Text(it, style = stageText(17, 500), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(4.dp))
+            f.upcoming.take(5).forEachIndexed { i, (t, title) ->
+                Row(Modifier.padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(t, style = stageText(16, 700), color = if (i == 0) stageAccent.accent else hudInk.copy(alpha = 0.65f), maxLines = 1, modifier = Modifier.width(56.dp))
+                    Text(title, style = stageText(16, if (i == 0) 600 else 500), color = hudInk.copy(alpha = if (i == 0) 1f else 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
         }
     }
 }

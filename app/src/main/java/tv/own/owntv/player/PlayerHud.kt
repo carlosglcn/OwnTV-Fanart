@@ -899,8 +899,10 @@ fun PlayerHud(
                     val barDp = with(androidx.compose.ui.platform.LocalDensity.current) { barHeightPx.toDp() }
                     if (tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.CINE) {
                         liveBannerWide(Modifier.align(Alignment.BottomStart).then(risen).padding(bottom = barDp))
+                    } else if (tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.FICHA) {
+                        liveBannerWide(Modifier.align(Alignment.BottomStart).then(risen).padding(bottom = barDp + 8.dp))
                     } else {
-                        liveBannerWide(Modifier.align(Alignment.TopStart).then(risen).padding(start = 28.dp, top = 24.dp, bottom = barDp + 12.dp).fillMaxWidth(0.34f).fillMaxHeight())
+                        liveBannerWide(Modifier.align(Alignment.TopStart).then(risen).padding(start = 28.dp, top = 24.dp, bottom = barDp + 12.dp).fillMaxWidth(0.30f).fillMaxHeight())
                     }
                 }
                 CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp), buffering = buffering) // glcn: clear of the now/next card's top edge

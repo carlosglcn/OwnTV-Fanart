@@ -117,3 +117,7 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎯 Films: back from a film's page keeps the focus on that film again (the guard against a stray poster focus was lifted a moment too early).
 - 🎬 Trailers start again on title pages: the memory brake no longer blocks them for good (it could stay on all day on a box with other apps open); a truly low memory still skips them.
 - 🕒 Light theme: the date and weather under the clock in darker, slightly bolder text, so they read at a glance.
+- 🪧 Live banners, each with its own role (Compact unchanged and still the default):
+  - Card: a wide glass band just above the controls, tinted with the programme's colour — large picture, title with its time-left ring, 3-line synopsis and the next three programmes as chips.
+  - Cinema: words only over a soft dark shade on the lower third (dark in both themes) — a very large title, times and kind, a 2-line synopsis, what follows on the right and the programme's line with its start and end at either end.
+  - Side: a full-height glass column like a small guide — picture, title, ring and times, a long synopsis and the next five programmes with their times.
