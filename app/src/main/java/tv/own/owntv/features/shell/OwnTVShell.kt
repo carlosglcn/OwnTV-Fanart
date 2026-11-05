@@ -229,7 +229,12 @@ fun OwnTVShell(
     var hudControlsVisible by remember { mutableStateOf(true) }
     var introSkipVisible by remember { mutableStateOf(false) }
     val introContext = androidx.compose.ui.platform.LocalContext.current
-    val navStyle by settingsRepo.navStyle.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.SettingsRepository.NavStyle.DOCKED)
+    // glcn: start from the menu style the last run ended with (kept on the device), not Docked — the settings arrive
+    // a moment after the first frame, and the side menu used to flash up before the top bar replaced it.
+    val navCtx = androidx.compose.ui.platform.LocalContext.current
+    val navStyleStart = remember { tv.own.owntv.glcn.NavStyleCache.read(navCtx) }
+    val navStyle by settingsRepo.navStyle.collectAsStateWithLifecycle(initialValue = navStyleStart)
+    LaunchedEffect(navStyle) { tv.own.owntv.glcn.NavStyleCache.write(navCtx, navStyle) }
     val homeLayout by settingsRepo.homeBackdropStyle.collectAsStateWithLifecycle(initialValue = 0)
     val navSize by settingsRepo.navSize.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.settings.SettingsRepository.NavSize.COMPACT)
     val navWiden by settingsRepo.navWiden.collectAsStateWithLifecycle(initialValue = null)

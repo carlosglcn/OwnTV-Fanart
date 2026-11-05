@@ -174,3 +174,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 💎 Glass mode: the player's channel list, the round player buttons (back, play/pause), and menu items / sheet rows / buttons now focus as tinted glass too, instead of a solid colour.
 - 📝 Live TV (Ficha): the coming programmes' cards sit lower, near the foot, and the synopsis of what is on takes all the room above them.
 - 🩹 Hold-OK menus (Dock tabs and cards, Keep watching…) show properly again — they had collapsed into a thin white bar; Move and Hide are back.
+- 🚀 Start-up: the menu opens in the style you use (top bar or side) from the first frame — the side menu no longer flashes up first.
+- 📐 Live TV (Ficha): the video takes the column's whole width, its edges in line with the text and cards under it.
