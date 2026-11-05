@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -986,7 +987,14 @@ fun PlayerHud(
                         .onSizeChanged { barHeightPx = it.height },
                     // glcn: Ficha — the channel and the controls on one line, the programme under them.
                     toolsUp = isLive && wideBanner && bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.FICHA,
-                    belowHeader = if (isLive && wideBanner && bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.FICHA) liveBannerWide?.let { b -> { b(Modifier) } } else null,
+                    belowHeader = if (isLive && wideBanner && bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.FICHA) liveBannerWide?.let { b ->
+                        {
+                            Column {
+                                FichaChannelLine(player)
+                                b(Modifier)
+                            }
+                        }
+                    } else null,
                     // glcn: the other styles keep an empty side, so the dock stays as low as with the card.
                     side = if (isLive && !wideBanner) liveEpgCard else if (isLive) ({ }) else null,
                     header = when {
@@ -1261,5 +1269,17 @@ private fun CineChannelTag(player: PlaybackEngine, modifier: Modifier = Modifier
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         meta.subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, style = tv.own.owntv.ui.theme.stageText(20, 600), color = Color.White.copy(alpha = 0.7f), maxLines = 1) }
         Text(name, style = tv.own.owntv.ui.theme.stageText(22, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** glcn: Ficha banner — the channel, small, over the programme ("#37  WARNERTV"); the controls hold the top line. */
+@Composable
+private fun FichaChannelLine(player: PlaybackEngine) {
+    val meta by player.currentMeta.collectAsStateWithLifecycle()
+    val name = meta.title?.takeIf { it.isNotBlank() } ?: return
+    Row(Modifier.padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!meta.logoUrl.isNullOrBlank()) coil3.compose.AsyncImage(model = meta.logoUrl, contentDescription = null, modifier = Modifier.size(width = 40.dp, height = 26.dp))
+        meta.subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, style = tv.own.owntv.ui.theme.stageText(18, 600), color = tv.own.owntv.ui.theme.hudInk.copy(alpha = 0.55f), maxLines = 1) }
+        Text(name, style = tv.own.owntv.ui.theme.stageText(19, 700), color = tv.own.owntv.ui.theme.hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

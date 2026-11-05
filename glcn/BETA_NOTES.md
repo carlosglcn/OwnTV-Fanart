@@ -141,3 +141,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📏 Card banner lower still: smaller picture and title, tighter lines.
 - 🔥 Trending split rows: besides the mixed "Now trending" row (unchanged, still the default), Home can show "Trending films" and "Trending series" — up to ten of each — switched on and moved in Settings › Layout › Home screen like any other row (both off by default).
 - 📝 Channel list in the player, coming programmes: their synopsis really shows now (each one is read from the guide by its id; the earlier lookup missed them).
+- 🪧 Card banner: all the controls on the top line across the panel (beside the channel they ran off its edge — the red sliver was the cut "LIVE" badge), the channel named small over the programme, and less room above the picture.

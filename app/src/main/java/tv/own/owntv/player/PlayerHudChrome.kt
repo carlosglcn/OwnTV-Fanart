@@ -612,13 +612,10 @@ internal fun BottomBar(
     }
     val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
         if (header != null && toolsUp) {
-            // glcn: Ficha banner — the channel and every control on one line, the programme under it.
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                Box(Modifier.widthIn(max = 520.dp)) { header() }
-                Spacer(Modifier.width(24.dp))
-                tools(Modifier.weight(1f))
-            }
-            Box(Modifier.fillMaxWidth().padding(vertical = 5.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
+            // glcn: Ficha banner — every control on the top line (all fifteen take the panel's whole width: beside the
+            // channel they ran off its edge), then the programme with the channel named over it.
+            tools(Modifier.fillMaxWidth())
+            Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 3.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
             belowHeader?.invoke()
         } else if (header != null) {
             // glcn: live TV — the channel on the left, the programme on air with its picture on the right,
