@@ -383,6 +383,7 @@ open class MainActivity : ComponentActivity() {
             }
             val bgImagePath by viewModel.bgImagePath.collectAsStateWithLifecycle()
             val glassConfig by viewModel.glassConfig.collectAsStateWithLifecycle()
+            tv.own.owntv.glcn.GlassFocus.on = glassConfig.enabled // glcn: the focus drawn as tinted glass
             val background by viewModel.backgroundConfig.collectAsStateWithLifecycle()
             val avatarId by viewModel.avatarId.collectAsStateWithLifecycle()
             val avatarPath by viewModel.avatarPath.collectAsStateWithLifecycle()

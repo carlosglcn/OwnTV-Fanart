@@ -145,3 +145,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪧 Card banner: the programme's text starts at the top beside the picture with room for a 4-line synopsis (no drifting), five programmes follow on the right, and the controls' name shows under them — no empty band above the icons.
 - 🪟 Lateral banner: no white wash over the bottom of the picture; the controls sit on their own glass strip, level with the side panel.
 - ⬅️ Live TV: ◀ from the channel list now jumps to the toolbar (Provider, Categories, Guide view); ◀ from the search field still opens the menu.
+- 💎 Glass mode: focused rows and cards now look like tinted glass — an accent wash, a light catch along the top edge and a ring that fades across.
