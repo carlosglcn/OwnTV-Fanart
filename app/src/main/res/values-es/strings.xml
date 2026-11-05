@@ -9,9 +9,6 @@
     <string name="glcn_star_scan">Escanea el QR con el móvil.</string>
     <string name="glcn_star_qr">Código QR de este proyecto en GitHub</string>
     <string name="glcn_star_close">Cerrar</string>
-    <string name="glcn_vod_section_platforms">Plataformas</string>
-    <string name="glcn_vod_section_genres">Géneros</string>
-    <string name="glcn_vod_section_more">Más categorías</string>
     <string name="glcn_star_google">Puedes entrar con tu cuenta de Google.</string>
     <string name="glcn_star_later">Ahora no</string>
     <string name="glcn_star_done">Ya la di ⭐</string>
