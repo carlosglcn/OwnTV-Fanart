@@ -1,5 +1,6 @@
 package tv.own.owntv.features.home
 
+import androidx.compose.foundation.layout.offset
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -900,7 +901,11 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
  * plays, OK opens it whole with sound ([CinemaTrailer]).
  */
 @Composable
-internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, modifier: Modifier = Modifier, dissolve: Boolean = true) {
+internal fun FocusTrailer(
+    trailerKey: String?, title: String?, focusKey: Any?, modifier: Modifier = Modifier, dissolve: Boolean = true,
+    /** glcn: the sound hint just under the window's corner, off the picture (the title page's small trailer window). */
+    hintBelow: Boolean = false,
+) {
     val allowed = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on && tv.own.owntv.glcn.DockPrefs.autoTrailers && !CinemaTrailer.blocked
     var ready by remember { mutableStateOf<String?>(null) }
     var start by remember { mutableStateOf(false) }
@@ -937,7 +942,9 @@ internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, m
             ) { ready = null; CinemaTrailer.playing = null }
         }
         // The one hint while it plays: Play/Pause for its sound.
-        if (CinemaTrailer.playing?.first == key) TrailerSoundHint(Modifier.align(Alignment.TopEnd).padding(end = 56.mpx, top = TRAILER_HINT_TOP))
+        if (CinemaTrailer.playing?.first == key) TrailerSoundHint(
+            if (hintBelow) Modifier.align(Alignment.BottomEnd).offset(y = 46.mpx) else Modifier.align(Alignment.TopEnd).padding(end = 56.mpx, top = TRAILER_HINT_TOP),
+        )
     }
 }
 

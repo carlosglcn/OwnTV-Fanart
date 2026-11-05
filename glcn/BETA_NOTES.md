@@ -137,3 +137,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪧 Card banner, new layout: the channel and all the controls share the top line, the programme sits under them (picture, title, ring, synopsis) and the next three programmes fill the right side as a short list — two bands instead of three, much lower.
 - 📋 Channel list in the player, coming programmes (▶): each one now shows its synopsis too (the schedule's rows carried none), and their pictures are fetched ahead so walking them with ▲▼ shows each at once.
 - 🙈 Trailers: YouTube's title, channel, Share button and logo over the first seconds are no longer seen — the trailer starts unseen a little earlier and comes into view once they have gone (and again after a pause).
+- 🔈 Title page trailer: the "Play/Pause: sound" hint sits just under the window's corner instead of over the picture.

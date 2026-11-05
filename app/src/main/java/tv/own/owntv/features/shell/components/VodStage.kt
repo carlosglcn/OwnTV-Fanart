@@ -376,7 +376,7 @@ internal fun VodCinematicBackdrop(
                             drawRoundRect(Color.Black, cornerRadius = androidx.compose.ui.geometry.CornerRadius(r))
                         },
                 )
-                tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize().padding(10.mpx), dissolve = false)
+                tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize().padding(10.mpx), dissolve = false, hintBelow = true)
             }
         }
     }
