@@ -670,10 +670,8 @@ fun StageMenu(modifier: Modifier = Modifier, content: @Composable ColumnScope.()
         modifier
             .stageGlass(StageRadii.Menu, overContent = true)
             .padding(start = 16.mpx, end = 16.mpx, top = 22.mpx, bottom = 16.mpx),
-    ) {
-        // glcn: the menu's own focus box, gliding between its items (never the screen's behind it).
-        tv.own.owntv.glcn.SlideFocusHost { Column(content = content) }
-    }
+        content = content,
+    )
 }
 
 /** `.menu .mh`: the menu's heading — optional leading art, a 23/800 title and a 15 px muted line. */
