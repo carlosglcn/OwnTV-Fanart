@@ -1386,6 +1386,7 @@
 2	technical	app/src/main/java/tv/own/owntv/player/PlayerHudChrome.kt	?
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHudChrome.kt	tuneCaret
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHudChrome.kt	tuneCaretAlpha
+1	technical	app/src/main/java/tv/own/owntv/player/PlayerHudChrome.kt	zapCard
 2	technical	app/src/main/java/tv/own/owntv/player/PlayerHudControls.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHudControls.kt	liveDot
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHudControls.kt	liveDotAlpha

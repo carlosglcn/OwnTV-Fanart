@@ -242,6 +242,7 @@ fun ChannelListOverlay(
                     modifier = Modifier.padding(start = 14.mpx, end = 14.mpx, top = 4.mpx, bottom = 12.mpx),
                 )
             }
+            androidx.compose.runtime.DisposableEffect(Unit) { tv.own.owntv.glcn.GlassFocus.overVideo++; onDispose { tv.own.owntv.glcn.GlassFocus.overVideo-- } }
             LazyColumn(
                 state = listState,
                 modifier = Modifier

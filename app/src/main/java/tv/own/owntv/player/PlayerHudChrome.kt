@@ -1,5 +1,7 @@
 package tv.own.owntv.player
 
+import androidx.compose.foundation.border
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.tv.material3.MaterialTheme
@@ -236,7 +238,11 @@ private fun ChannelLogo(logoUrl: String?, title: String?, size: Int, modifier: M
     }
 }
 
-/** The player's channel OSD: channel logo beside its name and number. */
+/**
+ * The player's channel OSD. glcn: one glass card a little in from the corner — the logo on a light glass plate, the
+ * number large in the accent and the name on one line, the programme under them (picture, title on up to two lines,
+ * progress, what follows). Zapping changes only what is inside, with a short fade: the card stays put.
+ */
 @Composable
 internal fun ChannelOsdCard(
     title: String?,
@@ -246,20 +252,38 @@ internal fun ChannelOsdCard(
     /** Now/next under the name on a zap; null (or a channel with no guide) keeps it name-only. */
     guide: (@Composable () -> Unit)? = null,
 ) {
-    Row(
-        modifier = modifier.widthIn(max = if (guide != null) 680.dp else 340.dp).clip(RoundedCornerShape(14.dp)).background(hudShade(0.55f)).padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    Column(
+        modifier = modifier.width(if (guide != null) 760.dp else 420.dp)
+            .clip(RoundedCornerShape(22.dp)).background(hudShade(0.62f))
+            .border(1.dp, hudInk.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
+            .padding(horizontal = 18.dp, vertical = 16.dp),
     ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF004F46)), contentAlignment = Alignment.Center) {
-            if (!logoUrl.isNullOrBlank()) AsyncImage(model = logoUrl, contentDescription = null, modifier = Modifier.fillMaxSize())
-            else Text((title ?: "?").take(3).uppercase(), style = tv.own.owntv.ui.theme.stageText(22, 700), color = Color(0xFF6FF8E4), fontWeight = FontWeight.Bold)
-        }
-        Column {
-            Text(title ?: "", style = tv.own.owntv.ui.theme.stageText(25, 500), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            subtitle?.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = tv.own.owntv.ui.theme.stageText(20, 500), color = hudInk.copy(alpha = 0.5f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        androidx.compose.animation.AnimatedContent(
+            targetState = title,
+            transitionSpec = { androidx.compose.animation.fadeIn(tween(180)) togetherWith androidx.compose.animation.fadeOut(tween(120)) },
+            label = "zapCard",
+        ) { shownTitle ->
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Box(
+                        Modifier.size(width = 64.dp, height = 44.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.14f)).padding(5.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (!logoUrl.isNullOrBlank()) AsyncImage(model = logoUrl, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                        else Text((shownTitle ?: "?").take(3).uppercase(), style = tv.own.owntv.ui.theme.stageText(18, 800), color = hudInk)
+                    }
+                    // A channel's number ("#7") stands large in the accent; any other line stays small under the name.
+                    val number = subtitle?.filter(Char::isDigit)?.takeIf { it.isNotEmpty() && subtitle.count(Char::isLetter) == 0 }
+                    if (number != null) Text(number, style = tv.own.owntv.ui.theme.stageText(30, 800), color = hudAccent, maxLines = 1)
+                    Column(Modifier.weight(1f, fill = false)) {
+                        Text(shownTitle ?: "", style = tv.own.owntv.ui.theme.stageText(25, 600), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (number == null) subtitle?.takeIf { it.isNotBlank() }?.let {
+                            Text(it, style = tv.own.owntv.ui.theme.stageText(18, 500), color = hudInk.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                if (guide != null) Box(Modifier.padding(top = 10.dp)) { guide() }
             }
-            guide?.invoke()
         }
     }
 }

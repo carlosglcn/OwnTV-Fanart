@@ -2369,14 +2369,19 @@ fun OwnTVShell(
                             androidx.compose.foundation.layout.Row(
                                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
                             ) {
-                                art?.takeIf { it.isNotBlank() }?.let { url ->
-                                    tv.own.owntv.ui.components.ProgrammeArt(
-                                        url = url,
-                                        modifier = Modifier
-                                            .padding(top = 10.dp)
-                                            .size(width = 192.dp, height = 108.dp)
-                                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
-                                    )
+                                // glcn: the picture's place is kept while it loads (the channel's logo on a quiet plate), so the
+                                // lines beside it never jump sideways when it arrives.
+                                androidx.compose.foundation.layout.Box(
+                                    Modifier.size(width = 192.dp, height = 108.dp)
+                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                        .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f)),
+                                    contentAlignment = androidx.compose.ui.Alignment.Center,
+                                ) {
+                                    val url = art?.takeIf { it.isNotBlank() }
+                                    if (url != null) tv.own.owntv.ui.components.ProgrammeArt(url = url, modifier = Modifier.fillMaxSize())
+                                    else zapChannel?.logoUrl?.takeIf { it.isNotBlank() }?.let { logo ->
+                                        coil3.compose.AsyncImage(model = logo, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.fillMaxSize(0.5f))
+                                    }
                                 }
                                 tv.own.owntv.features.shell.components.ZapGuideLines(guide, Modifier.weight(1f, fill = false))
                             }

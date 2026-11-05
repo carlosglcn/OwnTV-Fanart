@@ -767,7 +767,7 @@ fun PlayerHud(
         val tuned = (tuneOsd as? TuneOsd.Tuned)?.info
         Column(
             modifier = Modifier.align(Alignment.TopStart)
-                .padding(start = 28.dp, top = if (controlsVisible) 92.dp else 28.dp),
+                .padding(start = 44.dp, top = if (controlsVisible) 92.dp else 40.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (isLive && (tuned != null || (showFlash && !controlsVisible))) {

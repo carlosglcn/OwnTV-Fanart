@@ -109,11 +109,13 @@ internal fun CircleButton(icon: OwnTVIcon, size: Int, primary: Boolean = false, 
     // Focus fills the button with the accent and rings it in a white hairline. The glyph takes
     // onAccentOnVideo rather than a fixed dark, so a deep custom accent still gets a readable icon —
     // that role is already derived from the seed's luminance, which is the check this needs.
+    // glcn: with Glass on, the round buttons (back, play/pause) focus as tinted glass like the dock's tools, the glyph white.
+    val glass = tv.own.owntv.glcn.GlassFocus.on
     StageSurface(
         onClick = onClick,
         radius = (size / 2f).dp,
         modifier = modifier.size(size.dp),
-        focusStyle = StageFocus.FILLED,
+        focusStyle = if (glass) StageFocus.FX else StageFocus.FILLED,
         idle = Modifier.background(if (primary) hudInk.copy(alpha = 0.95f) else hudInk.copy(alpha = 0.10f), CircleShape),
         accent = hudFocus(ring = hudInk),
         contentAlignment = Alignment.Center,
@@ -121,6 +123,7 @@ internal fun CircleButton(icon: OwnTVIcon, size: Int, primary: Boolean = false, 
         OwnTVIcon(
             icon,
             tint = when {
+                focused && glass -> hudInk
                 focused -> hudOnAccent
                 primary -> tv.own.owntv.ui.theme.stageTone(Color(0xFF0E1513), Color.White)
                 else -> hudInk

@@ -216,7 +216,7 @@ fun ZapGuideLines(epg: EpgNowNext?, modifier: Modifier = Modifier) {
     Column(modifier.padding(top = 8.dp)) {
         epg.now?.let { entry ->
             SlotLabel(stringResource(R.string.content_live_now), tv.own.owntv.ui.theme.stageAccent.accent)
-            Text(entry.title, style = tv.own.owntv.ui.theme.stageText(25, 400), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(entry.title, style = tv.own.owntv.ui.theme.stageText(24, 500), color = hudInk, maxLines = 2, overflow = TextOverflow.Ellipsis) // glcn: two lines, not cut
             val remaining = ((entry.stopMs - nowMs) / 60_000L).toInt()
             Text(
                 if (remaining in 1..600) stringResource(R.string.glcn_pi_ends_left, formatTime(entry.stopMs), remaining)

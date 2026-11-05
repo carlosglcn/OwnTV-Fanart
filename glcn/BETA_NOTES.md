@@ -170,3 +170,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📜 Live TV scroll bar: a quiet bar now stays while the channel list has focus (it was easy to miss), brightening while the list moves.
 - 🎚️ Live TV: ▶ on a long channel list takes hold of the scroll bar — ▲ ▼ then jump ten channels with the number in the bubble; ▶ again goes to what follows, ◀ or OK let go.
 - 🖼️ Live TV (Ficha): the coming programmes' pictures fill their cards (wide and low), with the time and title over their foot.
+- 📺 Channel-change banner redesigned: one glass card a little in from the corner — logo on a light glass plate, the number large and the name; the programme's picture (its place kept while it loads), the title on up to two lines; zapping changes only what is inside, with a short fade. It now stays 6 seconds (it was 3).
+- 💎 Glass mode: the player's channel list, the round player buttons (back, play/pause), and menu items / sheet rows / buttons now focus as tinted glass too, instead of a solid colour.
