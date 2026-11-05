@@ -151,3 +151,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔊 Trailer window: the sound hint now sits beside the window's corner instead of over its edge.
 - ✅ Watched mark on posters: a solid accent disc with a white check and rim, readable on any poster.
 - 🎞️ Live TV programme info: opens with the film player's side-panel motion — the words glide in as one piece while the picture settles into its window (same size and layout as before).
+- 🩹 Hold-OK menus (Keep watching and others): the focused item's highlight was drawn on the screen behind, leaving white text on white in the light theme — fixed; the highlight now glides between the menu's items.

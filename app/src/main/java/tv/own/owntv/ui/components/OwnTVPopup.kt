@@ -145,7 +145,7 @@ fun OwnTVPopup(
                         val sc = POPUP_ENTER_SCALE + (1f - POPUP_ENTER_SCALE) * e
                         scaleX = sc; scaleY = sc
                     },
-                ) { content() }
+                ) { androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.glcn.LocalSlideFocus provides null) { content() } }
             }
             return@Dialog
         }
@@ -176,7 +176,8 @@ fun OwnTVPopup(
                 ) {
                     PopupFontTheme(fontScale = fontScale) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            content()
+                            // glcn: a popup never reports to the sliding focus box of the screen under it (drawn there, unseen).
+                            androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.glcn.LocalSlideFocus provides null) { content() }
                         }
                     }
                 }
