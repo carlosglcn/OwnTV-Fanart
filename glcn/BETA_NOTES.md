@@ -140,3 +140,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔈 Title page trailer: the "Play/Pause: sound" hint sits just under the window's corner instead of over the picture.
 - 📏 Card banner lower still: smaller picture and title, tighter lines.
 - 🔥 Trending split rows: besides the mixed "Now trending" row (unchanged, still the default), Home can show "Trending films" and "Trending series" — up to ten of each — switched on and moved in Settings › Layout › Home screen like any other row (both off by default).
+- 📝 Channel list in the player, coming programmes: their synopsis really shows now (each one is read from the guide by its id; the earlier lookup missed them).

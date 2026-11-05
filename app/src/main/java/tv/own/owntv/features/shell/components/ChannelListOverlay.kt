@@ -476,16 +476,18 @@ internal fun ZapSchedulePanel(
     }
     // glcn: the schedule's rows are the guide's light ones (no synopsis); the coming programmes are read whole in the
     // background — synopsis and picture — and their pictures fetched, so picking one with ▶ ▲ ▼ shows it at once.
-    val nowArt: tv.own.owntv.core.live.NowArt = org.koin.compose.koinInject()
+    val guideReader: tv.own.owntv.core.live.GuideReader = org.koin.compose.koinInject()
     val full = remember(channel?.id) { androidx.compose.runtime.mutableStateMapOf<Long, EpgProgrammeEntity>() }
     val prefetchCtx = androidx.compose.ui.platform.LocalContext.current
     if (joined) LaunchedEffect(channel?.id, rows) {
-        val c = channel ?: return@LaunchedEffect
+        if (channel == null) return@LaunchedEffect
         kotlinx.coroutines.delay(300)
         val loader = coil3.SingletonImageLoader.get(prefetchCtx)
         for (row in rows.take(8)) {
             if (row.startMs in full) continue
-            val whole = runCatching { nowArt.now(c, row.startMs + 1) }.getOrNull()?.takeIf { it.startMs == row.startMs } ?: continue
+            // The guide's window leaves synopses out; each one is read on its own, by the programme's id.
+            val whole = if (!row.description.isNullOrBlank()) row
+                else row.copy(description = runCatching { guideReader.description(row.id) }.getOrNull())
             full[row.startMs] = whole
             whole.imageUrl?.takeIf { it.isNotBlank() }?.let { url ->
                 loader.enqueue(coil3.request.ImageRequest.Builder(prefetchCtx).data(url).size(coil3.size.Size(640, 360)).build())
