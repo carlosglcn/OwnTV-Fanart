@@ -158,31 +158,31 @@ fun LiveBannerFicha(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifie
         modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (!art.isNullOrBlank()) tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.width(196.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)))
+        if (!art.isNullOrBlank()) tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.width(150.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp)))
         Column(Modifier.weight(1f)) {
             Label(stringResource(R.string.content_live_now), stageAccent.accent)
-            Text(f.title, style = stageText(24, 700), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(f.title, style = stageText(21, 700), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(Modifier.padding(top = 1.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LeftRing(f.progress, Modifier.size(14.dp))
                 Text(f.meta, style = stageText(15, 400), color = hudInk.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             f.synopsis?.let {
                 tv.own.owntv.features.shell.components.DriftingSynopsis(
-                    it, modifier = Modifier.padding(top = 4.dp),
-                    style = stageText(15, 400), color = hudInk.copy(alpha = 0.88f), lines = 2,
+                    it, modifier = Modifier.padding(top = 2.dp),
+                    style = stageText(14, 400), color = hudInk.copy(alpha = 0.88f), lines = 2,
                 )
             }
 
         }
         // What follows, as a short list in the room on the right.
         if (f.upcoming.isNotEmpty()) {
-            Box(Modifier.width(1.dp).height(72.dp).background(hudInk.copy(alpha = 0.12f)))
+            Box(Modifier.width(1.dp).height(56.dp).background(hudInk.copy(alpha = 0.12f)))
             Column(Modifier.width(280.dp)) {
                 Label(stringResource(R.string.content_live_next), hudInk.copy(alpha = 0.6f))
                 f.upcoming.take(3).forEachIndexed { i, (t, title) ->
-                    Row(Modifier.padding(top = 3.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(t, style = stageText(15, 700), color = if (i == 0) stageAccent.accent else hudInk.copy(alpha = 0.65f), maxLines = 1, modifier = Modifier.width(50.dp))
-                        Text(title, style = stageText(15, if (i == 0) 600 else 500), color = hudInk.copy(alpha = if (i == 0) 1f else 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(Modifier.padding(top = 1.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(t, style = stageText(14, 700), color = if (i == 0) stageAccent.accent else hudInk.copy(alpha = 0.65f), maxLines = 1, modifier = Modifier.width(50.dp))
+                        Text(title, style = stageText(14, if (i == 0) 600 else 500), color = hudInk.copy(alpha = if (i == 0) 1f else 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }

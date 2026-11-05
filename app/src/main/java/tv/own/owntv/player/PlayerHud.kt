@@ -979,7 +979,7 @@ fun PlayerHud(
                                     Modifier.padding(start = with(androidx.compose.ui.platform.LocalConfiguration.current) { screenWidthDp.dp } * LATERAL_SHARE + 24.dp)
                                 // Ficha: one glass panel round the channel, the programme and the controls.
                                 bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.FICHA ->
-                                    Modifier.padding(start = 20.dp, end = 20.dp, bottom = 16.dp).clip(RoundedCornerShape(26.dp)).background(hudShade(0.78f)).padding(vertical = 6.dp)
+                                    Modifier.padding(start = 20.dp, end = 20.dp, bottom = 16.dp).clip(RoundedCornerShape(26.dp)).background(hudShade(0.78f)).padding(vertical = 2.dp)
                                 else -> Modifier
                             },
                         )

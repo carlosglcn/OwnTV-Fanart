@@ -618,7 +618,7 @@ internal fun BottomBar(
                 Spacer(Modifier.width(24.dp))
                 tools(Modifier.weight(1f))
             }
-            Box(Modifier.fillMaxWidth().padding(vertical = 8.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
+            Box(Modifier.fillMaxWidth().padding(vertical = 5.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
             belowHeader?.invoke()
         } else if (header != null) {
             // glcn: live TV — the channel on the left, the programme on air with its picture on the right,
