@@ -2875,6 +2875,19 @@ fun OwnTVShell(
                 )
             }
         }
+        // glcn: the one-time GitHub star card — due from the third day and fifth start, shown after a calm minute
+        // of browsing (nothing playing, no update card); playback starting in that minute puts it off to the next start.
+        val starContext = androidx.compose.ui.platform.LocalContext.current
+        var starDue by remember { mutableStateOf(tv.own.owntv.glcn.GitHubStarPrompt.launchAndCheck(starContext)) }
+        var starShow by remember { mutableStateOf(false) }
+        val starCalm = starDue && playerMode == PlayerMode.NONE && !showStartupToast && !showChangelog && selectedSection != MainSection.SETTINGS
+        LaunchedEffect(starCalm) {
+            if (!starCalm) return@LaunchedEffect
+            kotlinx.coroutines.delay(tv.own.owntv.glcn.GitHubStarPrompt.BROWSE_MS)
+            starShow = true
+            starDue = false // once this run, whatever happens
+        }
+        if (starShow && playerMode == PlayerMode.NONE) tv.own.owntv.glcn.GitHubStarCard(onClose = { starShow = false })
     }
     }
 }

@@ -159,3 +159,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📱 Apps: the page takes the whole width while you are in it (the side menu slides away, ◀ on the first column brings it back), 7 columns.
 - 🎴 Apps: apps without a TV banner show their icon on a plate of the icon's own colour with the name under it; the focused app's name always shows.
 - 🧹 Apps: apps in "Your apps" are no longer listed again below; the grid fades out at the foot and the hold-OK hint sits there.
+- ⭐ A one-time GitHub star card (QR) — from the third day and fifth start, after a calm minute of browsing with nothing playing; "Not now" or "Already did" and it never returns. Also notes you can sign in with Google.

@@ -12,4 +12,7 @@
     <string name="glcn_vod_section_platforms">Platforms</string>
     <string name="glcn_vod_section_genres">Genres</string>
     <string name="glcn_vod_section_more">More categories</string>
+    <string name="glcn_star_google">You can sign in with your Google account.</string>
+    <string name="glcn_star_later">Not now</string>
+    <string name="glcn_star_done">Already did ⭐</string>
 </resources>
