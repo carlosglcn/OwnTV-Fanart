@@ -549,6 +549,7 @@ fun OwnTVShell(
                     episode = ep?.episodeNumber,
                     capabilities = show.advertisedCapabilities,
                     qualityRank = show.qualityRank,
+                    tmdbId = meta?.tmdbId,
                 )
             }
             else -> null
@@ -2478,6 +2479,7 @@ fun OwnTVShell(
                     controlsHidden = !hudControlsVisible,
                     autoSkip = autoSkipIntro,
                     onVisible = { introSkipVisible = it },
+                    lookup = cinemaInfo?.let { i -> i.tmdbId?.let { t -> i.season?.let { se -> i.episode?.let { ep -> Triple(t, se, ep) } } } },
                     modifier = Modifier.fillMaxSize(),
                 )
                 goalToast?.let { a ->

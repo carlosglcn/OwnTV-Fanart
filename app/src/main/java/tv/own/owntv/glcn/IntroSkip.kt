@@ -34,7 +34,8 @@ import tv.own.owntv.ui.theme.stageText
  * glcn: "Skip intro" for series. Each series learns where its intro ends: the first time the viewer
  * jumps forward early in an episode (with this button or by fast-forwarding) and keeps watching from
  * there, that moment is remembered for the series, and later episodes offer — or, with Auto-skip on,
- * make — the same jump. Before anything is learned the button jumps a typical intro length.
+ * make — the same jump. glcn: the episode's own times from TheIntroDB come first (after the file's chapters);
+ * with nothing known the button stays away — a blind jump landed in shows without an intro, or mid-scene.
  */
 object IntroSkip {
     /** How far the very first "Skip intro" of a series jumps — a typical opening. */
@@ -52,6 +53,9 @@ object IntroSkip {
 
     /** glcn: the end of the playing file's intro chapter (the next chapter's start), or -1. Set by [Chip]. */
     @Volatile var chapterEnd: Long = -1L
+        private set
+    /** glcn: the intro's end from TheIntroDB for the episode playing, or -1. Set by [Chip]. */
+    @Volatile var dbEnd: Long = -1L
         private set
 
     /** The end of a chapter named as an intro and starting in the first minutes, from the file's chapters. */
@@ -73,7 +77,7 @@ object IntroSkip {
      * [controlsHidden] — the button stands in for the controls, never over them.
      */
     @Composable
-    fun Chip(engine: PlaybackEngine, controlsHidden: Boolean, autoSkip: Boolean, onVisible: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    fun Chip(engine: PlaybackEngine, controlsHidden: Boolean, autoSkip: Boolean, onVisible: (Boolean) -> Unit, modifier: Modifier = Modifier, lookup: Triple<Int, Int, Int>? = null) {
         val context = LocalContext.current
         val meta by engine.currentMeta.collectAsStateWithLifecycle()
         val series = meta.subtitle?.takeIf { meta.episodeNumber != null && it.isNotBlank() }
@@ -84,6 +88,13 @@ object IntroSkip {
             value = if (duration > 0) introEnd(runCatching { engine.chapters() }.getOrDefault(emptyList())) else -1L
             chapterEnd = value
         }
+        // glcn: the episode's intro from TheIntroDB (TMDB id, season, episode).
+        val db by androidx.compose.runtime.produceState<IntroDb.Segments?>(null, lookup) {
+            value = lookup?.let { (t, se, ep) -> IntroDb.segments(t, se, ep) }
+            dbEnd = value?.introEnd ?: -1L
+        }
+        val dbStart = db?.introStart ?: 0L
+        val dbIntroEnd = db?.introEnd ?: -1L
         var learnedEnd by remember(series) { mutableLongStateOf(series?.let { learned(context, it) } ?: -1L) }
         var autoDone by remember(meta) { mutableStateOf(false) }
 
@@ -114,11 +125,16 @@ object IntroSkip {
 
         val inWindow = when {
             introChapterEnd > 0 -> position in 2_000L until (introChapterEnd - 3_000L)
+            dbIntroEnd > 0 -> position in maxOf(2_000L, dbStart) until (dbIntroEnd - 3_000L)
             series == null -> false
             learnedEnd > 0 -> position in 2_000L until (learnedEnd - 3_000L)
-            else -> position in SHOW_FROM_MS until SHOW_UNTIL_MS
+            else -> false // glcn: nothing known — no blind jump
         }
-        val exactEnd = if (introChapterEnd > 0) introChapterEnd else learnedEnd
+        val exactEnd = when {
+            introChapterEnd > 0 -> introChapterEnd
+            dbIntroEnd > 0 -> dbIntroEnd
+            else -> learnedEnd
+        }
         // Auto-skip: once per episode, only to a learned end.
         LaunchedEffect(inWindow, autoSkip, exactEnd) {
             if (autoSkip && inWindow && exactEnd > 0 && !autoDone) {
@@ -148,8 +164,9 @@ object IntroSkip {
         val pos = engine.position.value
         // glcn: the intro chapter's end, when the file names one.
         chapterEnd.takeIf { it > pos }?.let { engine.seekBy(it - pos); return }
+        dbEnd.takeIf { it > pos }?.let { engine.seekBy(it - pos); return }
         val series = engine.currentMeta.value.subtitle ?: return
         val end = learned(context, series)
-        engine.seekBy(if (end > pos) end - pos else DEFAULT_JUMP_MS)
+        if (end > pos) engine.seekBy(end - pos)
     }
 }
