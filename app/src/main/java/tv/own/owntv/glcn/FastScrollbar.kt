@@ -28,7 +28,7 @@ import tv.own.owntv.ui.theme.stageText
  * with a bubble beside the thumb naming where you are ([label], the focused channel's number) on a long run.
  */
 @Composable
-fun Modifier.fastScrollbar(state: LazyListState, count: Int, endInset: Dp, bottomInset: Dp, label: () -> String?): Modifier {
+fun Modifier.fastScrollbar(state: LazyListState, count: Int, endInset: Dp, bottomInset: Dp, resting: () -> Float = { 0f }, label: () -> String?): Modifier {
     val alpha = remember { Animatable(0f) }
     val bubble = remember { Animatable(0f) }
     val accent = stageAccent.accent
@@ -54,18 +54,19 @@ fun Modifier.fastScrollbar(state: LazyListState, count: Int, endInset: Dp, botto
     }
     return drawWithContent {
         drawContent()
-        val a = alpha.value
+        // glcn: a quiet bar stays while the list holds focus (it was easy to miss); moving brings it up full.
+        val a = maxOf(alpha.value, resting())
         val visible = state.layoutInfo.visibleItemsInfo.size
         if (a <= 0.01f || count <= visible * 2 || visible == 0) return@drawWithContent
         val px = 1.mpx.toPx()
-        val w = 5f * px
+        val w = 6f * px
         val x = size.width - endInset.toPx() + 6f * px
         val top = 4f * px
         val track = size.height - bottomInset.toPx() - top
         val thumbH = (track * visible / count).coerceAtLeast(44f * px)
         val maxFirst = (count - visible).coerceAtLeast(1)
         val y = top + (track - thumbH) * (state.firstVisibleItemIndex.toFloat() / maxFirst).coerceIn(0f, 1f)
-        drawRoundRect(ink.copy(alpha = 0.12f * a), Offset(x, top), Size(w, track), CornerRadius(w / 2f))
+        drawRoundRect(ink.copy(alpha = 0.16f * a), Offset(x, top), Size(w, track), CornerRadius(w / 2f))
         drawRoundRect(accent.copy(alpha = a), Offset(x, y), Size(w, thumbH), CornerRadius(w / 2f))
         val b = bubble.value * a
         val text = label()

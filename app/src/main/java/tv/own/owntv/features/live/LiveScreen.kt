@@ -1021,6 +1021,7 @@ fun LiveScreen(
                             layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(-extra, 0) }
                         }.fastScrollbar(
                             effectiveListState, channels.itemCount, endInset = glowRoom, bottomInset = 48.mpx,
+                            resting = { if (channelPaneFocused) 0.45f else 0f },
                             // glcn: the bubble names the focused channel by its number (or its place in the list).
                             label = { (stepTarget ?: effectiveListState.firstVisibleItemIndex).let { i -> channels.peek(i)?.number?.toString() ?: (i + 1).toString() } },
                         ),

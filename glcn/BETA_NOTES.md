@@ -167,3 +167,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔑 Lists that refuse the usual player identity now play without touching anything: OwnTV Fanart tries another identity by itself and remembers the one that works for that list. If every one is refused, the error points you to the User-Agent setting.
 - 🩹 Live TV scroll bar: no longer blinks on a long run — it stays while the list moves and fades once it rests.
 - 🩹 Live TV (Ficha): coming programmes as compact cards (small picture at the left, time and title beside it) so the synopsis keeps its lines; no logo flashing before the pictures load.
+- 📜 Live TV scroll bar: a quiet bar now stays while the channel list has focus (it was easy to miss), brightening while the list moves.
