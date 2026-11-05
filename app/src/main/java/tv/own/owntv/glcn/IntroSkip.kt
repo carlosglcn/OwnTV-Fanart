@@ -89,8 +89,8 @@ object IntroSkip {
             chapterEnd = value
         }
         // glcn: the episode's intro from TheIntroDB (TMDB id, season, episode).
-        val db by androidx.compose.runtime.produceState<IntroDb.Segments?>(null, lookup) {
-            value = lookup?.let { (t, se, ep) -> IntroDb.segments(t, se, ep) }
+        val db by androidx.compose.runtime.produceState<tv.own.owntv.core.metadata.IntroDb.Segments?>(null, lookup) {
+            value = lookup?.let { (t, se, ep) -> tv.own.owntv.core.metadata.IntroDb.segments(t, se, ep) }
             dbEnd = value?.introEnd ?: -1L
         }
         val dbStart = db?.introStart ?: 0L
