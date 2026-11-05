@@ -208,6 +208,7 @@ fun LiveScreen(
     val firstItemFocus = remember { FocusRequester() }
     // Right from the rail on an empty list: the list's search box, so a search with no results can be cleared.
     val listSearchFocus = remember { FocusRequester() }
+    val toolsFocus = remember { FocusRequester() } // glcn: ◀ from the rows lands on the toolbar (Provider)
 
     // CH+- key paging: shared settings + a hoisted rail state so the same modifier can page both the
     // category rail and this channel list. Channel-list pane focus is tracked separately from rail
@@ -953,6 +954,7 @@ fun LiveScreen(
                         icon = OwnTVIcon.SORT,
                         value = if (sortMode == tv.own.owntv.core.settings.SettingsRepository.SortMode.ALPHA) stringResource(R.string.settings_sort_alpha) else stringResource(R.string.content_epg_sort_provider),
                         onClick = vm::toggleSort,
+                        modifier = Modifier.focusRequester(toolsFocus),
                     )
                     if (!separate && lockedKey == null) tv.own.owntv.ui.stage.StageTool(
                         text = stringResource(R.string.content_category_browser_title),
@@ -1060,7 +1062,8 @@ fun LiveScreen(
                                             androidx.compose.ui.input.key.Key.DirectionLeft -> when {
                                                 lockedKey != null -> false
                                                 separate -> { runCatching { railFocus.requestFocus() }; true }
-                                                else -> false // glcn: categories open from their button in the header; ◀ goes on to the side menu
+                                                // glcn: ◀ to the toolbar (Provider, Categories…); ◀ again from the search field goes on to the side menu.
+                                                else -> runCatching { toolsFocus.requestFocus() }.isSuccess
                                             }
                                             // ▶ Schedule: next / later under the stage; nothing else to the right.
                                             androidx.compose.ui.input.key.Key.DirectionRight -> { runCatching { scheduleFocus.requestFocus() }; true }
