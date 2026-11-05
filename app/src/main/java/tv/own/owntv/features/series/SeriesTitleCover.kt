@@ -1,5 +1,7 @@
 package tv.own.owntv.features.series
 
+import tv.own.owntv.glcn.glowRoomScroll
+
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.background
@@ -115,7 +117,7 @@ internal fun SeriesTitleCover(
         ) {
             tv.own.owntv.features.shell.components.VodHero(info, Modifier.width(1100.mpx), showCast = false, plotLines = 3)
             Row(
-                Modifier.padding(top = 10.mpx).horizontalScroll(rememberScrollState()).focusGroup(),
+                Modifier.padding(top = 10.mpx).then(Modifier.glowRoomScroll()).focusGroup(), // glcn: the focus ring and glow never clipped
                 horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (playLabel != null) StageButton(

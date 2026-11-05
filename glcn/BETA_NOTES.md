@@ -147,3 +147,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⬅️ Live TV: ◀ from the channel list now jumps to the toolbar (Provider, Categories, Guide view); ◀ from the search field still opens the menu.
 - 💎 Glass mode: focused rows and cards now look like tinted glass — an accent wash, a light catch along the top edge and a ring that fades across.
 - 🔥 Home settings: "Trending films" and "Trending series" now sit under Now trending (switches), and on Home they show right under it.
+- ✨ Film and series pages: the focused button's ring and glow are no longer cut off, and the hazy box behind the buttons is gone.
+- 🔊 Trailer window: the sound hint now sits beside the window's corner instead of over its edge.

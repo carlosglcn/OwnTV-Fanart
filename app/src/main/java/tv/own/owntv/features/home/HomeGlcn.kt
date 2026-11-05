@@ -1,5 +1,6 @@
 package tv.own.owntv.features.home
 
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.offset
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
@@ -943,7 +944,11 @@ internal fun FocusTrailer(
         }
         // The one hint while it plays: Play/Pause for its sound.
         if (CinemaTrailer.playing?.first == key) TrailerSoundHint(
-            if (hintBelow) Modifier.align(Alignment.BottomEnd).offset(y = 46.mpx) else Modifier.align(Alignment.TopEnd).padding(end = 56.mpx, top = TRAILER_HINT_TOP),
+            if (hintBelow) Modifier.align(Alignment.BottomEnd).padding(bottom = 10.mpx).layout { m, c ->
+                // glcn: beside the window's bottom-right corner, clear of the picture and of the title under it.
+                val p = m.measure(c.copy(minWidth = 0, minHeight = 0))
+                layout(p.width, p.height) { p.place(p.width + 16.mpx.roundToPx(), 0) }
+            } else Modifier.align(Alignment.TopEnd).padding(end = 56.mpx, top = TRAILER_HINT_TOP),
         )
     }
 }

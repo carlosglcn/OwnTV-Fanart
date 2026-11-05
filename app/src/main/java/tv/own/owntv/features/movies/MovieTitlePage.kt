@@ -1,5 +1,7 @@
 package tv.own.owntv.features.movies
 
+import tv.own.owntv.glcn.glowRoomScroll
+
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.background
@@ -210,8 +212,7 @@ internal fun MovieTitlePage(
                 }
                 Row(
                     // The row scrolls when it does not fit; room inside it, so the focused button's glow is never clipped.
-                    Modifier.padding(top = 2.mpx).offset(x = (-16).mpx).horizontalScroll(androidx.compose.foundation.rememberScrollState())
-                        .padding(horizontal = 16.mpx, vertical = 8.mpx).focusGroup(),
+                    Modifier.padding(top = 2.mpx).then(Modifier.glowRoomScroll()).focusGroup(),
                     horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val playLabel = if (resume) stringResource(R.string.glcn_title_resume, tv.own.owntv.features.shell.components.vodRuntime((saved / 1000).toInt()))
