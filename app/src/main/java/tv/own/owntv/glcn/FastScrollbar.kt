@@ -16,6 +16,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.draw.drawWithContent
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import tv.own.owntv.ui.theme.LocalStagePalette
 import tv.own.owntv.ui.theme.mpx
@@ -35,21 +36,17 @@ fun Modifier.fastScrollbar(state: LazyListState, count: Int, endInset: Dp, botto
     val ink = if (palette.isLight) Color.Black else Color.White
     val measurer = rememberTextMeasurer()
     val style = stageText(15, 800)
+    // One watcher: each move shows the bar (and, on a run of moves, the bubble); only a pause of [REST_MS] hides it —
+    // collectLatest drops the pending hide whenever the list moves again, so it no longer blinks on a long run.
     LaunchedEffect(state) {
         var moves = 0
         var lastAt = 0L
-        snapshotFlow { state.firstVisibleItemIndex }.distinctUntilChanged().collect {
+        snapshotFlow { state.firstVisibleItemIndex }.distinctUntilChanged().collectLatest {
             val now = android.os.SystemClock.uptimeMillis()
             moves = if (now - lastAt < RUN_GAP_MS) moves + 1 else 0
             lastAt = now
-            alpha.snapTo(maxOf(alpha.value, 0.01f))
-            alpha.animateTo(1f, androidx.compose.animation.core.tween(160))
-            // A held key (several steps in a row) brings the bubble.
-            if (moves >= RUN_STEPS) bubble.animateTo(1f, androidx.compose.animation.core.tween(140))
-        }
-    }
-    LaunchedEffect(state) {
-        snapshotFlow { state.firstVisibleItemIndex to alpha.targetValue }.collect {
+            if (alpha.value < 1f) alpha.animateTo(1f, androidx.compose.animation.core.tween(160))
+            if (moves >= RUN_STEPS && bubble.value < 1f) bubble.animateTo(1f, androidx.compose.animation.core.tween(140))
             delay(REST_MS)
             bubble.animateTo(0f, androidx.compose.animation.core.tween(300))
             alpha.animateTo(0f, androidx.compose.animation.core.tween(500))
@@ -84,6 +81,6 @@ fun Modifier.fastScrollbar(state: LazyListState, count: Int, endInset: Dp, botto
     }
 }
 
-private const val RUN_GAP_MS = 260L
+private const val RUN_GAP_MS = 450L
 private const val RUN_STEPS = 3
 private const val REST_MS = 1_100L
