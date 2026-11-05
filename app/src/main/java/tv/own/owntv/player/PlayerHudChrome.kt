@@ -425,7 +425,8 @@ internal fun BottomBar(
         Column(toolsModifier) {
         val toolFocus = androidx.compose.runtime.remember { ToolFocusState() }
         val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-        ToolLabelLine(toolFocus)
+        // glcn: the tool's name above the row; on the Ficha banner under it (above, it left an empty band at the top).
+        if (!toolsUp) ToolLabelLine(toolFocus)
         androidx.compose.runtime.CompositionLocalProvider(LocalToolFocus provides toolFocus) {
         Box(Modifier.fillMaxWidth().onGloballyPositioned { toolFocus.origin = it.positionInWindow() }) {
         ToolFocusBox(toolFocus, Modifier.matchParentSize())
@@ -608,6 +609,7 @@ internal fun BottomBar(
         }
         }
         }
+        if (toolsUp) ToolLabelLine(toolFocus, compact = true)
         }
     }
     val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
@@ -615,7 +617,7 @@ internal fun BottomBar(
             // glcn: Ficha banner — every control on the top line (all fifteen take the panel's whole width: beside the
             // channel they ran off its edge), then the programme with the channel named over it.
             tools(Modifier.fillMaxWidth())
-            Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 3.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
+            Box(Modifier.fillMaxWidth().padding(bottom = 4.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
             belowHeader?.invoke()
         } else if (header != null) {
             // glcn: live TV — the channel on the left, the programme on air with its picture on the right,

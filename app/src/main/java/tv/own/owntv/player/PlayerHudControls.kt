@@ -335,7 +335,7 @@ internal fun ToolFocusBox(st: ToolFocusState, modifier: Modifier = Modifier) {
 
 /** The name of the tool in focus, in one fixed spot above the row, a margin in from the dock's edge. */
 @Composable
-internal fun ToolLabelLine(st: ToolFocusState) {
+internal fun ToolLabelLine(st: ToolFocusState, compact: Boolean = false) {
     val alpha = remember { androidx.compose.animation.core.Animatable(0f) }
     val on = st.current != null
     val fade = ownTvTween<Float>(140)
@@ -345,7 +345,7 @@ internal fun ToolLabelLine(st: ToolFocusState) {
     androidx.compose.runtime.LaunchedEffect(on) { alpha.animateTo(if (on) 1f else 0f, fade) }
     val text = st.label + (st.value?.let { " · $it" } ?: "")
     Box(
-        Modifier.fillMaxWidth().height(30.dp).padding(start = 12.dp, end = 12.dp, bottom = 4.dp).graphicsLayer { this.alpha = alpha.value },
+        Modifier.fillMaxWidth().height(if (compact) 22.dp else 30.dp).padding(start = 12.dp, end = 12.dp, bottom = if (compact) 0.dp else 4.dp).graphicsLayer { this.alpha = alpha.value },
         contentAlignment = Alignment.CenterStart,
     ) {
         AnimatedContent(
