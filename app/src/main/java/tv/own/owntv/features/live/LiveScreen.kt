@@ -322,6 +322,9 @@ fun LiveScreen(
     // The row a burst of presses is heading for: every press counts from there, not from the row that
     // still has focus, and the newest press cancels the step still in flight.
     var stepTarget by remember { mutableStateOf<Int?>(null) }
+    // glcn: ▶ on a long list takes hold of the scroll bar: ▲ ▼ then jump ten channels, ▶ goes on to what follows, ◀ or OK let go.
+    var barHeld by remember { mutableStateOf(false) }
+    var focusedRow by remember { mutableStateOf(0) }
     var stepJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun stepTo(i: Int) {
         stepTarget = i
@@ -866,7 +869,7 @@ fun LiveScreen(
                     .padding(start = listX, top = 118.mpx)
                     .width(listWidth)
                     .fillMaxHeight()
-                    .onFocusChanged { channelPaneFocused = it.hasFocus }
+                    .onFocusChanged { channelPaneFocused = it.hasFocus; if (!it.hasFocus) barHeld = false }
                     .chNavPaging(
                         enabled = chNavEnabled,
                         upSkip = chNavUpSkip,
@@ -1022,8 +1025,9 @@ fun LiveScreen(
                         }.fastScrollbar(
                             effectiveListState, channels.itemCount, endInset = glowRoom, bottomInset = 48.mpx,
                             resting = { if (channelPaneFocused) 0.45f else 0f },
+                            held = { barHeld && channelPaneFocused },
                             // glcn: the bubble names the focused channel by its number (or its place in the list).
-                            label = { (stepTarget ?: effectiveListState.firstVisibleItemIndex).let { i -> channels.peek(i)?.number?.toString() ?: (i + 1).toString() } },
+                            label = { (stepTarget ?: focusedRow).let { i -> channels.peek(i)?.number?.toString() ?: (i + 1).toString() } },
                         ),
                         // glcn: room at the foot so the last row never sits on the edge of the TV (overscan).
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(start = glowRoom, end = glowRoom, bottom = 48.mpx),
@@ -1067,21 +1071,35 @@ fun LiveScreen(
                             androidx.compose.ui.input.key.Key.Menu -> { if (selecting != null) batchActions = true else { contextChannel = channel; contextChannelId = channel.id }; true }
                                             // ◀ Categories: the sheet (Stage) or the column (Separate); pinned lists have none.
                                             androidx.compose.ui.input.key.Key.DirectionLeft -> when {
+                                                barHeld -> { barHeld = false; true }
                                                 lockedKey != null -> false
                                                 separate -> { runCatching { railFocus.requestFocus() }; true }
                                                 // glcn: ◀ to the toolbar (Provider, Categories…); ◀ again from the search field goes on to the side menu.
                                                 else -> runCatching { toolsFocus.requestFocus() }.isSuccess
                                             }
                                             // ▶ Schedule: next / later under the stage; nothing else to the right.
-                                            androidx.compose.ui.input.key.Key.DirectionRight -> { runCatching { scheduleFocus.requestFocus() }; true }
+                                            androidx.compose.ui.input.key.Key.DirectionRight -> {
+                                                if (!barHeld && channels.itemCount > BAR_MIN_CHANNELS) barHeld = true
+                                                else { barHeld = false; runCatching { scheduleFocus.requestFocus() } }
+                                                true
+                                            }
+                                            androidx.compose.ui.input.key.Key.DirectionCenter, androidx.compose.ui.input.key.Key.Enter, androidx.compose.ui.input.key.Key.NumPadEnter ->
+                                                if (barHeld) { barHeld = false; true } else false
                                             // ▲/▼ step by row number, not by focus search: a held key outran the
                                             // lazy list at the edge or a page boundary and stopped.
-                                            androidx.compose.ui.input.key.Key.DirectionDown -> (stepTarget ?: index).let { from -> from + 1 < channels.itemCount && run { stepTo(from + 1); true } }
-                                            androidx.compose.ui.input.key.Key.DirectionUp -> (stepTarget ?: index).let { from -> from > 0 && run { stepTo(from - 1); true } }
+                                            androidx.compose.ui.input.key.Key.DirectionDown -> (stepTarget ?: index).let { from ->
+                                                val to = if (barHeld) (from + BAR_JUMP).coerceAtMost(channels.itemCount - 1) else from + 1
+                                                to < channels.itemCount && to != from && run { stepTo(to); true }
+                                            }
+                                            androidx.compose.ui.input.key.Key.DirectionUp -> (stepTarget ?: index).let { from ->
+                                                val to = if (barHeld) (from - BAR_JUMP).coerceAtLeast(0) else from - 1
+                                                to >= 0 && to != from && run { stepTo(to); true }
+                                            }
                                             else -> false
                                         }
                                     },
                                     onFocus = {
+                                        focusedRow = index
                                         vm.onChannelFocused(channel)
                                         if (rememberLive) perCategoryChannelIds[selectedKey] = channel.id
                                     },
@@ -2190,3 +2208,7 @@ private const val HINTS_SHOWN_MS = 7_000L
 
 /** glcn: how often the toolbar's live-match count is read again. */
 private const val SPORTS_COUNT_MS = 5 * 60_000L
+
+/** glcn: the held scroll bar — how many channels ▲ ▼ jump, and how long a list must be for ▶ to take hold of it. */
+private const val BAR_JUMP = 10
+private const val BAR_MIN_CHANNELS = 30

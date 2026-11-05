@@ -512,26 +512,24 @@ private fun LiveScheduleItem(
         // glcn: as a chip (Ficha's row of what follows) it sits on a faint glass pill.
         idle = if (chip) Modifier.background(StageColors.ControlFill, RoundedCornerShape(12.mpx)) else Modifier,
     ) { focused ->
-        // glcn: with pictures, a small 16:9 thumbnail at the left and the time over the title beside it — short
-        // enough that the synopsis above keeps its lines.
+        // glcn: with pictures, the picture fills the card (wide, so it stays low) with the time and title over its foot —
+        // big enough to see, short enough that the synopsis above keeps its lines.
         if (chip && withArt) {
-            Row(Modifier.padding(6.mpx), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
-                Box(
-                    Modifier.width(LATER_THUMB_W).aspectRatio(16f / 9f).clip(RoundedCornerShape(8.mpx)).background(StageColors.Ink.copy(alpha = 0.06f)),
-                    contentAlignment = Alignment.Center,
+            Box(
+                Modifier.fillMaxWidth().aspectRatio(LATER_CARD_RATIO).clip(RoundedCornerShape(12.mpx)).background(StageColors.Ink.copy(alpha = 0.06f)),
+            ) {
+                if (art != null) coil3.compose.AsyncImage(model = art, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                else if (logo != null) coil3.compose.AsyncImage(
+                    model = logo, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.mpx).fillMaxWidth(0.4f).aspectRatio(2f),
+                )
+                Column(
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.82f))))
+                        .padding(start = 10.mpx, end = 10.mpx, top = 22.mpx, bottom = 7.mpx),
                 ) {
-                    if (art != null) coil3.compose.AsyncImage(model = art, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    else if (logo != null) coil3.compose.AsyncImage(model = logo, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.fillMaxSize(0.6f))
-                }
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        formatTime(p.startMs), style = stageText(15, 700).copy(fontFeatureSettings = Tabular),
-                        color = if (focused) a.onAccent else if (accentTime) a.accent else StageColors.Muted, maxLines = 1,
-                    )
-                    Text(
-                        p.title, style = stageText(16, 500), color = if (focused) a.onAccent else if (accentTime) StageColors.Text else StageColors.Muted,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    )
+                    Text(formatTime(p.startMs), style = stageText(14, 800).copy(fontFeatureSettings = Tabular), color = if (accentTime) Color(0xFF8FD3FF) else Color.White.copy(alpha = 0.85f), maxLines = 1)
+                    Text(p.title, style = stageText(15, 600), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             return@StageSurface
@@ -552,7 +550,7 @@ private fun LiveScheduleItem(
 }
 
 private const val LATER_ART_SETTLE_MS = 350L
-private val LATER_THUMB_W = 92.mpx
+private const val LATER_CARD_RATIO = 2.1f
 
 /** Scroll only as far as the focused item, plus one row of room, needs (the TV default pins it a third down). */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)

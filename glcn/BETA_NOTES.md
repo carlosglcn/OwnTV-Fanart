@@ -168,3 +168,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🩹 Live TV scroll bar: no longer blinks on a long run — it stays while the list moves and fades once it rests.
 - 🩹 Live TV (Ficha): coming programmes as compact cards (small picture at the left, time and title beside it) so the synopsis keeps its lines; no logo flashing before the pictures load.
 - 📜 Live TV scroll bar: a quiet bar now stays while the channel list has focus (it was easy to miss), brightening while the list moves.
+- 🎚️ Live TV: ▶ on a long channel list takes hold of the scroll bar — ▲ ▼ then jump ten channels with the number in the bubble; ▶ again goes to what follows, ◀ or OK let go.
+- 🖼️ Live TV (Ficha): the coming programmes' pictures fill their cards (wide and low), with the time and title over their foot.
