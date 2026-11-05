@@ -146,3 +146,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪟 Lateral banner: no white wash over the bottom of the picture; the controls sit on their own glass strip, level with the side panel.
 - ⬅️ Live TV: ◀ from the channel list now jumps to the toolbar (Provider, Categories, Guide view); ◀ from the search field still opens the menu.
 - 💎 Glass mode: focused rows and cards now look like tinted glass — an accent wash, a light catch along the top edge and a ring that fades across.
+- 🔥 Home settings: "Trending films" and "Trending series" now sit under Now trending (switches), and on Home they show right under it.
