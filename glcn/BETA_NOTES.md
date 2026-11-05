@@ -149,3 +149,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔥 Home settings: "Trending films" and "Trending series" now sit under Now trending (switches), and on Home they show right under it.
 - ✨ Film and series pages: the focused button's ring and glow are no longer cut off, and the hazy box behind the buttons is gone.
 - 🔊 Trailer window: the sound hint now sits beside the window's corner instead of over its edge.
+- ✅ Watched mark on posters: a solid accent disc with a white check and rim, readable on any poster.

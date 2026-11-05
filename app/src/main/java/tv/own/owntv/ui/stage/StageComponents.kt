@@ -3,6 +3,7 @@ package tv.own.owntv.ui.stage
 import tv.own.owntv.ui.theme.stageTone
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.ui.res.stringResource
 import tv.own.owntv.R
 import androidx.compose.foundation.clickable
@@ -941,10 +942,11 @@ fun StagePoster(
             )
             if (watched) {
                 Box(
+                    // glcn: a solid accent disc with a white check and rim — the old dark disc vanished on dark posters.
                     Modifier.align(Alignment.TopEnd).padding(8.mpx).size(if (compact) 26.mpx else 30.mpx)
-                        .background(badge.copy(alpha = 0.9f), CircleShape),
+                        .background(accent.accent, CircleShape).border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
                     contentAlignment = Alignment.Center,
-                ) { StageIcon(OwnTVIcon.CHECK, accent.accent, if (compact) 16.mpx else 18.mpx) }
+                ) { StageIcon(OwnTVIcon.CHECK, Color.White, if (compact) 15.mpx else 17.mpx) }
             } else if (fresh && (progress == null || progress <= 0f)) {
                 Text(
                     stringResource(R.string.glcn_new_badge),
@@ -1151,9 +1153,9 @@ fun StageEpisode(
             )
             if (watched) {
                 Box(
-                    Modifier.align(Alignment.TopEnd).padding(10.mpx).size(30.mpx).background(badge.copy(alpha = 0.9f), CircleShape),
+                    Modifier.align(Alignment.TopEnd).padding(10.mpx).size(30.mpx).background(accent.accent, CircleShape).border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
                     contentAlignment = Alignment.Center,
-                ) { StageIcon(OwnTVIcon.CHECK, accent.accent, 18.mpx) }
+                ) { StageIcon(OwnTVIcon.CHECK, Color.White, 17.mpx) }
             }
             if (progress != null && progress > 0f && !watched) {
                 Box(
