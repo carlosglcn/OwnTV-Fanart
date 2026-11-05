@@ -150,3 +150,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ✨ Film and series pages: the focused button's ring and glow are no longer cut off, and the hazy box behind the buttons is gone.
 - 🔊 Trailer window: the sound hint now sits beside the window's corner instead of over its edge.
 - ✅ Watched mark on posters: a solid accent disc with a white check and rim, readable on any poster.
+- 🎞️ Live TV programme info: opens with the film player's side-panel motion — the words glide in as one piece while the picture settles into its window (same size and layout as before).

@@ -2133,7 +2133,7 @@ fun OwnTVShell(
                     if (isFull && !inPip && tv.own.owntv.glcn.InfoStage.liveWindow) 1f else 0f,
                     androidx.compose.animation.core.tween(
                         if (tv.own.owntv.glcn.DeviceClass.richMotion) INFO_SHIFT_MS else 0,
-                        easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.9f, 0.1f, 1f),
+                        easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f), // glcn: the cinema panel's curve
                     ),
                     label = "infoShift",
                 )
@@ -2153,7 +2153,7 @@ fun OwnTVShell(
                     if (isFull && !inPip && tv.own.owntv.glcn.InfoStage.liveWindow) 1f else 0f,
                     androidx.compose.animation.core.tween(
                         if (tv.own.owntv.glcn.DeviceClass.richMotion) INFO_SHIFT_MS else 0,
-                        easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.9f, 0.1f, 1f),
+                        easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f), // glcn: the cinema panel's curve
                     ),
                     label = "infoShiftMpv",
                 )
@@ -2928,7 +2928,7 @@ private fun cinemaJsonList(json: String?): List<String> {
 /** glcn: how long the film takes to slide aside for the cinema panel. */
 private const val CINEMA_SHIFT_MS = 380
 /** glcn: the picture folding into the programme info's window — long enough to be seen, eased to land softly. */
-private const val INFO_SHIFT_MS = 560
+private const val INFO_SHIFT_MS = 420
 
 /**
  * glcn: the film's box as the cinema panel opens — at [p] = 0 the whole screen, at 1 a 16:9 picture filling

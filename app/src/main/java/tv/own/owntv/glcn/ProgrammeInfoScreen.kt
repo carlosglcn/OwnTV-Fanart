@@ -114,6 +114,15 @@ fun ProgrammeInfoScreen(
         translationX = swap.value * SWAP_SHIFT.toPx()
         alpha = 1f - kotlin.math.abs(swap.value) * 0.9f
     }
+    // glcn: the film player's side-panel motion — the words glide in as one piece from their side (the left),
+    // the window's things from the right, together with the picture settling into its window.
+    val enterAnimated = !LowRam.on && tv.own.owntv.ui.theme.animationsOn
+    val enter = remember { androidx.compose.animation.core.Animatable(if (enterAnimated) 0f else 1f) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        enter.animateTo(1f, androidx.compose.animation.core.tween(PANEL_IN_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+    }
+    val slideInLeft = Modifier.graphicsLayer { translationX = (1f - enter.value) * -PANEL_SHIFT.toPx(); alpha = enter.value }
+    val slideInRight = Modifier.graphicsLayer { translationX = (1f - enter.value) * PANEL_SHIFT.toPx(); alpha = enter.value }
     BackHandler { onDismiss() }
     val accent = stageAccent.accent
     val resolver: ProgrammeArtResolver = org.koin.compose.koinInject()
@@ -278,7 +287,7 @@ fun ProgrammeInfoScreen(
         // A fine frame round the window, and the word "Live" on it.
         Box(
             Modifier.align(Alignment.TopEnd).padding(end = 96.mpx, top = WINDOW_TOP).width(WINDOW_W).height(WINDOW_H)
-                .staggerIn(300, fromRight = true)
+                .then(slideInRight)
                 .border(1.5.mpx, Ink.copy(alpha = 0.22f), RoundedCornerShape(windowRadius)),
         ) {
             Text(
@@ -289,7 +298,7 @@ fun ProgrammeInfoScreen(
         }
 
         Column(Modifier.padding(start = 96.mpx, top = 80.mpx, end = 96.mpx).width(1240.mpx).then(slide)) {
-            Row(Modifier.staggerIn(0), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
+            Row(Modifier.then(slideInLeft), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
                 val logo = channel.displayLogoUrl?.takeIf { it.isNotBlank() }
                 if (logo != null) ChannelLogoTile(logoUrl = logo, modifier = Modifier.size(132.mpx, 80.mpx), fill = Color.Transparent, surfaceLuminance = if (light) 0.95f else 0.02f) { }
                 Column {
@@ -311,21 +320,21 @@ fun ProgrammeInfoScreen(
                 if (!letterUrl.isNullOrBlank() && !logoFailed) {
                     tv.own.owntv.ui.stage.StageTitleArt(
                         url = letterUrl, contentDescription = cur.title,
-                        modifier = Modifier.staggerIn(80).width(640.mpx).height(150.mpx), alignment = Alignment.CenterStart,
+                        modifier = Modifier.then(slideInLeft).width(640.mpx).height(150.mpx), alignment = Alignment.CenterStart,
                         onFailed = { logoFailed = true }, onDarkScreen = true,
                     )
                 } else {
-                    Text(cur.title, style = stageText(58f, 800), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.staggerIn(80))
+                    Text(cur.title, style = stageText(58f, 800), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.then(slideInLeft))
                 }
                 val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
                 Text(
                     if (remaining in 1..600) stringResource(R.string.glcn_pi_ends_left, timeFmt.format(java.util.Date(cur.stopMs)), remaining)
                     else stringResource(R.string.content_live_time_range, timeFmt.format(java.util.Date(cur.startMs)), timeFmt.format(java.util.Date(cur.stopMs))),
-                    style = stageText(24, 600), color = Soft, modifier = Modifier.staggerIn(160).padding(top = 10.mpx), maxLines = 1,
+                    style = stageText(24, 600), color = Soft, modifier = Modifier.then(slideInLeft).padding(top = 10.mpx), maxLines = 1,
                 )
                 val span = (cur.stopMs - cur.startMs).coerceAtLeast(1L)
                 val f = ((nowMs - cur.startMs).toFloat() / span).coerceIn(0f, 1f)
-                Box(Modifier.staggerIn(200).padding(top = 14.mpx).width(560.mpx).height(5.mpx).clip(RoundedCornerShape(3.mpx)).background(Ink.copy(alpha = 0.2f))) {
+                Box(Modifier.then(slideInLeft).padding(top = 14.mpx).width(560.mpx).height(5.mpx).clip(RoundedCornerShape(3.mpx)).background(Ink.copy(alpha = 0.2f))) {
                     Box(Modifier.fillMaxWidth(f).height(5.mpx).background(accent))
                 }
                 val facts = (
@@ -334,7 +343,7 @@ fun ProgrammeInfoScreen(
                         (film?.rating?.takeIf { it > 0 } ?: lent?.rating)?.let { "★ " + ProgrammeArtResolver.format(it) },
                     )
                     ).filter { it.isNotBlank() }.joinToString("  ·  ")
-                Row(Modifier.staggerIn(250).padding(top = 16.mpx), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                Row(Modifier.then(slideInLeft).padding(top = 16.mpx), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
                     // glcn: the age rating as a badge of its own ("ES 7"), not lost in the line.
                     cur.rating?.takeIf { it.isNotBlank() }?.let { age ->
                         Text(
@@ -349,7 +358,7 @@ fun ProgrammeInfoScreen(
                     // glcn: as wide as the room up to the panels on the right, and a line more, so most synopses read whole
                     // without drifting.
                     // glcn: the cast sits on the right now, so the synopsis has the whole column down to the button.
-                    DriftingSynopsis(it, modifier = Modifier.staggerIn(300).padding(top = 16.mpx).width(1120.mpx), style = stageText(21, 400), color = Soft, lines = SYNOPSIS_LINES, fade = true)
+                    DriftingSynopsis(it, modifier = Modifier.then(slideInLeft).padding(top = 16.mpx).width(1120.mpx), style = stageText(21, 400), color = Soft, lines = SYNOPSIS_LINES, fade = true)
                 }
             }
         }
@@ -361,7 +370,7 @@ fun ProgrammeInfoScreen(
         ) {
         // glcn: only when it does air again — "no repeats this week" was a panel saying nothing.
         if (again.isNotEmpty()) Column(
-            Modifier.staggerIn(340, fromRight = true).fillMaxWidth()
+            Modifier.then(slideInRight).fillMaxWidth()
                 .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
@@ -380,7 +389,7 @@ fun ProgrammeInfoScreen(
         // run long (so it never reaches "Up next"); not while the technical data take that corner.
         val cast = film?.cast.orEmpty()
         if (cast.isNotEmpty() && !showTech) Column(
-            Modifier.staggerIn(380, fromRight = true).fillMaxWidth()
+            Modifier.then(slideInRight).fillMaxWidth()
                 .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(12.mpx),
         ) {
@@ -394,7 +403,7 @@ fun ProgrammeInfoScreen(
 
         // glcn: what follows on the channel, the rest of the evening, under the repeats.
         if (cur != null && next.isNotEmpty() && !showTech) Column(
-            Modifier.align(Alignment.BottomEnd).padding(end = 96.mpx, bottom = 56.mpx).staggerIn(400, fromRight = true).width(420.mpx).then(slide)
+            Modifier.align(Alignment.BottomEnd).padding(end = 96.mpx, bottom = 56.mpx).then(slideInRight).width(420.mpx).then(slide)
                 .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
@@ -466,6 +475,9 @@ private const val NEXT_MAX = 6
  * glcn: the programme info screen's live window — while it is open, the shell draws the channel's picture in this box
  * (up on the right) instead of full screen, and the screen leaves a hole in its backdrop there.
  */
+private const val PANEL_IN_MS = 420
+private val PANEL_SHIFT = 120.mpx
+
 object InfoStage {
     var liveWindow by mutableStateOf(false)
     /** glcn: how far the picture has shrunk into the window (0 full screen → 1 in the window), set by the shell. */
