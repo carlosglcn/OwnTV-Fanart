@@ -857,8 +857,10 @@ fun PlayerHud(
                     1.0f to Color.Transparent,
                 ))
             // glcn: live TV's bar has no panel of its own any more — this shade carries its text, a little deeper.
+            // glcn: Lateral — no wash over the picture; the controls carry their own glass strip (see the BottomBar).
+            val lateralBar = isLive && wideBanner && tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.LATERAL
             androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.theme.LocalStagePalette provides cinePalette) {
-            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(if (isLive) 280.dp else 260.dp).graphicsLayer { alpha = rise.value }
+            if (!lateralBar) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(if (isLive) 280.dp else 260.dp).graphicsLayer { alpha = rise.value }
                 .gradientWash(
                     vertical = true,
                     0.0f to Color.Transparent,
@@ -977,7 +979,9 @@ fun PlayerHud(
                                 !(isLive && wideBanner) -> Modifier
                                 // Lateral: the controls beside the column, not under it.
                                 bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.LATERAL ->
-                                    Modifier.padding(start = with(androidx.compose.ui.platform.LocalConfiguration.current) { screenWidthDp.dp } * LATERAL_SHARE + 24.dp)
+                                    // Its bottom edge level with the column's, on a glass strip of the column's own shade.
+                                    Modifier.padding(start = with(androidx.compose.ui.platform.LocalConfiguration.current) { screenWidthDp.dp } * LATERAL_SHARE + 40.dp, end = 24.dp, bottom = 24.dp)
+                                        .clip(RoundedCornerShape(24.dp)).background(hudShade(0.84f)).padding(vertical = 2.dp)
                                 // Ficha: one glass panel round the channel, the programme and the controls.
                                 bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.FICHA ->
                                     Modifier.padding(start = 20.dp, end = 20.dp, bottom = 16.dp).clip(RoundedCornerShape(26.dp)).background(hudShade(0.78f)).padding(vertical = 2.dp)

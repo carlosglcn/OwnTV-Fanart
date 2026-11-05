@@ -143,3 +143,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📝 Channel list in the player, coming programmes: their synopsis really shows now (each one is read from the guide by its id; the earlier lookup missed them).
 - 🪧 Card banner: all the controls on the top line across the panel (beside the channel they ran off its edge — the red sliver was the cut "LIVE" badge), the channel named small over the programme, and less room above the picture.
 - 🪧 Card banner: the programme's text starts at the top beside the picture with room for a 4-line synopsis (no drifting), five programmes follow on the right, and the controls' name shows under them — no empty band above the icons.
+- 🪟 Lateral banner: no white wash over the bottom of the picture; the controls sit on their own glass strip, level with the side panel.
