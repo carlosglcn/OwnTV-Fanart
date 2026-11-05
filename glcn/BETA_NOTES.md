@@ -139,3 +139,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🙈 Trailers: YouTube's title, channel, Share button and logo over the first seconds are no longer seen — the trailer starts unseen a little earlier and comes into view once they have gone (and again after a pause).
 - 🔈 Title page trailer: the "Play/Pause: sound" hint sits just under the window's corner instead of over the picture.
 - 📏 Card banner lower still: smaller picture and title, tighter lines.
+- 🔥 Trending split rows: besides the mixed "Now trending" row (unchanged, still the default), Home can show "Trending films" and "Trending series" — up to ten of each — switched on and moved in Settings › Layout › Home screen like any other row (both off by default).

@@ -81,6 +81,9 @@ data class TrendingDetailsMetadata(
 @Immutable
 data class HomeUiState(
     val trendingItems: List<TrendingHomeItem> = emptyList(),
+    /** glcn: the split Trending rows (films / series), hidden unless switched on in Settings. */
+    val trendingMovies: List<TrendingHomeItem> = emptyList(),
+    val trendingSeries: List<TrendingHomeItem> = emptyList(),
     val activeTrendingIndex: Int = 0,
     val trendingPreferredLanguage: String = "EN",
     val trendingSeasonCounts: Map<Long, Int> = emptyMap(),
@@ -508,6 +511,8 @@ class HomeViewModel(
         val data = feed.load(profileId)
         _uiState.value = HomeUiState(
             trendingItems = data.trendingItems,
+            trendingMovies = data.trendingMovies,
+            trendingSeries = data.trendingSeries,
             activeTrendingIndex = previous.activeTrendingIndex
                 .coerceIn(0, (data.trendingItems.size - 1).coerceAtLeast(0)),
             trendingPreferredLanguage = data.trendingPreferredLanguage,

@@ -847,6 +847,24 @@ fun HomeScreen(
                                 soon = true,
                             )
 
+                            // glcn: the split Trending rows — plain poster rows, films or series only.
+                            HomeRow.TRENDING_MOVIES, HomeRow.TRENDING_SERIES -> {
+                                val split = if (row == HomeRow.TRENDING_MOVIES) state.trendingMovies else state.trendingSeries
+                                if (split.isNotEmpty()) TrendingPosterRow(
+                                    title = row.displayTitle(),
+                                    items = split,
+                                    start = contentStart,
+                                    onItemClick = { item ->
+                                        onActivateTrending(item) {
+                                            trendingToast.show(trendingUnavailableMessage)
+                                            vm.refresh()
+                                        }
+                                    },
+                                    onFocus = onNonHeroFocused,
+                                    firstItemFocusRequester = firstItemFocusRequester,
+                                    track = track,
+                                )
+                            }
                             HomeRow.GENRES -> androidx.compose.foundation.layout.Column(
                                 rowModifier,
                                 verticalArrangement = Arrangement.spacedBy(RowGap),
@@ -998,6 +1016,8 @@ private fun rowHasData(row: HomeRow, state: HomeUiState, sportsCards: Int): Bool
     HomeRow.TONIGHT -> state.tonight.isNotEmpty()
     HomeRow.GENRES -> state.genres.isNotEmpty()
     HomeRow.STARTING_SOON -> state.startingSoon.isNotEmpty()
+    HomeRow.TRENDING_MOVIES -> state.trendingMovies.isNotEmpty()
+    HomeRow.TRENDING_SERIES -> state.trendingSeries.isNotEmpty()
 }
 
 private fun rowCanRender(row: HomeRow, state: HomeUiState, showHeroFallback: Boolean, sportsCards: Int): Boolean =

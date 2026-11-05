@@ -36,6 +36,8 @@ fun HomeRow.displayTitle(): String = stringResource(
         HomeRow.TONIGHT -> R.string.glcn_tonight
         HomeRow.GENRES -> R.string.glcn_genres
         HomeRow.STARTING_SOON -> R.string.glcn_starting_soon
+        HomeRow.TRENDING_MOVIES -> R.string.glcn_home_row_trending_movies
+        HomeRow.TRENDING_SERIES -> R.string.glcn_home_row_trending_series
     },
 )
 
@@ -58,6 +60,8 @@ fun HomeRow.settingsDescription(): String = stringResource(
         HomeRow.TONIGHT -> R.string.glcn_tonight_description
         HomeRow.GENRES -> R.string.glcn_genres_description
         HomeRow.STARTING_SOON -> R.string.glcn_starting_soon_description
+        HomeRow.TRENDING_MOVIES -> R.string.glcn_home_row_trending_movies_desc
+        HomeRow.TRENDING_SERIES -> R.string.glcn_home_row_trending_series_desc
     },
 )
 
