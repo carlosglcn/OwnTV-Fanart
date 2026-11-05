@@ -432,11 +432,11 @@ internal fun LiveStagePane(
         if (showTop) (now?.description?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
             tv.own.owntv.features.shell.components.DriftingSynopsis(
                 it,
-                modifier = Modifier.padding(top = 14.mpx).then(if (tall || rowSchedule) Modifier.weight(1f, fill = false) else Modifier),
+                modifier = Modifier.padding(top = 14.mpx).then(if (rowSchedule) Modifier.weight(1f) else if (tall) Modifier.weight(1f, fill = false) else Modifier), // glcn: Ficha — the synopsis takes all the room down to the cards at the foot
                 // glcn: Ficha — a little smaller and as many lines as the room under the video holds, so it reads at once.
                 style = if (rowSchedule) stageText(17, 400).copy(lineHeight = (17 * 1.4f).mpxSp) else stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp),
                 color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
-                lines = if (tall) 6 else if (rowSchedule) 9 else 3,
+                lines = if (tall) 6 else if (rowSchedule) 12 else 3,
             )
         }
         val next = nowNext?.next
@@ -480,7 +480,7 @@ internal fun LiveStagePane(
     if (ficha) {
         // glcn: the video across the whole column at the top; under it, full width, the title, the details, a longer
         // synopsis and what follows in one row — the programme's picture shows through at the bottom.
-        Column(modifier.fillMaxHeight().padding(bottom = 110.mpx)) {
+        Column(modifier.fillMaxHeight().padding(bottom = 70.mpx)) { // glcn: the cards lower, nearer the foot (the hints fade after a moment)
             // glcn: the video a little narrower (and so lower), lined up with the text under it.
             Video(Modifier.fillMaxWidth(tv.own.owntv.glcn.LivePaneLayout.FICHA_VIDEO_W))
             // The details take what is left under the video: the synopsis gives way (and drifts) so what follows
