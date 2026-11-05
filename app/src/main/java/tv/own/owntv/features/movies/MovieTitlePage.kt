@@ -278,7 +278,7 @@ internal fun MovieTitlePage(
                 if (extras.isNotEmpty()) {
                     Text(stringResource(R.string.glcn_title_extras), style = stageText(20, 700), color = StageColors.Text)
                     Row(
-                        Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(vertical = 10.mpx).focusGroup(),
+                        Modifier.glowRoomScroll().focusGroup(), // glcn: room for the focus ring and glow
                         horizontalArrangement = Arrangement.spacedBy(18.mpx),
                     ) {
                         extras.forEach { x ->
@@ -305,7 +305,7 @@ internal fun MovieTitlePage(
                     // glcn: films like this one — each opens its own page.
                     Text(stringResource(R.string.glcn_similar_title), style = stageText(20, 700), color = StageColors.Text)
                     Row(
-                        Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(vertical = 10.mpx).focusGroup(),
+                        Modifier.glowRoomScroll().focusGroup(), // glcn: room for the focus ring and glow
                         horizontalArrangement = Arrangement.spacedBy(18.mpx),
                     ) {
                         related.take(10).forEach { r ->

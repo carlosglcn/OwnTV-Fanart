@@ -160,3 +160,7 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎴 Apps: apps without a TV banner show their icon on a plate of the icon's own colour with the name under it; the focused app's name always shows.
 - 🧹 Apps: apps in "Your apps" are no longer listed again below; the grid fades out at the foot and the hold-OK hint sits there.
 - ⭐ A one-time GitHub star card (QR) — from the third day and fifth start, after a calm minute of browsing with nothing playing; "Not now" or "Already did" and it never returns. Also notes you can sign in with Google.
+- 💎 Glass focus made clearly visible: a deeper tint, a glassy sheen over the upper half, a brighter top edge and a stronger ring (Glass mode only).
+- 📜 Live TV: a slim scroll bar at the channel list's edge while it moves, with a bubble naming the channel number on a held run.
+- 🖼️ Live TV (Ficha): the coming programmes show their picture over each card (the channel's logo when there is none), loaded once the cursor rests.
+- ✨ Film page: the Extras and "You may like" rows no longer cut off the focus ring.

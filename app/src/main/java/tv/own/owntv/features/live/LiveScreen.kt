@@ -1,5 +1,7 @@
 package tv.own.owntv.features.live
 
+import tv.own.owntv.glcn.fastScrollbar
+
 import tv.own.owntv.ui.components.onDpadLeft
 import tv.own.owntv.core.epg.displayLogoUrl
 import androidx.activity.compose.BackHandler
@@ -1017,7 +1019,11 @@ fun LiveScreen(
                                 ),
                             )
                             layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(-extra, 0) }
-                        },
+                        }.fastScrollbar(
+                            effectiveListState, channels.itemCount, endInset = glowRoom, bottomInset = 48.mpx,
+                            // glcn: the bubble names the focused channel by its number (or its place in the list).
+                            label = { (stepTarget ?: effectiveListState.firstVisibleItemIndex).let { i -> channels.peek(i)?.number?.toString() ?: (i + 1).toString() } },
+                        ),
                         // glcn: room at the foot so the last row never sits on the edge of the TV (overscan).
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(start = glowRoom, end = glowRoom, bottom = 48.mpx),
                     ) {
@@ -1136,6 +1142,7 @@ fun LiveScreen(
                 scheduleFocus = scheduleFocus,
                 onOpenProgramme = { p -> previewChannel?.let { openProgramme = it to p } },
                 onBackToList = { focusCurrentRow() },
+                loadSchedule = { vm.scheduleFor(it) },
                 modifier = Modifier
                     .padding(start = screenW - margin - stageW, top = 120.mpx)
                     .width(stageW),

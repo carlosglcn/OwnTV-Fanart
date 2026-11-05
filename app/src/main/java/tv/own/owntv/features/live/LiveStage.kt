@@ -294,7 +294,19 @@ internal fun LiveStagePane(
     onOpenProgramme: (XtEpgEntry) -> Unit,
     onBackToList: () -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: the channel's guide rows (with their pictures), for the pictures over what follows. */
+    loadSchedule: (suspend (ChannelEntity) -> List<tv.own.owntv.core.database.entity.EpgProgrammeEntity>)? = null,
 ) {
+    // glcn: the coming programmes' pictures, read once the cursor rests on a channel (not while it races past).
+    val laterArt by androidx.compose.runtime.produceState<Map<Long, String>>(emptyMap(), channel?.id) {
+        value = emptyMap()
+        val ch = channel ?: return@produceState
+        val load = loadSchedule ?: return@produceState
+        kotlinx.coroutines.delay(LATER_ART_SETTLE_MS)
+        value = runCatching { load(ch) }.getOrDefault(emptyList())
+            .mapNotNull { r -> r.imageUrl?.takeIf { it.isNotBlank() }?.let { r.startMs to it } }.toMap()
+    }
+    val channelLogo = channel?.displayLogoUrl?.takeIf { it.isNotBlank() }
     val previewState by previewEngine.state.collectAsStateWithLifecycle()
     val streamChips by previewEngine.streamChips.collectAsStateWithLifecycle()
     val playing = showVideo && previewState != tv.own.owntv.player.LivePreviewEngine.State.ERROR &&
@@ -444,9 +456,9 @@ internal fun LiveStagePane(
                     Modifier.fillMaxWidth().padding(top = if (showTop) 18.mpx else 0.mpx).focusGroup(),
                     horizontalArrangement = Arrangement.spacedBy(8.mpx),
                 ) {
-                    LiveScheduleItem(next, accentTime = true, onClick = { onOpenProgramme(next) }, modifier = Modifier.weight(1f).focusRequester(scheduleFocus).then(back), chip = true)
+                    LiveScheduleItem(next, accentTime = true, onClick = { onOpenProgramme(next) }, modifier = Modifier.weight(1f).focusRequester(scheduleFocus).then(back), chip = true, art = laterArt[next.startMs], logo = channelLogo, withArt = loadSchedule != null)
                     later.take(2).forEach { l ->
-                        LiveScheduleItem(l, accentTime = false, onClick = { onOpenProgramme(l) }, modifier = Modifier.weight(1f), chip = true)
+                        LiveScheduleItem(l, accentTime = false, onClick = { onOpenProgramme(l) }, modifier = Modifier.weight(1f), chip = true, art = laterArt[l.startMs], logo = channelLogo, withArt = loadSchedule != null)
                     }
                 }
             } else Column(
@@ -487,7 +499,11 @@ internal fun LiveStagePane(
  * time and full-colour title, later is muted. Focused = FILLED.
  */
 @Composable
-private fun LiveScheduleItem(p: XtEpgEntry, accentTime: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, chip: Boolean = false) {
+private fun LiveScheduleItem(
+    p: XtEpgEntry, accentTime: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, chip: Boolean = false,
+    /** glcn: the programme's picture over the chip (the channel's logo stands in when there is none). */
+    art: String? = null, logo: String? = null, withArt: Boolean = false,
+) {
     val formatTime = rememberSystemTimeFormatter()
     val a = stageAccent
     StageSurface(
@@ -495,6 +511,19 @@ private fun LiveScheduleItem(p: XtEpgEntry, accentTime: Boolean, onClick: () -> 
         // glcn: as a chip (Ficha's row of what follows) it sits on a faint glass pill.
         idle = if (chip) Modifier.background(StageColors.ControlFill, RoundedCornerShape(12.mpx)) else Modifier,
     ) { focused ->
+        Column {
+        if (chip && withArt) {
+            Box(
+                Modifier.padding(start = 6.mpx, end = 6.mpx, top = 6.mpx).fillMaxWidth().aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(9.mpx)).background(StageColors.Ink.copy(alpha = 0.06f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                androidx.compose.animation.Crossfade(art, label = "laterArt") { url ->
+                    if (url != null) coil3.compose.AsyncImage(model = url, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    else if (logo != null) coil3.compose.AsyncImage(model = logo, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.fillMaxSize(0.45f))
+                }
+            }
+        }
         Text(
             buildAnnotatedString {
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold, fontFeatureSettings = Tabular, color = if (focused) a.onAccent else if (accentTime) a.accent else StageColors.Muted)) {
@@ -507,8 +536,11 @@ private fun LiveScheduleItem(p: XtEpgEntry, accentTime: Boolean, onClick: () -> 
             maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 12.mpx, vertical = 6.mpx),
         )
+        }
     }
 }
+
+private const val LATER_ART_SETTLE_MS = 350L
 
 /** Scroll only as far as the focused item, plus one row of room, needs (the TV default pins it a third down). */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)

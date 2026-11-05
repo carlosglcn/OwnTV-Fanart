@@ -104,23 +104,28 @@ private const val ACCESSIBLE_RING = 5f
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocusInner(style: StageFocus, radius: Dp, a: StageAccent, palette: StagePalette) {
     val r = radius.toPx()
     val px = 1.mpx.toPx()
-    // glcn: Glass on — rows and cards focus as tinted glass: an accent wash fading downwards, a light
-    // catch along the top edge and a ring that fades from strong at the left to nothing at the right.
+    // glcn: Glass on — rows and cards focus as tinted glass: an accent wash fading downwards, a sheen over its upper
+    // half, a light catch along the top edge and a ring that fades from strong at the left to faint at the right.
     if (style == StageFocus.FX && tv.own.owntv.glcn.GlassFocus.on) {
         val light = palette.isLight
-        drawBoxShadow(a.accent.copy(alpha = if (light) 0.14f else 0.24f), 34 * px, r, dy = 10 * px)
+        drawBoxShadow(a.accent.copy(alpha = if (light) 0.26f else 0.34f), 40 * px, r, dy = 12 * px)
         drawRoundRect(
-            Brush.verticalGradient(listOf(a.accent.copy(alpha = if (light) 0.24f else 0.38f), a.accent.copy(alpha = if (light) 0.05f else 0.10f))),
+            Brush.verticalGradient(listOf(a.accent.copy(alpha = if (light) 0.40f else 0.52f), a.accent.copy(alpha = if (light) 0.14f else 0.20f))),
+            cornerRadius = CornerRadius(r),
+        )
+        // The sheen: light on the upper half, as a pane of glass catches it.
+        drawRoundRect(
+            Brush.verticalGradient(0f to Color.White.copy(alpha = if (light) 0.55f else 0.22f), 0.5f to Color.White.copy(alpha = 0f), endY = size.height),
             cornerRadius = CornerRadius(r),
         )
         val catchY = 1.5f * px
         drawLine(
-            Brush.horizontalGradient(listOf(Color.Transparent, Color.White.copy(alpha = if (light) 0.95f else 0.45f), Color.Transparent), startX = r * 0.5f, endX = size.width - r * 0.5f),
-            start = androidx.compose.ui.geometry.Offset(r * 0.6f, catchY), end = androidx.compose.ui.geometry.Offset(size.width - r * 0.6f, catchY), strokeWidth = 1.5f * px,
+            Brush.horizontalGradient(listOf(Color.Transparent, Color.White, Color.Transparent), startX = r * 0.5f, endX = size.width - r * 0.5f),
+            start = androidx.compose.ui.geometry.Offset(r * 0.6f, catchY), end = androidx.compose.ui.geometry.Offset(size.width - r * 0.6f, catchY), strokeWidth = 2f * px,
         )
-        val ring = 2f * px
+        val ring = 2.5f * px
         drawRoundRect(
-            Brush.horizontalGradient(listOf(a.accent.copy(alpha = 0.95f), (if (light) a.accent else a.focus).copy(alpha = 0.40f), a.accent.copy(alpha = 0.06f))),
+            Brush.horizontalGradient(listOf(a.accent, (if (light) a.accent else a.focus).copy(alpha = 0.6f), a.accent.copy(alpha = 0.18f))),
             topLeft = androidx.compose.ui.geometry.Offset(ring / 2f, ring / 2f), size = androidx.compose.ui.geometry.Size(size.width - ring, size.height - ring),
             cornerRadius = CornerRadius((r - ring / 2f).coerceAtLeast(0f)), style = androidx.compose.ui.graphics.drawscope.Stroke(ring),
         )
