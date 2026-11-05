@@ -243,6 +243,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/more/MorePages.kt	owntv-playback-report.txt
 1	technical	app/src/main/java/tv/own/owntv/features/more/MoreScreen.kt	DEV
 1	technical	app/src/main/java/tv/own/owntv/features/more/MoreScreen.kt	Developer
+1	technical	app/src/main/java/tv/own/owntv/features/more/MoreScreen.kt	appsWide
 1	technical	app/src/main/java/tv/own/owntv/features/more/MoreScreen.kt	▶
 5	empty	app/src/main/java/tv/own/owntv/features/movies/MovieTitlePage.kt	\0
 1	url	app/src/main/java/tv/own/owntv/features/movies/MovieTitlePage.kt	/mqdefault.jpg

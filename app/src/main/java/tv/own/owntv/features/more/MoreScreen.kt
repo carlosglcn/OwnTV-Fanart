@@ -1,5 +1,6 @@
 package tv.own.owntv.features.more
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.size
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -158,10 +159,17 @@ fun MoreScreen(
     var logVersion by remember { mutableIntStateOf(0) }
     val logCount by produceState(0, logVersion) { value = withContext(Dispatchers.IO) { PlaybackErrorLog.read(context).size } }
 
+    // glcn: Apps takes the whole width while you are in it — the sheet slides away left and the page with it,
+    // in one move (no re-layout: the page is laid out full width and only shifted while the sheet is out).
+    val appsWide by androidx.compose.animation.core.animateFloatAsState(
+        if (selected == MoreItem.APPS && pageFocused) 1f else 0f,
+        tv.own.owntv.ui.theme.ownTvTween(380, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)), label = "appsWide",
+    )
     Box(modifier.fillMaxSize().onFocusChanged { if (it.hasFocus) onChildFocused() }) {
         // --- The sheet (`.gsheet`, 440 wide at 24 / 24 / 24): the full height.
         Column(
             Modifier
+                .graphicsLayer { translationX = -appsWide * 500.mpx.toPx(); alpha = 1f - appsWide }
                 .padding(start = 24.mpx, top = 24.mpx, bottom = 24.mpx)
                 .width(440.mpx)
                 .fillMaxHeight()
@@ -215,7 +223,10 @@ fun MoreScreen(
         // --- The page: everything right of the sheet, below the top-right cluster.
         Box(
             Modifier
-                .padding(start = 520.mpx, top = 128.mpx, end = 64.mpx)
+                .then(
+                    if (selected == MoreItem.APPS) Modifier.graphicsLayer { translationX = (1f - appsWide) * APPS_SHIFT.mpx.toPx() }.padding(start = 64.mpx, top = 128.mpx, end = 64.mpx)
+                    else Modifier.padding(start = 520.mpx, top = 128.mpx, end = 64.mpx),
+                )
                 .fillMaxSize()
                 .onFocusChanged { pageFocused = it.hasFocus },
         ) {
@@ -235,7 +246,7 @@ fun MoreScreen(
                     onClearHistory = { settingsVm.clearWatchHistory(it) },
                     onPlayChannel = onPlayChannel, onPlayMovie = onPlayMovie, onPlayEpisode = onPlayEpisode, onOpenSeries = onOpenSeries,
                 )
-                MoreItem.APPS -> tv.own.owntv.glcn.AppsHub(entry = pageTarget, modifier = Modifier.fillMaxSize())
+                MoreItem.APPS -> tv.own.owntv.glcn.AppsHub(entry = pageTarget, modifier = Modifier.fillMaxSize(), onLeftEdge = backToSheet)
                 MoreItem.BACKUP -> BackupScreen(entry = pageTarget, modifier = Modifier.fillMaxSize())
                 MoreItem.LOCAL_SYNC -> LocalSyncScreen(entry = pageTarget, modifier = Modifier.fillMaxSize())
                 MoreItem.ERROR_LOG -> ErrorLogPage(setEntry = setEntry, onCountChanged = { logVersion++ })
@@ -303,3 +314,6 @@ private fun relativeShort(at: Long): String =
     android.text.format.DateUtils.getRelativeTimeSpanString(
         at, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS,
     ).toString()
+
+/** glcn: how far right the full-width Apps page sits while the sheet is out (the sheet's room). */
+private const val APPS_SHIFT = 456

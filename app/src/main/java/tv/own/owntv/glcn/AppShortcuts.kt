@@ -10,7 +10,8 @@ import androidx.compose.runtime.mutableStateListOf
  * in the order picked. Read from the TV's launcher list (apps with a TV banner); kept per device by package name.
  */
 object AppShortcuts {
-    data class App(val pkg: String, val label: String, val banner: Drawable?)
+    /** [banner] is the app's TV banner, or null when it has none — then [icon] is drawn on its own colour. */
+    data class App(val pkg: String, val label: String, val banner: Drawable?, val icon: Drawable? = null)
 
     /** The packages chosen, in order. */
     val chosen = mutableStateListOf<String>()
@@ -34,7 +35,8 @@ object AppShortcuts {
                 App(
                     ai.packageName,
                     ai.loadLabel(pm).toString(),
-                    runCatching { ai.loadBanner(pm) ?: ai.applicationInfo.loadBanner(pm) ?: ai.loadIcon(pm) }.getOrNull(),
+                    runCatching { ai.loadBanner(pm) ?: ai.applicationInfo.loadBanner(pm) }.getOrNull(),
+                    runCatching { ai.loadIcon(pm) }.getOrNull(),
                 )
             }
             .sortedBy { it.label.lowercase() }

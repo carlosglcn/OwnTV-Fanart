@@ -156,3 +156,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🗂️ Movies / Series categories: shown in sections — Platforms, Genres and More categories — each under its heading, instead of one mixed "Providers" list.
 - 🏷️ Category logos (Netflix, Apple TV…) now sit small at the left before the name, like any icon, instead of large and centred.
 - 🔹 No playlist mark on categories when everything comes from one playlist.
+- 📱 Apps: the page takes the whole width while you are in it (the side menu slides away, ◀ on the first column brings it back), 7 columns.
+- 🎴 Apps: apps without a TV banner show their icon on a plate of the icon's own colour with the name under it; the focused app's name always shows.
+- 🧹 Apps: apps in "Your apps" are no longer listed again below; the grid fades out at the foot and the hold-OK hint sits there.

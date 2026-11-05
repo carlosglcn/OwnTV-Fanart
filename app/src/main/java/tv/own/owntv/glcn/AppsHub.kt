@@ -15,6 +15,8 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -71,12 +73,15 @@ import tv.own.owntv.ui.theme.stageText
  * move, the app's own Android settings. Shown in More while the Labs switch is on.
  */
 @Composable
-fun AppsHub(entry: FocusRequester, modifier: Modifier = Modifier) {
+fun AppsHub(entry: FocusRequester, modifier: Modifier = Modifier, onLeftEdge: () -> Unit = {}) {
     val context = LocalContext.current
     LaunchedEffect(Unit) { AppShortcuts.ensure(context) }
     val all by produceState(emptyList<AppShortcuts.App>()) { value = withContext(Dispatchers.IO) { AppShortcuts.installed(context) } }
     val byPkg = remember(all) { all.associateBy { it.pkg } }
     val mine = AppShortcuts.chosen.mapNotNull { byPkg[it] }
+    // glcn: an app in "Your apps" is not listed again below.
+    val rest = all.filter { it.pkg !in AppShortcuts.chosen }
+    val leftEdge: (Boolean) -> Modifier = { edge -> if (!edge) Modifier else Modifier.onPreviewKeyEvent { e -> if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown && e.key == androidx.compose.ui.input.key.Key.DirectionLeft) { onLeftEdge(); true } else false } }
     var focusedTint by remember { mutableStateOf(Color.Transparent) }
     val tint by animateColorAsState(focusedTint, tv.own.owntv.ui.theme.ownTvTween(500), label = "appsTint")
     var menuFor by remember { mutableStateOf<AppShortcuts.App?>(null) }
@@ -89,7 +94,6 @@ fun AppsHub(entry: FocusRequester, modifier: Modifier = Modifier) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(start = HPAD.mpx, end = HPAD.mpx, top = 6.mpx), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(if (mine.isNotEmpty()) R.string.glcn_apps_yours else R.string.glcn_apps_all), style = stageText(24, 800), color = StageColors.Text, modifier = Modifier.weight(1f))
-                tv.own.owntv.ui.stage.StageKeyHints(listOf(stringResource(R.string.content_key_hold_ok) to stringResource(R.string.content_key_options)))
             }
             if (mine.isNotEmpty()) {
                 // Room on every side for the focused banner's lift and ring, so it is never clipped.
@@ -100,7 +104,7 @@ fun AppsHub(entry: FocusRequester, modifier: Modifier = Modifier) {
                             onClick = { AppShortcuts.open(context, a.pkg) },
                             onLongClick = { menuFor = a },
                             onFocus = { focusedTint = it },
-                            modifier = if (i == 0) Modifier.focusRequester(entry) else Modifier,
+                            modifier = (if (i == 0) Modifier.focusRequester(entry) else Modifier).then(leftEdge(i == 0)),
                         )
                     }
                 }
@@ -113,18 +117,24 @@ fun AppsHub(entry: FocusRequester, modifier: Modifier = Modifier) {
                 contentPadding = PaddingValues(start = HPAD.mpx, end = HPAD.mpx, top = 16.mpx, bottom = 48.mpx),
                 modifier = Modifier.fillMaxWidth().weight(1f).focusGroup(),
             ) {
-                itemsIndexed(all, key = { _, a -> "a" + a.pkg }) { i, a ->
+                itemsIndexed(rest, key = { _, a -> "a" + a.pkg }) { i, a ->
                     AppBanner(
                         a, width = Dp.Unspecified,
-                        checked = a.pkg in AppShortcuts.chosen,
                         onClick = { AppShortcuts.open(context, a.pkg) },
                         onLongClick = { menuFor = a },
                         onFocus = { focusedTint = it },
-                        modifier = if (i == 0 && mine.isEmpty()) Modifier.focusRequester(entry) else Modifier,
+                        modifier = (if (i == 0 && mine.isEmpty()) Modifier.focusRequester(entry) else Modifier).then(leftEdge(i % GRID_COLUMNS == 0)),
                     )
                 }
             }
         }
+        // glcn: the grid fades out at the foot instead of being cut, the hold-OK hint over it.
+        val pg = tv.own.owntv.ui.theme.LocalStagePalette.current.page
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(90.mpx).background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Transparent, 1f to pg.copy(alpha = 0.92f))))
+        tv.own.owntv.ui.stage.StageKeyHints(
+            listOf(stringResource(R.string.content_key_hold_ok) to stringResource(R.string.content_key_options)),
+            Modifier.align(Alignment.BottomEnd).padding(end = HPAD.mpx, bottom = 14.mpx), textSize = 15,
+        )
     }
     menuFor?.let { a -> AppMenu(a) { menuFor = null } }
 }
@@ -144,7 +154,11 @@ fun AppBanner(
     onFocus: (Color) -> Unit = {},
 ) {
     val img: ImageBitmap? = remember(app.pkg) { app.banner?.let { d -> runCatching { d.toBitmap(BANNER_PX_W, BANNER_PX_H).asImageBitmap() }.getOrNull() } }
-    val tint = remember(app.pkg) { app.banner?.let { d -> runCatching { Color(d.toBitmap(1, 1).getPixel(0, 0)) }.getOrNull() } ?: Color.Transparent }
+    // glcn: no banner — the app's icon on a plate of its own colour, the name under it, so every card reads alike.
+    val iconImg: ImageBitmap? = remember(app.pkg) { if (img != null) null else app.icon?.let { d -> runCatching { d.toBitmap(ICON_PX, ICON_PX).asImageBitmap() }.getOrNull() } }
+    val iconColour = remember(app.pkg) { if (img != null) null else app.icon?.let { d -> runCatching { dominant(d.toBitmap(12, 12)) }.getOrNull() } }
+    val tint = remember(app.pkg) { app.banner?.let { d -> runCatching { Color(d.toBitmap(1, 1).getPixel(0, 0)) }.getOrNull() } ?: iconColour ?: Color.Transparent }
+    var isFocused by remember { mutableStateOf(false) }
     StageSurface(
         onClick = onClick,
         onLongClick = onLongClick,
@@ -153,7 +167,7 @@ fun AppBanner(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .then(if (width != Dp.Unspecified) Modifier.width(width).aspectRatio(BANNER_RATIO) else Modifier.fillMaxWidth().aspectRatio(BANNER_RATIO))
-            .onFocusChanged { if (it.isFocused) onFocus(tint) },
+            .onFocusChanged { isFocused = it.isFocused; if (it.isFocused) onFocus(tint) },
     ) { _ ->
         Box(
             Modifier.fillMaxSize()
@@ -164,7 +178,18 @@ fun AppBanner(
             if (img != null) {
                 Image(img, contentDescription = app.label, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             } else {
-                Text(app.label, style = stageText(20, 700), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(12.mpx))
+                val plate = iconColour ?: Color(0xFF1B2024)
+                Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(lighten(plate, 0.12f), darken(plate, 0.28f)))))
+                Column(Modifier.fillMaxSize().padding(10.mpx), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    if (iconImg != null) Image(iconImg, contentDescription = null, modifier = Modifier.fillMaxHeight(0.5f).aspectRatio(1f))
+                    Text(app.label, style = stageText(15, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.mpx))
+                }
+            }
+            // glcn: the focused app's name, always — over a banner as a strip along its foot.
+            if (img != null && isFocused) {
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)))).padding(start = 10.mpx, end = 10.mpx, top = 18.mpx, bottom = 6.mpx)) {
+                    Text(app.label, style = stageText(14, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
             if (checked) {
                 Box(
@@ -244,7 +269,7 @@ fun AppsPickerGrid(onDismiss: () -> Unit) {
                 }
                 Text(stringResource(R.string.glcn_apps_hint), style = stageText(19, 500), color = Color.White.copy(alpha = 0.65f), modifier = Modifier.padding(top = 6.mpx, bottom = 22.mpx))
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(GRID_COLUMNS),
+                    columns = GridCells.Fixed(PICKER_COLUMNS),
                     horizontalArrangement = Arrangement.spacedBy(20.mpx),
                     verticalArrangement = Arrangement.spacedBy(20.mpx),
                     contentPadding = PaddingValues(12.mpx),
@@ -264,11 +289,29 @@ fun AppsPickerGrid(onDismiss: () -> Unit) {
     }
 }
 
-private const val GRID_COLUMNS = 5
+private const val GRID_COLUMNS = 7
+private const val PICKER_COLUMNS = 5
 /** Side room for the focused banner's lift and ring, and the gap between banners. */
 private const val HPAD = 18
 private const val GAP = 22
-private const val BANNER_W = 288
+private const val BANNER_W = 240
 private const val BANNER_RATIO = 16f / 9f
 private const val BANNER_PX_W = 320
 private const val BANNER_PX_H = 180
+private const val ICON_PX = 128
+
+/** glcn: the icon's main colour — the average of its solid, not-too-pale pixels — made deep enough for white text. */
+private fun dominant(b: android.graphics.Bitmap): Color? {
+    var r = 0L; var g = 0L; var bl = 0L; var n = 0
+    for (y in 0 until b.height) for (x in 0 until b.width) {
+        val p = b.getPixel(x, y)
+        if (android.graphics.Color.alpha(p) < 200) continue
+        val pr = android.graphics.Color.red(p); val pg = android.graphics.Color.green(p); val pb = android.graphics.Color.blue(p)
+        if (pr > 235 && pg > 235 && pb > 235) continue
+        r += pr; g += pg; bl += pb; n++
+    }
+    if (n == 0) return null
+    return darken(Color((r / n).toInt(), (g / n).toInt(), (bl / n).toInt()), 0.25f)
+}
+private fun darken(c: Color, by: Float) = androidx.compose.ui.graphics.lerp(c, Color.Black, by)
+private fun lighten(c: Color, by: Float) = androidx.compose.ui.graphics.lerp(c, Color.White, by)
