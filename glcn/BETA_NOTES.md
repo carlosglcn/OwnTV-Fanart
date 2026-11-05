@@ -164,3 +164,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📜 Live TV: a slim scroll bar at the channel list's edge while it moves, with a bubble naming the channel number on a held run.
 - 🖼️ Live TV (Ficha): the coming programmes show their picture over each card (the channel's logo when there is none), loaded once the cursor rests.
 - ✨ Film page: the Extras and "You may like" rows no longer cut off the focus ring.
+- 🔑 Lists that refuse the usual player identity now play without touching anything: OwnTV Fanart tries another identity by itself and remembers the one that works for that list. If every one is refused, the error points you to the User-Agent setting.
