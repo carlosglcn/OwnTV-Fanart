@@ -53,7 +53,8 @@ object CategoryIcons {
         tv.own.owntv.core.sync.PlatformLogos.logoFor(groupName) != null || groupName == tv.own.owntv.core.sync.PlatformNames.other()
 
     /** Whether the row shows [glyph] instead of the group's name (a platform's logo, with logos alone chosen). */
-    fun hidesName(glyph: Glyph?): Boolean = mode == Mode.LOGOS && glyph is Glyph.Logo
+    // glcn: never now — a logo alone, centred, broke the list's left edge; it sits before the name like any icon.
+    @Suppress("UNUSED_PARAMETER") fun hidesName(glyph: Glyph?): Boolean = false
 
     /** [code]: an icon key from [CHOICES], [NONE] for no icon, null to go back to the automatic one. */
     fun choose(context: Context, groupName: String, code: String?) {

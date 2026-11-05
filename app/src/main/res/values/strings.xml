@@ -9,4 +9,7 @@
     <string name="glcn_star_scan">Scan the QR code with your phone.</string>
     <string name="glcn_star_qr">QR code to this project on GitHub</string>
     <string name="glcn_star_close">Close</string>
+    <string name="glcn_vod_section_platforms">Platforms</string>
+    <string name="glcn_vod_section_genres">Genres</string>
+    <string name="glcn_vod_section_more">More categories</string>
 </resources>

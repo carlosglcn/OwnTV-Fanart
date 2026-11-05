@@ -792,6 +792,8 @@ internal fun vodCategoryEntries(
     series: Boolean,
 ): Pair<List<LiveCategoryEntry>, String> {
     val allLabel = if (series) R.string.content_category_all_series else R.string.content_category_all_movies
+    // glcn: no playlist mark when every category comes from the same playlist.
+    val oneSource = railItems.mapNotNull { it.sourceId }.distinct().size <= 1
     val entries = railItems.map { item ->
         val label = item.displayLabel(allLabel)
         val parsed = if (item.key is LiveKey.Folder || item.key is LiveKey.Custom) ProviderTags.parse(label) else null
@@ -807,7 +809,7 @@ internal fun vodCategoryEntries(
                 else -> if (item.locked) OwnTVIcon.LOCK else null
             },
             count = if (item.sealed) null else counts[item.key],
-            mark = item.sourceId?.let(marks::get),
+            mark = if (oneSource) null else item.sourceId?.let(marks::get),
         )
     }
     return entries to stringResource(R.string.content_vod_providers).uppercase(androidx.compose.ui.text.intl.Locale.current.platformLocale)

@@ -153,3 +153,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ Live TV programme info: opens with the film player's side-panel motion — the words glide in as one piece while the picture settles into its window (same size and layout as before).
 - 🩹 Hold-OK menus (Keep watching and others): the focused item's highlight was drawn on the screen behind, leaving white text on white in the light theme — fixed; the highlight now glides between the menu's items.
 - ⏭️ Skip intro: uses each episode's real intro times from TheIntroDB (by TMDB id, season and episode) after the file's own chapters; with nothing known the button no longer appears (no more blind 80-second jumps).
+- 🗂️ Movies / Series categories: shown in sections — Platforms, Genres and More categories — each under its heading, instead of one mixed "Providers" list.
+- 🏷️ Category logos (Netflix, Apple TV…) now sit small at the left before the name, like any icon, instead of large and centred.
+- 🔹 No playlist mark on categories when everything comes from one playlist.

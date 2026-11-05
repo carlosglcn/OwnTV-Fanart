@@ -636,6 +636,10 @@ internal fun LiveCategories(
     onSearchQueryChange: ((String) -> Unit)? = null,
     /** The category search is being typed in (the player's sheet then leaves ◀ to the text cursor). */
     onSearchEditingChange: (Boolean) -> Unit = {},
+    /** glcn: Movies / Series — each provider group's section ([tv.own.owntv.glcn.VodSections]) and the sections' titles;
+     *  the groups are shown section by section, a heading over each. Null = one heading over all the groups. */
+    sectionOf: ((LiveCategoryEntry) -> Int)? = null,
+    sectionTitles: List<String> = emptyList(),
     /** glcn: list the playlists (when there are several) with the active one opened onto its categories. */
     showPlaylists: Boolean = false,
     /** glcn: the share of glass a sheet draws (below 1 over the player, so the picture shows through). */
@@ -650,12 +654,16 @@ internal fun LiveCategories(
     val hiddenKeys by tv.own.owntv.glcn.HiddenCategories.keys.collectAsStateWithLifecycle()
     val hideable = remember { setOf("Favorites", "History", "Catchup") }
     val hiddenEntries = remember(entries, hiddenKeys) { entries.indices.count { entries[it].item.key.toString().let { k -> k in hideable && k in hiddenKeys } } }
-    val visible = remember(entries, query, hiddenKeys) {
+    fun isGroup(e: LiveCategoryEntry) = !e.item.nested && (e.item.key is tv.own.owntv.core.live.LiveKey.Folder || e.item.key is tv.own.owntv.core.live.LiveKey.Custom)
+    val visible = remember(entries, query, hiddenKeys, sectionOf) {
         val q = query.trim()
-        entries.indices.filter { i ->
+        val shown = entries.indices.filter { i ->
             val k = entries[i].item.key.toString()
             !(k in hideable && k in hiddenKeys) && (q.isEmpty() || entries[i].label.contains(q, ignoreCase = true))
         }
+        // glcn: section by section (stable — each section keeps the list's own order); the fixed entries first.
+        if (sectionOf == null || q.isNotEmpty()) shown
+        else shown.sortedBy { i -> if (isGroup(entries[i])) 1 + sectionOf(entries[i]) else 0 }
     }
     val rowFocusers = remember(visible.size) { List(visible.size) { FocusRequester() } }
     val searchFocus = remember { FocusRequester() }
@@ -714,10 +722,22 @@ internal fun LiveCategories(
     val firstGroup = entries.indexOfFirst { !it.item.nested && (it.item.key is tv.own.owntv.core.live.LiveKey.Folder || it.item.key is tv.own.owntv.core.live.LiveKey.Custom) }
     var stepTarget by remember { mutableStateOf<Int?>(null) }
     var stepJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    fun lazyIndexOf(pos: Int): Int {
-        val groupsHeading = query.isBlank() && firstGroup >= 0 && visible.indexOf(firstGroup).let { it in 0..pos }
-        return headerCount + pos + if (groupsHeading) 1 else 0
+    // glcn: the headings over the groups, by row position — one ("GROUPS · DE"), or one per section.
+    val headingAt: Map<Int, String> = remember(visible, query, firstGroup, groupsHeading, sectionOf, sectionTitles) {
+        if (query.isNotBlank()) emptyMap()
+        else if (sectionOf == null) visible.indexOf(firstGroup).takeIf { firstGroup >= 0 && it >= 0 }?.let { mapOf(it to groupsHeading) } ?: emptyMap()
+        else buildMap {
+            var last = -1
+            visible.forEachIndexed { pos, i ->
+                val e = entries[i]
+                if (isGroup(e)) {
+                    val sec = sectionOf(e)
+                    if (sec != last) { put(pos, sectionTitles.getOrNull(sec) ?: groupsHeading); last = sec }
+                }
+            }
+        }
     }
+    fun lazyIndexOf(pos: Int): Int = headerCount + pos + headingAt.keys.count { it <= pos }
     fun stepTo(pos: Int) {
         stepTarget = pos
         stepJob?.cancel()
@@ -750,7 +770,7 @@ internal fun LiveCategories(
     LaunchedEffect(selectedIndex) {
         val pos = visible.indexOf(selectedIndex)
         if (!hasFocus || chipsFocused || pos < 0) return@LaunchedEffect
-        runCatching { listState.scrollToItem(pos + headerCount) } // the search field and playlist rows come first
+        runCatching { listState.scrollToItem(lazyIndexOf(pos)) } // the search field and playlist rows come first
         withFrameNanos { }
         runCatching { rowFocusers[pos].requestFocus() }
     }
@@ -760,7 +780,7 @@ internal fun LiveCategories(
         visible.indexOf(target).takeIf { it >= 0 }?.let { pos ->
             // A row further than the screen (a CH± jump) is not composed yet: scroll to it first.
             if (!runCatching { rowFocusers[pos].requestFocus() }.getOrDefault(false)) {
-                runCatching { listState.scrollToItem(pos + headerCount) } // the search field and playlist rows come first
+                runCatching { listState.scrollToItem(lazyIndexOf(pos)) } // the search field and playlist rows come first
                 withFrameNanos { }
                 runCatching { rowFocusers[pos].requestFocus() }
             }
@@ -833,7 +853,7 @@ internal fun LiveCategories(
                         val target = if (pos in rowFocusers.indices) rowFocusers[pos] else searchFocus
                         if (!runCatching { target.requestFocus() }.getOrDefault(false)) {
                             scope.launch {
-                                runCatching { listState.scrollToItem(if (pos >= 0) pos + headerCount else 0) }
+                                runCatching { listState.scrollToItem(if (pos >= 0) lazyIndexOf(pos) else 0) }
                                 withFrameNanos { }
                                 runCatching { target.requestFocus() }
                             }
@@ -889,11 +909,11 @@ internal fun LiveCategories(
             }
             visible.forEachIndexed { pos, index ->
                 val entry = entries[index]
-                if (index == firstGroup && query.isBlank()) {
-                    item(key = "__groups__") {
-                        if (sheet) StageGroupLabel(groupsHeading, sheet = true)
+                headingAt[pos]?.let { heading ->
+                    item(key = "__groups__$pos") {
+                        if (sheet) StageGroupLabel(heading, sheet = true)
                         else Text(
-                            groupsHeading, style = stageText(12.5f, 800, 0.13.em), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            heading, style = stageText(12.5f, 800, 0.13.em), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(start = 14.mpx, top = 8.mpx, bottom = 8.mpx),
                         )
                     }

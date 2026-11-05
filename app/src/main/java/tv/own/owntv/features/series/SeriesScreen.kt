@@ -532,6 +532,10 @@ private fun SeriesGrid(
         val id = selectedSeries?.id ?: return@LaunchedEffect
         titleInfo?.backdropUrl?.takeIf { it.isNotBlank() }?.let { runwayBackdrops[id] = it }
     }
+    // glcn: platforms, genres, then the rest — each under its own heading.
+    val vodSectionOf: (tv.own.owntv.features.live.LiveCategoryEntry) -> Int = { e -> tv.own.owntv.glcn.VodSections.of(e.name?.name ?: e.label) }
+    val vodSectionTitles = listOf(R.string.glcn_vod_section_platforms, R.string.glcn_vod_section_genres, R.string.glcn_vod_section_more)
+        .map { stringResource(it).uppercase(androidx.compose.ui.text.intl.Locale.current.platformLocale) }
     val (categoryEntries, groupsHeading) = vodCategoryEntries(railItems, railCounts, playlistMarks, series = true)
     val headerLabel = if (selectedItem?.key is LiveKey.Folder || selectedItem?.key is LiveKey.Custom) ProviderTags.parse(selectedLabel).name else selectedLabel
 
@@ -844,6 +848,7 @@ private fun SeriesGrid(
                     entries = categoryEntries,
                     selectedIndex = selectedIndex,
                     groupsHeading = groupsHeading,
+                    sectionOf = vodSectionOf, sectionTitles = vodSectionTitles,
                     sheet = false,
                     listState = catListState,
                     onSelect = onCategorySelect,
@@ -1002,6 +1007,7 @@ private fun SeriesGrid(
                 entries = categoryEntries,
                 selectedIndex = selectedIndex,
                 groupsHeading = groupsHeading,
+                    sectionOf = vodSectionOf, sectionTitles = vodSectionTitles,
                 sheet = true,
                 listState = catListState,
                 onSelect = onCategorySelect,
