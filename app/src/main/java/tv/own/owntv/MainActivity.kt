@@ -498,7 +498,7 @@ open class MainActivity : ComponentActivity() {
                 // Glass & background: a picture is drawn blurred (its Blur) and glass frosts it, so the
                 // blurred copy is built whenever a picture is shown, glass on or off. The blur itself is
                 // CPU work done once per picture, so every device gets it.
-                val needsBackdropAssets = background.showsPicture
+                val needsBackdropAssets = background.showsPicture && tv.own.owntv.glcn.Wallpapers.animKind(background.imagePath) == null
                 val supportsFrostPyramid = true
                 val blurred by produceState<BlurredBackdrop?>(
                     initialValue = null,
@@ -550,7 +550,10 @@ open class MainActivity : ComponentActivity() {
                     ) {
                         // Background image sits behind everything when a path is set; otherwise the solid
                         // base color shows through and glass renders over that instead.
-                        if (background.showsPicture) BackgroundLayer(background, blurred)
+                        val wallAnim = tv.own.owntv.glcn.Wallpapers.animKind(background.imagePath)
+                        // glcn: an animated wallpaper of the app's own, drawn live, in place of a picture file.
+                        if (background.showsPicture && wallAnim != null) tv.own.owntv.glcn.AnimatedWallpaper(wallAnim, Modifier.fillMaxSize())
+                        else if (background.showsPicture) BackgroundLayer(background, blurred)
                         // glcn: a gradient style's backdrop (Aurora, Crepúsculo, Océano, Fanart vivo) when no picture is set.
                         else glcnStyle?.takeIf { it.isGradient && themeMode != tv.own.owntv.core.settings.SettingsRepository.ThemeMode.LIGHT }?.let {
                             tv.own.owntv.glcn.GradientBackdrop(it, Modifier.fillMaxSize())

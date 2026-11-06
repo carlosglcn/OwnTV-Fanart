@@ -2501,6 +2501,7 @@ private fun GlassEffectSettingsScreen(onBack: () -> Unit, modifier: Modifier = M
     var showBackgroundChooser by remember { mutableStateOf(false) }
     var showLocalPicker by remember { mutableStateOf(false) }
     var showRemotePicker by remember { mutableStateOf(false) }
+    var showWallGallery by remember { mutableStateOf(false) }
     val ingestScope = rememberCoroutineScope()
 
     val background by settingsVm.backgroundConfig.collectAsStateWithLifecycle()
@@ -2536,7 +2537,19 @@ private fun GlassEffectSettingsScreen(onBack: () -> Unit, modifier: Modifier = M
                 onPickRemote = { showBackgroundChooser = false; showRemotePicker = true },
                 onClear = { settingsVm.setBgImagePath(""); showBackgroundChooser = false },
                 onDismiss = { showBackgroundChooser = false },
+                onPickApp = { showBackgroundChooser = false; showWallGallery = true },
             )
+    }
+    if (showWallGallery) {
+        tv.own.owntv.glcn.WallpaperGalleryPopup(
+            current = bgImagePath,
+            onPicked = { path, picture ->
+                settingsVm.setNewBackgroundPicture(path)
+                // The app's pictures are soft already: shown clear, only lightly darkened.
+                if (picture) settingsVm.setPictureLook(tv.own.owntv.core.theme.PictureLook.SHARP)
+            },
+            onDismiss = { showWallGallery = false },
+        )
     }
     if (showRemotePicker) {
         val context = LocalContext.current

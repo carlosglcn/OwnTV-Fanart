@@ -17,4 +17,15 @@
     <string name="glcn_apps_group_music">Música</string>
     <string name="glcn_apps_group_games">Juegos</string>
     <string name="glcn_apps_group_other">Otras apps</string>
+    <string name="glcn_wall_title">Fondos de pantalla</string>
+    <string name="glcn_wall_desc">Hechos para la app. Los animados se dibujan en directo y se quedan quietos en el modo ligero.</string>
+    <string name="glcn_wall_animated">Animados</string>
+    <string name="glcn_wall_pictures">Imágenes</string>
+    <string name="glcn_wall_ondas">Ondas</string>
+    <string name="glcn_wall_brillos">Destellos</string>
+    <string name="glcn_wall_nebulosa">Nebulosa</string>
+    <string name="glcn_wall_brasa">Brasa</string>
+    <string name="glcn_wall_glaciar">Glaciar</string>
+    <string name="glcn_wall_dunas">Dunas</string>
+    <string name="glcn_wall_option">Fondos de la app</string>
 </resources>

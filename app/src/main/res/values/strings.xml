@@ -17,4 +17,15 @@
     <string name="glcn_apps_group_music">Music</string>
     <string name="glcn_apps_group_games">Games</string>
     <string name="glcn_apps_group_other">Other apps</string>
+    <string name="glcn_wall_title">Wallpapers</string>
+    <string name="glcn_wall_desc">Made for the app. Animated ones are drawn live and stand still in the light mode.</string>
+    <string name="glcn_wall_animated">Animated</string>
+    <string name="glcn_wall_pictures">Pictures</string>
+    <string name="glcn_wall_ondas">Waves</string>
+    <string name="glcn_wall_brillos">Glints</string>
+    <string name="glcn_wall_nebulosa">Nebula</string>
+    <string name="glcn_wall_brasa">Ember</string>
+    <string name="glcn_wall_glaciar">Glacier</string>
+    <string name="glcn_wall_dunas">Dunes</string>
+    <string name="glcn_wall_option">App wallpapers</string>
 </resources>

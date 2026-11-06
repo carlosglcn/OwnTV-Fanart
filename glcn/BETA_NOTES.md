@@ -188,3 +188,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌈 Gradient styles: Aurora (soft lights drifting slowly), Crepúsculo (coral to purple), Océano (navy to turquoise) and Fanart vivo (takes the focused picture's colours) — dark glass over a coloured backdrop; still in the light mode.
 - 🎨 Style picker: the styles in two groups, Classic and Gradients, each drawn as a small Home in its real colours.
 - 📱 Apps: a "Recently used" row (the apps opened from here), and the rest grouped by kind — Video, Music, Games and Other apps.
+- 🖼️ Wallpapers: Settings › Glass & background › Picture › "App wallpapers" — animated ones drawn live (Aurora, Waves, Glints; still in the light mode) and four pictures made for the app (Nebula, Ember, Glacier, Dunes), each shown as it looks.
