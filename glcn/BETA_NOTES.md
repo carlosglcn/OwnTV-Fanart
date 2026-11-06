@@ -189,3 +189,10 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎨 Style picker: the styles in two groups, Classic and Gradients, each drawn as a small Home in its real colours.
 - 📱 Apps: a "Recently used" row (the apps opened from here), and the rest grouped by kind — Video, Music, Games and Other apps.
 - 🖼️ Wallpapers: Settings › Glass & background › Picture › "App wallpapers" — animated ones drawn live (Aurora, Waves, Glints; still in the light mode) and four pictures made for the app (Nebula, Ember, Glacier, Dunes), each shown as it looks.
+- 🏞️ Wallpapers: real photos instead of the made-up pictures — 8 dark (Milky Way, auroras, stormy harbour, misty forest, violet snow, ridges at dusk, lilac peak) and 5 light (pink sea of clouds, white dune, pale sea, pier, misty valley). Downloaded once when picked; the app only carries small previews.
+- 👀 Wallpaper gallery: the panel sits at the foot and the whole screen shows the wallpaper in focus as you move; OK sets it (with a download bar), Back keeps yours. Grouped Animated / Dark / Light.
+- 👤 New option: Settings › Glass & background › "Profile screen background" — none (as before), the app's background or any of the photos, with the same live preview and a sketch of the profile screen over it.
+- 🔒 Theme: while a style is on, light/dark shows "Set by the X style" and cannot be changed (each style is made for its tone); take the style off to choose.
+- 🌫️ Live TV (Ficha): the programme picture behind the text now fades out at its edges instead of being painted over with the page colour — no hard rectangle over gradient styles, animated wallpapers or photos.
+- ♿ Accessible mode: the top bar no longer stays folded to icons after turning it off — it measures again when the text size changes.
+- 📷 About: credit for the wallpaper photos (Unsplash).

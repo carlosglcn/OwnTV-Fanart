@@ -102,8 +102,14 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
             },
         contentAlignment = Alignment.Center,
     ) {
-        GateAurora(tint, Modifier.fillMaxSize())
-        androidx.compose.animation.Crossfade(
+        // glcn: Settings › Glass & background › Profile screen background — a picture of the person's choosing in
+        // place of the aurora and the fanart, darkened a little less so it shows.
+        val gateCtx = androidx.compose.ui.platform.LocalContext.current
+        tv.own.owntv.glcn.GateWall.ensure(gateCtx)
+        val gateWall = tv.own.owntv.glcn.GateWall.model(gateCtx, tv.own.owntv.ui.theme.LocalBackground.current)
+        if (gateWall != null) tv.own.owntv.glcn.WallLayer(gateWall, Modifier.fillMaxSize())
+        else GateAurora(tint, Modifier.fillMaxSize())
+        if (gateWall == null) androidx.compose.animation.Crossfade(
             targetState = focused?.id?.let { arts[it]?.backdrop },
             animationSpec = androidx.compose.animation.core.tween(GATE_FADE_MS),
             label = "gateArt",
@@ -118,15 +124,15 @@ fun ProfileGate(onEnter: (Long) -> Unit, onAddProfile: () -> Unit, modifier: Mod
         // Dark at the foot and the edges, so the names and the aurora read over any picture.
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.radialGradient(
             0f to androidx.compose.ui.graphics.Color.Transparent,
-            1f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.75f),
+            1f to androidx.compose.ui.graphics.Color.Black.copy(alpha = if (gateWall != null) 0.5f else 0.75f),
             radius = 1600f,
         )))
         // glcn: darker through the middle and the foot, where the greeting and the names sit — white text over a light,
         // greyish picture was hard to read from the sofa.
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
-            0f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.3f),
-            0.4f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.55f),
-            1f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.85f),
+            0f to androidx.compose.ui.graphics.Color.Black.copy(alpha = if (gateWall != null) 0.12f else 0.3f),
+            0.4f to androidx.compose.ui.graphics.Color.Black.copy(alpha = if (gateWall != null) 0.35f else 0.55f),
+            1f to androidx.compose.ui.graphics.Color.Black.copy(alpha = if (gateWall != null) 0.7f else 0.85f),
         )))
         GateClock(Modifier.align(Alignment.TopEnd).padding(top = 32.dp, end = 44.dp))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

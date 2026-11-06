@@ -887,6 +887,8 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
                 }
             }
         }
+        // glcn: credit for the app's wallpapers.
+        Text(stringResource(R.string.glcn_wall_credit), style = stageText(14, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 10.mpx))
         Row(Modifier.padding(top = 14.mpx), horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
             val languages = SupportedLocales.all.count { it.packaged }
             StageTool(pluralStringResource(R.plurals.more_about_languages, languages, languages), onClick = onOpenLanguage, icon = OwnTVIcon.LIST, boxed = true, modifier = Modifier.focusRequester(entry))

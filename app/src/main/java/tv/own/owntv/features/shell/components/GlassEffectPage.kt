@@ -89,6 +89,8 @@ internal fun GlassBackgroundPage(
     onReset: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: opens the profile screen background's gallery. */
+    onOpenGateWall: (() -> Unit)? = null,
 ) {
     val rowsFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { rowsFocus.requestFocus() } }
@@ -103,12 +105,12 @@ internal fun GlassBackgroundPage(
     StageFullPage(
         parents = listOf(stringResource(R.string.settings_group_appearance)),
         title = stringResource(R.string.settings_glass_bg_title),
-        count = pluralStringResource(R.plurals.settings_setting_count, 9, 9),
+        count = pluralStringResource(R.plurals.settings_setting_count, 10, 10),
         onBack = onBack,
         modifier = modifier,
         rowsFocus = rowsFocus,
     ) {
-        StageSettingsHeading(stringResource(R.string.settings_bg_background), 6, first = true)
+        StageSettingsHeading(stringResource(R.string.settings_bg_background), 7, first = true)
 
         val styles = listOf(BackgroundStyle.STAGE, BackgroundStyle.PICTURE, BackgroundStyle.PLAIN)
         val styleLabels = listOf(stringResource(R.string.settings_bg_stage), stringResource(R.string.settings_bg_picture), stringResource(R.string.settings_bg_plain))
@@ -172,6 +174,20 @@ internal fun GlassBackgroundPage(
             onClick = { onSetAccentLight(!background.accentLight) },
             help = SettingHelp(accentTitle, accentLine, hints = okHints, extra = preview),
         )
+
+        // glcn: the profile screen's own background — none, the app's, or one of the photos.
+        if (onOpenGateWall != null) {
+            val gateTitle = stringResource(R.string.glcn_gate_wall_title)
+            val gateLine = stringResource(R.string.glcn_gate_wall_desc)
+            StageSettingRow(
+                icon = OwnTVIcon.IMAGE,
+                title = gateTitle,
+                desc = gateLine,
+                value = SettingValue.Opens(tv.own.owntv.glcn.gateWallLabel()),
+                onClick = onOpenGateWall,
+                help = SettingHelp(gateTitle, gateLine, hints = okHints),
+            )
+        }
 
         StageSettingsHeading(stringResource(R.string.settings_glass_section), 2)
         val glassTitle = stringResource(R.string.settings_glass_section)

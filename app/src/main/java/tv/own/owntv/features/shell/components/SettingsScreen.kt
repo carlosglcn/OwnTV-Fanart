@@ -767,9 +767,9 @@ fun SettingsScreen(
         RootRow(
             "theme", TileTone.PRIMARY, OwnTVIcon.THEME,
             title = stringResource(R.string.settings_theme), desc = stringResource(R.string.settings_theme_description),
-            chip = themeLabel(themeMode), chipTone = TileTone.PRIMARY,
+            chip = glcnStyle?.let { stringResource(R.string.glcn_theme_fixed, it.label()) } ?: themeLabel(themeMode), chipTone = TileTone.PRIMARY,
             focus = themeRowFocus,
-            onClick = { saveScroll(); dialogReturn = themeRowFocus; showTheme = true },
+            onClick = { if (glcnStyle == null) { saveScroll(); dialogReturn = themeRowFocus; showTheme = true } },
         ),
         RootRow(
             "accent", TileTone.SECONDARY, OwnTVIcon.PALETTE,
@@ -2502,6 +2502,7 @@ private fun GlassEffectSettingsScreen(onBack: () -> Unit, modifier: Modifier = M
     var showLocalPicker by remember { mutableStateOf(false) }
     var showRemotePicker by remember { mutableStateOf(false) }
     var showWallGallery by remember { mutableStateOf(false) }
+    var showGateWall by remember { mutableStateOf(false) }
     val ingestScope = rememberCoroutineScope()
 
     val background by settingsVm.backgroundConfig.collectAsStateWithLifecycle()
@@ -2528,7 +2529,9 @@ private fun GlassEffectSettingsScreen(onBack: () -> Unit, modifier: Modifier = M
         onReset = settingsVm::resetGlassAndBackground,
         onBack = onBack,
         modifier = modifier,
+        onOpenGateWall = { showGateWall = true },
     )
+    if (showGateWall) tv.own.owntv.glcn.GateWallGalleryPopup(onDismiss = { showGateWall = false })
 
     if (showBackgroundChooser) {
         BackgroundImageChooserDialog(
@@ -2961,6 +2964,7 @@ private fun stageRowExtras(
     val brandAccent by vm.brandAccentTriangle.collectAsStateWithLifecycle()
     val focusHighlight by vm.focusHighlight.collectAsStateWithLifecycle()
     val focusWidth by vm.focusHighlightWidth.collectAsStateWithLifecycle()
+    val styleNow by vm.glcnStyle.collectAsStateWithLifecycle()
     val sep = stringResource(R.string.content_epg_bits_separator)
     fun <T> cycle(all: List<T>, now: T, step: Int): T = all[(all.indexOf(now) + step).mod(all.size)]
 
@@ -2994,11 +2998,19 @@ private fun stageRowExtras(
             SettingValue.Opens(playlistsKnown?.let { pluralStringResource(R.plurals.more_playlist_count, it.size, it.size) }),
             extra = { tv.own.owntv.features.settings.PlaylistSyncList(playlists) },
         ),
-        "theme" to RowExtra(
+        // glcn: a style is made for its own tone — while one is on, light or dark is its call, said plainly.
+        "theme" to (styleNow?.let { st ->
+            RowExtra(
+                SettingValue.Action(stringResource(R.string.glcn_theme_fixed, st.label())),
+                onStep = {},
+                onClick = {},
+                help = stringResource(R.string.glcn_theme_fixed_help),
+            )
+        } ?: RowExtra(
             SettingValue.Segmented(themeNames, themes.indexOf(themeMode)),
             onStep = { vm.setThemeMode(cycle(themes, themeMode, it)) },
             onClick = { vm.setThemeMode(cycle(themes, themeMode, 1)) },
-        ),
+        )),
         "accent" to RowExtra(
             SettingValue.Custom {
                 AccentSwatches(presetColors, current)

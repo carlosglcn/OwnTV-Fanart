@@ -47,6 +47,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.focusProperties
@@ -716,17 +717,27 @@ fun LiveScreen(
                 }
                 val roomTop = 120.mpx + stageW * tv.own.owntv.glcn.LivePaneLayout.FICHA_VIDEO_W * 9f / 16f
                 val artW = stageW + margin
-                Box(Modifier.align(Alignment.BottomEnd).width(artW).height((maxHeight - roomTop + 40.mpx).coerceAtLeast(1.dp))) {
+                // glcn: the edges fade the picture itself out (a mask), instead of painting the page's colour over them:
+                // over a gradient style, an animated wallpaper or a photo, a painted edge showed as a hard rectangle.
+                Box(
+                    Modifier.align(Alignment.BottomEnd).width(artW).height((maxHeight - roomTop + 40.mpx).coerceAtLeast(1.dp))
+                        .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            val keep = androidx.compose.ui.graphics.Color.Black
+                            val gone = androidx.compose.ui.graphics.Color.Transparent
+                            drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to gone, 0.3f to keep), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+                            drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to gone, 0.32f to keep, 0.78f to keep, 1f to gone), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+                        },
+                ) {
                     coil3.compose.AsyncImage(
                         model = soft, contentDescription = null,
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                         filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
                         modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.4f else 0.6f },
                     )
-                    // A general dim so white (or dark) text always reads, then the edges melt into the page.
+                    // A general dim so white (or dark) text always reads.
                     Box(Modifier.fillMaxSize().background(page.copy(alpha = if (light) 0.45f else 0.4f)))
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to page, 0.25f to page.copy(alpha = 0f))))
-                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to page, 0.3f to page.copy(alpha = 0f), 0.8f to page.copy(alpha = 0f), 1f to page.copy(alpha = 0.85f))))
                 }
             } else if (backdrop != null) {
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
