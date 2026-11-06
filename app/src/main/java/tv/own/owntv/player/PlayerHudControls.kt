@@ -477,10 +477,20 @@ internal fun SeekBar(
     positionMs: Long, durationMs: Long, bufferedMs: Long, stepMs: Long, onSeek: (Long) -> Unit, focusRequester: FocusRequester? = null,
     /** glcn: chapter starts, drawn as small gaps along the bar. */
     marks: List<Long> = emptyList(),
+    /** glcn: a thumbnail of the picture at a time (the server's seek previews), shown above the playhead while seeking. */
+    preview: (@Composable (Long) -> Unit)? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val frac = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+    // glcn: the thumbnail shows from a press until a moment after the last one.
+    var seekedAt by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+    val previewOn by androidx.compose.runtime.produceState(false, seekedAt) {
+        if (seekedAt == 0L) return@produceState
+        value = true
+        kotlinx.coroutines.delay(SEEK_PREVIEW_HOLD_MS)
+        value = false
+    }
     // The buffer ghost: how far ahead the engine has data. Never behind the playhead, so a stale or
     // unreported value simply draws nothing rather than a stripe that contradicts the fill.
     val bufferedFrac = if (durationMs > 0) (bufferedMs.toFloat() / durationMs).coerceIn(frac, 1f) else frac
@@ -491,8 +501,8 @@ internal fun SeekBar(
             .onKeyEvent { e ->
                 // Physical by design: left rewinds and right advances media time in every locale.
                 if (e.type == KeyEventType.KeyDown) when (e.key) {
-                    Key.DirectionLeft -> { onSeek(-stepMs); true }
-                    Key.DirectionRight -> { onSeek(stepMs); true }
+                    Key.DirectionLeft -> { seekedAt = android.os.SystemClock.uptimeMillis(); onSeek(-stepMs); true }
+                    Key.DirectionRight -> { seekedAt = android.os.SystemClock.uptimeMillis(); onSeek(stepMs); true }
                     else -> false
                 } else false
             }
@@ -513,6 +523,12 @@ internal fun SeekBar(
                         drawRect(cut, topLeft = androidx.compose.ui.geometry.Offset(x - w / 2, 0f), size = androidx.compose.ui.geometry.Size(w, size.height))
                     }
                 }
+            }
+        }
+        if (focused && previewOn && preview != null) {
+            // Above the time bubble: its bottom edge sits a few dp over the bubble's top.
+            Box(Modifier.fillMaxWidth()) {
+                Box(Modifier.atFraction(frac).offset(y = -(SEEK_PREVIEW_LIFT + SEEK_PREVIEW_HEIGHT / 2))) { preview(positionMs) }
             }
         }
         if (focused) {
@@ -536,6 +552,11 @@ internal fun SeekBar(
     }
     }
 }
+
+/** glcn: the seek thumbnail's height, how far it rises above the bar, and how long it stays after a press. */
+internal val SEEK_PREVIEW_HEIGHT = 135.dp
+private val SEEK_PREVIEW_LIFT = 56.dp
+private const val SEEK_PREVIEW_HOLD_MS = 1_500L
 
 /** Places the element centred at [fraction] of the parent's width, clamped so it stays fully inside. */
 private fun Modifier.atFraction(fraction: Float): Modifier = layout { measurable, constraints ->

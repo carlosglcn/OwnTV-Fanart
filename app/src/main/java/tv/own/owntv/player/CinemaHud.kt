@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -279,7 +280,14 @@ internal fun CinemaBanner(
                     Text(formatTime(pos), style = stageText(20, 700), color = Color.White.copy(alpha = 0.85f))
                     Spacer(Modifier.width(16.mpx))
                     Box(Modifier.weight(1f)) {
-                        SeekBar(positionMs = pos, durationMs = duration, bufferedMs = buffered, stepMs = seekStep, onSeek = { player.seekBy(it) }, focusRequester = seekFocus, marks = chapterMarks)
+                        // glcn: the Emby/Jellyfin seek previews, fetched once the controls are up.
+                        val thumbs by tv.own.owntv.core.emby.EmbyTrickplay.current.collectAsStateWithLifecycle()
+                        LaunchedEffect(thumbs) { thumbs?.prepare() }
+                        SeekBar(
+                            positionMs = pos, durationMs = duration, bufferedMs = buffered, stepMs = seekStep, onSeek = { player.seekBy(it) },
+                            focusRequester = seekFocus, marks = chapterMarks,
+                            preview = thumbs?.let { src -> { ms -> SeekThumb(src, ms) } },
+                        )
                     }
                     Spacer(Modifier.width(16.mpx))
                     Text(stringResource(R.string.player_time_remaining, formatTime((duration - pos).coerceAtLeast(0))), style = stageText(20, 700), color = Color.White.copy(alpha = 0.85f))
@@ -820,3 +828,21 @@ internal fun CinemaNextCard(
 }
 
 private const val PAUSE_FADE_MS = 420
+
+/** glcn: the server's thumbnail for [positionMs]; the last one stays while the next loads. Nothing when it has none. */
+@Composable
+private fun SeekThumb(src: tv.own.owntv.core.emby.EmbyTrickplay.Source, positionMs: Long) {
+    var shown by remember(src) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    LaunchedEffect(src, positionMs / SEEK_THUMB_STEP_MS) {
+        src.thumbAt(positionMs)?.let { shown = it.asImageBitmap() }
+    }
+    val img = shown ?: return
+    val shape = RoundedCornerShape(8.dp)
+    Image(
+        img, contentDescription = null, contentScale = ContentScale.Crop,
+        modifier = Modifier.height(SEEK_PREVIEW_HEIGHT).aspectRatio(img.width.toFloat() / img.height.coerceAtLeast(1))
+            .clip(shape).border(2.dp, Color.White.copy(alpha = 0.85f), shape),
+    )
+}
+
+private const val SEEK_THUMB_STEP_MS = 1_000L

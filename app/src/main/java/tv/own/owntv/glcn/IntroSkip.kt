@@ -54,6 +54,17 @@ object IntroSkip {
     /** glcn: the end of the playing file's intro chapter (the next chapter's start), or -1. Set by [Chip]. */
     @Volatile var chapterEnd: Long = -1L
         private set
+    /**
+     * glcn: where the end credits start in the episode playing (a chapter named so, else TheIntroDB), or -1.
+     * The player shows the next-episode card from there. Set by [Chip].
+     */
+    val creditsAt = kotlinx.coroutines.flow.MutableStateFlow(-1L)
+
+    /** A chapter named as the end credits in the last third of the file, or -1. */
+    fun creditsStart(chapters: List<tv.own.owntv.player.PlayerChapter>, durationMs: Long): Long =
+        chapters.firstOrNull { c -> c.startMs > durationMs * 2 / 3 && c.title?.let { CREDITS_NAME.containsMatchIn(it) } == true }
+            ?.startMs ?: -1L
+
     /** glcn: the intro's end from TheIntroDB for the episode playing, or -1. Set by [Chip]. */
     @Volatile var dbEnd: Long = -1L
         private set
@@ -65,6 +76,9 @@ object IntroSkip {
         return chapters.getOrNull(i + 1)?.startMs?.takeIf { it > chapters[i].startMs } ?: -1L
     }
 
+    private val CREDITS_NAME = Regex("""(?i)\b(credits|end credits|ending|outro|cr[ée]ditos|cr[ée]dits|abspann|ed)\b""")
+    /** Credits closer to the end than this are left to the usual last-seconds card. */
+    private const val CREDITS_TAIL_MS = 20_000L
     private val INTRO_NAME = Regex("""(?i)\b(intro|introduction|opening|openings|op|apertura|cabecera|generique|générique|vorspann)\b""")
 
     private fun prefs(c: Context) = c.getSharedPreferences("glcn_intro", Context.MODE_PRIVATE)
@@ -84,15 +98,24 @@ object IntroSkip {
         val position by engine.position.collectAsStateWithLifecycle()
         // glcn: a file whose chapters name its intro ("Intro", "Opening") says exactly where it ends — films too.
         val duration by engine.duration.collectAsStateWithLifecycle()
+        var creditsChapter by remember(meta) { mutableLongStateOf(-1L) }
         val introChapterEnd by androidx.compose.runtime.produceState(-1L, meta, duration > 0) {
-            value = if (duration > 0) introEnd(runCatching { engine.chapters() }.getOrDefault(emptyList())) else -1L
+            val chapters = if (duration > 0) runCatching { engine.chapters() }.getOrDefault(emptyList()) else emptyList()
+            value = if (duration > 0) introEnd(chapters) else -1L
             chapterEnd = value
+            creditsChapter = if (duration > 0) creditsStart(chapters, duration) else -1L
         }
         // glcn: the episode's intro from TheIntroDB (TMDB id, season, episode).
         val db by androidx.compose.runtime.produceState<tv.own.owntv.core.metadata.IntroDb.Segments?>(null, lookup) {
             value = lookup?.let { (t, se, ep) -> tv.own.owntv.core.metadata.IntroDb.segments(t, se, ep) }
             dbEnd = value?.introEnd ?: -1L
         }
+        // glcn: the end credits — the file's own chapter first, then TheIntroDB; only where it can be credits.
+        LaunchedEffect(meta, creditsChapter, db, duration) {
+            val at = creditsChapter.takeIf { it > 0 } ?: db?.creditsStart ?: -1L
+            creditsAt.value = at.takeIf { duration > 0 && it > duration / 2 && it < duration - CREDITS_TAIL_MS } ?: -1L
+        }
+        androidx.compose.runtime.DisposableEffect(Unit) { onDispose { creditsAt.value = -1L } }
         val dbStart = db?.introStart ?: 0L
         val dbIntroEnd = db?.introEnd ?: -1L
         var learnedEnd by remember(series) { mutableLongStateOf(series?.let { learned(context, it) } ?: -1L) }

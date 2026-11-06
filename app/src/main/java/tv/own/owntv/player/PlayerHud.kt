@@ -85,6 +85,8 @@ private fun PlaybackFailure.displayText(): String {
 internal const val DIRECT_TUNE_TIMEOUT_MS = 2_000L
 private const val DIRECT_TUNE_FEEDBACK_MS = 1_500L
 private const val DIRECT_TUNE_PLAYBACK_WAIT_MS = 8_000L
+/** glcn: how long the next-episode card counts down once the end credits start. */
+private const val CREDITS_COUNTDOWN_MS = 15_000L
 private const val MAX_DIRECT_TUNE_DIGITS = 5
 private const val PLAYER_SHORTCUT_LONG_PRESS_MS = 600L
 
@@ -284,10 +286,27 @@ fun PlayerHud(
     // Re-arm when the queued next episode changes (i.e. after an advance to a new item).
     LaunchedEffect(nextUpTitle, nav.hasNext) { autoNextDismissed = false }
     // Derived, so the root recomposes when the card appears or goes, not on every position tick.
-    val msToAdvance: () -> Long = { if (!isLive && duration > 0L) (duration - 8_000L) - position.value else Long.MAX_VALUE }
-    val nextCardDue by remember(isLive, duration) { derivedStateOf { msToAdvance() in 0L..30_000L } }
+    // glcn: when the episode's end credits are known (a chapter, or TheIntroDB), the card comes with them and
+    // counts down CREDITS_COUNTDOWN_MS from there instead of waiting for the file's last seconds.
+    val creditsAt by tv.own.owntv.glcn.IntroSkip.creditsAt.collectAsStateWithLifecycle()
+    val atCredits = !isLive && creditsAt > 0L && duration > 0L
+    val advanceAt = if (atCredits) minOf(duration - 8_000L, creditsAt + CREDITS_COUNTDOWN_MS) else duration - 8_000L
+    val msToAdvance: () -> Long = { if (!isLive && duration > 0L) advanceAt - position.value else Long.MAX_VALUE }
+    val nextCardDue by remember(isLive, duration, atCredits, creditsAt) {
+        derivedStateOf {
+            if (atCredits) position.value >= creditsAt && msToAdvance() >= 0L else msToAdvance() in 0L..30_000L
+        }
+    }
     val showNextCard = !isLive && error == null && nav.hasNext && nextUpTitle != null && !stopsAtItemEnd &&
         nextCardDue && !autoNextDismissed
+    // glcn: the credits countdown ran out — the next episode starts now (the engine applies auto-play next).
+    val creditsRanOut by remember(atCredits, advanceAt) { derivedStateOf { atCredits && msToAdvance() <= 0L } }
+    LaunchedEffect(creditsRanOut) {
+        if (creditsRanOut && !autoNextDismissed && nav.hasNext && !stopsAtItemEnd && error == null) {
+            autoNextDismissed = true
+            player.advanceAtCredits()
+        }
+    }
 
     var controlsVisible by remember { mutableStateOf(true) }
     LaunchedEffect(controlsVisible) { onControlsVisible(controlsVisible) }
