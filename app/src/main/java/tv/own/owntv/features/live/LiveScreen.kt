@@ -1,5 +1,8 @@
 package tv.own.owntv.features.live
 
+import coil3.request.allowHardware
+import coil3.request.transformations
+import androidx.compose.foundation.gestures.animateScrollBy
 import tv.own.owntv.glcn.fastScrollbar
 
 import tv.own.owntv.ui.components.onDpadLeft
@@ -340,6 +343,22 @@ fun LiveScreen(
                 else -> 0f
             }
             if (delta != 0f) runCatching { effectiveListState.scrollBy(delta) }
+            if (effectiveListState.layoutInfo.visibleItemsInfo.none { it.index == i }) runCatching { effectiveListState.scrollToItem(i) }
+            withFrameNanos { }
+            runCatching { rowFocus(i).requestFocus() }
+            stepTarget = null
+        }
+    }
+    // glcn: the held scroll bar's jump of ten — one smooth glide of the list (no snap to the row), then the focus.
+    fun glideTo(i: Int, from: Int) {
+        stepTarget = i
+        stepJob?.cancel()
+        stepJob = scope.launch {
+            val info = effectiveListState.layoutInfo
+            val step = ((info.visibleItemsInfo.firstOrNull()?.size ?: 0) + info.mainAxisItemSpacing).toFloat()
+            if (step > 0f) runCatching {
+                effectiveListState.animateScrollBy((i - from) * step, androidx.compose.animation.core.tween(BAR_GLIDE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+            }
             if (effectiveListState.layoutInfo.visibleItemsInfo.none { it.index == i }) runCatching { effectiveListState.scrollToItem(i) }
             withFrameNanos { }
             runCatching { rowFocus(i).requestFocus() }
@@ -691,7 +710,9 @@ fun LiveScreen(
                     // Its own cache entry and an exact small size: the sharp picture already cached was handed back.
                     coil3.request.ImageRequest.Builder(ctx).data(backdrop).size(160, 90)
                         .precision(coil3.size.Precision.EXACT)
-                        .memoryCacheKey("$backdrop#soft160").build()
+                        .memoryCacheKey("$backdrop#soft160b")
+                        // glcn: blurred while still small, so stretched it reads as a wash, not as pixel blocks.
+                        .allowHardware(false).transformations(tv.own.owntv.glcn.SoftBlur()).build()
                 }
                 val roomTop = 120.mpx + stageW * tv.own.owntv.glcn.LivePaneLayout.FICHA_VIDEO_W * 9f / 16f
                 val artW = stageW + margin
@@ -1089,11 +1110,11 @@ fun LiveScreen(
                                             // lazy list at the edge or a page boundary and stopped.
                                             androidx.compose.ui.input.key.Key.DirectionDown -> (stepTarget ?: index).let { from ->
                                                 val to = if (barHeld) (from + BAR_JUMP).coerceAtMost(channels.itemCount - 1) else from + 1
-                                                to < channels.itemCount && to != from && run { stepTo(to); true }
+                                                to < channels.itemCount && to != from && run { if (barHeld) glideTo(to, from) else stepTo(to); true }
                                             }
                                             androidx.compose.ui.input.key.Key.DirectionUp -> (stepTarget ?: index).let { from ->
                                                 val to = if (barHeld) (from - BAR_JUMP).coerceAtLeast(0) else from - 1
-                                                to >= 0 && to != from && run { stepTo(to); true }
+                                                to >= 0 && to != from && run { if (barHeld) glideTo(to, from) else stepTo(to); true }
                                             }
                                             else -> false
                                         }
@@ -2212,3 +2233,4 @@ private const val SPORTS_COUNT_MS = 5 * 60_000L
 /** glcn: the held scroll bar — how many channels ▲ ▼ jump, and how long a list must be for ▶ to take hold of it. */
 private const val BAR_JUMP = 10
 private const val BAR_MIN_CHANNELS = 30
+private const val BAR_GLIDE_MS = 260

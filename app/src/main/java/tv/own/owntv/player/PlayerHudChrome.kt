@@ -1,7 +1,6 @@
 package tv.own.owntv.player
 
 import androidx.compose.foundation.border
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.tv.material3.MaterialTheme
@@ -241,7 +240,7 @@ private fun ChannelLogo(logoUrl: String?, title: String?, size: Int, modifier: M
 /**
  * The player's channel OSD. glcn: one glass card a little in from the corner — the logo on a light glass plate, the
  * number large in the accent and the name on one line, the programme under them (picture, title on up to two lines,
- * progress, what follows). Zapping changes only what is inside, with a short fade: the card stays put.
+ * progress, what follows). Zapping changes only what is inside: the card stays put.
  */
 @Composable
 internal fun ChannelOsdCard(
@@ -258,11 +257,9 @@ internal fun ChannelOsdCard(
             .border(1.dp, hudInk.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
             .padding(horizontal = 18.dp, vertical = 16.dp),
     ) {
-        androidx.compose.animation.AnimatedContent(
-            targetState = title,
-            transitionSpec = { androidx.compose.animation.fadeIn(tween(180)) togetherWith androidx.compose.animation.fadeOut(tween(120)) },
-            label = "zapCard",
-        ) { shownTitle ->
+        // glcn: no cross-fade between channels — the outgoing channel's picture flashed up before the new one's.
+        val shownTitle = title
+        run {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Box(

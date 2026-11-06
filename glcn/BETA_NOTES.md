@@ -178,3 +178,7 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📐 Live TV (Ficha): the video takes the column's whole width, its edges in line with the text and cards under it.
 - 🩹 Channel-change banner: the programme's picture stays instead of flashing up and giving way to the logo.
 - 📐 Live TV (Ficha): the video back to 80 % of the column, now centred, so the synopsis has its room again.
+- 🩹 Channel-change banner: the picture is held per channel (the late guide update blanked it to the logo) and there is no cross-fade showing the previous channel's picture.
+- 🎚️ Live TV: the held scroll bar's ten-channel jumps glide smoothly instead of snapping.
+- 🎯 Live TV (Ficha): the focused coming-programme card shows a clear accent ring over its picture.
+- 🌫️ Live TV (Ficha): the backdrop behind the text is truly blurred — no more pixel blocks.

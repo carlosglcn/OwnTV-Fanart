@@ -2368,13 +2368,17 @@ fun OwnTVShell(
                             val guide by liveVm.zapGuide.collectAsStateWithLifecycle()
                             // glcn: the programme's picture beside now/next — the banner as a TV operator draws it.
                             val zapChannel = previewChannel
-                            val art by androidx.compose.runtime.produceState<String?>(liveVm.peekArt(zapChannel?.id, guide?.now?.startMs), zapChannel?.id, guide?.now?.startMs) {
-                                // glcn: keep the picture already shown when the fresh look-up comes back empty (it used to
-                                // flash up from the cache and then give way to the logo).
-                                val cached = liveVm.peekArt(zapChannel?.id, guide?.now?.startMs)
-                                value = cached
-                                value = zapChannel?.let { liveVm.nowArtUrl(it, guide?.now?.startMs) } ?: cached
+                            // glcn: the picture is held per channel — the guide catches up a moment after the channel
+                            // changes, and that second look-up used to blank the picture (logo) right after it showed.
+                            val artState by androidx.compose.runtime.produceState<Pair<Long?, String?>>(zapChannel?.id to liveVm.peekArt(zapChannel?.id, guide?.now?.startMs), zapChannel?.id, guide?.now?.startMs) {
+                                val id = zapChannel?.id
+                                val shown = value.second.takeIf { value.first == id }
+                                val cached = liveVm.peekArt(id, guide?.now?.startMs)
+                                if (cached != null || shown == null) value = id to (cached ?: shown)
+                                val fetched = zapChannel?.let { liveVm.nowArtUrl(it, guide?.now?.startMs) }
+                                value = id to (fetched ?: cached ?: shown)
                             }
+                            val art = artState.second.takeIf { artState.first == zapChannel?.id }
                             androidx.compose.foundation.layout.Row(
                                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
                             ) {

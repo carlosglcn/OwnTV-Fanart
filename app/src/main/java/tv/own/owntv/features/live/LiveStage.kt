@@ -518,6 +518,8 @@ private fun LiveScheduleItem(
             Box(
                 Modifier.fillMaxWidth().aspectRatio(LATER_CARD_RATIO).clip(RoundedCornerShape(12.mpx)).background(StageColors.Ink.copy(alpha = 0.06f)),
             ) {
+                // glcn: the focused card is plain to see — the picture covers the surface's own focus fill, so a ring
+                // in the accent with a white edge inside it is drawn over the picture.
                 if (art != null) coil3.compose.AsyncImage(model = art, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 else if (logo != null) coil3.compose.AsyncImage(
                     model = logo, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit,
@@ -530,6 +532,10 @@ private fun LiveScheduleItem(
                 ) {
                     Text(formatTime(p.startMs), style = stageText(14, 800).copy(fontFeatureSettings = Tabular), color = if (accentTime) Color(0xFF8FD3FF) else Color.White.copy(alpha = 0.85f), maxLines = 1)
                     Text(p.title, style = stageText(15, 600), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                if (focused) {
+                    Box(Modifier.matchParentSize().border(4.mpx, a.accent, RoundedCornerShape(12.mpx)))
+                    Box(Modifier.matchParentSize().padding(4.mpx).border(1.5.mpx, Color.White.copy(alpha = 0.85f), RoundedCornerShape(9.mpx)))
                 }
             }
             return@StageSurface
