@@ -46,7 +46,7 @@
     <string name="glcn_gate_wall_desc">What the profile screen shows behind the names.</string>
     <string name="glcn_gate_wall_basic">Basic</string>
     <string name="glcn_gate_wall_none">None</string>
-    <string name="glcn_gate_wall_app">The app's background</string>
+    <string name="glcn_gate_wall_app">The app\'s background</string>
     <string name="glcn_theme_fixed">Set by the %1$s style</string>
     <string name="glcn_theme_fixed_help">Each style is made for its own tone, light or dark. To choose the tone yourself, take the style off first in Style.</string>
     <string name="glcn_wall_option">App wallpapers</string>
