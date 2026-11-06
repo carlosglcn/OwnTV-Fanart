@@ -341,6 +341,8 @@ class SettingsViewModel(
     val maxVideoHeight: StateFlow<Int> = settings.maxVideoHeight.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     fun setMaxVideoHeight(height: Int) { viewModelScope.launch { settings.setMaxVideoHeight(height) } }
     val tunnelingSupported: Boolean get() = tv.own.owntv.player.Tunneling.supported
+    val dolbyVision: StateFlow<Boolean> = settings.dolbyVision.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+    fun setDolbyVision(enabled: Boolean) { viewModelScope.launch { settings.setDolbyVision(enabled) } }
     val tunneledPlayback: StateFlow<Boolean> = settings.tunneledPlayback.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
     val tunnelingFailed: StateFlow<Boolean> = settings.tunnelingFailed.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
     fun setTunneledPlayback(enabled: Boolean) {

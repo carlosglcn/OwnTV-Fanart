@@ -198,3 +198,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📷 About: credit for the wallpaper photos (Unsplash).
 - 🧸 Profile avatars: new 3D clay pictures — the 24 objects redone in the new style (each profile keeps its own, now in the new look) and 24 new characters (fox, astronaut, robot, panda, unicorn, superhero, mermaid…). The picker shows them in two groups, Characters and Objects; the profile screen's glow takes each picture's colour.
 - ✨ Six more animated wallpapers: dark — Snowfall, Shooting stars, City lights; light — Pearl, Dawn, Petals. A light one is veiled under a dark theme (and a dark one under the light theme) so the text always reads.
+- 🎞️ New option: Settings › Player › "Dolby Vision" (on by default). Off, Dolby Vision films (profiles 7 and 8) play in HDR10 — for a receiver or TV without Dolby Vision. Profile 5 stays in Dolby Vision, as it has no HDR10 picture. ExoPlayer only.
+- 🌈 Film player info: a profile 7 film now says whether its enhancement layer is full (FEL, its extra detail dropped as in Kodi) or minimal (MEL, nothing lost) when played as 8.1; with Dolby Vision off it says "HDR10 (Dolby Vision turned off)".

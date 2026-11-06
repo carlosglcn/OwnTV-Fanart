@@ -57,6 +57,7 @@ internal val SETTING_LINE: Map<String, Int> = mapOf(
     "vp_vod_reconnects" to R.string.settings_line_vod_reconnects,
     "vp_hw" to R.string.settings_line_hw,
     "vp_hdr" to R.string.settings_line_prefer_sdr,
+    "vp_dolby_vision" to R.string.glcn_settings_line_dolby_vision,
     "vp_max_quality" to R.string.settings_line_max_quality,
     "vp_tunneled" to R.string.settings_line_tunneled,
     "vp_zoom" to R.string.settings_line_zoom,

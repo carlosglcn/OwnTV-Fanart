@@ -88,6 +88,10 @@ internal data class CinemaTech(
     val hdr: StreamHdrMode? = null,
     val dolbyVision: Boolean = false,
     val dvConverted: Boolean = false,
+    /** A converted profile 7: its enhancement layer was full (FEL) or minimal (MEL); null until known. */
+    val dvLayer: DolbyVisionNow.Layer? = null,
+    /** Dolby Vision turned off in Settings: the film plays as HDR10. */
+    val dvOff: Boolean = false,
     val audioCodec: String? = null,
     val channels: Int? = null,
     val passthrough: Boolean? = null,
@@ -117,7 +121,10 @@ internal fun rememberCinemaTech(player: PlaybackEngine): CinemaTech {
         else -> Unit
     }
     val onExo = t.engine == StreamEngine.EXOPLAYER
-    return t.copy(dolbyVision = onExo && dv.dolbyVision, dvConverted = onExo && dv.converted)
+    return t.copy(
+        dolbyVision = onExo && dv.dolbyVision, dvConverted = onExo && dv.converted,
+        dvLayer = if (onExo) dv.layer else null, dvOff = onExo && dv.turnedOff,
+    )
 }
 
 /** The badges for what plays — the stream first, the catalogue's marks where the stream cannot tell. */
@@ -135,7 +142,7 @@ internal fun cinemaBadges(t: CinemaTech, info: CinemaInfo?): List<CinemaBadge> {
         t.dolbyVision -> out += CinemaBadge(KEY_DV, LABEL_DV)
         t.hdr == StreamHdrMode.HDR10_PQ -> out += if ("hdr10+" in caps) CinemaBadge(KEY_HDR10P, LABEL_HDR10P) else CinemaBadge(KEY_HDR10, LABEL_HDR10)
         t.hdr == StreamHdrMode.HLG -> out += CinemaBadge(KEY_HLG, LABEL_HLG)
-        t.hdr == null && "dolby vision" in caps -> out += CinemaBadge(KEY_DV, LABEL_DV)
+        t.hdr == null && !t.dvOff && "dolby vision" in caps -> out += CinemaBadge(KEY_DV, LABEL_DV)
         t.hdr == null && "hdr" in caps -> out += CinemaBadge(KEY_HDR10, LABEL_HDR10)
     }
     soundBadge(t.audioCodec, caps)?.let { out += it }
@@ -473,7 +480,10 @@ private fun pictureText(t: CinemaTech): String? {
             add(if (whole) String.format(java.util.Locale.ROOT, FPS_WHOLE, Math.round(f)) else String.format(java.util.Locale.ROOT, FPS_FORMAT, f))
         }
         when {
+            t.dvConverted && t.dvLayer == DolbyVisionNow.Layer.FEL -> add(stringResource(R.string.glcn_cine_dv_converted_fel))
+            t.dvConverted && t.dvLayer == DolbyVisionNow.Layer.MEL -> add(stringResource(R.string.glcn_cine_dv_converted_mel))
             t.dvConverted -> add(stringResource(R.string.glcn_cine_dv_converted))
+            t.dvOff -> add(stringResource(R.string.glcn_cine_dv_off))
             t.dolbyVision -> add(LABEL_DV)
             t.hdr == StreamHdrMode.HDR10_PQ -> add(LABEL_HDR10)
             t.hdr == StreamHdrMode.HLG -> add(LABEL_HLG)

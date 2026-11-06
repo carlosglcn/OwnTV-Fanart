@@ -155,6 +155,7 @@ internal val VIDEO_QUICK_ROWS: List<VideoQuickRef> = listOf(
     VideoQuickRef("vp_hw", SECTION_PICTURE, OwnTVIcon.VIDEO, R.string.settings_hardware_decoding, R.string.settings_hardware_decoding_description),
     VideoQuickRef("vp_sw_above_1080p", SECTION_PICTURE, OwnTVIcon.VIDEO, R.string.settings_software_decode_above_1080p, R.string.settings_software_decode_above_1080p_description),
     VideoQuickRef("vp_hdr", SECTION_PICTURE, OwnTVIcon.VIDEO, R.string.settings_quick_prefer_sdr, R.string.settings_prefer_sdr_description),
+    VideoQuickRef("vp_dolby_vision", SECTION_PICTURE, OwnTVIcon.VIDEO, R.string.glcn_settings_dolby_vision, R.string.glcn_settings_dolby_vision_desc),
     VideoQuickRef("vp_max_quality", SECTION_PICTURE, OwnTVIcon.VIDEO, R.string.settings_max_video_quality, R.string.settings_max_video_quality_description),
     VideoQuickRef("vp_tunneled", SECTION_PICTURE, OwnTVIcon.VIDEO, R.string.settings_tunneled_playback, R.string.settings_tunneled_playback_description),
     VideoQuickRef("vp_zoom", SECTION_PICTURE, OwnTVIcon.ASPECT, R.string.settings_default_zoom, R.string.settings_default_zoom_description),
@@ -247,6 +248,10 @@ internal fun videoQuickBinding(key: String, vm: SettingsViewModel): VideoQuickBi
         "vp_hdr" -> {
             val on by vm.preferSdr.collectAsStateWithLifecycle()
             toggle(onOff(on), on) { vm.setPreferSdr(!on) }
+        }
+        "vp_dolby_vision" -> {
+            val on by vm.dolbyVision.collectAsStateWithLifecycle()
+            toggle(onOff(on), on) { vm.setDolbyVision(!on) }
         }
         "vp_max_quality" -> {
             val height by vm.maxVideoHeight.collectAsStateWithLifecycle()
@@ -593,6 +598,7 @@ internal fun VideoPlayerGroupRows(
     val mpvPassthrough by vm.mpvPassthrough.collectAsStateWithLifecycle()
     val maxVideoHeight by vm.maxVideoHeight.collectAsStateWithLifecycle()
     val tunneledPlayback by vm.tunneledPlayback.collectAsStateWithLifecycle()
+    val dolbyVision by vm.dolbyVision.collectAsStateWithLifecycle()
     val tunnelingFailed by vm.tunnelingFailed.collectAsStateWithLifecycle()
     val autoPlayNext by vm.autoPlayNext.collectAsStateWithLifecycle()
     val livePreview by vm.livePreviewEnabled.collectAsStateWithLifecycle()
@@ -826,6 +832,15 @@ internal fun VideoPlayerGroupRows(
             desc = stringResource(R.string.settings_prefer_sdr_description),
             value = SettingValue.Switch(hdr),
             onClick = { vm.setPreferSdr(!hdr) },
+        )
+        // glcn: off for a receiver or TV without Dolby Vision — such films play as HDR10.
+        KeyedSettingRow(
+            quickKey = "vp_dolby_vision",
+            icon = OwnTVIcon.VIDEO,
+            title = stringResource(R.string.glcn_settings_dolby_vision),
+            desc = stringResource(R.string.glcn_settings_dolby_vision_desc),
+            value = SettingValue.Switch(dolbyVision),
+            onClick = { vm.setDolbyVision(!dolbyVision) },
         )
         // The Settings limit; the player's Quality button picks within a stream.
         KeyedSettingRow(
