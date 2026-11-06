@@ -481,8 +481,8 @@ internal fun LiveStagePane(
         // glcn: the video across the whole column at the top; under it, full width, the title, the details, a longer
         // synopsis and what follows in one row — the programme's picture shows through at the bottom.
         Column(modifier.fillMaxHeight().padding(bottom = 70.mpx)) { // glcn: the cards lower, nearer the foot (the hints fade after a moment)
-            // glcn: the video a little narrower (and so lower), lined up with the text under it.
-            Video(Modifier.fillMaxWidth(tv.own.owntv.glcn.LivePaneLayout.FICHA_VIDEO_W))
+            // glcn: the video a little narrower (and so lower), centred over the text — the synopsis keeps its room.
+            Video(Modifier.align(Alignment.CenterHorizontally).fillMaxWidth(tv.own.owntv.glcn.LivePaneLayout.FICHA_VIDEO_W))
             // The details take what is left under the video: the synopsis gives way (and drifts) so what follows
             // is always on screen above the key hints.
             Info(Modifier.fillMaxWidth().weight(1f), tall = false, rowSchedule = true)

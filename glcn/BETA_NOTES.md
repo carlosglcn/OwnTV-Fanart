@@ -176,3 +176,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🩹 Hold-OK menus (Dock tabs and cards, Keep watching…) show properly again — they had collapsed into a thin white bar; Move and Hide are back.
 - 🚀 Start-up: the menu opens in the style you use (top bar or side) from the first frame — the side menu no longer flashes up first.
 - 📐 Live TV (Ficha): the video takes the column's whole width, its edges in line with the text and cards under it.
+- 🩹 Channel-change banner: the programme's picture stays instead of flashing up and giving way to the logo.
+- 📐 Live TV (Ficha): the video back to 80 % of the column, now centred, so the synopsis has its room again.

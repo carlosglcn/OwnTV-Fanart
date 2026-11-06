@@ -2369,7 +2369,11 @@ fun OwnTVShell(
                             // glcn: the programme's picture beside now/next — the banner as a TV operator draws it.
                             val zapChannel = previewChannel
                             val art by androidx.compose.runtime.produceState<String?>(liveVm.peekArt(zapChannel?.id, guide?.now?.startMs), zapChannel?.id, guide?.now?.startMs) {
-                                value = zapChannel?.let { liveVm.nowArtUrl(it, guide?.now?.startMs) }
+                                // glcn: keep the picture already shown when the fresh look-up comes back empty (it used to
+                                // flash up from the cache and then give way to the logo).
+                                val cached = liveVm.peekArt(zapChannel?.id, guide?.now?.startMs)
+                                value = cached
+                                value = zapChannel?.let { liveVm.nowArtUrl(it, guide?.now?.startMs) } ?: cached
                             }
                             androidx.compose.foundation.layout.Row(
                                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
