@@ -185,3 +185,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔴 Live TV: the "LIVE" badge on the preview only on a programme that is really live (a "DIRECTO" broadcast), not on every channel.
 - 🖼️ Channel-change banner: when the guide has no picture, it uses the same picture the Live TV screen shows (by the title) instead of the logo.
 - 🖼️ Channel-change banner: once a picture is up for a channel it is never replaced by the logo — the last picture of each channel is kept and shown at once; the look-ups are logged (zapArt) for the report.
+- 🌈 Gradient styles: Aurora (soft lights drifting slowly), Crepúsculo (coral to purple), Océano (navy to turquoise) and Fanart vivo (takes the focused picture's colours) — dark glass over a coloured backdrop; still in the light mode.
+- 🎨 Style picker: the styles in two groups, Classic and Gradients, each drawn as a small Home in its real colours.

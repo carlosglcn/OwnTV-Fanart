@@ -322,6 +322,7 @@ internal fun LiveStagePane(
     // still shows something of it; only after the focus has settled on the channel.
     val artResolver: tv.own.owntv.core.metadata.ProgrammeArtResolver = org.koin.compose.koinInject()
     val nowTitle = nowNext?.now?.title
+    androidx.compose.runtime.LaunchedEffect(nowNext?.nowDetails?.imageUrl) { nowNext?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.glcn.FanartAmbient.url = it } }
     val lentArt by androidx.compose.runtime.produceState<String?>(null, nowTitle, ficha) {
         value = null
         val t = nowTitle?.takeIf { ficha && it.isNotBlank() } ?: return@produceState

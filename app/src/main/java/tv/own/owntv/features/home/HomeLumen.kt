@@ -211,6 +211,8 @@ fun LumenHome(
     val tab = tabs.getOrNull(selected.coerceIn(0, (tabs.size - 1).coerceAtLeast(0)))
     var focusedKey by remember { mutableStateOf<String?>(null) }
     val shown = tab?.items?.firstOrNull { it.key == focusedKey } ?: tab?.items?.firstOrNull()
+    // glcn: "Fanart vivo" takes its colours from the picture in focus.
+    LaunchedEffect(shown?.backdrop, shown?.art) { tv.own.owntv.glcn.FanartAmbient.url = shown?.backdrop ?: shown?.art }
     val entry = firstRowFocusRequester ?: remember { FocusRequester() }
     val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
     val synopses = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }

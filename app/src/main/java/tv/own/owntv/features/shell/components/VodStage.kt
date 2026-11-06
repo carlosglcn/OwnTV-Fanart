@@ -269,6 +269,7 @@ internal fun VodCinematicBackdrop(
     expand: Float = 0f,
 ) {
     var settled by remember { mutableStateOf(url) }
+    LaunchedEffect(settled) { tv.own.owntv.glcn.FanartAmbient.url = settled } // glcn: Fanart vivo's colours
     // Art already shown once is in the image cache: it swaps at once; only new art waits the settle.
     val seen = remember { HashSet<String>() }
     LaunchedEffect(url) {

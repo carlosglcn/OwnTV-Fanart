@@ -551,6 +551,10 @@ open class MainActivity : ComponentActivity() {
                         // Background image sits behind everything when a path is set; otherwise the solid
                         // base color shows through and glass renders over that instead.
                         if (background.showsPicture) BackgroundLayer(background, blurred)
+                        // glcn: a gradient style's backdrop (Aurora, Crepúsculo, Océano, Fanart vivo) when no picture is set.
+                        else glcnStyle?.takeIf { it.isGradient && themeMode != tv.own.owntv.core.settings.SettingsRepository.ThemeMode.LIGHT }?.let {
+                            tv.own.owntv.glcn.GradientBackdrop(it, Modifier.fillMaxSize())
+                        }
 
                         Box(modifier = Modifier.fillMaxSize()) {
                         tv.own.owntv.glcn.LowRamPrompt()
