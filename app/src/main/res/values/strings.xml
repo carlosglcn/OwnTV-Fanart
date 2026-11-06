@@ -49,5 +49,13 @@
     <string name="glcn_gate_wall_app">The app\'s background</string>
     <string name="glcn_theme_fixed">Set by the %1$s style</string>
     <string name="glcn_theme_fixed_help">Each style is made for its own tone, light or dark. To choose the tone yourself, take the style off first in Style.</string>
+    <string name="glcn_avatar_characters">Characters</string>
+    <string name="glcn_avatar_objects">Objects</string>
+    <string name="glcn_wall_nieve">Snowfall</string>
+    <string name="glcn_wall_fugaces">Shooting stars</string>
+    <string name="glcn_wall_bokeh">City lights</string>
+    <string name="glcn_wall_nacar">Pearl</string>
+    <string name="glcn_wall_amanecer">Dawn</string>
+    <string name="glcn_wall_petalos">Petals</string>
     <string name="glcn_wall_option">App wallpapers</string>
 </resources>

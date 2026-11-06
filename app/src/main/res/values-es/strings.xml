@@ -49,5 +49,13 @@
     <string name="glcn_gate_wall_app">El fondo de la app</string>
     <string name="glcn_theme_fixed">Lo fija el estilo %1$s</string>
     <string name="glcn_theme_fixed_help">Cada estilo está hecho para su tono, claro u oscuro. Para elegir el tono tú, quita antes el estilo en Estilo.</string>
+    <string name="glcn_avatar_characters">Personajes</string>
+    <string name="glcn_avatar_objects">Objetos</string>
+    <string name="glcn_wall_nieve">Nevada</string>
+    <string name="glcn_wall_fugaces">Estrellas fugaces</string>
+    <string name="glcn_wall_bokeh">Luces de ciudad</string>
+    <string name="glcn_wall_nacar">Nácar</string>
+    <string name="glcn_wall_amanecer">Amanecer</string>
+    <string name="glcn_wall_petalos">Pétalos</string>
     <string name="glcn_wall_option">Fondos de la app</string>
 </resources>

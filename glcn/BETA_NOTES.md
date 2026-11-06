@@ -196,3 +196,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌫️ Live TV (Ficha): the programme picture behind the text now fades out at its edges instead of being painted over with the page colour — no hard rectangle over gradient styles, animated wallpapers or photos.
 - ♿ Accessible mode: the top bar no longer stays folded to icons after turning it off — it measures again when the text size changes.
 - 📷 About: credit for the wallpaper photos (Unsplash).
+- 🧸 Profile avatars: new 3D clay pictures — the 24 objects redone in the new style (each profile keeps its own, now in the new look) and 24 new characters (fox, astronaut, robot, panda, unicorn, superhero, mermaid…). The picker shows them in two groups, Characters and Objects; the profile screen's glow takes each picture's colour.
+- ✨ Six more animated wallpapers: dark — Snowfall, Shooting stars, City lights; light — Pearl, Dawn, Petals. A light one is veiled under a dark theme (and a dark one under the light theme) so the text always reads.
