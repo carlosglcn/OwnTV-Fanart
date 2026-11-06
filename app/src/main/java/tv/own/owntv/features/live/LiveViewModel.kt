@@ -200,9 +200,15 @@ class LiveViewModel(
     fun peekArt(channelId: Long?, startMs: Long?): String? =
         if (channelId == null || startMs == null) null else artNow[channelId]?.takeIf { it.first == startMs }?.second
 
+    // glcn: the last picture found for each channel, whatever programme — the zap banner opens on it at once.
+    private val lastArt = HashMap<Long, String>()
+    fun lastArtFor(channelId: Long?): String? = channelId?.let { lastArt[it] }
+    fun keepArt(channelId: Long?, url: String?) { if (channelId != null && !url.isNullOrBlank()) lastArt[channelId] = url }
+
     suspend fun nowArtUrl(channel: ChannelEntity, startMs: Long?): String? {
         peekArt(channel.id, startMs)?.let { return it }
         val url = runCatching { nowFull(channel).first?.imageUrl }.getOrNull()?.takeIf { it.isNotBlank() }
+        keepArt(channel.id, url)
         if (startMs != null && url != null) {
             if (artNow.size > 60) artNow.clear()
             artNow[channel.id] = startMs to url

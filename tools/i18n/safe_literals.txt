@@ -727,6 +727,7 @@
 2	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	w1280
 1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	w780
 1	protocol	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	webvtt
+1	log	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	zapArt: ch=$id start=$start cached=${cached != null} shown=${shown != null} fetched=${fetched != null}
 2	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/shell/OwnTVShell.kt	⏯
 8	technical	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	\0

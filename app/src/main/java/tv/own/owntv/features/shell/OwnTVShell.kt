@@ -2371,17 +2371,26 @@ fun OwnTVShell(
                             // glcn: the picture is held per channel — the guide catches up a moment after the channel
                             // changes, and that second look-up used to blank the picture (logo) right after it showed.
                             val zapArtResolver: tv.own.owntv.core.metadata.ProgrammeArtResolver = org.koin.compose.koinInject()
-                            val artState by androidx.compose.runtime.produceState<Pair<Long?, String?>>(zapChannel?.id to liveVm.peekArt(zapChannel?.id, guide?.now?.startMs), zapChannel?.id, guide?.now?.startMs) {
+                            val artState by androidx.compose.runtime.produceState<Pair<Long?, String?>>(
+                                zapChannel?.id to (liveVm.peekArt(zapChannel?.id, guide?.now?.startMs) ?: liveVm.lastArtFor(zapChannel?.id)),
+                                zapChannel?.id, guide?.now?.startMs,
+                            ) {
                                 val id = zapChannel?.id
-                                val shown = value.second.takeIf { value.first == id }
+                                // Never step back to the logo once a picture is up for this channel: only a picture replaces a picture.
+                                val shown = value.second.takeIf { value.first == id } ?: liveVm.lastArtFor(id)
                                 val cached = liveVm.peekArt(id, guide?.now?.startMs)
-                                if (cached != null || shown == null) value = id to (cached ?: shown)
-                                val fetched = zapChannel?.let { liveVm.nowArtUrl(it, guide?.now?.startMs) }
+                                value = id to (cached ?: shown)
+                                val start = guide?.now?.startMs
+                                val fetched = zapChannel?.let { liveVm.nowArtUrl(it, start) }
                                     // glcn: no picture in the guide → the one the Live TV screen lends (TMDB, by the title),
                                     // so the banner shows the same picture as the screen instead of the logo.
                                     ?: guide?.now?.title?.takeIf { it.isNotBlank() }?.let { t ->
                                         runCatching { zapArtResolver.detailsFor(t, null) }.getOrNull()?.backdropUrl
                                     }
+                                liveVm.keepArt(id, fetched)
+                                tv.own.owntv.player.LiveDiagnosticsLog.event(
+                                    "zapArt: ch=$id start=$start cached=${cached != null} shown=${shown != null} fetched=${fetched != null}",
+                                )
                                 value = id to (fetched ?: cached ?: shown)
                             }
                             val art = artState.second.takeIf { artState.first == zapChannel?.id }

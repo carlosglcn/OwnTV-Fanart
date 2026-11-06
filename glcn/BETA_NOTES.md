@@ -184,3 +184,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌫️ Live TV (Ficha): the backdrop behind the text is truly blurred — no more pixel blocks.
 - 🔴 Live TV: the "LIVE" badge on the preview only on a programme that is really live (a "DIRECTO" broadcast), not on every channel.
 - 🖼️ Channel-change banner: when the guide has no picture, it uses the same picture the Live TV screen shows (by the title) instead of the logo.
+- 🖼️ Channel-change banner: once a picture is up for a channel it is never replaced by the logo — the last picture of each channel is kept and shown at once; the look-ups are logged (zapArt) for the report.
