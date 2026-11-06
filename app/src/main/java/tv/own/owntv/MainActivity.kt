@@ -555,7 +555,7 @@ open class MainActivity : ComponentActivity() {
                         if (background.showsPicture && wallAnim != null) tv.own.owntv.glcn.AnimatedWallpaper(wallAnim, Modifier.fillMaxSize())
                         else if (background.showsPicture) BackgroundLayer(background, blurred)
                         // glcn: a gradient style's backdrop (Aurora, Crepúsculo, Océano, Fanart vivo) when no picture is set.
-                        else glcnStyle?.takeIf { it.isGradient && themeMode != tv.own.owntv.core.settings.SettingsRepository.ThemeMode.LIGHT }?.let {
+                        else glcnStyle?.takeIf { it.isGradient && themeMode != tv.own.owntv.core.theme.ThemeMode.LIGHT }?.let {
                             tv.own.owntv.glcn.GradientBackdrop(it, Modifier.fillMaxSize())
                         }
 
