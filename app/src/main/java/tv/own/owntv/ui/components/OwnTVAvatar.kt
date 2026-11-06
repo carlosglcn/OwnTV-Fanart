@@ -27,7 +27,7 @@ import androidx.compose.ui.graphics.drawscope.Fill
  */
 object OwnTVAvatars {
     /** glcn: 24 objects (the old drawings' subjects, same numbers, so every profile keeps its own) and 24 characters. */
-    const val COUNT = 48
+    const val COUNT = tv.own.owntv.core.profile.PROFILE_AVATAR_COUNT
     const val OBJECTS = 24
 }
 
