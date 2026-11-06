@@ -109,7 +109,17 @@ fun AppsHub(entry: FocusRequester, modifier: Modifier = Modifier, onLeftEdge: ()
                     }
                 }
             }
-            if (mine.isNotEmpty()) Text(stringResource(R.string.glcn_apps_all), style = stageText(24, 800), color = StageColors.Text, modifier = Modifier.padding(start = HPAD.mpx, top = 6.mpx))
+            // glcn: the rest in one grid — "Recently used" as a row, then the apps grouped by kind (Video, Music,
+            // Games, Other), each group under its heading and starting on a new line.
+            val recentApps = AppShortcuts.recent.mapNotNull { byPkg[it] }.filter { it.pkg !in AppShortcuts.chosen }.take(GRID_COLUMNS)
+            val groups = listOf(
+                AppShortcuts.GROUP_VIDEO to R.string.glcn_apps_group_video,
+                AppShortcuts.GROUP_MUSIC to R.string.glcn_apps_group_music,
+                AppShortcuts.GROUP_GAMES to R.string.glcn_apps_group_games,
+                AppShortcuts.GROUP_OTHER to R.string.glcn_apps_group_other,
+            ).map { (g, title) -> title to rest.filter { it.group == g } }.filter { it.second.isNotEmpty() }
+            // With a single group (no app declares a kind) there is no point in its heading.
+            val headed = groups.size > 1
             LazyVerticalGrid(
                 columns = GridCells.Fixed(GRID_COLUMNS),
                 horizontalArrangement = Arrangement.spacedBy(GAP.mpx),
@@ -117,14 +127,37 @@ fun AppsHub(entry: FocusRequester, modifier: Modifier = Modifier, onLeftEdge: ()
                 contentPadding = PaddingValues(start = HPAD.mpx, end = HPAD.mpx, top = 16.mpx, bottom = 48.mpx),
                 modifier = Modifier.fillMaxWidth().weight(1f).focusGroup(),
             ) {
-                itemsIndexed(rest, key = { _, a -> "a" + a.pkg }) { i, a ->
-                    AppBanner(
-                        a, width = Dp.Unspecified,
-                        onClick = { AppShortcuts.open(context, a.pkg) },
-                        onLongClick = { menuFor = a },
-                        onFocus = { focusedTint = it },
-                        modifier = (if (i == 0 && mine.isEmpty()) Modifier.focusRequester(entry) else Modifier).then(leftEdge(i % GRID_COLUMNS == 0)),
-                    )
+                if (recentApps.isNotEmpty()) {
+                    item(key = "hRecent", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                        Text(stringResource(R.string.glcn_apps_recent), style = stageText(22, 800), color = StageColors.Text, modifier = Modifier.padding(top = 4.mpx))
+                    }
+                    itemsIndexed(recentApps, key = { _, a -> "r" + a.pkg }) { i, a ->
+                        AppBanner(
+                            a, width = Dp.Unspecified,
+                            onClick = { AppShortcuts.open(context, a.pkg) },
+                            onLongClick = { menuFor = a },
+                            onFocus = { focusedTint = it },
+                            modifier = (if (i == 0 && mine.isEmpty()) Modifier.focusRequester(entry) else Modifier).then(leftEdge(i == 0)),
+                        )
+                    }
+                }
+                groups.forEachIndexed { gi, (title, apps) ->
+                    item(key = "h$title", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            stringResource(if (headed) title else R.string.glcn_apps_all), style = stageText(22, 800), color = StageColors.Text,
+                            modifier = Modifier.padding(top = if (gi == 0 && recentApps.isEmpty()) 4.mpx else 14.mpx),
+                        )
+                    }
+                    itemsIndexed(apps, key = { _, a -> "a" + a.pkg }) { i, a ->
+                        AppBanner(
+                            a, width = Dp.Unspecified,
+                            onClick = { AppShortcuts.open(context, a.pkg) },
+                            onLongClick = { menuFor = a },
+                            onFocus = { focusedTint = it },
+                            modifier = (if (gi == 0 && i == 0 && mine.isEmpty() && recentApps.isEmpty()) Modifier.focusRequester(entry) else Modifier)
+                                .then(leftEdge(i % GRID_COLUMNS == 0)),
+                        )
+                    }
                 }
             }
         }

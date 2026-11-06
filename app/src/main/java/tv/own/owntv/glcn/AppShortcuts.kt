@@ -11,7 +11,26 @@ import androidx.compose.runtime.mutableStateListOf
  */
 object AppShortcuts {
     /** [banner] is the app's TV banner, or null when it has none — then [icon] is drawn on its own colour. */
-    data class App(val pkg: String, val label: String, val banner: Drawable?, val icon: Drawable? = null)
+    data class App(val pkg: String, val label: String, val banner: Drawable?, val icon: Drawable? = null, val group: Int = GROUP_OTHER)
+
+    // glcn: Android's own category for each app (what the maker declared), folded into four groups.
+    const val GROUP_VIDEO = 0
+    const val GROUP_MUSIC = 1
+    const val GROUP_GAMES = 2
+    const val GROUP_OTHER = 3
+
+    private fun groupOf(info: android.content.pm.ApplicationInfo): Int = when {
+        info.category == android.content.pm.ApplicationInfo.CATEGORY_GAME -> GROUP_GAMES
+        info.category == android.content.pm.ApplicationInfo.CATEGORY_VIDEO -> GROUP_VIDEO
+        info.category == android.content.pm.ApplicationInfo.CATEGORY_AUDIO -> GROUP_MUSIC
+        @Suppress("DEPRECATION") (info.flags and android.content.pm.ApplicationInfo.FLAG_IS_GAME) != 0 -> GROUP_GAMES
+        else -> GROUP_OTHER
+    }
+
+    /** glcn: the apps opened from here, the latest first (kept per device). */
+    val recent = mutableStateListOf<String>()
+    private const val RECENT_KEY = "recent"
+    private const val RECENT_MAX = 8
 
     /** The packages chosen, in order. */
     val chosen = mutableStateListOf<String>()
@@ -21,6 +40,15 @@ object AppShortcuts {
         if (loaded) return
         loaded = true
         prefs(context).getString(KEY, null)?.split(SEP)?.filter { it.isNotBlank() }?.let { chosen.addAll(it) }
+        prefs(context).getString(RECENT_KEY, null)?.split(SEP)?.filter { it.isNotBlank() }?.let { recent.addAll(it) }
+    }
+
+    private fun noteOpened(context: Context, pkg: String) {
+        ensure(context)
+        recent.remove(pkg)
+        recent.add(0, pkg)
+        while (recent.size > RECENT_MAX) recent.removeAt(recent.lastIndex)
+        prefs(context).edit().putString(RECENT_KEY, recent.joinToString(SEP)).apply()
     }
 
     /** Every app the TV's launcher shows, but this one, by name. */
@@ -37,6 +65,7 @@ object AppShortcuts {
                     ai.loadLabel(pm).toString(),
                     runCatching { ai.loadBanner(pm) ?: ai.applicationInfo.loadBanner(pm) }.getOrNull(),
                     runCatching { ai.loadIcon(pm) }.getOrNull(),
+                    groupOf(ai.applicationInfo),
                 )
             }
             .sortedBy { it.label.lowercase() }
@@ -72,6 +101,7 @@ object AppShortcuts {
         val pm = context.packageManager
         val launch = pm.getLeanbackLaunchIntentForPackage(pkg) ?: pm.getLaunchIntentForPackage(pkg) ?: return false
         context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        noteOpened(context, pkg)
         true
     }.getOrDefault(false)
 

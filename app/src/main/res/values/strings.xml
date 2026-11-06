@@ -12,4 +12,9 @@
     <string name="glcn_star_google">You can sign in with your Google account.</string>
     <string name="glcn_star_later">Not now</string>
     <string name="glcn_star_done">Already did ⭐</string>
+    <string name="glcn_apps_recent">Recently used</string>
+    <string name="glcn_apps_group_video">Video</string>
+    <string name="glcn_apps_group_music">Music</string>
+    <string name="glcn_apps_group_games">Games</string>
+    <string name="glcn_apps_group_other">Other apps</string>
 </resources>

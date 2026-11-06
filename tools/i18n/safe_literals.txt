@@ -1041,12 +1041,17 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/Accessible.kt	glcn_accessible
 1	technical	app/src/main/java/tv/own/owntv/glcn/Accessible.kt	on_$profile
 1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	,
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	DEPRECATION
 1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	apps
 1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	glcn_app_shortcuts
 1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	package:$pkg
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppShortcuts.kt	recent
 1	technical	app/src/main/java/tv/own/owntv/glcn/AppsHub.kt	a
 1	technical	app/src/main/java/tv/own/owntv/glcn/AppsHub.kt	appsTint
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppsHub.kt	h$title
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppsHub.kt	hRecent
 1	technical	app/src/main/java/tv/own/owntv/glcn/AppsHub.kt	m
+1	technical	app/src/main/java/tv/own/owntv/glcn/AppsHub.kt	r
 1	technical	app/src/main/java/tv/own/owntv/glcn/ArtPrefetch.kt	http
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	Back held $held ms; armed at press=$armedAtDown, now=${armed()}; repeats=$repeats
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	Back hold closed the player ($how)
