@@ -368,7 +368,10 @@ internal fun LiveStagePane(
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.58f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.72f))))
             Box(Modifier.fillMaxSize().drawBehind { drawInnerRing(Color.White.copy(alpha = 0.08f), 1.mpx.toPx(), videoR.toPx()) })
             if (channel != null) {
-                Box(Modifier.align(Alignment.TopStart).padding(start = 24.mpx, top = 22.mpx)) { StageLiveBadge(stringResource(R.string.player_live)) }
+                // glcn: the live badge only on a programme that is really live (a match, a "DIRECTO" broadcast), as
+                // before — not on every channel.
+                val reallyLive = nowTitle?.let { t -> tv.own.owntv.core.live.SportsNow.displayTitle(t) != t } ?: false
+                if (reallyLive) Box(Modifier.align(Alignment.TopStart).padding(start = 24.mpx, top = 22.mpx)) { StageLiveBadge(stringResource(R.string.player_live)) }
                 if (playing && streamChips.isNotEmpty()) {
                     Row(Modifier.align(Alignment.TopEnd).padding(end = 22.mpx, top = 22.mpx), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
                         // Three facts — quality, frame rate, sound: the
