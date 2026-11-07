@@ -206,3 +206,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Seek previews: on films and episodes from Emby or Jellyfin, a thumbnail of the picture shows above the bar while seeking — when the server has made them (Jellyfin "Trickplay", Emby "Seek previews").
 - 🖼️ Live TV (Ficha): the programme's blurred picture behind the text shows clearly again over an animated wallpaper, a gradient or a photo (it had faded almost away); its edges still melt.
 - 📏 Channel-change banner smaller (narrower card, smaller picture), and it stays away while the TV strip is up — the strip's own card already names the programme, so they no longer overlap.
+- 🩹 Light theme: the focused row no longer drags a blue band under it — its accent shadow is now faint and close (Glass focus and the plain one).

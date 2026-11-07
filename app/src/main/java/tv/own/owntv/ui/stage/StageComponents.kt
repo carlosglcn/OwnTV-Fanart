@@ -108,7 +108,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocusInner
     // half, a light catch along the top edge and a ring that fades from strong at the left to faint at the right.
     if (style == StageFocus.FX && tv.own.owntv.glcn.GlassFocus.active) {
         val light = palette.isLight
-        drawBoxShadow(a.accent.copy(alpha = if (light) 0.26f else 0.34f), 40 * px, r, dy = 12 * px)
+        // A faint, close shadow only: a wide accent glow pushed down read as a blue band under the row on light pages.
+        drawBoxShadow(a.accent.copy(alpha = if (light) 0.07f else 0.2f), 20 * px, r, dy = 4 * px)
         drawRoundRect(
             Brush.verticalGradient(listOf(a.accent.copy(alpha = if (light) 0.40f else 0.52f), a.accent.copy(alpha = if (light) 0.14f else 0.20f))),
             cornerRadius = CornerRadius(r),
@@ -134,7 +135,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocusInner
     // glcn: Glass on — menu items, sheet rows, pills and buttons (FILLED / PRIMARY) as deep tinted glass: still
     // dense enough under their on-accent text in both themes, with the same sheen, top light and fading ring.
     if ((style == StageFocus.FILLED || style == StageFocus.PRIMARY) && tv.own.owntv.glcn.GlassFocus.on) {
-        drawBoxShadow(a.accent.copy(alpha = 0.32f), 34 * px, r, dy = 10 * px)
+        drawBoxShadow(a.accent.copy(alpha = if (palette.isLight) 0.12f else 0.28f), 24 * px, r, dy = 6 * px)
         drawRoundRect(
             Brush.verticalGradient(listOf(a.accent.copy(alpha = 0.92f), a.accent.copy(alpha = 0.66f))),
             cornerRadius = CornerRadius(r),
@@ -159,7 +160,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocusInner
         // `.mine.light`: the accent is the ring, set off from the item by a page-coloured gap.
         when (style) {
             StageFocus.FX -> {
-                drawBoxShadow(a.accent.copy(alpha = 0.18f), 30 * px, r, dy = 10 * px)
+                drawBoxShadow(a.accent.copy(alpha = 0.1f), 22 * px, r, dy = 5 * px)
                 drawRoundRect(
                     Brush.horizontalGradient(listOf(a.accent.copy(alpha = 0.18f), a.accent.copy(alpha = 0.06f))),
                     cornerRadius = CornerRadius(r),
