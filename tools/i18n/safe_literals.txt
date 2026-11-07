@@ -178,6 +178,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	channel
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	epg_offset
 1	preference-key	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	favourite
+1	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	fichaTint
 1	preference-key	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	hide
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	liveHints
 2	technical	app/src/main/java/tv/own/owntv/features/live/LiveScreen.kt	match_epg
