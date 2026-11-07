@@ -22,6 +22,12 @@ object RecentPins {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putStringSet(KEY, keys).apply()
     }
 
+    /** Every pin let go (Recent channels › Clear all). */
+    fun clear(context: Context) {
+        keys = emptySet()
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putStringSet(KEY, keys).apply()
+    }
+
     private const val PREFS = "glcn_recent_pins"
     private const val KEY = "pinned"
 }

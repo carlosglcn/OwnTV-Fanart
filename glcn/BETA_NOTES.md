@@ -211,3 +211,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎯 Film page: the focus always shows in the lower part — Extras and "You may like" cards get the poster ring outside the picture (with Glass on it was drawn under the picture, unseen), and the cast block lights an accent outline and heading when it has the focus.
 - 🔇 Trailers never show captions: YouTube could turn them on by itself, and the window's edges cut them in half.
 - 🪟 Live TV (Ficha): over a photo, an animated wallpaper or a gradient style, the text and coming programmes sit on a quiet dark glass panel tinted with the programme's colour, instead of the blurred picture (it made a muddy patch over the backdrop). On a plain page the blurred picture stays.
+- 🧹 Recent channels: hold OK on one › "Clear all recent channels" empties the row at once (and lets every pin go), beside Pin and Remove.

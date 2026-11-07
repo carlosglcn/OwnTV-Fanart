@@ -57,5 +57,6 @@
     <string name="glcn_wall_nacar">Nácar</string>
     <string name="glcn_wall_amanecer">Amanecer</string>
     <string name="glcn_wall_petalos">Pétalos</string>
+    <string name="glcn_recent_clear_all">Borrar todos los recientes</string>
     <string name="glcn_wall_option">Fondos de la app</string>
 </resources>
