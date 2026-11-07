@@ -2095,6 +2095,14 @@ internal fun EpgMatchDialog(
         value = runCatching { loadChannels(query) }.getOrDefault(emptyList())
     }
     androidx.activity.compose.BackHandler { onDismiss() }
+    // glcn: whose guide each channel comes from — your playlists by name, your added guides by theirs — so the person
+    // can tell "DAZN LaLiga" from one guide and the other at a glance.
+    val epgStore = org.koin.compose.koinInject<tv.own.owntv.core.epg.EpgSourceStore>()
+    val sourceDao = org.koin.compose.koinInject<tv.own.owntv.core.database.dao.SourceDao>()
+    val sourceNames by androidx.compose.runtime.produceState(emptyMap<Long, String>()) {
+        value = runCatching { epgStore.getAll().associate { it.id to it.name } }.getOrDefault(emptyMap()) +
+            runCatching { sourceDao.getAllOnce().associate { it.id to it.name } }.getOrDefault(emptyMap())
+    }
 
     // Pull focus into the dialog once the list first arrives (first result, else the search bar).
     // One-shot, so later search-driven reloads don't steal focus from the field while typing.
@@ -2115,7 +2123,7 @@ internal fun EpgMatchDialog(
             Modifier.fillMaxSize().background(tv.own.owntv.ui.theme.StageColors.Scrim),
             contentAlignment = Alignment.Center,
         ) {
-            tv.own.owntv.ui.stage.StageMenu(Modifier.width(640.mpx).trapAllFocusExit().focusGroup()) {
+            tv.own.owntv.ui.stage.StageMenu(Modifier.width(860.mpx).trapAllFocusExit().focusGroup()) {
                 tv.own.owntv.ui.stage.StageMenuHeader(
                     title = stringResource(R.string.content_match_epg),
                     subtitle = if (currentMatch != null) {
@@ -2140,9 +2148,10 @@ internal fun EpgMatchDialog(
                     )
                     else -> LazyColumn(Modifier.fillMaxWidth().height(400.mpx)) {
                         items(list, key = { it.epgChannelId }) { epg ->
+                            val from = epg.sourceIds.mapNotNull { sourceNames[it] }.distinct().joinToString(" + ")
                             tv.own.owntv.ui.stage.StageMenuItem(
                                 text = epg.displayName ?: epg.epgChannelId,
-                                value = epg.epgChannelId.takeIf { epg.displayName != null },
+                                value = listOfNotNull(from.takeIf { it.isNotBlank() }, epg.epgChannelId.takeIf { epg.displayName != null }).joinToString("  ·  ").takeIf { it.isNotBlank() },
                                 checked = epg.epgChannelId == currentMatch,
                                 onClick = { onPick(epg.epgChannelId) },
                                 modifier = if (epg == list.first()) Modifier.focusRequester(firstItemFocus) else Modifier,
