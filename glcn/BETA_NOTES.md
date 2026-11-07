@@ -212,3 +212,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔇 Trailers never show captions: YouTube could turn them on by itself, and the window's edges cut them in half.
 - 🪟 Live TV (Ficha): over a photo, an animated wallpaper or a gradient style, the text and coming programmes sit on a quiet dark glass panel tinted with the programme's colour, instead of the blurred picture (it made a muddy patch over the backdrop). On a plain page the blurred picture stays.
 - 🧹 Recent channels: hold OK on one › "Clear all recent channels" empties the row at once (and lets every pin go), beside Pin and Remove.
+- 🩹 Hold-OK menus (Recent channels and the rest): letting go of the held OK no longer chooses the first option and closes the menu — it stays open until you pick.
