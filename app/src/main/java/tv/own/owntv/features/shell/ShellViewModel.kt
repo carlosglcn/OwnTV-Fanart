@@ -91,6 +91,13 @@ class ShellViewModel(
         }
     }
 
+    /**
+     * Set by the shell while it is up: leaves the player and Multiview and stops the preview. The profile
+     * gate calls it before it takes the screen, because the player's state lives here and outlives the
+     * shell — the profile would otherwise come back to a player whose stream the gate already freed.
+     */
+    internal var leavePlayback: (() -> Unit)? = null
+
     /** Set by the shell while it is up: stops what plays from a category a relock seals. */
     internal var sealedPlayback: SealedPlaybackGuard?
         get() = relock.guard
@@ -111,7 +118,13 @@ class ShellViewModel(
 
     /** The Auto refresh settings — core's [tv.own.owntv.core.sync.AutoRefresh], shared with the phone. */
     fun checkAutoRefresh(includeStartup: Boolean) {
-        viewModelScope.launch { autoRefresh.check(includeStartup) }
+        viewModelScope.launch {
+            // glcn: the box has only just started (the first minutes after a restart, when Android itself is busiest
+            // and memory is tightest): the start-up syncs wait a little, so the app opens light.
+            val sinceBoot = android.os.SystemClock.elapsedRealtime()
+            if (includeStartup && sinceBoot < JUST_BOOTED_MS) kotlinx.coroutines.delay(JUST_BOOTED_MS - sinceBoot)
+            autoRefresh.check(includeStartup)
+        }
     }
 
     /**
@@ -349,3 +362,6 @@ class ShellViewModel(
         return profileDao.resolveExistingProfileId(preferred)
     }
 }
+
+/** glcn: how long after the box starts the start-up syncs wait for. */
+private const val JUST_BOOTED_MS = 3 * 60_000L

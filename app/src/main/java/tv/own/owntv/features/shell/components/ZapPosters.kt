@@ -186,18 +186,22 @@ fun ZapPosterOverlay(
             ) { LazyRow(
                 state = listState,
                 horizontalArrangement = Arrangement.spacedBy(20.mpx),
-                contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 10.mpx, bottom = 10.mpx),
-                modifier = Modifier.focusGroup(),
+                // glcn: the row is clipped at the margins (padding on the row, not in its content) so the next card never
+                // peeks in at the edge; 8 of content room on each side keeps the focused card's ring whole.
+                contentPadding = PaddingValues(start = 8.mpx, end = 8.mpx, top = 10.mpx, bottom = 10.mpx),
+                modifier = Modifier.padding(horizontal = 56.mpx).focusGroup(),
             ) {
                 itemsIndexed(channels, key = { _, c -> c.id }) { index, ch ->
-                    Column(Modifier.staggerAt((index - start + 1).coerceAtLeast(0), zapGate, step = 70, cap = 6).width(360.mpx)) {
+                    // glcn: the cards rise into place one after another from below the screen's edge when the strip opens.
+                    Column(Modifier.staggerAt((index - start + 1).coerceAtLeast(0), zapGate, step = 70, cap = 6, rise = 90.mpx).width(ZAP_CARD_W.mpx)) {
                     tv.own.owntv.features.home.ArtLiveCard(
                         channel = ch,
                         programme = programmes[ch.id],
                         now = now,
                         onClick = { onSelect(ch) },
                         onLongClick = onLongPress?.let { lp -> { lp(ch) } },
-                        width = 360.mpx,
+                        width = ZAP_CARD_W.mpx,
+                        artRatio = ZAP_CARD_RATIO,
                         modifier = Modifier.focusRequester(cardFocus.getOrPut(index) { FocusRequester() }).then(if (index == start) Modifier.focusRequester(first) else Modifier),
                     )
                     if (showNext) {
@@ -217,7 +221,7 @@ fun ZapPosterOverlay(
             loadSchedule = loadSchedule,
             cache = scheduleCache,
             loadDescription = loadDescription,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.mpx, bottom = if (showNext) 530.mpx else 392.mpx).staggerIn(260, fromRight = true),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.mpx, bottom = if (showNext) 556.mpx else 418.mpx).staggerIn(260, fromRight = true),
         )
     }
 }
@@ -258,7 +262,11 @@ private fun ZapPosterInfo(
     val ch = channel ?: return
     val nowMs = System.currentTimeMillis()
     val card = programmes[ch.id]
-    val cur = rows.firstOrNull { nowMs in it.startMs until it.stopMs } ?: card ?: return // no guide: nothing
+    // glcn: the same programme as the card — with two guides listing different shows at once, the first one on air was
+    // not the card's (the one that started last), and "Up next" then named the card's own show.
+    val cur = card?.takeIf { nowMs in it.startMs until it.stopMs }
+        ?: rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
+        ?: card ?: return // no guide: nothing
     val next = rows.filter { it.startMs >= cur.stopMs }.take(2)
     // glcn: a film or series the guide says little about: TMDB lends its year, rating and synopsis, once
     // the D-pad has rested (and from memory when it was asked before).
@@ -285,7 +293,7 @@ private fun ZapPosterInfo(
     // brighter secondary words in the dark theme too.
     val quiet = StageColors.Body
     Column(
-        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = if (light) LIGHT_CARD_GLASS else DARK_CARD_GLASS).padding(18.mpx),
+        modifier.width(520.mpx).stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.glcn.PlayerGlass.share(if (light) LIGHT_CARD_GLASS else DARK_CARD_GLASS)).padding(18.mpx),
         verticalArrangement = Arrangement.spacedBy(8.mpx),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
@@ -394,7 +402,14 @@ internal fun DriftingSynopsis(
             ),
     ) {
         Text(
-            text, style = style.copy(lineHeight = style.fontSize * 1.4f), color = color,
+            // glcn: every line exactly one step tall (no trimmed first line), so a line-at-a-time drift always rests on
+            // whole lines — the first line used to show cut at the top.
+            text, style = style.copy(
+                lineHeight = style.fontSize * 1.4f,
+                lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
+                    androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center, androidx.compose.ui.text.style.LineHeightStyle.Trim.None,
+                ),
+            ), color = color,
             modifier = Modifier.verticalScroll(scroll, enabled = false).padding(bottom = if (soft) 18.dp else 6.dp),
         )
     }
@@ -405,3 +420,10 @@ private const val LIGHT_CARD_GLASS = 0.94f
 private const val LINE_STEP_MS = 520
 private const val LINE_REST_MS = 2_600L
 private const val DARK_CARD_GLASS = 0.92f
+
+/**
+ * glcn: the zapping strip shows whole cards only — five across the 1920 design width inside the row's clipped margins
+ * ((1920 − 2 × 56 − 2 × 8 − 4 × 20) ÷ 5 ≈ 342), so no card is cut at the edge — and a squarer picture, 3:2.
+ */
+private const val ZAP_CARD_W = 342
+private const val ZAP_CARD_RATIO = 3f / 2f

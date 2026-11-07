@@ -258,7 +258,7 @@ fun ZapDeck(
                             // ▶ from the channels gives the picture back, as Back does.
                             // glcn: in the schedule view ▶ walks into the coming programmes (their picture and synopsis below).
                             1 -> if (first) {
-                                if (detail == 1 && schedCount > 1) { column = 2; schedIdx = 1 }
+                                if (detail == 1 && schedCount > 0) { column = 2; schedIdx = 0 } // glcn: from the programme on air, at the top
                                 else if (onCycleDetail != null) onCycleDetail() else onDismiss()
                             }
                             2 -> if (first) { column = 1; if (onCycleDetail != null) onCycleDetail() }
@@ -288,7 +288,7 @@ fun ZapDeck(
             // glcn: both parts on a share of the same glass, so the picture shows through everywhere: the groups and
             // channels on a little more of it, so their words still read; the column on the right on less.
             Box(Modifier.fillMaxHeight()) {
-            Box(Modifier.matchParentSize().graphicsLayer { alpha = DECK_LIST_GLASS }.stageGlass(StageRadii.Sheet, overContent = true))
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = tv.own.owntv.glcn.PlayerGlass.share(DECK_LIST_GLASS) }.stageGlass(StageRadii.Sheet, overContent = true))
             Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
             // ---- Groups (and the playlists above them).
             Column(Modifier.width(280.mpx).fillMaxHeight().padding(start = 14.mpx, end = 8.mpx)) {
@@ -325,9 +325,10 @@ fun ZapDeck(
                         horizontalArrangement = Arrangement.spacedBy(10.mpx),
                     ) {
                         entry.icon?.let { OwnTVIcon(it, tint, Modifier.size(20.mpx)) }
-                        entry.groupGlyph()?.let { tv.own.owntv.glcn.CategoryGlyphView(it, tint, size = 20.mpx) }
+                        val glyph = entry.groupGlyph()
+                        glyph?.let { tv.own.owntv.glcn.CategoryGlyphView(it, tint, size = 20.mpx, name = entry.label) }
                         Text(
-                            entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
+                            if (tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) "" else entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
                             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                         )
                         entry.count?.let { Text(it.toString(), style = stageText(15, 500), color = tint.copy(alpha = 0.7f), maxLines = 1) }
@@ -383,7 +384,7 @@ fun ZapDeck(
             // ---- The focused channel: its programme, or its schedule.
             val focusedChannel = list.getOrNull(chIdx)
             Box(Modifier.fillMaxHeight().padding(start = 8.mpx)) {
-            Box(Modifier.matchParentSize().graphicsLayer { alpha = DECK_DETAIL_GLASS }.stageGlass(StageRadii.Sheet, overContent = true))
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = tv.own.owntv.glcn.PlayerGlass.share(DECK_DETAIL_GLASS) }.stageGlass(StageRadii.Sheet, overContent = true))
             Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
             if (detail == 1) {
                 ZapSchedulePanel(

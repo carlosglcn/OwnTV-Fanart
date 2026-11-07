@@ -67,10 +67,18 @@ Los problemas de **esta versión** van al grupo de Fanart; el otro es para la ap
 - **Sonido** — la mejor pista de audio en tu idioma, diálogos más claros y (en SHIELD) paso de Dolby/DTS también desde mpv.
 - **TV y móvil juntos** — sincronización automática de favoritos e historial y *Ver en la TV* desde el móvil.
 - **Emby** mediante M3U, Android Auto y un widget en el móvil, y un salvapantallas de fanart en la TV.
+- **Un reproductor a la altura de Kodi** — subtítulos con estilo ASS/SSA, capítulos con imagen, carpetas de Blu-ray/DVD, saltar intro y siguiente episodio en los créditos, vista previa al avanzar, HDR→SDR y control de Dolby Vision.
+- **Estilos y fondos** — estilos degradados, fondos animados y de fotos, y avatares de perfil en 3D.
 
 ## 📄 Licencia y créditos
 
 GPLv3, como OwnTV. Todo el mérito de la app en sí es de **ahXN00** y los colaboradores de OwnTV; el
 logotipo **owntv** es de [@m3th0d93](https://github.com/m3th0d93). El icono de OwnTV Fanart es original de esta versión.
 
+Fotos de los fondos de [Unsplash](https://unsplash.com/) (Licencia Unsplash). Los avatares 3D de perfil son originales de esta versión (generados con IA). Tiempos de intro y créditos de [TheIntroDB](https://theintrodb.org/). Subtítulos con estilo dibujados con [libass](https://github.com/libass/libass) (ISC).
+
 Los iconos de categorías de OwnTV Fanart proceden de [Material Symbols](https://fonts.google.com/icons) de Google (licencia Apache 2.0).
+
+El icono de Jellyfin en las etiquetas de las listas es el del propio proyecto Jellyfin ([jellyfin-ux](https://github.com/jellyfin/jellyfin-ux), CC BY-SA 4.0).
+El logo de Emby en las etiquetas es el del propio Emby ([MediaBrowser.Resources](https://github.com/MediaBrowser/MediaBrowser.Resources)) y solo indica que la lista viene de un servidor Emby; OwnTV Fanart no está hecha por Emby. Más: [emby.media](https://emby.media).
+El logo de Plex en las etiquetas solo indica que la lista viene de un servidor Plex: Plex\* is used under license from Plex; OwnTV Fanart no está hecha, respaldada ni patrocinada por Plex.

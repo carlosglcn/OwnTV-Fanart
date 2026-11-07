@@ -50,6 +50,7 @@ import tv.own.owntv.core.metadata.MetadataImages
 import tv.own.owntv.core.metadata.MetadataRepository
 import tv.own.owntv.core.settings.SettingsRepository
 import tv.own.owntv.core.categorylock.sealedCategoryKeys
+import tv.own.owntv.core.sync.LibraryLoading
 import tv.own.owntv.player.HeroPreviewEngine
 
 @Immutable
@@ -81,6 +82,9 @@ data class TrendingDetailsMetadata(
 @Immutable
 data class HomeUiState(
     val trendingItems: List<TrendingHomeItem> = emptyList(),
+    /** glcn: the split Trending rows (films / series), hidden unless switched on in Settings. */
+    val trendingMovies: List<TrendingHomeItem> = emptyList(),
+    val trendingSeries: List<TrendingHomeItem> = emptyList(),
     val activeTrendingIndex: Int = 0,
     val trendingPreferredLanguage: String = "EN",
     val trendingSeasonCounts: Map<Long, Int> = emptyMap(),
@@ -156,6 +160,7 @@ class HomeViewModel(
     private val reminderManager: tv.own.owntv.core.reminder.ReminderManager,
     private val sourceRepository: tv.own.owntv.core.repository.SourceRepository,
     private val customize: CustomizationStore,
+    private val libraryLoading: LibraryLoading,
 ) : ViewModel() {
 
     /** The Dock's long press: take this row off Home, where Settings › Home rows would show it again. */
@@ -360,6 +365,10 @@ class HomeViewModel(
         resolveTrendingExtras(items[index])
     }
 
+    /** Titles stored so far while one of this profile's playlists still loads after setup; 0 once none does. */
+    val libraryLoadingTitles: StateFlow<Int> = libraryLoading.titles
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
     /** Favourite ids per type, for the hero's ♥ (the same favourites Movies and Series show). */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun favoriteIds(type: MediaType): StateFlow<Set<Long>> = settings.activeProfileId
@@ -508,6 +517,8 @@ class HomeViewModel(
         val data = feed.load(profileId)
         _uiState.value = HomeUiState(
             trendingItems = data.trendingItems,
+            trendingMovies = data.trendingMovies,
+            trendingSeries = data.trendingSeries,
             activeTrendingIndex = previous.activeTrendingIndex
                 .coerceIn(0, (data.trendingItems.size - 1).coerceAtLeast(0)),
             trendingPreferredLanguage = data.trendingPreferredLanguage,

@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -99,6 +100,32 @@ internal fun TvHome(
         if (smart.isNotEmpty()) value = smart + plain
     }
     var selected by remember { mutableIntStateOf(0) }
+    val orderContext = LocalContext.current
+    // glcn: reminders, for the programmes still to come (Starting now, Tonight): one OK sets one.
+    val reminderManager: tv.own.owntv.core.reminder.ReminderManager = org.koin.compose.koinInject()
+    val settingsRepo: tv.own.owntv.core.settings.SettingsRepository = org.koin.compose.koinInject()
+    val profileId by settingsRepo.activeProfileId.collectAsStateWithLifecycle(-1L)
+    val reminders by remember(profileId) {
+        if (profileId >= 0) reminderManager.observe(profileId) else kotlinx.coroutines.flow.flowOf(emptyList())
+    }.collectAsStateWithLifecycle(emptyList())
+    val leadMinutes by settingsRepo.reminderLeadMinutes.collectAsStateWithLifecycle(tv.own.owntv.core.reminder.ReminderSchedule.DEFAULT_LEAD_MINUTES)
+    val remindScope = androidx.compose.runtime.rememberCoroutineScope()
+    val toggleReminder: (ChannelEntity, EpgProgrammeEntity) -> Unit = { c, p ->
+        remindScope.launch {
+            val existing = reminders.firstOrNull { it.channelId == c.id && it.startMs == p.startMs }
+            if (existing != null) reminderManager.dismiss(existing.id)
+            else if (profileId >= 0) reminderManager.add(profileId, c.id, c.name, c.epgChannelId, p.title, p.startMs, p.stopMs, leadMinutes)
+        }
+    }
+    var rowOrder by remember { mutableStateOf(TvHomeOrder.load(orderContext)) }
+    // glcn: the row being moved (hold OK on its name): ◀ ▶ move it, OK or Back leave it there.
+    var moving by remember { mutableStateOf<String?>(null) }
+    var swallowOkUp by remember { mutableStateOf(false) }
+    // glcn: the "Apps" pill at the end — the TV's other apps the person picked (AppShortcuts).
+    var appsShown by remember { mutableStateOf(false) }
+    var pickingApps by remember { mutableStateOf(false) }
+    val firstApp = remember { FocusRequester() }
+    LaunchedEffect(Unit) { tv.own.owntv.glcn.AppShortcuts.ensure(orderContext); tv.own.owntv.glcn.Labs.ensure(orderContext) }
     val nowNext = remember { mutableStateMapOf<Long, Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>>() }
     var focusedChannel by remember { mutableStateOf<ChannelEntity?>(null) }
     // glcn: the programme that put the focused card in its row (Tonight's 22:00 film), shown in the panel instead of now.
@@ -201,14 +228,19 @@ internal fun TvHome(
                     // glcn: the strips' programmes come from the zap cache, which leaves the synopsis out (it is heavy) — Recent
                     // showed none while the same channel elsewhere did. Read here, for the programme in focus only.
                     val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
-                    val synopsis by androidx.compose.runtime.produceState(p.description?.takeIf { it.isNotBlank() }, p.id) {
-                        if (value == null) value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    // Set afresh for every programme: produceState keeps its value across keys, so "load only when
+                    // empty" left the previous programme's synopsis (a film's) under the next one.
+                    val synopsis by androidx.compose.runtime.produceState<String?>(null, p.id) {
+                        value = p.description?.takeIf { it.isNotBlank() } ?: kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                             runCatching { epgDao.programmeDescription(p.id) }.getOrNull()?.takeIf { it.isNotBlank() }
                         }
                     }
                     synopsis?.let {
                         Text(it, style = stageText(19, 400), color = StageColors.Body, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
+                }
+                now?.takeIf { it.startMs > clock }?.let {
+                    Text(stringResource(R.string.glcn_tvhome_remind_hint), style = stageText(17, 600), color = stageAccent.accent, maxLines = 1)
                 }
                 next?.let { n ->
                     Text(
@@ -219,30 +251,86 @@ internal fun TvHome(
             }
         }
 
-        // Your channels, by group, as picture cards.
-        val list = groups.orEmpty()
-        val group = list.getOrNull(selected.coerceIn(0, (list.size - 1).coerceAtLeast(0)))
+        // Your channels, by group, as picture cards — in the order chosen by holding OK on a row's name.
+        val list = remember(groups, rowOrder) { TvHomeOrder.sort(groups.orEmpty(), rowOrder) }
+        val group = if (appsShown) null else list.getOrNull(selected.coerceIn(0, (list.size - 1).coerceAtLeast(0)))
         Column(
             Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(bottom = 40.mpx),
             verticalArrangement = Arrangement.spacedBy(16.mpx),
         ) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = moving != null,
+                enter = androidx.compose.animation.fadeIn(tv.own.owntv.ui.theme.ownTvTween(200)),
+                exit = androidx.compose.animation.fadeOut(tv.own.owntv.ui.theme.ownTvTween(150)),
+            ) {
+                Text(
+                    stringResource(R.string.glcn_tvhome_move_hint), style = stageText(17, 600),
+                    color = StageColors.Text.copy(alpha = 0.85f), modifier = Modifier.padding(start = contentStart + 28.mpx),
+                )
+            }
+            val pillsState = rememberLazyListState()
+            val moveScope = androidx.compose.runtime.rememberCoroutineScope()
             LazyRow(
+                state = pillsState,
                 contentPadding = PaddingValues(start = contentStart + 24.mpx, end = 64.mpx),
                 horizontalArrangement = Arrangement.spacedBy(12.mpx),
                 modifier = Modifier.focusRestorer().focusGroup(),
             ) {
-                itemsIndexed(list) { i, g ->
+                itemsIndexed(list, key = { _, g -> TvHomeOrder.keyOf(g) }) { i, g ->
+                    val key = TvHomeOrder.keyOf(g)
+                    val isMoving = moving == key
                     StagePill(
                         text = tvHomeTitle(g),
                         onClick = { selected = i; runCatching { firstCard.requestFocus() } },
+                        onLongClick = { selected = i; moving = key },
                         small = g.channels.size.toString(),
-                        highlighted = i == selected,
-                        modifier = Modifier.onPreviewKeyEvent { e ->
-                            if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown) { selected = i; runCatching { firstCard.requestFocus() }.isSuccess } else false
-                        }.onFocusChanged { if (it.hasFocus) selected = i },
+                        trailingIcon = if (isMoving) tv.own.owntv.ui.components.OwnTVIcon.MOVE else null,
+                        highlighted = i == selected && !appsShown,
+                        modifier = Modifier.animateItem().onFocusChanged { if (it.hasFocus) appsShown = false }.onPreviewKeyEvent { e ->
+                            val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
+                            if (isMoving) {
+                                // Ups are kept: the one ending the hold that started the move, and Back's (the system acts on its up).
+                                if (e.type != KeyEventType.KeyDown) {
+                                    if (e.key == Key.Back) moving = null
+                                    return@onPreviewKeyEvent true
+                                }
+                                val to = when {
+                                    e.key == Key.DirectionLeft -> i - 1
+                                    e.key == Key.DirectionRight -> i + 1
+                                    ok -> { moving = null; swallowOkUp = true; return@onPreviewKeyEvent true }
+                                    else -> return@onPreviewKeyEvent true
+                                }
+                                if (to in list.indices) {
+                                    val keys = list.map(TvHomeOrder::keyOf).toMutableList()
+                                    java.util.Collections.swap(keys, i, to)
+                                    rowOrder = keys
+                                    TvHomeOrder.save(orderContext, keys)
+                                    selected = to
+                                    moveScope.launch { pillsState.animateScrollToItem((to - 1).coerceAtLeast(0)) }
+                                }
+                                true
+                            } else if (swallowOkUp && ok && e.type == KeyEventType.KeyUp) {
+                                swallowOkUp = false; true
+                            } else if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown) {
+                                selected = i; runCatching { firstCard.requestFocus() }.isSuccess
+                            } else false
+                        }.onFocusChanged { if (it.hasFocus) selected = i else if (isMoving) moving = null },
+                    )
+                }
+                // glcn: still being tried — only once switched on with the Labs sequence in Settings.
+                if (tv.own.owntv.glcn.Labs.on) item(key = "__apps__") {
+                    StagePill(
+                        text = stringResource(R.string.glcn_tvhome_apps),
+                        onClick = { appsShown = true; runCatching { firstApp.requestFocus() } },
+                        small = tv.own.owntv.glcn.AppShortcuts.chosen.size.takeIf { it > 0 }?.toString(),
+                        highlighted = appsShown,
+                        modifier = Modifier.onFocusChanged { if (it.hasFocus) appsShown = true }.onPreviewKeyEvent { e ->
+                            if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown) runCatching { firstApp.requestFocus() }.isSuccess else false
+                        },
                     )
                 }
             }
+            if (appsShown && tv.own.owntv.glcn.Labs.on) AppsRow(contentStart, firstApp) { pickingApps = true }
             group?.let { g ->
                 androidx.compose.runtime.key(g) {
                     LazyRow(
@@ -269,7 +357,13 @@ internal fun TvHome(
                                     now = clock,
                                     // glcn: a programme still to come (Starting now, Tonight) says when it starts.
                                     startLabel = pair?.first?.takeIf { it.startMs > clock }?.let { timeFormat.format(java.util.Date(it.startMs)) },
-                                    onClick = { onTune(c, g.channels) },
+                                    // glcn: a programme still to come — OK reminds you of it (again: forgets it), hold OK watches the channel now.
+                                    bell = pair?.first?.let { p -> reminders.any { it.channelId == c.id && it.startMs == p.startMs } } == true,
+                                    onClick = {
+                                        val p = pair?.first
+                                        if (p != null && p.startMs > clock) toggleReminder(c, p) else onTune(c, g.channels)
+                                    },
+                                    onLongClick = pair?.first?.takeIf { it.startMs > clock }?.let { { onTune(c, g.channels) } },
                                     width = TV_CARD_WIDTH.mpx,
                                     modifier = (if (i == 0) Modifier.focusRequester(firstCard) else Modifier)
                                         .onFocusChanged { if (it.hasFocus) { focusedChannel = c; focusedShow = g.shows[c.id]; if (pair?.first == null) focusedArt = null } },
@@ -280,6 +374,7 @@ internal fun TvHome(
                 }
             }
         }
+        if (pickingApps) tv.own.owntv.glcn.AppsPickerGrid { pickingApps = false }
     }
 }
 
@@ -333,3 +428,74 @@ private const val PREVIEW_SETTLE_MS = 900L
 private const val ART_SETTLE_MS = 450L
 private const val CLOCK_TICK_MS = 15_000L
 private const val DRIFT_MS = 14_000
+
+/** glcn: the picked apps as their TV banners (one size, framed) — OK opens one, hold OK takes it off; a small card adds more. */
+@Composable
+private fun AppsRow(contentStart: androidx.compose.ui.unit.Dp, first: FocusRequester, onAdd: () -> Unit) {
+    val context = LocalContext.current
+    val apps = tv.own.owntv.glcn.AppShortcuts.chosen.toList()
+    val all by androidx.compose.runtime.produceState(emptyMap<String, tv.own.owntv.glcn.AppShortcuts.App>(), apps) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { tv.own.owntv.glcn.AppShortcuts.installed(context).associateBy { it.pkg } }
+    }
+    val shown = apps.mapNotNull { all[it] }
+    LazyRow(
+        contentPadding = PaddingValues(start = contentStart + 24.mpx, end = 64.mpx, top = 16.mpx, bottom = 16.mpx),
+        horizontalArrangement = Arrangement.spacedBy(20.mpx),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().focusRestorer().focusGroup(),
+    ) {
+        itemsIndexed(shown, key = { _, a -> a.pkg }) { i, a ->
+            tv.own.owntv.glcn.AppBanner(
+                a, width = APP_CARD_W.mpx,
+                onClick = { tv.own.owntv.glcn.AppShortcuts.open(context, a.pkg) },
+                onLongClick = { tv.own.owntv.glcn.AppShortcuts.toggle(context, a.pkg) },
+                modifier = if (i == 0) Modifier.focusRequester(first) else Modifier,
+            )
+        }
+        item(key = "__add__") {
+            tv.own.owntv.ui.stage.StageSurface(
+                onClick = onAdd, radius = 16.mpx,
+                idle = Modifier.background(StageColors.Text.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(16.mpx)),
+                modifier = Modifier.size(APP_ADD_W.mpx, (APP_CARD_W * 9 / 16).mpx).then(if (shown.isEmpty()) Modifier.focusRequester(first) else Modifier),
+                contentAlignment = Alignment.Center,
+            ) { focused ->
+                val c = if (focused) stageAccent.onAccent else StageColors.Text
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    tv.own.owntv.ui.components.OwnTVIcon(tv.own.owntv.ui.components.OwnTVIcon.ADD, c, Modifier.size(30.mpx))
+                    Text(stringResource(R.string.glcn_apps_add), style = stageText(16, 700), color = c, modifier = Modifier.padding(top = 6.mpx))
+                }
+            }
+        }
+    }
+}
+
+private const val APP_CARD_W = 320
+private const val APP_ADD_W = 150
+
+/**
+ * glcn: the order of Home's rows (Starting now, Films, a group…), chosen by holding OK on a row's name and moving it.
+ * Kept per device by kind and name; a row not placed yet (a new group) follows the placed ones in its own order.
+ */
+internal object TvHomeOrder {
+    fun keyOf(g: LiveViewModel.StripGroup): String = g.kind.name + SEP + g.title.orEmpty()
+
+    fun sort(groups: List<LiveViewModel.StripGroup>, order: List<String>): List<LiveViewModel.StripGroup> {
+        if (order.isEmpty()) return groups
+        val at = order.withIndex().associate { (i, k) -> k to i }
+        return groups.withIndex().sortedBy { (i, g) -> at[keyOf(g)] ?: (order.size + i) }.map { it.value }
+    }
+
+    fun load(context: android.content.Context): List<String> =
+        prefs(context).getString(KEY, null)?.let { raw ->
+            runCatching { org.json.JSONArray(raw).let { a -> List(a.length()) { a.getString(it) } } }.getOrNull()
+        }.orEmpty()
+
+    fun save(context: android.content.Context, keys: List<String>) {
+        prefs(context).edit().putString(KEY, org.json.JSONArray(keys).toString()).apply()
+    }
+
+    private fun prefs(context: android.content.Context) = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+    private const val PREFS = "glcn_tvhome"
+    private const val KEY = "row_order"
+    private const val SEP = "|"
+}

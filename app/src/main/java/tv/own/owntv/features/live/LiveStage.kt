@@ -4,6 +4,7 @@ import tv.own.owntv.glcn.groupGlyph
 import tv.own.owntv.ui.theme.stageTone
 import tv.own.owntv.ui.theme.stageShadow
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -152,51 +153,80 @@ internal fun LiveStageRow(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
     trailing: (@Composable () -> Unit)? = null,
+    /** glcn: what follows on this channel — shown under the programme on the focused row only. */
+    next: XtEpgEntry? = null,
 ) {
+    val formatTime = rememberSystemTimeFormatter()
     StageRow(
         onClick = onClick,
         onLongClick = onLongClick,
-        height = 96.mpx,
+        height = 82.mpx,
         modifier = modifier.fillMaxWidth().onFocusChanged { if (it.hasFocus) onFocus() },
     ) { focused ->
         if (showNumber) {
+            // glcn: the number quieter — the logo and the name carry the row.
             Text(
                 channel.number?.toString().orEmpty(),
-                style = stageText(20, 600).copy(textAlign = TextAlign.End, fontFeatureSettings = Tabular),
-                color = if (focused) stageTone(Color(0xFFE6F2EE), StageColors.FxLine) else StageColors.Dim,
+                style = stageText(17, 600).copy(textAlign = TextAlign.End, fontFeatureSettings = Tabular),
+                color = if (focused) stageTone(Color(0xFFE6F2EE), StageColors.FxLine) else StageColors.Dim.copy(alpha = 0.7f),
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.width(50.mpx),
+                modifier = Modifier.width(40.mpx),
             )
         }
-        // glcn: bigger logos — on a 75" screen the old 76×54 read as dots.
-        LivePlate(channel.displayLogoUrl, 104.mpx, 74.mpx)
+        // glcn: every logo on the same rounded glass tile, one size — "1" and "2" no longer tower over the others.
+        LivePlate(channel.displayLogoUrl, 80.mpx, 56.mpx, radius = 14.mpx)
         Column(Modifier.weight(1f)) {
-            Text(name.name, style = stageText(22, 700), color = if (focused) StageColors.FxText else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(name.name, style = stageText(20, 700), color = if (focused) StageColors.FxText else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val title = now?.title ?: nowTitle
             if (title != null) {
-                val left = now?.let { timeLeftText(minutesLeft(it)) }
-                Spacer(Modifier.height(2.mpx))
+                Spacer(Modifier.height(1.mpx))
                 Text(
-                    buildAnnotatedString {
-                        append(title)
-                        if (left != null) withStyle(SpanStyle(color = (if (focused) StageColors.FxLine else StageColors.Muted).copy(alpha = 0.6f))) { append(" · $left") }
-                    },
-                    style = stageText(17, 400), color = if (focused) StageColors.FxLine else StageColors.Muted,
+                    title, style = stageText(16, 400), color = if (focused) StageColors.FxLine else StageColors.Muted,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (now != null) {
-                Spacer(Modifier.height(8.mpx))
-                StageProgress(progressOf(now), Modifier.width(300.mpx), flat = true)
+            // glcn: the focused row also says what comes next, so two channels can be compared without looking right.
+            if (focused && next != null) {
+                Spacer(Modifier.height(2.mpx))
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, fontFeatureSettings = Tabular)) { append(formatTime(next.startMs)) }
+                        append("  ")
+                        append(next.title)
+                    },
+                    style = stageText(14, 500), color = StageColors.FxLine.copy(alpha = 0.75f),
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
             }
         }
         if (trailing != null) trailing()
-        else Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
+        else Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
             name.tags.forEach { StageTag(it) }
             if (channel.catchup) OwnTVIcon(OwnTVIcon.REWIND, StageColors.Dim, Modifier.size(22.mpx))
             if (isFavorite) OwnTVIcon(OwnTVIcon.FAVORITE, stageAccent.accent, Modifier.size(22.mpx), filled = true)
             mark?.let { StagePlaylistMark(it) }
+            // glcn: how much is left as a small ring with the minutes in it, instead of a cut-off "quedan …" and a thin line.
+            if (now != null) TimeLeftRing(progressOf(now), minutesLeft(now), focused)
         }
+    }
+}
+
+/** glcn: a 44 ring filling as the programme runs, the minutes left in it ("56'", "2h"). */
+@Composable
+private fun TimeLeftRing(progress: Float, minutes: Long, focused: Boolean) {
+    val track = if (focused) StageColors.FxLine.copy(alpha = 0.25f) else StageColors.Dim.copy(alpha = 0.3f)
+    val fill = if (focused) StageColors.FxText else stageAccent.accent
+    Box(Modifier.size(40.mpx), contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+            val w = 3.5f * density
+            val inset = w / 2
+            val size = androidx.compose.ui.geometry.Size(this.size.width - w, this.size.height - w)
+            val tl = androidx.compose.ui.geometry.Offset(inset, inset)
+            drawArc(track, 0f, 360f, false, tl, size, style = androidx.compose.ui.graphics.drawscope.Stroke(w))
+            drawArc(fill, -90f, 360f * progress, false, tl, size, style = androidx.compose.ui.graphics.drawscope.Stroke(w, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+        }
+        val label = if (minutes >= 60) "${minutes / 60}h" else "$minutes'"
+        Text(label, style = stageText(12, 700).copy(fontFeatureSettings = Tabular), color = if (focused) StageColors.FxText else StageColors.Muted, maxLines = 1)
     }
 }
 
@@ -212,10 +242,16 @@ internal fun LivePlate(
     height: androidx.compose.ui.unit.Dp,
     radius: androidx.compose.ui.unit.Dp = StageRadii.Plate,
 ) {
-    Box(Modifier.size(width, height).clip(RoundedCornerShape(radius))) {
-        // glcn: the page's own lightness, so a white logo gets a dark plate in the light theme (it vanished there).
-        val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
-        ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize(), fill = StageColors.ControlFill, surfaceLuminance = if (light) 0.9f else 0.02f) {
+    // glcn: a visible glass tile with the logo set inside it (room on every side), so every channel's logo reads the same
+    // size — a bare "1" or "2" filled its whole box and towered over the others.
+    val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    Box(
+        Modifier.size(width, height).clip(RoundedCornerShape(radius))
+            .background(if (light) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.07f))
+            .border(1.mpx, if (light) Color.Black.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.08f), RoundedCornerShape(radius)),
+        contentAlignment = Alignment.Center,
+    ) {
+        ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize().padding(horizontal = width * 0.16f, vertical = height * 0.18f), fill = Color.Transparent, surfaceLuminance = if (light) 0.9f else 0.02f) {
             OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.align(Alignment.Center).size(height * 0.5f))
         }
     }
@@ -258,7 +294,20 @@ internal fun LiveStagePane(
     onOpenProgramme: (XtEpgEntry) -> Unit,
     onBackToList: () -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: the channel's guide rows (with their pictures), for the pictures over what follows. */
+    loadSchedule: (suspend (ChannelEntity) -> List<tv.own.owntv.core.database.entity.EpgProgrammeEntity>)? = null,
 ) {
+    // glcn: the coming programmes' pictures, read once the cursor rests on a channel (not while it races past).
+    // Null while it is being read: the cards then show a quiet plate, never the logo first and the picture after.
+    val laterArt by androidx.compose.runtime.produceState<Map<Long, String>?>(null, channel?.id) {
+        value = null
+        val ch = channel ?: return@produceState
+        val load = loadSchedule ?: return@produceState
+        kotlinx.coroutines.delay(LATER_ART_SETTLE_MS)
+        value = runCatching { load(ch) }.getOrDefault(emptyList())
+            .mapNotNull { r -> r.imageUrl?.takeIf { it.isNotBlank() }?.let { r.startMs to it } }.toMap()
+    }
+    val channelLogo = channel?.displayLogoUrl?.takeIf { it.isNotBlank() }
     val previewState by previewEngine.state.collectAsStateWithLifecycle()
     val streamChips by previewEngine.streamChips.collectAsStateWithLifecycle()
     val playing = showVideo && previewState != tv.own.owntv.player.LivePreviewEngine.State.ERROR &&
@@ -266,10 +315,27 @@ internal fun LiveStagePane(
     val loading = showVideo && previewState == tv.own.owntv.player.LivePreviewEngine.State.LOADING
     val videoR = 28.mpx
     val videoShadow = tv.own.owntv.ui.theme.stageShadow(0.55f)
-    Column(modifier) {
+    // glcn: [tv.own.owntv.glcn.LivePaneLayout.FICHA] — the programme's page first (title, a long synopsis, what follows)
+    // with the video small in its top right corner; the older layout keeps the big video on top.
+    val ficha = tv.own.owntv.glcn.LivePaneLayout.FICHA
+    // glcn: Ficha — a programme the guide gives no picture is looked up once (cached) by its title, so the video box
+    // still shows something of it; only after the focus has settled on the channel.
+    val artResolver: tv.own.owntv.core.metadata.ProgrammeArtResolver = org.koin.compose.koinInject()
+    val nowTitle = nowNext?.now?.title
+    androidx.compose.runtime.LaunchedEffect(nowNext?.nowDetails?.imageUrl) { nowNext?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.glcn.FanartAmbient.url = it } }
+    val lentArt by androidx.compose.runtime.produceState<String?>(null, nowTitle, ficha) {
+        value = null
+        val t = nowTitle?.takeIf { ficha && it.isNotBlank() } ?: return@produceState
+        if (!nowNext?.nowDetails?.imageUrl.isNullOrBlank()) return@produceState
+        kotlinx.coroutines.delay(500)
+        value = runCatching { artResolver.detailsFor(t, nowNext?.nowDetails?.categories) }.getOrNull()?.backdropUrl
+        // glcn: shared with the screen, so the lent picture is the ambient backdrop too, not only in the video box.
+        tv.own.owntv.glcn.LentLiveArt.set(t, value)
+    }
+    @Composable
+    fun Video(videoModifier: Modifier) {
         Box(
-            Modifier
-                .fillMaxWidth()
+            videoModifier
                 .aspectRatio(16f / 9f)
                 .drawBehind {
                     drawBoxShadow(videoShadow, 80.mpx.toPx(), videoR.toPx(), dy = 30.mpx.toPx())
@@ -281,13 +347,19 @@ internal fun LiveStagePane(
             // glcn: until the video plays — and while a new channel loads — the frame holds the channel's logo alone;
             // the programme's picture is already the screen's backdrop.
             if (playing) tv.own.owntv.player.ExoPreviewSurface(engine = previewEngine, modifier = Modifier.fillMaxSize())
-            if (channel != null && (!playing || loading)) {
+            // glcn: Ficha — until the video plays (or with the preview off) the box shows the programme's picture, not a
+            // black frame with the channel's number.
+            val still = (nowNext?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() } ?: lentArt)?.takeIf { ficha && (!playing || loading) }
+            if (still != null) {
+                tv.own.owntv.ui.components.ProgrammeArt(url = still, modifier = Modifier.fillMaxSize(), tolerance = 10f)
+                Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.45f), 0.5f to Color.Transparent)))
+            } else if (channel != null && (!playing || loading)) {
                 // The channel's logo, large and soft toward the right — you can tell which channel it is
                 // without it competing with the programme.
                 if (loading) Box(Modifier.fillMaxSize().background(Color.Black))
                 ChannelLogoTile(
                     logoUrl = channel.displayLogoUrl,
-                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f).graphicsLayer { alpha = 0.34f },
+                    modifier = (if (ficha) Modifier.align(Alignment.Center).fillMaxWidth(0.34f).fillMaxHeight(0.34f) else Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f)).graphicsLayer { alpha = if (ficha) 0.5f else 0.34f },
                     fill = Color.Transparent,
                 ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(56.mpx)) }
                 Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.5f to Color.Transparent)))
@@ -297,9 +369,14 @@ internal fun LiveStagePane(
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.58f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.72f))))
             Box(Modifier.fillMaxSize().drawBehind { drawInnerRing(Color.White.copy(alpha = 0.08f), 1.mpx.toPx(), videoR.toPx()) })
             if (channel != null) {
-                Box(Modifier.align(Alignment.TopStart).padding(start = 24.mpx, top = 22.mpx)) { StageLiveBadge(stringResource(R.string.player_live)) }
+                // glcn: the live badge only on a programme that is really live (a match, a "DIRECTO" broadcast), as
+                // before — not on every channel.
+                val reallyLive = nowTitle?.let { t -> tv.own.owntv.core.live.SportsNow.displayTitle(t) != t } ?: false
+                if (reallyLive) Box(Modifier.align(Alignment.TopStart).padding(start = 24.mpx, top = 22.mpx)) { StageLiveBadge(stringResource(R.string.player_live)) }
                 if (playing && streamChips.isNotEmpty()) {
-                    Row(Modifier.align(Alignment.TopEnd).padding(end = 22.mpx, top = 22.mpx), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
+                    // glcn: at the foot, level with the channel's name — at the top right they sat over the channel's own
+                    // on-screen logo.
+                    Row(Modifier.align(Alignment.BottomEnd).padding(end = 22.mpx, bottom = 24.mpx), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
                         // Three facts — quality, frame rate, sound: the
                         // engine's aspect ratio ("16:9") and declared bitrate ("4.2 Mbps") are left out.
                         streamChips.filterNot { it.contains(':') || it.endsWith("Mbps") }.forEach { StageSpecChip(it) }
@@ -322,24 +399,29 @@ internal fun LiveStagePane(
                 )
             }
         }
+    }
+    @Composable
+    fun Info(infoModifier: Modifier, tall: Boolean, showTop: Boolean = true, showSchedule: Boolean = true, rowSchedule: Boolean = false) {
         val now = nowNext?.now
-        Box(Modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth().padding(start = 4.mpx, end = 4.mpx, top = 34.mpx)) {
-        Row(Modifier.fillMaxWidth()) {
+        Box(infoModifier) {
+        Column(Modifier.fillMaxWidth().then(if (tall || rowSchedule) Modifier.fillMaxHeight() else Modifier).padding(start = 4.mpx, end = 4.mpx, top = if (tall || !showTop) 0.mpx else if (rowSchedule) 22.mpx else 34.mpx)) {
+        if (showTop) Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             if (now != null) {
-                Text(now.title, style = stageText(42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (!tall) Text(now.title, style = stageText(if (rowSchedule) 30 else 42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = if (rowSchedule) 1 else 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     listOfNotNull(
                         detailsLine(now, nowNext.nowDetails).takeIf { it.isNotBlank() },
+                        // glcn: Ficha — the time left sits with the times, not alone at the end of the bar.
+                        timeLeftText(minutesLeft(now)).takeIf { rowSchedule },
                         tv.own.owntv.ui.components.rememberTmdbRating(now.title, nowNext.nowDetails?.categories),
                     ).joinToString("  ·  "),
-                    style = stageText(19, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 8.mpx, bottom = 16.mpx),
+                    style = stageText(if (rowSchedule) 17 else 19, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = if (tall) 0.mpx else if (rowSchedule) 6.mpx else 8.mpx, bottom = if (rowSchedule) 12.mpx else 16.mpx),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
                     StageProgress(progressOf(now), Modifier.weight(1f))
-                    Text(timeLeftText(minutesLeft(now)), style = stageText(17, 400).copy(fontFeatureSettings = Tabular), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (!rowSchedule) Text(timeLeftText(minutesLeft(now)), style = stageText(17, 400).copy(fontFeatureSettings = Tabular), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -353,42 +435,68 @@ internal fun LiveStagePane(
             kotlinx.coroutines.delay(300)
             value = runCatching { resolver.detailsFor(n.title, null) }.getOrNull()?.overview
         }
-        (now?.description?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
+        if (showTop) (now?.description?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
             tv.own.owntv.features.shell.components.DriftingSynopsis(
                 it,
-                modifier = Modifier.padding(top = 14.mpx),
-                style = stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp),
+                modifier = Modifier.padding(top = 14.mpx).then(if (rowSchedule) Modifier.weight(1f) else if (tall) Modifier.weight(1f, fill = false) else Modifier), // glcn: Ficha — the synopsis takes all the room down to the cards at the foot
+                // glcn: Ficha — a little smaller and as many lines as the room under the video holds, so it reads at once.
+                style = if (rowSchedule) stageText(17, 400).copy(lineHeight = (17 * 1.4f).mpxSp) else stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp),
                 color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
+                lines = if (tall) 6 else if (rowSchedule) 12 else 3,
             )
         }
         val next = nowNext?.next
         // glcn: what follows, several — the next one and the two after it.
-        val later = nowNext?.upcoming.orEmpty().take(2)
-        if (next != null) {
-            Column(
+        // glcn: a guide listing one programme twice (same start, same title) shows it once.
+        val later = nowNext?.upcoming.orEmpty()
+            .filterNot { next != null && it.startMs == next.startMs && it.title == next.title }
+            .distinctBy { it.startMs to it.title }
+            .take(if (tall || !showTop) 4 else 2)
+        if (showSchedule && next != null) {
+            // ◀ from what follows goes back to the channel it belongs to, not to whatever lies to the left.
+            val back = Modifier.onPreviewKeyEvent { e ->
+                if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onBackToList(); true } else false
+            }
+            if (rowSchedule) {
+                // glcn: Ficha — what follows in one row across the column, so the picture under it stays in view.
+                Row(
+                    Modifier.fillMaxWidth().padding(top = if (showTop) 18.mpx else 0.mpx).focusGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(8.mpx),
+                ) {
+                    LiveScheduleItem(next, accentTime = true, onClick = { onOpenProgramme(next) }, modifier = Modifier.weight(1f).focusRequester(scheduleFocus).then(back), chip = true, art = laterArt?.get(next.startMs), logo = channelLogo.takeIf { laterArt != null }, withArt = loadSchedule != null)
+                    later.take(2).forEach { l ->
+                        LiveScheduleItem(l, accentTime = false, onClick = { onOpenProgramme(l) }, modifier = Modifier.weight(1f), chip = true, art = laterArt?.get(l.startMs), logo = channelLogo.takeIf { laterArt != null }, withArt = loadSchedule != null)
+                    }
+                }
+            } else Column(
                 Modifier
-                    .padding(top = 14.mpx)
+                    .padding(top = if (showTop) 14.mpx else 0.mpx)
                     .offset(x = (-12).mpx)
                     .focusGroup(),
             ) {
-                // ◀ from next goes back to the channel it belongs to, not to whatever lies to the left.
-                LiveScheduleItem(
-                    next, accentTime = true, onClick = { onOpenProgramme(next) },
-                    modifier = Modifier.focusRequester(scheduleFocus).onPreviewKeyEvent { e ->
-                        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onBackToList(); true } else false
-                    },
-                )
+                LiveScheduleItem(next, accentTime = true, onClick = { onOpenProgramme(next) }, modifier = Modifier.focusRequester(scheduleFocus).then(back))
                 later.forEach { l ->
-                    LiveScheduleItem(
-                        l, accentTime = false, onClick = { onOpenProgramme(l) },
-                        modifier = Modifier.onPreviewKeyEvent { e ->
-                            if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onBackToList(); true } else false
-                        },
-                    )
+                    LiveScheduleItem(l, accentTime = false, onClick = { onOpenProgramme(l) }, modifier = back)
                 }
             }
         }
         }
+        }
+    }
+    if (ficha) {
+        // glcn: the video across the whole column at the top; under it, full width, the title, the details, a longer
+        // synopsis and what follows in one row — the programme's picture shows through at the bottom.
+        Column(modifier.fillMaxHeight().padding(bottom = 70.mpx)) { // glcn: the cards lower, nearer the foot (the hints fade after a moment)
+            // glcn: the video a little narrower (and so lower), centred over the text — the synopsis keeps its room.
+            Video(Modifier.align(Alignment.CenterHorizontally).fillMaxWidth(tv.own.owntv.glcn.LivePaneLayout.FICHA_VIDEO_W))
+            // The details take what is left under the video: the synopsis gives way (and drifts) so what follows
+            // is always on screen above the key hints.
+            Info(Modifier.fillMaxWidth().weight(1f), tall = false, rowSchedule = true)
+        }
+    } else {
+        Column(modifier) {
+            Video(Modifier.fillMaxWidth())
+            Info(Modifier.fillMaxWidth(), tall = false)
         }
     }
 }
@@ -398,10 +506,46 @@ internal fun LiveStagePane(
  * time and full-colour title, later is muted. Focused = FILLED.
  */
 @Composable
-private fun LiveScheduleItem(p: XtEpgEntry, accentTime: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun LiveScheduleItem(
+    p: XtEpgEntry, accentTime: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, chip: Boolean = false,
+    /** glcn: the programme's picture over the chip (the channel's logo stands in when there is none). */
+    art: String? = null, logo: String? = null, withArt: Boolean = false,
+) {
     val formatTime = rememberSystemTimeFormatter()
     val a = stageAccent
-    StageSurface(onClick = onClick, radius = 12.mpx, modifier = modifier) { focused ->
+    StageSurface(
+        onClick = onClick, radius = 12.mpx, modifier = modifier,
+        // glcn: as a chip (Ficha's row of what follows) it sits on a faint glass pill.
+        idle = if (chip) Modifier.background(StageColors.ControlFill, RoundedCornerShape(12.mpx)) else Modifier,
+    ) { focused ->
+        // glcn: with pictures, the picture fills the card (wide, so it stays low) with the time and title over its foot —
+        // big enough to see, short enough that the synopsis above keeps its lines.
+        if (chip && withArt) {
+            Box(
+                Modifier.fillMaxWidth().aspectRatio(LATER_CARD_RATIO).clip(RoundedCornerShape(12.mpx)).background(StageColors.Ink.copy(alpha = 0.06f)),
+            ) {
+                // glcn: the focused card is plain to see — the picture covers the surface's own focus fill, so a ring
+                // in the accent with a white edge inside it is drawn over the picture.
+                if (art != null) coil3.compose.AsyncImage(model = art, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                else if (logo != null) coil3.compose.AsyncImage(
+                    model = logo, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.mpx).fillMaxWidth(0.4f).aspectRatio(2f),
+                )
+                Column(
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.82f))))
+                        .padding(start = 10.mpx, end = 10.mpx, top = 22.mpx, bottom = 7.mpx),
+                ) {
+                    Text(formatTime(p.startMs), style = stageText(14, 800).copy(fontFeatureSettings = Tabular), color = if (accentTime) Color(0xFF8FD3FF) else Color.White.copy(alpha = 0.85f), maxLines = 1)
+                    Text(p.title, style = stageText(15, 600), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                if (focused) {
+                    Box(Modifier.matchParentSize().border(4.mpx, a.accent, RoundedCornerShape(12.mpx)))
+                    Box(Modifier.matchParentSize().padding(4.mpx).border(1.5.mpx, Color.White.copy(alpha = 0.85f), RoundedCornerShape(9.mpx)))
+                }
+            }
+            return@StageSurface
+        }
         Text(
             buildAnnotatedString {
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold, fontFeatureSettings = Tabular, color = if (focused) a.onAccent else if (accentTime) a.accent else StageColors.Muted)) {
@@ -416,6 +560,9 @@ private fun LiveScheduleItem(p: XtEpgEntry, accentTime: Boolean, onClick: () -> 
         )
     }
 }
+
+private const val LATER_ART_SETTLE_MS = 350L
+private const val LATER_CARD_RATIO = 2.1f
 
 /** Scroll only as far as the focused item, plus one row of room, needs (the TV default pins it a third down). */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -450,6 +597,16 @@ internal data class CategoryPlaylists(
 internal val LocalCategoryPlaylists = androidx.compose.runtime.staticCompositionLocalOf<CategoryPlaylists?> { null }
 
 /** A category as the Stage sheet / column shows it: the rail item, its parsed name and its count. */
+/** glcn: a group's name without web addresses, "@" handles' at-signs, or the separators left around them. */
+internal fun cleanGroupLabel(label: String): String {
+    val cleaned = label
+        .replace(Regex("""https?://\S+|www\.\S+"""), " ")
+        .replace(Regex("""(^|\s)@(\w)"""), "$1$2")
+        .replace(Regex("""\s{2,}"""), " ")
+        .trim(' ', '|', '-', '–', '·', ':', '/', ',')
+    return cleaned.ifBlank { label }
+}
+
 internal data class LiveCategoryEntry(
     val item: LiveRailItem,
     val label: String,
@@ -489,6 +646,8 @@ internal fun liveCategoryEntries(railItems: List<LiveRailItem>, railCounts: Map<
     val groupCountry = ProviderTags.sharedCountry(entries.mapNotNull { it.name })
     // A group keeps its "UK|" unless the heading below says it for every group.
     val labelled = entries.map { e -> e.name?.let { e.copy(label = ProviderTags.groupLabel(it, groupCountry)) } ?: e }
+        // glcn: groups named with an address or a handle ("@LaQuay https://github.com/LaQuay/…") show just the name.
+        .map { e -> e.copy(label = cleanGroupLabel(e.label)) }
     val heading = (if (groupCountry != null) stringResource(R.string.content_live_groups_country, groupCountry) else stringResource(R.string.content_live_groups))
         .uppercase(androidx.compose.ui.text.intl.Locale.current.platformLocale)
     return labelled to heading
@@ -531,6 +690,10 @@ internal fun LiveCategories(
     onSearchQueryChange: ((String) -> Unit)? = null,
     /** The category search is being typed in (the player's sheet then leaves ◀ to the text cursor). */
     onSearchEditingChange: (Boolean) -> Unit = {},
+    /** glcn: Movies / Series — each provider group's section ([tv.own.owntv.glcn.VodSections]) and the sections' titles;
+     *  the groups are shown section by section, a heading over each. Null = one heading over all the groups. */
+    sectionOf: ((LiveCategoryEntry) -> Int)? = null,
+    sectionTitles: List<String> = emptyList(),
     /** glcn: list the playlists (when there are several) with the active one opened onto its categories. */
     showPlaylists: Boolean = false,
     /** glcn: the share of glass a sheet draws (below 1 over the player, so the picture shows through). */
@@ -545,12 +708,16 @@ internal fun LiveCategories(
     val hiddenKeys by tv.own.owntv.glcn.HiddenCategories.keys.collectAsStateWithLifecycle()
     val hideable = remember { setOf("Favorites", "History", "Catchup") }
     val hiddenEntries = remember(entries, hiddenKeys) { entries.indices.count { entries[it].item.key.toString().let { k -> k in hideable && k in hiddenKeys } } }
-    val visible = remember(entries, query, hiddenKeys) {
+    fun isGroup(e: LiveCategoryEntry) = !e.item.nested && (e.item.key is tv.own.owntv.core.live.LiveKey.Folder || e.item.key is tv.own.owntv.core.live.LiveKey.Custom)
+    val visible = remember(entries, query, hiddenKeys, sectionOf) {
         val q = query.trim()
-        entries.indices.filter { i ->
+        val shown = entries.indices.filter { i ->
             val k = entries[i].item.key.toString()
             !(k in hideable && k in hiddenKeys) && (q.isEmpty() || entries[i].label.contains(q, ignoreCase = true))
         }
+        // glcn: section by section (stable — each section keeps the list's own order); the fixed entries first.
+        if (sectionOf == null || q.isNotEmpty()) shown
+        else shown.sortedBy { i -> if (isGroup(entries[i])) 1 + sectionOf(entries[i]) else 0 }
     }
     val rowFocusers = remember(visible.size) { List(visible.size) { FocusRequester() } }
     val searchFocus = remember { FocusRequester() }
@@ -609,10 +776,22 @@ internal fun LiveCategories(
     val firstGroup = entries.indexOfFirst { !it.item.nested && (it.item.key is tv.own.owntv.core.live.LiveKey.Folder || it.item.key is tv.own.owntv.core.live.LiveKey.Custom) }
     var stepTarget by remember { mutableStateOf<Int?>(null) }
     var stepJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    fun lazyIndexOf(pos: Int): Int {
-        val groupsHeading = query.isBlank() && firstGroup >= 0 && visible.indexOf(firstGroup).let { it in 0..pos }
-        return headerCount + pos + if (groupsHeading) 1 else 0
+    // glcn: the headings over the groups, by row position — one ("GROUPS · DE"), or one per section.
+    val headingAt: Map<Int, String> = remember(visible, query, firstGroup, groupsHeading, sectionOf, sectionTitles) {
+        if (query.isNotBlank()) emptyMap()
+        else if (sectionOf == null) visible.indexOf(firstGroup).takeIf { firstGroup >= 0 && it >= 0 }?.let { mapOf(it to groupsHeading) } ?: emptyMap()
+        else buildMap {
+            var last = -1
+            visible.forEachIndexed { pos, i ->
+                val e = entries[i]
+                if (isGroup(e)) {
+                    val sec = sectionOf(e)
+                    if (sec != last) { put(pos, sectionTitles.getOrNull(sec) ?: groupsHeading); last = sec }
+                }
+            }
+        }
     }
+    fun lazyIndexOf(pos: Int): Int = headerCount + pos + headingAt.keys.count { it <= pos }
     fun stepTo(pos: Int) {
         stepTarget = pos
         stepJob?.cancel()
@@ -645,7 +824,7 @@ internal fun LiveCategories(
     LaunchedEffect(selectedIndex) {
         val pos = visible.indexOf(selectedIndex)
         if (!hasFocus || chipsFocused || pos < 0) return@LaunchedEffect
-        runCatching { listState.scrollToItem(pos + headerCount) } // the search field and playlist rows come first
+        runCatching { listState.scrollToItem(lazyIndexOf(pos)) } // the search field and playlist rows come first
         withFrameNanos { }
         runCatching { rowFocusers[pos].requestFocus() }
     }
@@ -655,7 +834,7 @@ internal fun LiveCategories(
         visible.indexOf(target).takeIf { it >= 0 }?.let { pos ->
             // A row further than the screen (a CH± jump) is not composed yet: scroll to it first.
             if (!runCatching { rowFocusers[pos].requestFocus() }.getOrDefault(false)) {
-                runCatching { listState.scrollToItem(pos + headerCount) } // the search field and playlist rows come first
+                runCatching { listState.scrollToItem(lazyIndexOf(pos)) } // the search field and playlist rows come first
                 withFrameNanos { }
                 runCatching { rowFocusers[pos].requestFocus() }
             }
@@ -728,7 +907,7 @@ internal fun LiveCategories(
                         val target = if (pos in rowFocusers.indices) rowFocusers[pos] else searchFocus
                         if (!runCatching { target.requestFocus() }.getOrDefault(false)) {
                             scope.launch {
-                                runCatching { listState.scrollToItem(if (pos >= 0) pos + headerCount else 0) }
+                                runCatching { listState.scrollToItem(if (pos >= 0) lazyIndexOf(pos) else 0) }
                                 withFrameNanos { }
                                 runCatching { target.requestFocus() }
                             }
@@ -784,11 +963,11 @@ internal fun LiveCategories(
             }
             visible.forEachIndexed { pos, index ->
                 val entry = entries[index]
-                if (index == firstGroup && query.isBlank()) {
-                    item(key = "__groups__") {
-                        if (sheet) StageGroupLabel(groupsHeading, sheet = true)
+                headingAt[pos]?.let { heading ->
+                    item(key = "__groups__$pos") {
+                        if (sheet) StageGroupLabel(heading, sheet = true)
                         else Text(
-                            groupsHeading, style = stageText(12.5f, 800, 0.13.em), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            heading, style = stageText(12.5f, 800, 0.13.em), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(start = 14.mpx, top = 8.mpx, bottom = 8.mpx),
                         )
                     }
@@ -810,8 +989,9 @@ internal fun LiveCategories(
                     // glcn: Favourites' groups sit in under it.
                     val rowModifier = if (entry.item.nested) baseRow.padding(start = NESTED_INDENT) else baseRow
                     if (sheet) {
+                        val glyph = entry.groupGlyph()
                         StageSheetItem(
-                            text = entry.label,
+                            text = if (tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) "" else entry.label,
                             onClick = { onSelect(index) },
                             icon = entry.icon,
                             count = entry.count?.let { tv.own.owntv.ui.components.formatCount(it) },
@@ -820,9 +1000,10 @@ internal fun LiveCategories(
                             tags = if (entry.name?.tags.isNullOrEmpty()) null else { focused ->
                                 entry.name.tags.forEach { StageTag(it, onAccent = if (focused) a.onAccent else null) }
                             },
-                            trailing = entry.mark?.let { m -> { _ -> StagePlaylistMark(m) } },
+                            // glcn: not on a platform's row (Netflix, HBO…) — those only come from Emby / Jellyfin.
+                            trailing = entry.mark?.takeUnless { entry.name?.name?.let(tv.own.owntv.glcn.CategoryIcons::isPlatform) == true }?.let { m -> { focused -> StagePlaylistMark(m, onLight = focused) } },
                             onLongClick = { entryLong(entry, index) },
-                            leading = entry.groupGlyph()?.let { g -> { tint -> tv.own.owntv.glcn.CategoryGlyphView(g, tint) } },
+                            leading = glyph?.let { g -> { tint -> tv.own.owntv.glcn.CategoryGlyphView(g, tint, name = entry.label) } },
                             modifier = rowModifier,
                         )
                     } else {
@@ -874,10 +1055,11 @@ private fun LiveColumnItem(
         ) {
             val on = if (focused) a.onAccent else null
             entry.icon?.let { OwnTVIcon(it, on ?: StageColors.Muted, Modifier.size(20.mpx)) }
-            entry.groupGlyph()?.let { tv.own.owntv.glcn.CategoryGlyphView(it, on ?: StageColors.Muted, size = 20.mpx) }
+            val glyph = entry.groupGlyph()
+            glyph?.let { tv.own.owntv.glcn.CategoryGlyphView(it, on ?: StageColors.Muted, size = 20.mpx, name = entry.label) }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.mpx)) {
-                Text(
-                    entry.label, style = stageText(18.5f, 600),
+                if (!tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) Text(
+                    entry.label, style = stageText(17, 600),
                     color = on ?: if (selected) a.accent else stageTone(Color(0xFFCDD7D3), StageColors.ItemText),
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
@@ -886,7 +1068,8 @@ private fun LiveColumnItem(
                 if (tags.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(6.mpx)) { tags.forEach { StageTag(it, onAccent = on) } }
             }
             entry.count?.let { Text(tv.own.owntv.ui.components.formatCount(it), style = stageText(15, 700), color = on ?: StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            entry.mark?.let { m -> Box(Modifier.size(7.mpx).background(m.shownColor, RoundedCornerShape(50))) }
+            entry.mark?.takeUnless { entry.name?.name?.let(tv.own.owntv.glcn.CategoryIcons::isPlatform) == true }
+                ?.let { m -> Box(Modifier.size(7.mpx).background(m.shownColor, RoundedCornerShape(50))) }
         }
     }
 }

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,9 +33,48 @@ internal fun LiveCategoryEntry.groupGlyph(): CategoryIcons.Glyph? {
 
 /** glcn: a group's picture at the size of the list's line icons: the line icon in [tint], or the posters' chip. */
 @Composable
-internal fun CategoryGlyphView(glyph: CategoryIcons.Glyph, tint: Color, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 22.mpx) {
+internal fun CategoryGlyphView(
+    glyph: CategoryIcons.Glyph,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 22.mpx,
+    /** The group's name, read out when the logo stands in for it. */
+    name: String? = null,
+) {
     when (glyph) {
         is CategoryIcons.Glyph.Icon -> CategoryIconShape(glyph.key, tint, modifier.size(size))
+        // The platform's logo in the row's own colour (no plate): light on the list, dark on the focused row.
+        // Alone (no name beside it) it is drawn larger, in the name's place.
+        // Sized by its own shape, to the same optical weight: about the same area for every logo, within a
+        // height and a width — a long one (Netflix) no longer fills the box while a square one (PBS) shrank in it.
+        is CategoryIcons.Glyph.Logo -> {
+            val alone = CategoryIcons.hidesName(glyph)
+            var ratio by androidx.compose.runtime.remember(glyph.url) { androidx.compose.runtime.mutableFloatStateOf(LOGO_DEFAULT_RATIO) }
+            val area = if (alone) LOGO_AREA_ALONE else LOGO_AREA_BESIDE
+            val maxH = if (alone) LOGO_MAX_H_ALONE else LOGO_MAX_H_BESIDE
+            val maxW = if (alone) LOGO_MAX_W_ALONE else LOGO_MAX_W_BESIDE
+            var h = kotlin.math.sqrt(area / ratio).coerceAtMost(maxH)
+            var w = h * ratio
+            if (w > maxW) { w = maxW; h = w / ratio }
+            // Alone, the logo stands in the middle of the row's free width (it sat at the left with the row empty
+            // to its right); beside a name it keeps to the left.
+            Box(
+                modifier.size(if (alone) size * LOGO_SLOT_ALONE else size * w, size * maxH),
+                contentAlignment = if (alone) Alignment.Center else Alignment.CenterStart,
+            ) {
+                coil3.compose.AsyncImage(
+                    model = glyph.url, contentDescription = if (alone) name else null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    alignment = Alignment.CenterStart,
+                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(tint, androidx.compose.ui.graphics.BlendMode.SrcIn),
+                    onSuccess = { s ->
+                        val i = s.painter.intrinsicSize
+                        if (i.width > 0f && i.height > 0f) ratio = (i.width / i.height).coerceIn(0.5f, 8f)
+                    },
+                    modifier = Modifier.size(size * w, size * h),
+                )
+            }
+        }
         is CategoryIcons.Glyph.Badge -> Text(
             glyph.text,
             style = stageText(if (glyph.text.length > 3) 10.5f else 11.5f, 800),
@@ -124,3 +165,14 @@ internal fun CategoryIconPicker(groupName: String, onDismiss: () -> Unit) {
 }
 
 private const val PICKER_COLUMNS = 7
+
+// glcn: platform logos' optical size, in units of the list's icon size — area, then the height and width caps.
+private const val LOGO_DEFAULT_RATIO = 3f
+private const val LOGO_AREA_ALONE = 7.5f
+private const val LOGO_MAX_H_ALONE = 2.1f
+private const val LOGO_MAX_W_ALONE = 7f
+/** The width a logo shown alone is centred in: the row's free room between the left edge and the count. */
+private const val LOGO_SLOT_ALONE = 12f
+private const val LOGO_AREA_BESIDE = 2.0f
+private const val LOGO_MAX_H_BESIDE = 1.25f
+private const val LOGO_MAX_W_BESIDE = 2.8f

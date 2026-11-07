@@ -1,0 +1,20 @@
+# glcn: keeps the download total that never goes down (see glcn/download_stats.py) — every six hours, and on demand.
+name: Download count glcn
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  count:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Count downloads
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 glcn/download_stats.py

@@ -15,6 +15,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -46,16 +47,32 @@ fun AmbientTrailer(
     /** glcn: how far it has played, for that carry-over. */
     onSecond: (Float) -> Unit = {},
     onPlaying: () -> Unit = {},
+    /** glcn: it stopped showing a moving picture (paused, buffering) — YouTube's own overlays would show: hidden. */
+    onPaused: () -> Unit = {},
     onDone: () -> Unit,
 ) {
     val context = LocalContext.current
     val keys = remember(stored) { tv.own.owntv.core.metadata.TrailerKeys.split(stored).ifEmpty { listOf(stored) } }
     var playing by remember { mutableStateOf(false) }
     val alpha by animateFloatAsState(if (playing) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(TRAILER_FADE_MS), label = "ambientTrailer")
-    val view = remember { TrailerPool.view(context) }
-    if (view == null) { LaunchedEffect(Unit) { onDone() }; return }
+    // glcn: no player right now (a few seconds after a film, memory short for a moment): asked again a few times before
+    // giving up — it gave up at once, and that trailer never came on that page.
+    var view by remember { mutableStateOf(TrailerPool.view(context)) }
+    if (view == null) {
+        LaunchedEffect(Unit) {
+            repeat(VIEW_RETRIES) {
+                kotlinx.coroutines.delay(VIEW_RETRY_MS)
+                TrailerPool.view(context)?.let { view = it; return@LaunchedEffect }
+            }
+            tv.own.owntv.player.LiveDiagnosticsLog.event("trailer: no player available — skipped")
+            onDone()
+        }
+        return
+    }
+    val playerView = view!!
     val secondNow by rememberUpdatedState(onSecond)
     val playingNow by rememberUpdatedState(onPlaying)
+    val pausedNow by rememberUpdatedState(onPaused)
     val doneNow by rememberUpdatedState(onDone)
     val owner = remember { Any() }
     DisposableEffect(stored) {
@@ -64,6 +81,7 @@ fun AmbientTrailer(
                 owner = owner, keys = keys, startAt = startAt, start = start, muted = muted,
                 onSecond = { secondNow(it) },
                 onPlaying = { playing = true; playingNow() },
+                onPaused = { playing = false; pausedNow() },
                 onDone = { playing = false; doneNow() },
             ),
         )
@@ -77,9 +95,18 @@ fun AmbientTrailer(
     androidx.compose.foundation.layout.BoxWithConstraints(modifier.clipToBounds()) {
         val ratio = if (maxHeight.value > 0f) maxWidth.value / maxHeight.value else VIDEO_RATIO
         val cover = maxOf(ratio / VIDEO_RATIO, VIDEO_RATIO / ratio).coerceIn(1f, 1.6f) * TRAILER_OVERSCAN
+        // glcn: fluidity — the player is laid out at most [TRAILER_RENDER_W] pixels wide and scaled up to the window.
+        // YouTube picks the video's quality from the player's size, so it streams and decodes a light ~540p picture,
+        // and the web page composes a quarter of the pixels; behind the page's soft edges the difference is not seen.
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val boxW = with(density) { maxWidth.toPx() }
+        val renderScale = if (boxW > TRAILER_RENDER_W) boxW / TRAILER_RENDER_W else 1f
+        val renderW = maxWidth / renderScale
+        val renderH = maxHeight / renderScale
         AndroidView(
-            factory = { (view.parent as? ViewGroup)?.removeView(view); view },
-            modifier = Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha; scaleX = cover; scaleY = cover },
+            factory = { (playerView.parent as? ViewGroup)?.removeView(playerView); playerView },
+            modifier = Modifier.align(androidx.compose.ui.Alignment.Center).requiredSize(renderW, renderH)
+                .graphicsLayer { this.alpha = alpha; scaleX = cover * renderScale; scaleY = cover * renderScale },
             onRelease = { (it.parent as? ViewGroup)?.removeView(it) },
         )
     }
@@ -100,15 +127,22 @@ object TrailerPool {
         var muted: Boolean,
         val onSecond: (Float) -> Unit,
         val onPlaying: () -> Unit,
+        val onPaused: () -> Unit,
         val onDone: () -> Unit,
     ) {
         var index = 0
         var started = false
+        /** glcn: when it was told to play, and when its picture last moved (uptime ms) — for the stall watch. */
+        var startedAt = 0L
+        var movedAt = 0L
+        var loggedPlay = false
     }
 
     private val main = Handler(Looper.getMainLooper())
     private var view: YouTubePlayerView? = null
     private var player: YouTubePlayer? = null
+    /** glcn: the trailer's web page, to switch YouTube's captions off (the window's overscan cut them in half). */
+    private var web: android.webkit.WebView? = null
     private var request: Request? = null
     /** The video the player holds now (cued or playing), and whether it is playing — a page taking over the same
      *  trailer keeps it going rather than loading it again (that reload was the slow step on opening a title). */
@@ -123,9 +157,17 @@ object TrailerPool {
     /** glcn: pause the trailer while something else plays ([on] = true), and let it go on once that ends. */
     fun hold(on: Boolean) {
         holds = (holds + if (on) 1 else -1).coerceAtLeast(0)
+        tv.own.owntv.player.LiveDiagnosticsLog.event("trailer: ${if (on) "held" else "released"} (holds $holds)")
         val p = player ?: return
         if (holds > 0) runCatching { p.pause() }
-        else request?.takeIf { it.started }?.let { runCatching { p.play() } }
+        else request?.takeIf { it.started }?.let { r ->
+            runCatching { p.play() }
+            r.movedAt = android.os.SystemClock.uptimeMillis()
+            // glcn: back from the page's lower part the web page sometimes ignored play(): loaded again where it was.
+            main.postDelayed({
+                if (request === r && holds == 0 && !isPlaying) loadedKey?.let { k -> runCatching { player?.loadVideo(k, lastSecond) } }
+            }, RESUME_CHECK_MS)
+        }
     }
 
     /** Get the player ready ahead of the first trailer (a page that may show one calls this). */
@@ -139,6 +181,10 @@ object TrailerPool {
     fun view(context: Context): YouTubePlayerView? {
         if (!allowed()) return null
         view?.let { return it }
+        // glcn: no new web view right after a film, or while Android says memory is short — its start-up blocks the
+        // main thread and, on a box short of memory, long enough for an "app not responding".
+        if (android.os.SystemClock.uptimeMillis() < notBefore) { logOnce("trailer: waiting after a film"); return null }
+        if (memoryShort(context)) { logOnce("trailer: memory short, no player yet"); return null }
         // glcn: made on the activity (not a dialog's context, not the application's): a web view on the application's
         // context does not know the screen it draws on, and video played less smoothly. Let go when the activity goes.
         val app = activityOf(context) ?: context.applicationContext
@@ -152,6 +198,7 @@ object TrailerPool {
         }.getOrNull() ?: return null
         val options = IFramePlayerOptions.Builder(app).controls(0).fullscreen(0).rel(0).ivLoadPolicy(3).ccLoadPolicy(0).build()
         if (runCatching { created.initialize(listener, options) }.isFailure) { runCatching { created.release() }; return null }
+        runCatching { guardRenderer(created) }
         // glcn: moved into another window (a title's page opens in its own), the video went on playing but its picture
         // did not follow — heard and not seen. On such a move a playing trailer is loaded again at the second it was at.
         created.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
@@ -177,7 +224,7 @@ object TrailerPool {
             // The same trailer, handed on: it goes on from where it is, no new load.
             request = r
             applyMute(p, r.muted)
-            if (r.start) { r.started = true; if (isPlaying) r.onPlaying() else if (holds == 0) p.play() }
+            if (r.start) { r.started = true; markStarted(r); if (isPlaying) r.onPlaying() else if (holds == 0) p.play() }
             return
         }
         request?.let { old -> if (old.owner !== r.owner) runCatching { player?.pause() } }
@@ -189,7 +236,44 @@ object TrailerPool {
         val r = request?.takeIf { it.owner === owner } ?: return
         r.start = true
         val p = player ?: return
-        if (!r.started) { r.started = true; if (holds == 0) p.play() }
+        if (!r.started) { r.started = true; markStarted(r); if (holds == 0) p.play() }
+    }
+
+    private fun markStarted(r: Request) {
+        r.startedAt = android.os.SystemClock.uptimeMillis()
+        r.movedAt = r.startedAt
+        main.removeCallbacks(stallWatch)
+        main.postDelayed(stallWatch, STALL_TICK_MS)
+    }
+
+    /**
+     * glcn: a trailer YouTube never really plays (blocked outside its site, region, gone) sat as a dark band over
+     * the picture, waiting. If its picture has not moved for [STALL_MS] since it was told to play, the next key is
+     * tried, then it gives up and the page keeps its picture.
+     */
+    private val stallWatch: Runnable = object : Runnable {
+        override fun run() {
+            val r = request ?: return
+            if (!r.started) return
+            val now = android.os.SystemClock.uptimeMillis()
+            if (holds == 0 && now - r.movedAt >= STALL_MS) {
+                tv.own.owntv.player.LiveDiagnosticsLog.event("trailer did not play in ${STALL_MS / 1000}s — skipped")
+                val p = player
+                if (p != null && r.index < r.keys.lastIndex) {
+                    r.index++
+                    val key = r.keys[r.index]
+                    loadedKey = key
+                    r.movedAt = now
+                    runCatching { p.loadVideo(key, 0f) }
+                } else {
+                    request = null
+                    runCatching { p?.pause() }
+                    r.onDone()
+                    return
+                }
+            }
+            main.postDelayed(this, STALL_TICK_MS)
+        }
     }
 
     fun setMuted(owner: Any, muted: Boolean) {
@@ -213,6 +297,8 @@ object TrailerPool {
 
     /** Let the player go now, its memory with it; the next trailer makes a new one. */
     fun free() {
+        wasPlaying = true
+        tv.own.owntv.glcn.FrameWatch.trailerOn = false
         main.removeCallbacks(idleFree)
         val v = view ?: return
         val r = request
@@ -228,6 +314,83 @@ object TrailerPool {
     }
 
     private fun allowed(): Boolean = !tv.own.owntv.glcn.LowRam.on
+
+    private var lastLog = ""
+    private var lastLogAt = 0L
+    /** glcn: a reason line in the report, not repeated within half a minute. */
+    private fun logOnce(line: String) {
+        val now = android.os.SystemClock.uptimeMillis()
+        if (line == lastLog && now - lastLogAt < 30_000L) return
+        lastLog = line; lastLogAt = now
+        tv.own.owntv.player.LiveDiagnosticsLog.event(line)
+    }
+
+    /**
+     * glcn: the web view's page runs in its own process; when that process stops answering, every command the player
+     * sends it (on the main thread) waits — the app froze until Android closed it. Android 10+ says when the page
+     * stops answering: it is ended there and then (from a background thread, since the main one is the one waiting),
+     * and its end is handled (the player let go) instead of taking the app down with it.
+     */
+    private fun guardRenderer(root: android.view.View) {
+        val web = findWebView(root) ?: return
+        this.web = web
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            web.setWebViewRenderProcessClient(watcher, object : android.webkit.WebViewRenderProcessClient() {
+                override fun onRenderProcessUnresponsive(view: android.webkit.WebView, renderer: android.webkit.WebViewRenderProcess?) {
+                    tv.own.owntv.player.LiveDiagnosticsLog.event("trailer page not answering — ended")
+                    runCatching { renderer?.terminate() }
+                }
+                override fun onRenderProcessResponsive(view: android.webkit.WebView, renderer: android.webkit.WebViewRenderProcess?) {}
+            })
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            val inner = web.webViewClient
+            web.webViewClient = GuardClient(inner) { main.post { free() } }
+        }
+    }
+
+    private val watcher: java.util.concurrent.Executor by lazy { java.util.concurrent.Executors.newSingleThreadExecutor() }
+
+    private fun findWebView(v: android.view.View): android.webkit.WebView? = when (v) {
+        is android.webkit.WebView -> v
+        is ViewGroup -> (0 until v.childCount).firstNotNullOfOrNull { findWebView(v.getChildAt(it)) }
+        else -> null
+    }
+
+    /** The player's own page client, with the page process's end handled: the trailer goes, the app stays. */
+    private class GuardClient(private val inner: android.webkit.WebViewClient, private val onGone: () -> Unit) : android.webkit.WebViewClient() {
+        override fun shouldOverrideUrlLoading(view: android.webkit.WebView, request: android.webkit.WebResourceRequest) = inner.shouldOverrideUrlLoading(view, request)
+        override fun onPageStarted(view: android.webkit.WebView, url: String?, favicon: android.graphics.Bitmap?) = inner.onPageStarted(view, url, favicon)
+        override fun onPageFinished(view: android.webkit.WebView, url: String?) = inner.onPageFinished(view, url)
+        override fun shouldInterceptRequest(view: android.webkit.WebView, request: android.webkit.WebResourceRequest) = inner.shouldInterceptRequest(view, request)
+        override fun onReceivedError(view: android.webkit.WebView, request: android.webkit.WebResourceRequest, error: android.webkit.WebResourceError) = inner.onReceivedError(view, request, error)
+        override fun onReceivedHttpError(view: android.webkit.WebView, request: android.webkit.WebResourceRequest, response: android.webkit.WebResourceResponse) = inner.onReceivedHttpError(view, request, response)
+        override fun onRenderProcessGone(view: android.webkit.WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+            tv.own.owntv.player.LiveDiagnosticsLog.event("trailer page process gone (crashed=${detail.didCrash()}) — player let go")
+            onGone()
+            return true
+        }
+    }
+
+    /** glcn: whether a trailer player exists now (for the memory diary). */
+    val active: Boolean get() = view != null
+
+    /** glcn: no player is made before this (uptime ms). */
+    private var notBefore = 0L
+    private var wasPlaying = false
+
+    /** glcn: called with nothing playing; the first call after a player closed starts the wait. */
+    fun coolDownAfterPlayer() {
+        if (!wasPlaying) return
+        wasPlaying = false
+        notBefore = android.os.SystemClock.uptimeMillis() + AFTER_PLAYER_MS
+    }
+
+    private fun memoryShort(context: Context): Boolean = runCatching {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val info = android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
+        info.lowMemory
+    }.getOrDefault(false)
 
     private fun activityOf(context: Context): android.app.Activity? {
         var c: Context? = context
@@ -245,9 +408,10 @@ object TrailerPool {
     private fun load(p: YouTubePlayer, r: Request) {
         applyMute(p, r.muted)
         val key = r.keys.getOrNull(r.index) ?: return
+        tv.own.owntv.player.LiveDiagnosticsLog.event("trailer: load ${r.index + 1}/${r.keys.size}")
         loadedKey = key
         isPlaying = false
-        if (r.start && holds == 0) { r.started = true; p.loadVideo(key, r.startAt) } else p.cueVideo(key, r.startAt)
+        if (r.start && holds == 0) { r.started = true; markStarted(r); p.loadVideo(key, r.startAt) } else p.cueVideo(key, r.startAt)
     }
 
     private val listener = object : AbstractYouTubePlayerListener() {
@@ -255,9 +419,13 @@ object TrailerPool {
             player = youTubePlayer
             request?.let { load(youTubePlayer, it) }
         }
-        override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) { lastSecond = second; request?.onSecond?.invoke(second) }
+        override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
+            if (second != lastSecond && isPlaying) request?.movedAt = android.os.SystemClock.uptimeMillis()
+            lastSecond = second; request?.onSecond?.invoke(second)
+        }
         override fun onStateChange(youTubePlayer: YouTubePlayer, state: PlayerConstants.PlayerState) {
             isPlaying = state == PlayerConstants.PlayerState.PLAYING
+            tv.own.owntv.glcn.FrameWatch.trailerOn = isPlaying
             if (state == PlayerConstants.PlayerState.ENDED) loadedKey = null
             val r = request ?: return
             // glcn: moved to another page (another window), the web view pauses the video by itself — a trailer that is
@@ -266,13 +434,26 @@ object TrailerPool {
                 main.postDelayed({ if (request === r && !isPlaying && holds == 0) runCatching { player?.play() } }, RESUME_AFTER_MOVE_MS)
             }
             when (state) {
-                PlayerConstants.PlayerState.PLAYING -> if (r.started) r.onPlaying()
+                PlayerConstants.PlayerState.PLAYING -> if (r.started) {
+                    // glcn: no captions on a trailer — YouTube can turn them on by itself (the viewer's or the video's
+                    // own setting), and the window's overscan cut them in half at the foot.
+                    runCatching { web?.evaluateJavascript(CAPTIONS_OFF_JS, null) }
+                    val first = !r.loggedPlay
+                    if (first) { r.loggedPlay = true; tv.own.owntv.player.LiveDiagnosticsLog.event("trailer: playing after ${(android.os.SystemClock.uptimeMillis() - r.startedAt) / 100 / 10.0}s") }
+                    // glcn: YouTube lays its title, channel, Share and logo over the first seconds of a video (and again
+                    // for a moment after a pause); the trailer is shown only once they have gone.
+                    main.postDelayed({ if (request === r && isPlaying) r.onPlaying() }, if (first) OVERLAY_START_MS else OVERLAY_RESUME_MS)
+                }
+                // glcn: paused or waiting, YouTube draws its title bar, its logo and "More videos" over the picture —
+                // the trailer is hidden until it moves again (the page's picture shows meanwhile).
+                PlayerConstants.PlayerState.PAUSED, PlayerConstants.PlayerState.BUFFERING -> if (r.started) r.onPaused()
                 PlayerConstants.PlayerState.ENDED -> { request = null; r.onDone() }
                 else -> Unit
             }
         }
         override fun onError(youTubePlayer: YouTubePlayer, error: PlayerConstants.PlayerError) {
             val r = request ?: return
+            tv.own.owntv.player.LiveDiagnosticsLog.event("trailer: YouTube error $error on ${r.index + 1}/${r.keys.size}")
             if (r.index < r.keys.lastIndex) {
                 r.index++
                 val key = r.keys[r.index]
@@ -282,14 +463,27 @@ object TrailerPool {
         }
     }
 
-    private const val IDLE_FREE_MS = 60_000L
+    private const val IDLE_FREE_MS = 90_000L // glcn: kept warm between pages (making a new one was the slow start); the memory brake lets it go when memory is short
+    private const val AFTER_PLAYER_MS = 6_000L
     private const val HANDOVER_MS = 250L
     private const val RESUME_AFTER_MOVE_MS = 120L
+    private const val RESUME_CHECK_MS = 900L
+    private const val OVERLAY_START_MS = 3_000L
+    private const val OVERLAY_RESUME_MS = 2_000L
+    private const val STALL_MS = 15_000L // glcn: a slow start (first buffering) is not a stall
+    private const val STALL_TICK_MS = 2_000L
 }
 
 /** glcn: a trailer's own shape, and a little more so a thin line at its edge never shows. */
 private const val VIDEO_RATIO = 16f / 9f
-private const val TRAILER_OVERSCAN = 1.03f
+private const val TRAILER_OVERSCAN = 1.08f // glcn: enough to keep YouTube's corner marks out of the window
+// glcn: the trailer player's largest laid-out width in pixels (YouTube then serves ~540p); scaled up to the window.
+private const val TRAILER_RENDER_W = 960f
 
 /** glcn: how fast a trailer comes in over the picture once it plays. */
 private const val TRAILER_FADE_MS = 450
+private const val VIEW_RETRIES = 5
+private const val VIEW_RETRY_MS = 2_000L
+
+/** glcn: unloads YouTube's caption module in the trailer page (the player is the page's global `player`). */
+private const val CAPTIONS_OFF_JS = "try{player.unloadModule('captions');player.unloadModule('cc');}catch(e){}"

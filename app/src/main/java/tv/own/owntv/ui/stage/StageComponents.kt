@@ -3,6 +3,7 @@ package tv.own.owntv.ui.stage
 import tv.own.owntv.ui.theme.stageTone
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.ui.res.stringResource
 import tv.own.owntv.R
 import androidx.compose.foundation.clickable
@@ -103,11 +104,63 @@ private const val ACCESSIBLE_RING = 5f
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocusInner(style: StageFocus, radius: Dp, a: StageAccent, palette: StagePalette) {
     val r = radius.toPx()
     val px = 1.mpx.toPx()
+    // glcn: Glass on — rows and cards focus as tinted glass: an accent wash fading downwards, a sheen over its upper
+    // half, a light catch along the top edge and a ring that fades from strong at the left to faint at the right.
+    if (style == StageFocus.FX && tv.own.owntv.glcn.GlassFocus.active) {
+        val light = palette.isLight
+        // A faint, close shadow only: a wide accent glow pushed down read as a blue band under the row on light pages.
+        drawBoxShadow(a.accent.copy(alpha = if (light) 0.07f else 0.2f), 20 * px, r, dy = 4 * px)
+        drawRoundRect(
+            Brush.verticalGradient(listOf(a.accent.copy(alpha = if (light) 0.40f else 0.52f), a.accent.copy(alpha = if (light) 0.14f else 0.20f))),
+            cornerRadius = CornerRadius(r),
+        )
+        // The sheen: light on the upper half, as a pane of glass catches it.
+        drawRoundRect(
+            Brush.verticalGradient(0f to Color.White.copy(alpha = if (light) 0.55f else 0.22f), 0.5f to Color.White.copy(alpha = 0f), endY = size.height),
+            cornerRadius = CornerRadius(r),
+        )
+        val catchY = 1.5f * px
+        drawLine(
+            Brush.horizontalGradient(listOf(Color.Transparent, Color.White, Color.Transparent), startX = r * 0.5f, endX = size.width - r * 0.5f),
+            start = androidx.compose.ui.geometry.Offset(r * 0.6f, catchY), end = androidx.compose.ui.geometry.Offset(size.width - r * 0.6f, catchY), strokeWidth = 2f * px,
+        )
+        val ring = 2.5f * px
+        drawRoundRect(
+            Brush.horizontalGradient(listOf(a.accent, (if (light) a.accent else a.focus).copy(alpha = 0.6f), a.accent.copy(alpha = 0.18f))),
+            topLeft = androidx.compose.ui.geometry.Offset(ring / 2f, ring / 2f), size = androidx.compose.ui.geometry.Size(size.width - ring, size.height - ring),
+            cornerRadius = CornerRadius((r - ring / 2f).coerceAtLeast(0f)), style = androidx.compose.ui.graphics.drawscope.Stroke(ring),
+        )
+        return
+    }
+    // glcn: Glass on — menu items, sheet rows, pills and buttons (FILLED / PRIMARY) as deep tinted glass: still
+    // dense enough under their on-accent text in both themes, with the same sheen, top light and fading ring.
+    if ((style == StageFocus.FILLED || style == StageFocus.PRIMARY) && tv.own.owntv.glcn.GlassFocus.on) {
+        drawBoxShadow(a.accent.copy(alpha = if (palette.isLight) 0.12f else 0.28f), 24 * px, r, dy = 6 * px)
+        drawRoundRect(
+            Brush.verticalGradient(listOf(a.accent.copy(alpha = 0.92f), a.accent.copy(alpha = 0.66f))),
+            cornerRadius = CornerRadius(r),
+        )
+        drawRoundRect(
+            Brush.verticalGradient(0f to Color.White.copy(alpha = 0.30f), 0.5f to Color.White.copy(alpha = 0f), endY = size.height),
+            cornerRadius = CornerRadius(r),
+        )
+        drawLine(
+            Brush.horizontalGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.85f), Color.Transparent), startX = r * 0.5f, endX = size.width - r * 0.5f),
+            start = androidx.compose.ui.geometry.Offset(r * 0.6f, 1.5f * px), end = androidx.compose.ui.geometry.Offset(size.width - r * 0.6f, 1.5f * px), strokeWidth = 2f * px,
+        )
+        val ring = 2f * px
+        drawRoundRect(
+            Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.75f), Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.08f))),
+            topLeft = androidx.compose.ui.geometry.Offset(ring / 2f, ring / 2f), size = androidx.compose.ui.geometry.Size(size.width - ring, size.height - ring),
+            cornerRadius = CornerRadius((r - ring / 2f).coerceAtLeast(0f)), style = androidx.compose.ui.graphics.drawscope.Stroke(ring),
+        )
+        return
+    }
     if (palette.isLight) {
         // `.mine.light`: the accent is the ring, set off from the item by a page-coloured gap.
         when (style) {
             StageFocus.FX -> {
-                drawBoxShadow(a.accent.copy(alpha = 0.18f), 30 * px, r, dy = 10 * px)
+                drawBoxShadow(a.accent.copy(alpha = 0.1f), 22 * px, r, dy = 5 * px)
                 drawRoundRect(
                     Brush.horizontalGradient(listOf(a.accent.copy(alpha = 0.18f), a.accent.copy(alpha = 0.06f))),
                     cornerRadius = CornerRadius(r),
@@ -329,11 +382,14 @@ fun StagePill(
     highlighted: Boolean = false,
     /** Idle text in the dim colour: a choice that is currently off. */
     dimmed: Boolean = false,
+    /** glcn: hold OK (Home's rows: move the row). */
+    onLongClick: (() -> Unit)? = null,
 ) {
     val a = stageAccent
     val r = StageRadii.Pill
     StageSurface(
         onClick = onClick,
+        onLongClick = onLongClick,
         radius = r,
         modifier = modifier.height(50.mpx).widthIn(max = 470.mpx),
         idle = Modifier.stageGlass(r),
@@ -378,6 +434,8 @@ fun StageTool(
     valueAccent: Boolean = false,
     /** `.danger`: a destructive action in red ("Clear watch history"). */
     danger: Boolean = false,
+    /** glcn: an icon-only pill whose [text] shows only while it is focused — a lighter toolbar. */
+    labelOnFocus: Boolean = false,
 ) {
     val a = stageAccent
     val r = StageRadii.Tool
@@ -394,7 +452,7 @@ fun StageTool(
         ) {
             val color = if (focused) a.onAccent else if (danger) StageColors.Danger else StageColors.Muted
             if (icon != null) StageIcon(icon, color, 20.mpx)
-            if (text != null) Text(text, style = stageText(18, 700), color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (text != null && (!labelOnFocus || focused || icon == null)) Text(text, style = stageText(18, 700), color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (value != null) Text(value, style = stageText(18, 700), color = if (focused) a.onAccent else if (valueAccent) a.accent else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (trailingIcon != null) StageIcon(trailingIcon, color, 20.mpx)
         }
@@ -516,7 +574,25 @@ fun StageTag(text: String, onAccent: Color? = null, tint: Color? = null) {
 
 /** `.pm`: which playlist a row comes from, outlined in that playlist's colour (see [PlaylistMark]). */
 @Composable
-fun StagePlaylistMark(mark: PlaylistMark) {
+fun StagePlaylistMark(
+    mark: PlaylistMark,
+    /** glcn: drawn on a light ground (a focused row) — the service's logo for light backgrounds, when it has one. */
+    onLight: Boolean = false,
+) {
+    // glcn: a playlist named after its service (Emby, Jellyfin, Plex, Movistar) shows the service's own logo, when
+    // that artwork is in the app (res/drawable/glcn_source_<service>, from the service's brand kit); else its name.
+    // On a light ground (the light theme, a focused row) its version for light backgrounds (…_light) if there is one.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val light = onLight || LocalStagePalette.current.isLight
+    val logoRes = androidx.compose.runtime.remember(mark.text, light) { sourceLogoRes(context, mark.text, light) }
+    if (logoRes != 0) {
+        androidx.compose.foundation.Image(
+            androidx.compose.ui.res.painterResource(logoRes), contentDescription = mark.text,
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            modifier = Modifier.height(20.mpx).widthIn(max = 84.mpx),
+        )
+        return
+    }
     val shape = RoundedCornerShape(7.mpx)
     val color = mark.shownColor
     Box(
@@ -531,6 +607,21 @@ fun StagePlaylistMark(mark: PlaylistMark) {
         Text(mark.text, style = stageText(12, 800, 0.04.em), color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
+
+/** glcn: the drawable of the service a playlist is named after, or 0. */
+@android.annotation.SuppressLint("DiscouragedApi")
+private fun sourceLogoRes(context: android.content.Context, name: String, light: Boolean = false): Int {
+    val n = name.lowercase(java.util.Locale.ROOT)
+    val key = SOURCE_LOGO_KEYS.firstOrNull { it in n } ?: return 0
+    val res = context.resources
+    if (light) res.getIdentifier(SOURCE_LOGO_PREFIX + key + SOURCE_LOGO_LIGHT, SOURCE_LOGO_TYPE, context.packageName).takeIf { it != 0 }?.let { return it }
+    return res.getIdentifier(SOURCE_LOGO_PREFIX + key, SOURCE_LOGO_TYPE, context.packageName)
+}
+
+private val SOURCE_LOGO_KEYS = listOf("jellyfin", "emby", "plex", "movistar")
+private const val SOURCE_LOGO_PREFIX = "glcn_source_"
+private const val SOURCE_LOGO_TYPE = "drawable"
+private const val SOURCE_LOGO_LIGHT = "_light"
 
 /** The mark's colour as shown: the pastel marks are darkened in light (`.mine.light .pm`, brightness .72) to read on white. */
 val PlaylistMark.shownColor: Color
@@ -881,10 +972,11 @@ fun StagePoster(
             )
             if (watched) {
                 Box(
+                    // glcn: a solid accent disc with a white check and rim — the old dark disc vanished on dark posters.
                     Modifier.align(Alignment.TopEnd).padding(8.mpx).size(if (compact) 26.mpx else 30.mpx)
-                        .background(badge.copy(alpha = 0.9f), CircleShape),
+                        .background(accent.accent, CircleShape).border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
                     contentAlignment = Alignment.Center,
-                ) { StageIcon(OwnTVIcon.CHECK, accent.accent, if (compact) 16.mpx else 18.mpx) }
+                ) { StageIcon(OwnTVIcon.CHECK, Color.White, if (compact) 15.mpx else 17.mpx) }
             } else if (fresh && (progress == null || progress <= 0f)) {
                 Text(
                     stringResource(R.string.glcn_new_badge),
@@ -1091,9 +1183,9 @@ fun StageEpisode(
             )
             if (watched) {
                 Box(
-                    Modifier.align(Alignment.TopEnd).padding(10.mpx).size(30.mpx).background(badge.copy(alpha = 0.9f), CircleShape),
+                    Modifier.align(Alignment.TopEnd).padding(10.mpx).size(30.mpx).background(accent.accent, CircleShape).border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
                     contentAlignment = Alignment.Center,
-                ) { StageIcon(OwnTVIcon.CHECK, accent.accent, 18.mpx) }
+                ) { StageIcon(OwnTVIcon.CHECK, Color.White, 17.mpx) }
             }
             if (progress != null && progress > 0f && !watched) {
                 Box(

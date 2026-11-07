@@ -42,10 +42,10 @@ object SmoothScroll {
         return if (quick) androidx.compose.animation.core.tween(QUICK_GLIDE_MS, easing = androidx.compose.animation.core.LinearOutSlowInEasing) else calm
     }
     @Volatile private var lastStart = 0L
-    /** Goes a little past and comes back (about 6 %): the elastic landing. */
-    private val ELASTIC = androidx.compose.animation.core.CubicBezierEasing(0.3f, 0.9f, 0.3f, 1.12f)
-    /** Home's page: softer start, a smaller overshoot. */
-    private val ELASTIC_SOFT = androidx.compose.animation.core.CubicBezierEasing(0.4f, 0.4f, 0.25f, 1.06f)
+    /** Eases out long without going past: the page never wobbles when it lands. */
+    private val ELASTIC = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
+    /** Home's page: softer start, no overshoot. */
+    private val ELASTIC_SOFT = androidx.compose.animation.core.CubicBezierEasing(0.4f, 0.2f, 0.2f, 1f)
 
     /**
      * glcn: a menu's list (Settings) — brisk enough that a quick run of ▼ never leaves the highlight off the screen,

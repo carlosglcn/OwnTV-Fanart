@@ -847,6 +847,24 @@ fun HomeScreen(
                                 soon = true,
                             )
 
+                            // glcn: the split Trending rows — plain poster rows, films or series only.
+                            HomeRow.TRENDING_MOVIES, HomeRow.TRENDING_SERIES -> {
+                                val split = if (row == HomeRow.TRENDING_MOVIES) state.trendingMovies else state.trendingSeries
+                                if (split.isNotEmpty()) TrendingPosterRow(
+                                    title = row.displayTitle(),
+                                    items = split,
+                                    start = contentStart,
+                                    onItemClick = { item ->
+                                        onActivateTrending(item) {
+                                            trendingToast.show(trendingUnavailableMessage)
+                                            vm.refresh()
+                                        }
+                                    },
+                                    onFocus = onNonHeroFocused,
+                                    firstItemFocusRequester = firstItemFocusRequester,
+                                    track = track,
+                                )
+                            }
                             HomeRow.GENRES -> androidx.compose.foundation.layout.Column(
                                 rowModifier,
                                 verticalArrangement = Arrangement.spacedBy(RowGap),
@@ -998,6 +1016,8 @@ private fun rowHasData(row: HomeRow, state: HomeUiState, sportsCards: Int): Bool
     HomeRow.TONIGHT -> state.tonight.isNotEmpty()
     HomeRow.GENRES -> state.genres.isNotEmpty()
     HomeRow.STARTING_SOON -> state.startingSoon.isNotEmpty()
+    HomeRow.TRENDING_MOVIES -> state.trendingMovies.isNotEmpty()
+    HomeRow.TRENDING_SERIES -> state.trendingSeries.isNotEmpty()
 }
 
 private fun rowCanRender(row: HomeRow, state: HomeUiState, showHeroFallback: Boolean, sportsCards: Int): Boolean =
@@ -1853,7 +1873,14 @@ private fun AllRowsHiddenState(
 
 /** glcn: the hold-OK menu of a Keep watching card. */
 @Composable
-internal fun KeepWatchingMenu(title: String, onRemove: () -> Unit, onDismiss: () -> Unit, label: String = stringResource(R.string.glcn_remove_from_continue)) {
+internal fun KeepWatchingMenu(
+    title: String,
+    onRemove: () -> Unit,
+    onDismiss: () -> Unit,
+    label: String = stringResource(R.string.glcn_remove_from_continue),
+    /** glcn: a second choice, "Move row" (the Dock's tabs). */
+    onMove: (() -> Unit)? = null,
+) {
     androidx.activity.compose.BackHandler { onDismiss() }
     val first = androidx.compose.runtime.remember { FocusRequester() }
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -1872,6 +1899,11 @@ internal fun KeepWatchingMenu(title: String, onRemove: () -> Unit, onDismiss: ()
                     onClick = { onRemove(); onDismiss() },
                     icon = OwnTVIcon.CLOSE,
                     modifier = Modifier.focusRequester(first),
+                )
+                if (onMove != null) tv.own.owntv.ui.stage.StageMenuItem(
+                    stringResource(R.string.settings_home_move_row),
+                    onClick = { onDismiss(); onMove() },
+                    icon = OwnTVIcon.MOVE,
                 )
             }
         }
@@ -1959,9 +1991,12 @@ private val PANEL_WIDE_ROWS = setOf(HomeRow.FEATURED, HomeRow.LIVE_SPORTS)
 private fun HomeReadScope(content: @Composable () -> Unit) { content() }
 
 /** glcn: Home's one focus box glides slower than a menu's — soft, never a jump. */
-private const val HOME_GLIDE_STIFFNESS = 380f
-/** glcn: a touch of overshoot — the box lands a little past and settles back, elastic; stiffer so it keeps pace. */
-private const val HOME_GLIDE_DAMPING = 0.72f
+/**
+ * glcn: brisk, like the player's picture strip (whose cards take the focus at once): the box is on the next card almost
+ * as the key lands, with only a small give at the end — it used to trail behind and catch up.
+ */
+private const val HOME_GLIDE_STIFFNESS = 1100f
+private const val HOME_GLIDE_DAMPING = 0.92f
 
 /** glcn: the rows a TV profile's Home keeps. */
 internal val TV_PROFILE_ROWS = setOf(

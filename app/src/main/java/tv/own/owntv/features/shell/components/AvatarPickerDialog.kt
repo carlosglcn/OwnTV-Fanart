@@ -82,8 +82,13 @@ fun AvatarPickerDialog(
                 }
             }
 
-            // glcn: 24 avatars — six to a row in smaller tiles, so the set fits the popup.
-            (0 until OwnTVAvatars.COUNT).toList().chunked(6).forEach { rowIds ->
+            // glcn: 48 avatars in two groups — Characters, then Objects — six to a row in smaller tiles.
+            listOf(
+                R.string.glcn_avatar_characters to (OwnTVAvatars.OBJECTS until OwnTVAvatars.COUNT).toList(),
+                R.string.glcn_avatar_objects to (0 until OwnTVAvatars.OBJECTS).toList(),
+            ).forEach { (groupLabel, groupIds) ->
+            tv.own.owntv.ui.stage.StageGroupLabel(stringResource(groupLabel), sheet = true)
+            groupIds.chunked(6).forEach { rowIds ->
                 Row(horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
                     rowIds.forEach { id ->
                         val isSelected = id == selectedId
@@ -92,6 +97,7 @@ fun AvatarPickerDialog(
                         }
                     }
                 }
+            }
             }
         }
     }

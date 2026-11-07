@@ -117,10 +117,10 @@ and shows its page beside the list; **Right** enters that page; **Back** returns
 |---|---|---|
 | **Long-press OK** / **Menu** key | any channel, film or show (not on Home) | The options menu — favourite, rename, hide, record, catch-up, move, download |
 | **Left** | Live TV, Movies, Series lists | Opens the categories (a sheet, or the column in **Separate** layouts) |
-| **Right** | Live TV channel list | Steps into the schedule beside the preview — what's next and later; OK = Remind me / Record / Watch |
+| **Right** / **Info** | Live TV channel list | That channel's Program details page |
 | **Hold Up / Down** | Live TV, Movies, Series lists | Runs through the list to its ends |
 | **Left** | full-screen live | Channel list for the folder you came from |
-| **Left ×2** | full-screen live | All Live TV categories, the same sheet as Live TV's (search, Favorites, Recently watched, Catch-up, All channels, groups) — switch list without stopping the stream |
+| **Left ×2** | full-screen live | The categories (the same sheet as Live TV's) beside the channels of the one you are in. **OK** on a category shows its channels; **Right** goes into them, **Left** back; **OK** on a channel plays it. **Back** closes both. Looking around never changes what CH+/CH− step through — the channel you pick does |
 | **Right** | full-screen live | The last 30 channels you watched, each with when you watched it |
 | **Left / Right** | full-screen live, a channel you can rewind (catch-up, or saved by **Pause and rewind live TV**), **Left and right rewind live TV** on | Rewind / go forward instead of the lists (the timeline comes up; hold to scrub) |
 | **Left / Right** | film or episode, controls hidden | Skip back / forward by your seek step; the seek bar comes up, hold to keep scrubbing |
@@ -171,6 +171,11 @@ phone on the same Wi-Fi, fill the form in the browser there, or upload an `.m3u`
 computer, and press **Send to TV**. The details land in the TV's form and you press **Start Import**.
 *(Idea from community PR #66 by @zarga03.)*
 
+**Editing a saved playlist works the same way:** Playlists → a playlist → **Edit** → **Edit from
+another device**. The page shows only that playlist's details; passwords, MAC addresses and M3U
+playlist addresses are never sent to it — leave those fields empty to keep them. What you send fills
+the edit form on the TV, and nothing changes until you press **Save** there.
+
 ### 🧪 Test connection
 **Where:** inside the Add/Edit form, and on each saved playlist row
 Says whether the account is active, when it expires, whether it's a trial, and how many connections
@@ -210,8 +215,9 @@ just above it checks whether your provider really serves it.
 
 ### 📡 Stalker portals
 **Where:** Add source → Stalker (MAC)
-Portal URL plus MAC. Stricter portals also take Serial Number, Device ID, Device ID2 and Signature
-under **Advanced device identification**.
+Portal URL plus MAC. A portal that also asks for a login takes it in **Username** and **Password**,
+right under the MAC; leave both empty otherwise. Stricter portals also take Serial Number, Device ID,
+Device ID2 and Signature under **Advanced device identification**.
 > **"Portal refused the login"?** Check the MAC, and check the TV's **date & time** — Stalker
 > validates timestamps and a clock a few minutes out fails the handshake.
 
@@ -223,6 +229,10 @@ under **Advanced device identification**.
 **Where:** Live TV → focus a channel → **OK**
 The preview pane plays it first; OK goes full screen with no reload. Beside the video: the programme,
 its progress and time left, the synopsis, and what's on next and later.
+**OK previews first** (Settings → Video player → Live TV, shown while Live preview is on) has a
+switch for Live TV and one for the TV Guide. With Live TV's on, moving through the list no longer
+plays anything: the first **OK** plays the channel in the preview, **OK** on that channel again goes
+full screen, and the video stays on it (its name on the picture) while you look around the list.
 If the stream stalls, the last picture stays on screen; after about 10 seconds the player says
 **Stream interrupted. Reconnecting…** and the picture comes back by itself when the network does.
 
@@ -232,10 +242,15 @@ The categories slide in as a sheet over the list — Favorites, History, Catch-u
 categories, then the provider's groups, each with its channel count. **Back** closes it.
 **Settings → Layout → Live TV layout** → **Separate** keeps them on screen as a column instead.
 
-### 📅 What's on next
-**Where:** Live TV → a channel → **Right**
-Steps into the schedule under the preview. **OK** on a later programme offers **Remind me**,
-**Record** or **Watch channel**; **Left** returns to the same channel.
+### 📅 Program details
+**Where:** Live TV → a channel → **Right**, the remote's **Info** key, or hold OK → **Program details**
+A full page with the channel's day: every programme on one line, grouped **Earlier · On now ·
+Later**, the one under the cursor opened with its times, facts, categories and whole description.
+**▲▼** move through the programmes; **Right** or **OK** goes to the opened programme's buttons —
+**Watch channel**, **Watch from start**, **Record**, **Record every showing**, **Remind me**,
+**Record from catch-up**, whichever fit it — **Left/Right** between them, **OK** runs one. **Up**
+from the first programme reaches **Yesterday · Today · Tomorrow**. **Back** closes. The next and
+later lines under the preview are for reading only.
 
 ### 🗓️ List or guide
 **Where:** the **Guide view** button in the Live TV tool row
@@ -287,7 +302,8 @@ Widevine and ClearKey channels play with nothing to set up — your TV does the 
 includes ClearKey channels whose playlist writes the key itself (`license_key=kid:key`); a playlist
 added before this update needs one refresh to pick the key up. They always
 use ExoPlayer, so the engine toggle is hidden for them. Some cheaper boxes only allow standard
-definition; that is the device's decision, not OwnTV's.
+definition; that is the device's decision, not OwnTV's. Apple FairPlay channels cannot play on any
+Android device — OwnTV says so instead of a general error; those playlists are made for Apple devices.
 
 ---
 
@@ -300,8 +316,13 @@ Below, one control line — **Today**, **Now**, **Category**, **Order**, **Searc
 then the grid, opened at now with the now-line about a third of the way across.
 - **Two steps:** focus picks a channel row; **OK** or **Right** steps into its programmes; **Back**
   steps out. Across an empty stretch, Left/Right move 30 minutes at a time.
-- **Hold OK** on a programme: **Remind me** (upcoming) or **Watch from start** (past), **Record**,
-  **Watch channel** and more.
+- **Hold OK** on a programme: **Program details** (the channel's day as a page, opened on this
+  programme — see Live TV › Program details), **Remind me** (upcoming) or **Watch from start**
+  (past), **Record**, **Watch channel** and more. The remote's **Info** key opens Program details
+  straight away.
+- **OK on a programme** plays its channel in the video at the top; **OK** again watches it full
+  screen. With the TV Guide's switch in **OK previews first** off, OK watches at once and the video
+  follows the highlighted row.
 - **Order:** Provider, A–Z, Catch-up first or Favourites first. **Category** uses Live TV's own list,
   and in Provider or A–Z the channels come in Live TV's order, moved ones in their place.
   Its **Show** group: **Channels without guide**, and **Video preview** — off, the top shows the
@@ -345,7 +366,9 @@ finishes, and the review window is waiting when you come back.
 How many days of upcoming guide the app stores, 1–14, seven by default. The same number decides how
 much is downloaded, how much is kept, and how far the grid scrolls — so raising it gives you a longer
 guide, and lowering it frees space. Old programmes are kept only on channels with catch-up, since
-those are the only ones that can play them back.
+those are the only ones that can play them back. For catch-up channels whose guide stops a day back,
+OwnTV asks the provider's archive for the rest of the week as their rows come on screen, so the guide
+reaches back as far as the recordings do.
 
 ### 🕰️ Guide time offset
 **Where:** Settings → Sources & guide → **EPG time offset** (global) · long-press a channel (just that one)
@@ -368,7 +391,8 @@ provider actually keeps.
 ### 🕐 Go back to a time
 **Where:** full-screen player → **Go back to…**
 Offers times counted back from now — `21:30`, `19:00`, `Sun 20:00`. The last row opens a
-day/hour/minute picker. **This works even on channels with no guide at all.**
+day/hour/minute picker. **This works even on channels with no guide at all.** When the guide knows what
+is on, the first row is **Start of “…”** — back to the beginning of the programme on air.
 
 ### ⏸️ Pause and rewind channels without catch-up
 **Where:** **Settings → Live TV → Pause and rewind live TV**
@@ -376,6 +400,9 @@ Off by default. While you watch a channel full screen, OwnTV saves it on this TV
 from that copy, so it still looks live — and you can **pause**, rewind and go forward on channels
 whose provider keeps no archive. Pause, the rewind/forward buttons, the bar, Left/Right and **Go live** work as on a catch-up channel. A dark stretch on the bar is a moment the connection
 dropped; playback jumps over it. If your internet drops, saving waits and carries on when it is back; the channel picks up by itself.
+Without it, a live channel paused for more than a minute goes back to the live edge when you press Play;
+a shorter pause carries on where it was. Switching the TV off and on also brings the channel back by
+itself, at the live edge.
 
 - **Rewind length:** 15 (default), 30, 45 or 60 minutes. At least **1 GB** of the TV's storage always
   stays free; the oldest part goes first.
@@ -436,7 +463,10 @@ A tile that cannot start says why rather than sitting blank.
 ### 🔌 How many channels your provider allows
 **Where:** Settings → Sources & guide → Playlists → **Info**
 OwnTV measures this once, at a playlist's first sync, and warns before refusing a stream. **Re-test**
-is inside Info — it stops anything playing and takes a few minutes.
+is inside Info — it stops anything playing and takes a few minutes; what it measures is kept, even when
+the provider's own number says less. **Ignore connection limit**, beside Re-test, lets Multiview and
+recordings try more streams than the playlist reports — for a provider that allows more than it says.
+A stream the provider refuses still says so.
 
 ---
 
@@ -452,12 +482,39 @@ left and switch on its leagues on the right. The more you choose, the longer loa
 **Sport buttons → All sports** fetches every league instead.
 
 ### 🗂️ The Sports page
-Two rows of buttons filter the page: sports (and ★ My teams) on top, that sport's leagues below.
+Three tabs sit after the title: **Scores | Calendar | Leagues**. Sports always opens on **Scores**;
+**▲** from the sport buttons reaches the tabs, **OK** opens one, **Back** on Calendar or Leagues
+returns to Scores.
+Two rows of buttons filter every tab: sports (and ★ My teams) on top, that sport's leagues below.
 **OK** switches a button on or off, so you can pick Bundesliga and Premier League together; none
-chosen shows everything. The choice stays until you close the app. **⟳** at the end of the top row
-rebuilds the sports data now; the bottom status pill says **Rebuilding sports…** while it runs.
-Rows: **Live now** (red LIVE mark), **Sport on your channels now** (from your guide) and
-**Starting soon**. **OK** on a match opens its page.
+chosen shows everything. The choice stays across the tabs until you close the app. **⟳** at the end
+of the top row rebuilds the sports data now; the bottom status pill says **Rebuilding sports…** while
+it runs.
+**Scores** rows: **Live now** (red LIVE mark), **Sport on your channels now** (from your guide) and
+**Starting soon**. **OK** on a match opens its page; **hold OK** offers Follow, Remind me (once Find
+channels has found a channel), each side's team page and the match page.
+
+### 📅 Calendar
+The month on the left — each day with how many matches each sport has (one league chosen: the
+pairings), ★ for a day one of My teams plays, a red dot while something is live — and the chosen day's
+matches on the right, by league. **◀ ▶** move a day, **▲ ▼** a week; past the last week the month
+turns. **OK** or **▶** from the last column goes into the day's list, **◀** comes back. **‹ ›** and
+**Today** at the top change month; months go back to the season's start. **OK** on a league heading
+opens that league in Leagues. Finished matches show the result; with Spoiler-free on, **OK** shows it.
+A month is downloaded when you open it and saved on the TV; without internet the saved copy shows.
+
+### 🏆 Leagues
+One card per followed league: who leads and what is next. **OK** opens the league in the tab,
+**hold OK** follows or unfollows it. A league shows **Table | Fixtures | Results** (Formula 1:
+**Drivers | Constructors | Races** with the next race weekend; other racing: Drivers | Races; ATP and
+WTA: **Rankings | Matches**). **OK** on a table row opens that team's page. A match page's **Table**
+tab and its league name at the top open the league here.
+
+### 👕 Team pages
+**Fixtures | Results** for the whole season, cups included, with the next match, the last five
+results and the team's place in the table. Open one from a match page's team (▲ from the tabs, then
+**OK**), a table row, **hold OK** on a match, or **Settings → App → Sports → My teams** (hold OK there
+stops following). Racing drivers, tennis players, fighters and cricket teams have none.
 
 ### 📋 A match page
 The box at the top shows the score, the time, the round and the venue with its city and country.
@@ -479,9 +536,12 @@ switched on. In the Move window, **▲ ▼** choose a row, **OK** picks it up an
 **Save** keeps the new order. The Sports page and the Home row follow it.
 
 ### ⚙️ Settings → App → Sports
-**Auto rebuild** every 1, 2, 4 or 8 hours, on every app start, or by hand. **Live refresh** updates
-live scores every 30–120 seconds while something sports is on screen. **Refresh sports data now**
-shows when it last updated. Also here: My teams, goal alerts, playlist and channel filters.
+**Auto rebuild** every 1, 2, 4 or 8 hours, on every app start, or by hand. **Calendar refresh**
+(every 1–30 days, 7 at first) is how often a saved current or coming month is downloaded again;
+past months never are. **Live refresh** updates live scores every 30–120 seconds while something
+sports is on screen. **Refresh sports data now** shows when it last updated, and also marks the saved
+months out of date.
+Also here: My teams, goal alerts, playlist and channel filters.
 
 ### 🏠 Sports on Home
 **Settings → Layout → Home screen** can show a **Sports** row: live and upcoming matches of your leagues and teams,
@@ -573,6 +633,9 @@ episodes**), **Trailer**, **All versions** (when your playlist has several copie
 favourite. **Down** reaches the pager under the buttons; **◀ ▶** there change the title. Moving into
 the rows folds the hero small; **Up** from the first row opens it again. **Posters only** shows the
 trending titles as the first poster row instead.
+
+While a large playlist is still loading after setup, Home says **Loading your library** with the
+number of titles stored so far, and that Now Trending appears as the library fills in.
 
 ### ▶️ Keep watching
 Partly-watched films, episodes and recent channels, newest first, as wide pictures with progress and
@@ -669,11 +732,31 @@ Pick a drawn avatar, or **Your own picture** — a file on this TV or a photo se
 A new profile can have its picture straight away: **Your own picture** is also in the window that
 creates a profile, and in Settings → **Profile** when you edit one.
 
+### ⬇️ Allow downloads
+**Where:** Settings → **Profile** → OK on a profile → **Allow downloads**
+Off takes every Download button and menu item away from that profile. With it on, **Download season**
+and **Download all episodes** first ask "Download N episodes?".
+
 ### 🚀 Where a profile opens
 **Where:** Settings → App → **App startup**
 **Home**, **Last channel** (full screen), **Last channel · TV Guide** or **Last channel · Live TV**
 (that screen opens on the channel's category with the channel focused and in the preview),
 **Live Favorites**, or one chosen channel picked from a searchable list.
+
+**Open OwnTV with the TV:** Settings → App → **Auto start on boot** · **Auto start on wake-up**, both
+off by default. *On boot* opens OwnTV once the TV has started up; *on wake-up* opens it each time the
+TV comes out of sleep, which is what most TVs do when you press the power button. A cold start lands
+on the App startup choice above; an OwnTV that was still running comes back where you left it, but a
+profile with a PIN asks for it again.
+- Android 10 and newer let an app open by itself only when it may **display over other apps**.
+  Turning an option on opens that permission's screen (or the list of apps, where the TV has no page
+  for one app); until it is allowed the row says so. If your TV has no such screen, the option cannot
+  work there. Some TVs also have an auto-start list of their own that has to allow OwnTV for *on boot*.
+- With **App startup** on a channel, *on wake-up* starts that stream every time — also when you woke
+  the TV for another app.
+- *On wake-up* keeps a small background listener, with a silent notification, while it is on. It is
+  offered on TVs only. If Android ends the listener, it comes back with the next boot, app start or
+  visit to Settings.
 
 ---
 
@@ -684,6 +767,8 @@ creates a profile, and in Settings → **Profile** when you edit one.
 | Clock (and programme time on a replay) | top centre, always |
 | Engine pill **⇄ MPV/EXO** | control bar |
 | **Go back to…** | control bar, catch-up channels |
+| **Sources** | control bar, live channels — the same channel in another quality, category or playlist; pick one to switch. Locked and hidden channels are left out |
+| **Aspect** | control bar — a press steps to the next mode (Fit, Fill, Stretch, Original, 16:9, 4:3) and names it; **hold OK** for the list |
 | ⓘ **Stream info** | right-most button — codec, resolution, HDR, bitrate, decoder, audio, buffer; on mpv also **Interlacing** (none, deinterlaced by the player or by the TV, or not deinterlaced) |
 | **Record** | control bar, live channels, once enabled |
 | **Multiview** | control bar, once enabled |
@@ -694,7 +779,7 @@ creates a profile, and in Settings → **Profile** when you edit one.
 - **Remote transport keys** work — play/pause, next, previous, from the remote, a headset or a voice
   assistant.
 - **A notification won't pause your film** — the sound dips and comes back.
-- **Mini-player** — subtitles show in it too. Get back to it from any screen via **Now Playing**.
+- **Mini-player** — subtitles show in it too. Get back to it from any screen via **Now Playing**. Browsing Live TV or the Guide behind it does not change it: expanded, the player, its guide card, Record and CH± are still about the channel playing.
 - **Picture-in-picture** — with Settings → Watching & recording → **Picture-in-picture when leaving
   the app** on (off by default), pressing **Home** while a video plays full screen or in the mini-player
   keeps it playing in a small window. Open OwnTV again for full screen; close the window to stop. Not
@@ -857,13 +942,21 @@ Hide, rename, reorder, and **unhide**. Highlights:
   until OwnTV goes to the background or you switch profile. **Remove lock** in the same menu asks the
   PIN, and removing this screen's PIN unlocks every category. 5 wrong PINs → a 30 s wait.
 
-### 🔀 Reorder the long-press menus
+### 🔀 Reorder or hide the long-press menus
 **Where:** Settings → Layout → **Long-press menus**
-Put the actions you use most at the top.
+Each menu starts in the order it shows today. **OK** on an action shows or hides it (hidden ones stay
+in the list, dimmed); **hold OK** picks it up to move it. **Reset** brings back every menu as shipped.
+Some actions only appear where they apply — Catch-up on catch-up channels, Remove from history in History.
 
 ### 📋 Browsing & lists
 **Where:** Settings → Layout → **Browsing & lists**
-Whether each section remembers the last category and item.
+Whether each section remembers the last category and item — each profile its own, so switching
+profile lands everyone where they left off, no restart. Only a category you pick is remembered; a
+startup choice or jumping to a channel from Search does not replace it. **TV Guide follows Live TV**
+(off by default): the TV Guide opens on Live TV's remembered category, and a category picked in the
+Guide becomes Live TV's too. **Live TV categories:** switch off
+**Catch-up** or **All channels** to drop them from Live TV, the guide, the player and Multiview; without All
+channels, Live TV opens on your first category (or Favorites).
 
 ### 🎞️ Animations
 **Where:** Settings → Appearance → **Animations** (a switch)
@@ -894,7 +987,7 @@ all settings** lists every setting whose name contains what you type, with its p
 | **Catch-up time zone per playlist** | Sources & guide | One provider's archive on a different clock (quarter-hour zones such as +05:30 included) |
 | **Hardware decoder** | Picture | On for smooth 4K; off only to diagnose |
 | **Prefer SDR** | Picture | When a stream offers both SDR and HDR, play the SDR one. Off by default |
-| **Auto frame rate** | Picture | Match the TV's refresh rate to the content. Off by default |
+| **Auto frame rate for films and series** · **for Live TV** | Picture | Match the TV's refresh rate to the content, separately for films and episodes and for live channels. Off by default; an earlier single setting carries into both |
 | **Pause during the display switch** · **Match resolution** | Picture | Films only: hold the film while the TV re-syncs (off–5 s); also switch to the film's resolution, never above the TV's own |
 | **Seek step / Live rewind step** | Watching & recording | How far the skip buttons jump |
 | **Left and right rewind live TV** | Live TV | Off by default — Left/Right open the channel list and history |
@@ -910,6 +1003,7 @@ all settings** lists every setting whose name contains what you type, with its p
 | **Programme reminders** · **Reminder time** | Sources & guide | Ask to switch, switch, or notify; how early |
 | **Measured stream stats** | App | Live fps, bitrate and dropped frames in Stream info |
 | **Check updates on startup** | App | Be told when a newer version is on GitHub |
+| **Auto start on boot** · **Auto start on wake-up** | App | Open OwnTV when the TV starts up or wakes from sleep. Off by default |
 | **Error log** | ⋯ More → Error log | The last crash and recent playback failures — exportable |
 | **Detailed playback logging** | App | Turn on before reproducing a playback bug |
 

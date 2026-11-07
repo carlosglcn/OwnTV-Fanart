@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -75,7 +77,7 @@ import tv.own.owntv.ui.theme.stageText
  * Always dark, whatever the app's style: a film is watched with the lights down.
  */
 
-internal enum class CinemaTab { INFO, AUDIO, SUBS, EPISODES, SETTINGS }
+internal enum class CinemaTab { INFO, AUDIO, SUBS, EPISODES, CHAPTERS, SETTINGS }
 
 /** What is actually playing, read from the engine: picture, sound and who plays it. */
 @Immutable
@@ -87,6 +89,10 @@ internal data class CinemaTech(
     val hdr: StreamHdrMode? = null,
     val dolbyVision: Boolean = false,
     val dvConverted: Boolean = false,
+    /** A converted profile 7: its enhancement layer was full (FEL) or minimal (MEL); null until known. */
+    val dvLayer: DolbyVisionNow.Layer? = null,
+    /** Dolby Vision turned off in Settings: the film plays as HDR10. */
+    val dvOff: Boolean = false,
     val audioCodec: String? = null,
     val channels: Int? = null,
     val passthrough: Boolean? = null,
@@ -116,7 +122,10 @@ internal fun rememberCinemaTech(player: PlaybackEngine): CinemaTech {
         else -> Unit
     }
     val onExo = t.engine == StreamEngine.EXOPLAYER
-    return t.copy(dolbyVision = onExo && dv.dolbyVision, dvConverted = onExo && dv.converted)
+    return t.copy(
+        dolbyVision = onExo && dv.dolbyVision, dvConverted = onExo && dv.converted,
+        dvLayer = if (onExo) dv.layer else null, dvOff = onExo && dv.turnedOff,
+    )
 }
 
 /** The badges for what plays — the stream first, the catalogue's marks where the stream cannot tell. */
@@ -134,7 +143,7 @@ internal fun cinemaBadges(t: CinemaTech, info: CinemaInfo?): List<CinemaBadge> {
         t.dolbyVision -> out += CinemaBadge(KEY_DV, LABEL_DV)
         t.hdr == StreamHdrMode.HDR10_PQ -> out += if ("hdr10+" in caps) CinemaBadge(KEY_HDR10P, LABEL_HDR10P) else CinemaBadge(KEY_HDR10, LABEL_HDR10)
         t.hdr == StreamHdrMode.HLG -> out += CinemaBadge(KEY_HLG, LABEL_HLG)
-        t.hdr == null && "dolby vision" in caps -> out += CinemaBadge(KEY_DV, LABEL_DV)
+        t.hdr == null && !t.dvOff && "dolby vision" in caps -> out += CinemaBadge(KEY_DV, LABEL_DV)
         t.hdr == null && "hdr" in caps -> out += CinemaBadge(KEY_HDR10, LABEL_HDR10)
     }
     soundBadge(t.audioCodec, caps)?.let { out += it }
@@ -240,6 +249,9 @@ internal fun CinemaBanner(
     onOpen: (CinemaTab) -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
+    hasChapters: Boolean = false,
+    /** glcn: where the chapters start, marked on the seek bar. */
+    chapterMarks: List<Long> = emptyList(),
 ) {
     Box(modifier.fillMaxSize()) {
         Box(
@@ -268,7 +280,14 @@ internal fun CinemaBanner(
                     Text(formatTime(pos), style = stageText(20, 700), color = Color.White.copy(alpha = 0.85f))
                     Spacer(Modifier.width(16.mpx))
                     Box(Modifier.weight(1f)) {
-                        SeekBar(positionMs = pos, durationMs = duration, bufferedMs = buffered, stepMs = seekStep, onSeek = { player.seekBy(it) }, focusRequester = seekFocus)
+                        // glcn: the Emby/Jellyfin seek previews, fetched once the controls are up.
+                        val thumbs by tv.own.owntv.core.emby.EmbyTrickplay.current.collectAsStateWithLifecycle()
+                        LaunchedEffect(thumbs) { thumbs?.prepare() }
+                        SeekBar(
+                            positionMs = pos, durationMs = duration, bufferedMs = buffered, stepMs = seekStep, onSeek = { player.seekBy(it) },
+                            focusRequester = seekFocus, marks = chapterMarks,
+                            preview = thumbs?.let { src -> { ms -> SeekThumb(src, ms) } },
+                        )
                     }
                     Spacer(Modifier.width(16.mpx))
                     Text(stringResource(R.string.player_time_remaining, formatTime((duration - pos).coerceAtLeast(0))), style = stageText(20, 700), color = Color.White.copy(alpha = 0.85f))
@@ -287,6 +306,7 @@ internal fun CinemaBanner(
                 )
                 StageTool(stringResource(R.string.glcn_cine_audio_subs), icon = OwnTVIcon.SUBTITLE, onClick = { onOpen(CinemaTab.AUDIO) }, boxed = true)
                 if (hasEpisodes) StageTool(stringResource(R.string.glcn_cine_episodes), icon = OwnTVIcon.LIST, onClick = { onOpen(CinemaTab.EPISODES) }, boxed = true)
+                if (hasChapters) StageTool(stringResource(R.string.glcn_cine_chapters), icon = OwnTVIcon.LIST_GRID, onClick = { onOpen(CinemaTab.CHAPTERS) }, boxed = true)
                 StageTool(stringResource(R.string.glcn_cine_info), icon = OwnTVIcon.INFO, onClick = { onOpen(CinemaTab.INFO) }, boxed = true)
                 StageTool(stringResource(R.string.glcn_cine_settings), icon = OwnTVIcon.GEAR, onClick = { onOpen(CinemaTab.SETTINGS) }, boxed = true)
                 if (hasNext) StageTool(stringResource(R.string.glcn_cine_next), icon = OwnTVIcon.SKIP_NEXT, onClick = onNext, boxed = true)
@@ -338,12 +358,16 @@ internal fun CinemaPanel(
     actions: CinemaActions,
     focus: FocusRequester,
     modifier: Modifier = Modifier,
+    /** glcn: the film's chapters (mpv only); the tab is there only when it has some. */
+    chapters: List<PlayerChapter> = emptyList(),
+    position: () -> Long = { 0L },
 ) {
     val slide = remember { Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
     LaunchedEffect(Unit) { slide.animateTo(1f, tween(PANEL_IN_MS, easing = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f))) }
     val tabs = buildList {
         add(CinemaTab.INFO); add(CinemaTab.AUDIO); add(CinemaTab.SUBS)
         if (episodes.size > 1 && onPlayEpisode != null) add(CinemaTab.EPISODES)
+        if (chapters.size > 1) add(CinemaTab.CHAPTERS)
         add(CinemaTab.SETTINGS)
     }
     Box(modifier.fillMaxSize()) {
@@ -351,7 +375,7 @@ internal fun CinemaPanel(
             Modifier.align(Alignment.CenterEnd).padding(top = 48.mpx, bottom = 48.mpx, end = 48.mpx)
                 .width(PANEL_WIDTH.mpx).fillMaxHeight()
                 .graphicsLayer { translationX = (1f - slide.value) * 120.mpx.toPx(); alpha = slide.value }
-                .clip(RoundedCornerShape(28.mpx)).background(Color(0xD90E1113))
+                .clip(RoundedCornerShape(28.mpx)).background(Color(0xFF0E1113).copy(alpha = tv.own.owntv.glcn.PlayerGlass.share(0.85f)))
                 .padding(28.mpx),
         ) {
             Row(Modifier.focusGroup(), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
@@ -381,6 +405,7 @@ internal fun CinemaPanel(
                 CinemaTab.AUDIO -> AudioTab(player, actions)
                 CinemaTab.SUBS -> SubsTab(player, actions)
                 CinemaTab.EPISODES -> EpisodesTab(episodes, episodeIndex, onPlayEpisode)
+                CinemaTab.CHAPTERS -> ChaptersTab(chapters, position, remember(player) { player.mediaSource() }, info.backdropUrl) { player.seekBy(it - position()) }
                 CinemaTab.SETTINGS -> SettingsTab(player, actions)
             }
         }
@@ -392,6 +417,7 @@ private fun tabLabel(t: CinemaTab): Int = when (t) {
     CinemaTab.AUDIO -> R.string.player_tool_audio
     CinemaTab.SUBS -> R.string.player_tool_subtitles
     CinemaTab.EPISODES -> R.string.glcn_cine_episodes
+    CinemaTab.CHAPTERS -> R.string.glcn_cine_chapters
     CinemaTab.SETTINGS -> R.string.glcn_cine_settings
 }
 
@@ -462,7 +488,10 @@ private fun pictureText(t: CinemaTech): String? {
             add(if (whole) String.format(java.util.Locale.ROOT, FPS_WHOLE, Math.round(f)) else String.format(java.util.Locale.ROOT, FPS_FORMAT, f))
         }
         when {
+            t.dvConverted && t.dvLayer == DolbyVisionNow.Layer.FEL -> add(stringResource(R.string.glcn_cine_dv_converted_fel))
+            t.dvConverted && t.dvLayer == DolbyVisionNow.Layer.MEL -> add(stringResource(R.string.glcn_cine_dv_converted_mel))
             t.dvConverted -> add(stringResource(R.string.glcn_cine_dv_converted))
+            t.dvOff -> add(stringResource(R.string.glcn_cine_dv_off))
             t.dolbyVision -> add(LABEL_DV)
             t.hdr == StreamHdrMode.HDR10_PQ -> add(LABEL_HDR10)
             t.hdr == StreamHdrMode.HLG -> add(LABEL_HLG)
@@ -543,6 +572,93 @@ private fun EpisodesTab(episodes: List<CinemaEpisode>, current: Int, onPlay: ((I
     }
 }
 
+/**
+ * glcn: the film's chapters as picture cards, two across — a frame of each chapter (the server's chapter image, else
+ * one read from the film, else the film's backdrop with the number), its name ("Chapter 01" becomes "Capítulo 1"),
+ * where it starts; the one playing has its progress. OK jumps there.
+ */
+@Composable
+private fun ChaptersTab(
+    chapters: List<PlayerChapter>,
+    position: () -> Long,
+    source: tv.own.owntv.player.PlayerMediaSource?,
+    backdrop: String?,
+    onSeek: (Long) -> Unit,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val pos = position()
+    val current = chapters.indexOfLast { it.startMs <= pos }.coerceAtLeast(0)
+    val thumbs = remember(source) { androidx.compose.runtime.mutableStateMapOf<Int, Any>() }
+    LaunchedEffect(source, chapters.size) {
+        val src = source ?: return@LaunchedEffect
+        // Pictures already read before show at once.
+        chapters.forEachIndexed { i, c -> tv.own.owntv.glcn.ChapterThumbs.cached(context, src, c.startMs)?.let { thumbs[i] = it } }
+        tv.own.owntv.glcn.ChapterThumbs.serverImages(src, chapters.size)?.let { urls ->
+            urls.forEachIndexed { i, u -> thumbs[i] = u }
+            return@LaunchedEffect
+        }
+        if (!tv.own.owntv.glcn.ChapterThumbs.canReadFrames(src) || tv.own.owntv.glcn.LowRam.on) return@LaunchedEffect
+        val frames = tv.own.owntv.glcn.ChapterThumbs.Frames(context, src)
+        try {
+            // Nearest the chapter playing first, then outwards.
+            chapters.indices.sortedBy { kotlin.math.abs(it - current) }.forEach { i ->
+                if (tv.own.owntv.glcn.MemoryWatch.tight) return@LaunchedEffect // memory braked: no more frames now
+                if (thumbs[i] == null) frames.at(chapters[i].startMs)?.let { thumbs[i] = it }
+            }
+        } finally {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { frames.close() }
+        }
+    }
+    val grid = androidx.compose.foundation.lazy.grid.rememberLazyGridState(initialFirstVisibleItemIndex = (current / 2) * 2)
+    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+        state = grid,
+        horizontalArrangement = Arrangement.spacedBy(16.mpx),
+        verticalArrangement = Arrangement.spacedBy(16.mpx),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(6.mpx),
+    ) {
+        items(chapters.size) { i ->
+            val c = chapters[i]
+            val title = c.title?.takeUnless { tv.own.owntv.glcn.ChapterThumbs.isGeneric(it) } ?: stringResource(R.string.glcn_cine_chapter_n, i + 1)
+            val playing = i == current
+            StageSurface(
+                onClick = { onSeek(c.startMs) },
+                radius = 14.mpx,
+                focusStyle = tv.own.owntv.ui.stage.StageFocus.POSTER,
+                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+            ) { _ ->
+                Box(Modifier.fillMaxSize().clip(RoundedCornerShape(14.mpx)).background(Color(0xFF1B2024))) {
+                    val pic = thumbs[i]
+                    if (pic != null || backdrop != null) coil3.compose.AsyncImage(
+                        model = pic ?: backdrop, contentDescription = null, contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().then(if (pic == null) Modifier.graphicsLayer { alpha = 0.35f } else Modifier),
+                    )
+                    // No frame of its own: the number, large, over the film's picture.
+                    if (pic == null) Text(
+                        "${i + 1}", style = stageText(64, 800), color = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))))
+                    Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 12.mpx, vertical = 10.mpx)) {
+                        Text(title, style = stageText(17, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            if (playing) formatTime(c.startMs) + "  ·  " + stringResource(R.string.glcn_cine_now_playing) else formatTime(c.startMs),
+                            style = stageText(14, 500), color = if (playing) stageAccent.accent else Color.White.copy(alpha = 0.7f), maxLines = 1,
+                        )
+                    }
+                    if (playing) {
+                        val end = chapters.getOrNull(i + 1)?.startMs
+                        val frac = if (end != null && end > c.startMs) ((pos - c.startMs).toFloat() / (end - c.startMs)).coerceIn(0f, 1f) else 0f
+                        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.mpx).background(Color.White.copy(alpha = 0.18f))) {
+                            Box(Modifier.fillMaxWidth(frac).fillMaxHeight().background(stageAccent.accent))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun SettingsTab(player: PlaybackEngine, actions: CinemaActions) {
     val speed by player.speed.collectAsStateWithLifecycle()
@@ -610,3 +726,123 @@ private const val LABEL_DTS = "DTS"
 private const val LABEL_51 = "5.1"
 private const val LABEL_71 = "7.1"
 private const val LABEL_20 = "2.0"
+
+/**
+ * glcn: the pause screen — a few seconds after a film or episode is paused (and the controls have gone), what it is
+ * comes up over the frozen picture: "Paused", its lettering, the episode, the facts and the synopsis, on a shade from
+ * the left. Any key brings the controls back and it goes.
+ */
+@Composable
+internal fun CinemaPauseScreen(info: CinemaInfo, position: () -> Long, duration: Long, modifier: Modifier = Modifier) {
+    val a = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { a.animateTo(1f, tween(PAUSE_FADE_MS, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) }
+    Box(modifier.fillMaxSize().graphicsLayer { alpha = a.value }) {
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.88f), 0.5f to Color.Black.copy(alpha = 0.55f), 1f to Color.Black.copy(alpha = 0.15f)),
+            ),
+        )
+        Column(
+            Modifier.align(Alignment.CenterStart).padding(start = 96.mpx, end = 96.mpx).widthIn(max = 900.mpx)
+                .graphicsLayer { translationX = (1f - a.value) * -40f },
+        ) {
+            Text(
+                stringResource(R.string.glcn_cine_paused).uppercase(),
+                style = stageText(20, 800).copy(letterSpacing = 3.sp), color = Color.White.copy(alpha = 0.7f),
+            )
+            Spacer(Modifier.height(18.mpx))
+            CinemaTitle(info, widthPx = 680, heightPx = 150, textSize = 60)
+            episodeLine(info)?.let {
+                Text(it, style = stageText(26, 700), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 14.mpx))
+            }
+            Text(
+                metaLine(info, duration, position()), style = stageText(22, 600), color = Color.White.copy(alpha = 0.78f),
+                maxLines = 1, modifier = Modifier.padding(top = 12.mpx),
+            )
+            info.overview?.takeIf { it.isNotBlank() }?.let {
+                Text(
+                    it, style = stageText(22, 400), color = Color.White.copy(alpha = 0.86f), maxLines = 6, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 20.mpx),
+                )
+            }
+            if (info.cast.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.glcn_cine_cast) + ": " + info.cast.take(4).joinToString(", "),
+                    style = stageText(19, 500), color = Color.White.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 16.mpx),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * glcn: the next episode coming up — its picture in the corner, the countdown filling along its foot, its code and
+ * name, and Play now / Cancel. The picture is the episode's still, or the show's fanart when TMDB has none.
+ */
+@Composable
+internal fun CinemaNextCard(
+    seconds: () -> Int,
+    title: String,
+    art: String?,
+    code: String?,
+    playFocus: FocusRequester,
+    onPlayNow: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val a = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { a.animateTo(1f, tween(PAUSE_FADE_MS, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) }
+    val start = remember { seconds().coerceAtLeast(1) }
+    Column(
+        modifier.width(420.mpx).graphicsLayer { alpha = a.value; translationY = (1f - a.value) * 30f }
+            .clip(RoundedCornerShape(18.mpx)).background(Color(0xFF0E1113).copy(alpha = tv.own.owntv.glcn.PlayerGlass.share(0.9f))),
+    ) {
+        Box(Modifier.fillMaxWidth().height(236.mpx)) {
+            if (!art.isNullOrBlank()) {
+                coil3.compose.AsyncImage(model = art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.75f))))
+            Text(
+                stringResource(R.string.player_next_episode, seconds()), style = stageText(20, 800), color = Color.White,
+                modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.mpx, bottom = 14.mpx),
+            )
+            // The countdown, filling along the picture's foot.
+            val left = seconds().coerceAtLeast(0)
+            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.mpx).background(Color.White.copy(alpha = 0.2f))) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(1f - left.toFloat() / start).background(tv.own.owntv.ui.theme.stageAccent.accent))
+            }
+        }
+        Column(Modifier.padding(horizontal = 16.mpx, vertical = 14.mpx)) {
+            code?.let { Text(it, style = stageText(17, 700), color = Color.White.copy(alpha = 0.65f), maxLines = 1) }
+            Text(title, style = stageText(22, 700), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Row(Modifier.padding(top = 12.mpx).focusGroup(), horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
+                tv.own.owntv.ui.stage.StageButton(
+                    stringResource(R.string.player_play_now), onClick = onPlayNow,
+                    modifier = Modifier.focusRequester(playFocus), icon = OwnTVIcon.PLAY, tinted = true,
+                )
+                tv.own.owntv.ui.stage.StageButton(stringResource(R.string.common_cancel), onClick = onCancel, icon = OwnTVIcon.CLOSE)
+            }
+        }
+    }
+}
+
+private const val PAUSE_FADE_MS = 420
+
+/** glcn: the server's thumbnail for [positionMs]; the last one stays while the next loads. Nothing when it has none. */
+@Composable
+private fun SeekThumb(src: tv.own.owntv.core.emby.EmbyTrickplay.Source, positionMs: Long) {
+    var shown by remember(src) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    LaunchedEffect(src, positionMs / SEEK_THUMB_STEP_MS) {
+        src.thumbAt(positionMs)?.let { shown = it.asImageBitmap() }
+    }
+    val img = shown ?: return
+    val shape = RoundedCornerShape(8.dp)
+    Image(
+        img, contentDescription = null, contentScale = ContentScale.Crop,
+        modifier = Modifier.height(SEEK_PREVIEW_HEIGHT).aspectRatio(img.width.toFloat() / img.height.coerceAtLeast(1))
+            .clip(shape).border(2.dp, Color.White.copy(alpha = 0.85f), shape),
+    )
+}
+
+private const val SEEK_THUMB_STEP_MS = 1_000L

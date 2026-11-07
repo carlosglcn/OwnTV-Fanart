@@ -25,6 +25,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.focusRequester
@@ -78,8 +81,19 @@ fun StagePopup(
     OwnTVPopup(onDismissRequest = onDismiss, dismissOnBackPress = dismissOnBackPress, stageLayout = true) {
         val ime = LocalTvImeMetrics.current
         val density = LocalDensity.current
+        // glcn: a popup opened by a held OK (Recent channels, Keep watching…) got the release of that same press, which
+        // chose its first option and closed it at once. OK counts here only after a press that started inside.
+        var armed by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
         BoxWithConstraints(
-            Modifier.fillMaxSize().background(StageColors.Scrim).trapAllFocusExit().focusGroup(),
+            Modifier.fillMaxSize().background(StageColors.Scrim)
+                .onPreviewKeyEvent { e ->
+                    val ok = e.key == androidx.compose.ui.input.key.Key.DirectionCenter || e.key == androidx.compose.ui.input.key.Key.Enter ||
+                        e.key == androidx.compose.ui.input.key.Key.NumPadEnter
+                    if (!ok) return@onPreviewKeyEvent false
+                    if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) armed = true
+                    !armed
+                }
+                .trapAllFocusExit().focusGroup(),
             contentAlignment = if (ime.visible) Alignment.TopCenter else Alignment.Center,
         ) {
             val edge = 40.mpx
@@ -129,6 +143,7 @@ fun StageConfirm(
     width: Dp = 760.mpx,
     /** What Back does, when it is not the same as [cancel] (the resume prompt: Back closes, Start over restarts). */
     onBack: () -> Unit = onCancel,
+    modifier: Modifier = Modifier,
 ) {
     val first = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
     // A popup opened by a long press is still under the finger: the OK being released would otherwise
@@ -136,7 +151,7 @@ fun StageConfirm(
     var armed by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(Unit) { kotlinx.coroutines.delay(60); runCatching { first.requestFocus() }; kotlinx.coroutines.delay(500); armed = true }
     StagePopup(
-        onDismiss = onBack, title = title, body = body, eyebrow = eyebrow, width = width,
+        onDismiss = onBack, title = title, body = body, eyebrow = eyebrow, width = width, modifier = modifier,
         buttons = {
             StageButton(cancel, onClick = { if (armed) onCancel() }, height = 56.mpx, textSize = 19, modifier = if (focusCancel) Modifier.focusRequester(first) else Modifier)
             StageButton(confirm, onClick = { if (armed) onConfirm() }, height = 56.mpx, textSize = 19, tinted = true, modifier = if (focusCancel) Modifier else Modifier.focusRequester(first))

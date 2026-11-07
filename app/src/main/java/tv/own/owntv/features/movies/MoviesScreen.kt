@@ -270,7 +270,8 @@ fun MoviesScreen(
     // The List view scrolls a LazyListState, the grids (Cinematic and Separate) a LazyGridState.
     val usesList = viewMode == SettingsRepository.VodViewMode.LIST
     // glcn: the Runway layout is one row of posters; it has no lazy state, only the index it is centred on.
-    var runwayAt by remember(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
+    // glcn: saveable, so coming back from the player or a title's page the row is still on the poster left.
+    var runwayAt by androidx.compose.runtime.saveable.rememberSaveable(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
     var runwayWindow by remember { mutableStateOf(0..0) }
     val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
     suspend fun scrollToIndex(i: Int) {
@@ -395,10 +396,24 @@ fun MoviesScreen(
 
     // The title the cursor was on: after a long-press it carries contextFocus instead of selFocus
     // (gridFocusTarget prefers it), so both are tried before the first title (fix playbook 6).
-    fun focusCurrentTitle(): Boolean =
+    fun focusCurrentTitleNow(): Boolean =
         runCatching { selFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { contextFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
+    fun focusCurrentTitle(): Boolean {
+        // glcn: Runway — only the posters around the centre exist, so the remembered title (coming back from its page
+        // or the player) may not be there yet: centre the row on it first, then focus it a frame or two later.
+        if (runway && movies.itemCount > 0) {
+            val tid = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: selectedMovie?.id else selectedMovie?.id
+            val idx = tid?.let { id -> movies.itemSnapshotList.items.indexOfFirst { it.id == id } } ?: -1
+            if (idx >= 0 && idx != runwayAt) {
+                runwayAt = idx
+                scope.launch { withFrameNanos { }; withFrameNanos { }; runCatching { selFocus.requestFocus() } }
+                return true
+            }
+        }
+        return focusCurrentTitleNow()
+    }
     // From the categories to the titles: the remembered movie, else the first; a locked one's Enter PIN button; else the search field.
     fun focusTitles() {
         val targetId = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: selectedMovie?.id else selectedMovie?.id
@@ -456,6 +471,10 @@ fun MoviesScreen(
         val id = selectedMovie?.id ?: return@LaunchedEffect
         titleInfo?.backdropUrl?.takeIf { it.isNotBlank() }?.let { runwayBackdrops[id] = it }
     }
+    // glcn: platforms, genres, then the rest — each under its own heading.
+    val vodSectionOf: (tv.own.owntv.features.live.LiveCategoryEntry) -> Int = { e -> tv.own.owntv.core.live.VodSections.of(e.name?.name ?: e.label) }
+    val vodSectionTitles = tv.own.owntv.core.live.VodSections.TITLES
+        .map { stringResource(it).uppercase(androidx.compose.ui.text.intl.Locale.current.platformLocale) }
     val (categoryEntries, groupsHeading) = vodCategoryEntries(railItems, railCounts, playlistMarks, series = false)
     val headerLabel = if (selectedItem?.key is LiveKey.Folder || selectedItem?.key is LiveKey.Custom) ProviderTags.parse(selectedLabel).name else selectedLabel
 
@@ -503,6 +522,14 @@ fun MoviesScreen(
         }
     }
     val targetMovieId = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: selectedMovie?.id else selectedMovie?.id
+    // glcn: Runway — the row centres on the remembered title once the list is there, so restoring focus to it
+    // finds it composed (only the posters around the centre exist).
+    androidx.compose.runtime.LaunchedEffect(runway, selectedKey, movies.itemCount > 0) {
+        if (!runway || movies.itemCount == 0) return@LaunchedEffect
+        val id = targetMovieId ?: return@LaunchedEffect
+        val idx = movies.itemSnapshotList.items.indexOfFirst { it.id == id }
+        if (idx >= 0) runwayAt = idx
+    }
     val openMenu: (MovieEntity, Int) -> Unit = { movie, index -> contextMovie = movie; contextMovieId = movie.id; contextMovieIndex = index }
     val onMovieFocus: (MovieEntity) -> Unit = { movie ->
         vm.onMovieFocused(movie)
@@ -604,11 +631,20 @@ fun MoviesScreen(
         )
     }
     val inPlaceTitle = cinematic && titleMovie != null && titleMovie?.id == selectedMovie?.id
-    // Back from the page drawn here: the focus goes back to the film it was opened from.
+    // Back from the page drawn here: the focus goes back to the film it was opened from. glcn: while the page is open
+    // and until the focus is put back, a poster that catches the focus on its own (Compose hands it to the first one
+    // when the page's buttons go) does not become the selected film — that sent the focus back to the first film.
     val wasInPlace = remember { booleanArrayOf(false) }
     LaunchedEffect(inPlaceTitle) {
         if (inPlaceTitle) wasInPlace[0] = true
-        else if (wasInPlace[0]) { wasInPlace[0] = false; withFrameNanos { }; focusCurrentTitle() }
+        else if (wasInPlace[0]) {
+            // glcn: the guard stays on until the focus is back on the film (the Runway puts it there a couple of
+            // frames later); lifted first, a poster grabbing the focus meanwhile became the selected film again.
+            withFrameNanos { }
+            focusCurrentTitle()
+            repeat(4) { withFrameNanos { } }
+            wasInPlace[0] = false
+        }
     }
     val listAlpha by androidx.compose.animation.core.animateFloatAsState(if (inPlaceTitle) 0f else 1f, tv.own.owntv.ui.theme.ownTvTween(260), label = "titleListFade")
     fun openCategories() { if (cinematic) categoriesOpen = true else runCatching { railFocus.requestFocus() } }
@@ -634,8 +670,10 @@ fun MoviesScreen(
             val heroH = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 464.mpx - (short - lift)
             val toolTop = heroTop + heroH
             Box(Modifier.fillMaxSize().then(if (categoriesOpen) Modifier.graphicsLayer { alpha = 0.36f } else Modifier)) {
-                tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl, Modifier.matchParentSize())
-                VodCinematicBackdrop(titleInfo?.backdropUrl, series = false, Modifier.align(Alignment.TopEnd), trailer = selectedMeta?.trailerKey.takeIf { metadataMode.enrich }, trailerTitle = selectedMovie?.name, focusKey = selectedMovie?.id)
+                tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl.takeIf { tv.own.owntv.features.home.CinemaTrailer.playing == null }, Modifier.matchParentSize())
+                // glcn: the trailer only once the film's page is open — playing one for every film the cursor rested on
+                // made browsing stutter (each start is a web page) and filled the box's memory.
+                VodCinematicBackdrop(titleInfo?.backdropUrl, series = false, Modifier.align(Alignment.TopEnd), trailer = selectedMeta?.trailerKey.takeIf { metadataMode.enrich && inPlaceTitle }, trailerTitle = selectedMovie?.name, focusKey = selectedMovie?.id)
                 VodHeader(
                     section = stringResource(R.string.common_nav_movies), category = headerLabel, count = vodCount(false, count).takeUnless { sealed },
                     showChevron = true, modifier = Modifier.padding(start = fx(84), top = 52.mpx - lift * 0.7f).width(fx(900)).graphicsLayer { alpha = listAlpha },
@@ -706,7 +744,7 @@ fun MoviesScreen(
                                                 selectedId = targetMovieId, selectedFocus = selFocus,
                                                 firstItemFocus = firstItemFocus,
                                             )
-                                            .onFocusChanged { if (it.isFocused) { onMovieFocus(movie); runwayAt = index } }
+                                            .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); runwayAt = index } }
                                             .onPreviewKeyEvent { e ->
                                                 if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true } else false
                                             },
@@ -752,7 +790,7 @@ fun MoviesScreen(
                                                     selectedId = targetMovieId, selectedFocus = selFocus,
                                                     firstItemFocus = firstItemFocus,
                                                 )
-                                                .onFocusChanged { if (it.isFocused) { onMovieFocus(movie); glide.focused(index) } }
+                                                .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); glide.focused(index) } }
                                                 .onPreviewKeyEvent { e ->
                                                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                     when (e.key) {
@@ -794,6 +832,7 @@ fun MoviesScreen(
                     entries = categoryEntries,
                     selectedIndex = selectedIndex,
                     groupsHeading = groupsHeading,
+                    sectionOf = vodSectionOf, sectionTitles = vodSectionTitles,
                     sheet = false,
                     listState = catListState,
                     onSelect = onCategorySelect,
@@ -956,6 +995,7 @@ fun MoviesScreen(
                 entries = categoryEntries,
                 selectedIndex = selectedIndex,
                 groupsHeading = groupsHeading,
+                    sectionOf = vodSectionOf, sectionTitles = vodSectionTitles,
                 sheet = true,
                 listState = catListState,
                 onSelect = onCategorySelect,

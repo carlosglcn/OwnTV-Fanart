@@ -109,6 +109,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -218,6 +219,15 @@ fun SeriesScreen(
             modifier = modifier,
         )
     }
+    vm.bulkDownloadAsk.collectAsStateWithLifecycle().value?.let { ask ->
+        tv.own.owntv.features.settings.ConfirmDialog(
+            title = pluralStringResource(R.plurals.content_download_episodes_confirm, ask.episodes, ask.episodes),
+            message = stringResource(R.string.content_download_episodes_confirm_message),
+            onConfirm = { vm.answerBulkDownload(true) },
+            onDismiss = { vm.answerBulkDownload(false) },
+            confirmLabel = R.string.content_download,
+        )
+    }
 }
 
 @Composable
@@ -325,7 +335,8 @@ private fun SeriesGrid(
     // The List view scrolls a LazyListState, the grids (Cinematic and Separate) a LazyGridState.
     val usesList = viewMode == SettingsRepository.VodViewMode.LIST
     // glcn: the Runway layout is one row of posters; it has no lazy state, only the index it is centred on.
-    var runwayAt by remember(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
+    // glcn: saveable, so coming back from the player or a title's page the row is still on the poster left.
+    var runwayAt by androidx.compose.runtime.saveable.rememberSaveable(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
     var runwayWindow by remember { mutableStateOf(0..0) }
     val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
     suspend fun scrollToIndex(i: Int) {
@@ -456,10 +467,24 @@ private fun SeriesGrid(
 
     // The show the cursor was on: after a long-press it carries contextFocus instead of gridSelFocus
     // (gridFocusTarget prefers it), so both are tried before the first show (fix playbook 6).
-    fun focusCurrentTitle(): Boolean =
+    fun focusCurrentTitleNow(): Boolean =
         runCatching { gridSelFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { contextFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
+    fun focusCurrentTitle(): Boolean {
+        // glcn: Runway — only the posters around the centre exist, so the remembered title (coming back from its page
+        // or the player) may not be there yet: centre the row on it first, then focus it a frame or two later.
+        if (runway && series.itemCount > 0) {
+            val tid = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: selectedSeries?.id else selectedSeries?.id
+            val idx = tid?.let { id -> series.itemSnapshotList.items.indexOfFirst { it.id == id } } ?: -1
+            if (idx >= 0 && idx != runwayAt) {
+                runwayAt = idx
+                scope.launch { withFrameNanos { }; withFrameNanos { }; runCatching { gridSelFocus.requestFocus() } }
+                return true
+            }
+        }
+        return focusCurrentTitleNow()
+    }
     // From the categories to the shows: the remembered one, else the first; a locked one's Enter PIN button; else the search field.
     fun focusTitles() {
         val targetId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: selectedSeries?.id else selectedSeries?.id
@@ -517,6 +542,10 @@ private fun SeriesGrid(
         val id = selectedSeries?.id ?: return@LaunchedEffect
         titleInfo?.backdropUrl?.takeIf { it.isNotBlank() }?.let { runwayBackdrops[id] = it }
     }
+    // glcn: platforms, genres, then the rest — each under its own heading.
+    val vodSectionOf: (tv.own.owntv.features.live.LiveCategoryEntry) -> Int = { e -> tv.own.owntv.core.live.VodSections.of(e.name?.name ?: e.label) }
+    val vodSectionTitles = tv.own.owntv.core.live.VodSections.TITLES
+        .map { stringResource(it).uppercase(androidx.compose.ui.text.intl.Locale.current.platformLocale) }
     val (categoryEntries, groupsHeading) = vodCategoryEntries(railItems, railCounts, playlistMarks, series = true)
     val headerLabel = if (selectedItem?.key is LiveKey.Folder || selectedItem?.key is LiveKey.Custom) ProviderTags.parse(selectedLabel).name else selectedLabel
 
@@ -564,6 +593,14 @@ private fun SeriesGrid(
         }
     }
     val targetSeriesId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: selectedSeries?.id else selectedSeries?.id
+    // glcn: Runway — the row centres on the remembered title once the list is there, so restoring focus to it
+    // finds it composed (only the posters around the centre exist).
+    androidx.compose.runtime.LaunchedEffect(runway, selectedKey, series.itemCount > 0) {
+        if (!runway || series.itemCount == 0) return@LaunchedEffect
+        val id = targetSeriesId ?: return@LaunchedEffect
+        val idx = series.itemSnapshotList.items.indexOfFirst { it.id == id }
+        if (idx >= 0) runwayAt = idx
+    }
     val openMenu: (tv.own.owntv.core.database.entity.SeriesEntity, Int) -> Unit = { show, index -> contextSeries = show; contextSeriesId = show.id; contextSeriesIndex = index }
     val onShowFocus: (tv.own.owntv.core.database.entity.SeriesEntity) -> Unit = { show ->
         vm.onSeriesFocused(show)
@@ -667,8 +704,8 @@ private fun SeriesGrid(
             val heroH = if (panelShares != null) maxHeight * (cinematicDetailsPct / 100f) else 464.mpx - (short - lift)
             val toolTop = heroTop + heroH
             Box(Modifier.fillMaxSize().then(if (categoriesOpen) Modifier.graphicsLayer { alpha = 0.36f } else Modifier)) {
-                tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl, Modifier.matchParentSize())
-                VodCinematicBackdrop(titleInfo?.backdropUrl, series = true, Modifier.align(Alignment.TopEnd), trailer = selectedMeta?.trailerKey.takeIf { metadataMode.enrich }, trailerTitle = selectedSeries?.name, focusKey = selectedSeries?.id)
+                tv.own.owntv.ui.components.ArtTint(titleInfo?.backdropUrl.takeIf { tv.own.owntv.features.home.CinemaTrailer.playing == null }, Modifier.matchParentSize())
+                VodCinematicBackdrop(titleInfo?.backdropUrl, series = true, Modifier.align(Alignment.TopEnd), trailer = null, trailerTitle = selectedSeries?.name, focusKey = selectedSeries?.id) // glcn: trailers on the show's page only
                 VodHeader(
                     section = stringResource(R.string.common_nav_series), category = headerLabel, count = vodCount(true, count).takeUnless { sealed },
                     showChevron = true, modifier = Modifier.padding(start = fx(84), top = 52.mpx - lift * 0.7f).width(fx(900)),
@@ -821,6 +858,7 @@ private fun SeriesGrid(
                     entries = categoryEntries,
                     selectedIndex = selectedIndex,
                     groupsHeading = groupsHeading,
+                    sectionOf = vodSectionOf, sectionTitles = vodSectionTitles,
                     sheet = false,
                     listState = catListState,
                     onSelect = onCategorySelect,
@@ -979,6 +1017,7 @@ private fun SeriesGrid(
                 entries = categoryEntries,
                 selectedIndex = selectedIndex,
                 groupsHeading = groupsHeading,
+                    sectionOf = vodSectionOf, sectionTitles = vodSectionTitles,
                 sheet = true,
                 listState = catListState,
                 onSelect = onCategorySelect,
@@ -1030,7 +1069,7 @@ private fun SeriesGrid(
                 vm.toggleFavorite(s); contextSeries = null
             })
             add(MenuAction("download", stringResource(R.string.content_download_all_episodes), OwnTVIcon.DOWNLOADS, group = VodGroupLibrary) {
-                vm.downloadSeries(s); contextSeries = null
+                vm.askBulkDownload(s, null); contextSeries = null
             })
             add(MenuAction("remove_history", stringResource(R.string.content_remove_history), OwnTVIcon.HISTORY, group = VodGroupLibrary) {
                 vm.removeFromHistory(s.id); contextSeries = null
@@ -1339,6 +1378,7 @@ private fun EpisodeView(
     val refetchingTmdbMessage = stringResource(R.string.content_refetching_tmdb)
     val researchingTmdbMessage = stringResource(R.string.content_researching_tmdb)
     val episodes by vm.episodes.collectAsStateWithLifecycle()
+    val downloadsAllowed by vm.downloadsAllowed.collectAsStateWithLifecycle()
     val loading by vm.episodesLoading.collectAsStateWithLifecycle()
     val episodesFailure by vm.episodesFailure.collectAsStateWithLifecycle()
     val favoriteIds by vm.favoriteIds.collectAsStateWithLifecycle()
@@ -1606,10 +1646,10 @@ private fun EpisodeView(
                     onClick = { vm.toggleFavorite(series) },
                     icon = OwnTVIcon.FAVORITE, iconFilled = favourite, height = 60.mpx, textSize = 20,
                 )
-                if (visibleEpisodes.isNotEmpty() || seasonEpisodes.isNotEmpty()) {
+                if (downloadsAllowed && (visibleEpisodes.isNotEmpty() || seasonEpisodes.isNotEmpty())) {
                     StageButton(
                         text = stringResource(R.string.content_download_season),
-                        onClick = { vm.downloadSeason(series, activeSeason) },
+                        onClick = { vm.askBulkDownload(series, activeSeason) },
                         icon = OwnTVIcon.DOWNLOADS, height = 60.mpx, textSize = 20,
                     )
                 }
@@ -1930,7 +1970,7 @@ private fun EpisodeView(
                 vm.toggleFavorite(series); close()
             })
             add(MenuAction("download", stringResource(R.string.content_download_all_episodes), OwnTVIcon.DOWNLOADS, group = VodGroupLibrary) {
-                vm.downloadSeries(series); close()
+                vm.askBulkDownload(series, null); close()
             })
             add(MenuAction("remove_history", stringResource(R.string.content_remove_history), OwnTVIcon.HISTORY, group = VodGroupLibrary) {
                 vm.removeFromHistory(series.id); close()

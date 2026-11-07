@@ -106,9 +106,14 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         tv.own.owntv.glcn.TvProfiles.load(this)
         Perf.begin() // zero-point for the OwnTVPerf startup timeline (adb logcat -s OwnTVPerf)
         super.onCreate()
+        // The six icon colours are MainActivity + a suffix (see MainActivityColours.kt); core switches them.
+        // Before the early returns: auto start opens the app from its bare process through this name.
+        tv.own.owntv.core.brand.AppIconSwitcher.mainActivityClass = MainActivity::class.java.name
         // "Restart now" after an icon change runs a few milliseconds in a process of its own; nothing
         // below may start there (core's AppRestartActivity).
         if (tv.own.owntv.core.brand.AppIconSwitcher.isRestartProcess(this)) return
+        // The auto-start wake listener's process stays this bare (see AutoStart.isAutoStartProcess).
+        if (tv.own.owntv.features.autostart.AutoStart.isAutoStartProcess(this)) return
         // Core has its own BuildConfig, which carries none of this: a library gets no version at all,
         // and the edge key and the maintainer switch are the app's build inputs. Hand them over before
         // the first reader — CrashRecorder, two lines down (see CoreBuildInfo).
@@ -134,6 +139,12 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // Fixed for this process before any player exists: the setting applies only after a restart.
         tv.own.owntv.core.player.FfmpegAudioSetting.load(this)
         tv.own.owntv.glcn.CategoryIcons.ensure(this) // glcn: category icons and the ones chosen by hand
+        tv.own.owntv.glcn.MemoryWatch.start(this) // glcn: memory diary, stall watch and memory brake (one sleeping thread)
+        tv.own.owntv.glcn.LiveBanner.ensure(this) // glcn: the live banner's style
+        tv.own.owntv.glcn.PlayerGlass.ensure(this) // glcn: see-through level of the panels over the video
+        tv.own.owntv.glcn.Labs.ensure(this) // glcn: test features (switched on with a key sequence in Settings)
+        tv.own.owntv.glcn.AppShortcuts.ensure(this)
+        tv.own.owntv.glcn.EmbyGroupsPref.load(this) // glcn: how Emby / Jellyfin libraries are split into categories
         // First thing after the context exists: a crash from here on leaves a trace on disk that the
         // user can export from Settings, instead of being lost with the process.
         tv.own.owntv.core.util.CrashRecorder.diagnostics = { tv.own.owntv.player.LiveDiagnosticsLog.snapshot() }
@@ -144,8 +155,6 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // Four of the five subtitle faces are this app's own res/font files, so the engine asks us for
         // the id rather than owning the assets (see SubtitleFontAssets).
         tv.own.owntv.player.SubtitleFontAssets.resourceOf = { it.subtitleFontResource }
-        // The six icon colours are MainActivity + a suffix (see MainActivityColours.kt); core switches them.
-        tv.own.owntv.core.brand.AppIconSwitcher.mainActivityClass = MainActivity::class.java.name
         tv.own.owntv.glcn.DeviceClass.detect(this) // glcn: a modest box skips purely decorative motion
         startKoin {
             androidLogger(if (BuildConfig.DEBUG) Level.ERROR else Level.NONE)
@@ -156,6 +165,9 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // A chosen icon colour ("Later", the first-run pick, a restore) reaches the launcher when the app
         // is next in the background, never while it is on screen.
         tv.own.owntv.core.brand.AppIconSwitcher.start(this, GlobalContext.get().get())
+        // Auto start on wake-up: a force stop ends the wake listener, so the next app start brings it back.
+        tv.own.owntv.features.autostart.AutoStart.onAppStarted(this)
+        tv.own.owntv.features.autostart.AutoStartProfileGate(this).register()
         // Diagnostics switch and the one-shot settings migrations — core's, shared with the phone, which
         // used to run none of them.
         tv.own.owntv.player.PlaybackStartup.start(

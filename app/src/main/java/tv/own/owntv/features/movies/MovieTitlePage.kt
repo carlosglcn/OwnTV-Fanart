@@ -1,8 +1,13 @@
 package tv.own.owntv.features.movies
 
+import tv.own.owntv.glcn.glowRoomScroll
+
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.background
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
@@ -118,6 +123,15 @@ internal fun MovieTitlePage(
     val lowerAt by androidx.compose.animation.core.animateFloatAsState(
         if (lower) 1f else 0f, tv.own.owntv.ui.theme.ownTvTween(LOWER_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)), label = "titleLower",
     )
+    // glcn: with the lower part open (cast, versions…) the trailer behind is covered — it waits, paused, so moving
+    // through that part is not slowed by a video nobody sees.
+    androidx.compose.runtime.DisposableEffect(lower) {
+        // glcn: the value as it was when the hold was taken — read at dispose time, `lower` was already false, the
+        // hold was never given back, and every trailer after the first visit to the cast stayed paused for good.
+        val held = lower
+        if (held) tv.own.owntv.ui.components.TrailerPool.hold(true)
+        onDispose { if (held) tv.own.owntv.ui.components.TrailerPool.hold(false) }
+    }
     val lowerFocus = remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf<String?>(null) }
     // glcn: the film's other videos — teasers, clips, featurettes, behind the scenes — each full screen with sound.
@@ -164,7 +178,7 @@ internal fun MovieTitlePage(
                 .focusGroup(),
         ) {
             if (!inPlace) {
-                tv.own.owntv.ui.components.ArtTint(info.backdropUrl, Modifier.fillMaxSize(), strength = 0.7f)
+                tv.own.owntv.ui.components.ArtTint(info.backdropUrl.takeIf { tv.own.owntv.features.home.CinemaTrailer.playing == null || tv.own.owntv.glcn.TitleRoom.textTop > 0f }, Modifier.fillMaxSize(), strength = 0.7f)
                 // The picture — or its trailer — edge to edge.
                 tv.own.owntv.features.shell.components.VodCinematicBackdrop(
                     info.backdropUrl, series = false, Modifier.align(Alignment.TopEnd),
@@ -178,8 +192,11 @@ internal fun MovieTitlePage(
             )
             Box(Modifier.fillMaxSize().graphicsLayer { alpha = lowerAt }.background(page.copy(alpha = 0.86f)))
             // First part: the title, its facts and the buttons.
+            androidx.compose.runtime.DisposableEffect(Unit) { onDispose { tv.own.owntv.glcn.TitleRoom.textTop = 0f } }
             Column(
                 Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 64.mpx, end = 96.mpx)
+                    // glcn: where the words begin, for the trailer's window above them (measured before the entrance slide).
+                    .onGloballyPositioned { tv.own.owntv.glcn.TitleRoom.textTop = it.positionInRoot().y }
                     .graphicsLayer {
                         alpha = enter.value * (1f - lowerAt)
                         translationY = (1f - enter.value) * 40.mpx.toPx() - lowerAt * 160.mpx.toPx()
@@ -196,8 +213,7 @@ internal fun MovieTitlePage(
                 }
                 Row(
                     // The row scrolls when it does not fit; room inside it, so the focused button's glow is never clipped.
-                    Modifier.padding(top = 2.mpx).offset(x = (-16).mpx).horizontalScroll(androidx.compose.foundation.rememberScrollState())
-                        .padding(horizontal = 16.mpx, vertical = 8.mpx).focusGroup(),
+                    Modifier.padding(top = 2.mpx).then(Modifier.glowRoomScroll()).focusGroup(),
                     horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val playLabel = if (resume) stringResource(R.string.glcn_title_resume, tv.own.owntv.features.shell.components.vodRuntime((saved / 1000).toInt()))
@@ -251,25 +267,29 @@ internal fun MovieTitlePage(
             ) {
                 Text(info.title, style = stageText(30, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 // One focus stop for the reading part, so ▼ always has somewhere to land.
+                // glcn: it shows when it has the focus — an accent outline and heading — so you always know where you are.
+                var lowerFocused by remember { mutableStateOf(false) }
                 Column(
-                    Modifier.focusRequester(lowerFocus).focusable(),
+                    Modifier.focusRequester(lowerFocus).onFocusChanged { lowerFocused = it.isFocused }.focusable()
+                        .then(Modifier.border(2.5.mpx, if (lowerFocused) stageAccent.accent else Color.Transparent, RoundedCornerShape(16.mpx)))
+                        .padding(horizontal = 14.mpx, vertical = 10.mpx),
                     verticalArrangement = Arrangement.spacedBy(22.mpx),
                 ) {
                     if (info.cast.isNotEmpty()) {
-                        Text(stringResource(R.string.content_media_cast), style = stageText(20, 700), color = StageColors.Text)
+                        Text(stringResource(R.string.content_media_cast), style = stageText(20, 700), color = if (lowerFocused) stageAccent.accent else StageColors.Text)
                         tv.own.owntv.features.shell.components.VodCast(info.cast, 10)
                     }
                 }
                 if (extras.isNotEmpty()) {
                     Text(stringResource(R.string.glcn_title_extras), style = stageText(20, 700), color = StageColors.Text)
                     Row(
-                        Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(vertical = 10.mpx).focusGroup(),
+                        Modifier.glowRoomScroll().focusGroup(), // glcn: room for the focus ring and glow
                         horizontalArrangement = Arrangement.spacedBy(18.mpx),
                     ) {
                         extras.forEach { x ->
                             Column(Modifier.width(300.mpx)) {
                                 tv.own.owntv.ui.stage.StageSurface(
-                                    onClick = { fullTrailer = x.key }, radius = 12.mpx,
+                                    onClick = { fullTrailer = x.key }, radius = 12.mpx, focusStyle = tv.own.owntv.ui.stage.StageFocus.POSTER,
                                     modifier = Modifier.width(300.mpx).height(169.mpx),
                                 ) { _ ->
                                     Box(Modifier.fillMaxSize()) {
@@ -290,13 +310,13 @@ internal fun MovieTitlePage(
                     // glcn: films like this one — each opens its own page.
                     Text(stringResource(R.string.glcn_similar_title), style = stageText(20, 700), color = StageColors.Text)
                     Row(
-                        Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(vertical = 10.mpx).focusGroup(),
+                        Modifier.glowRoomScroll().focusGroup(), // glcn: room for the focus ring and glow
                         horizontalArrangement = Arrangement.spacedBy(18.mpx),
                     ) {
                         related.take(10).forEach { r ->
                             Column(Modifier.width(150.mpx)) {
                                 tv.own.owntv.ui.stage.StageSurface(
-                                    onClick = { onOpenRelated(r) }, radius = 12.mpx,
+                                    onClick = { onOpenRelated(r) }, radius = 12.mpx, focusStyle = tv.own.owntv.ui.stage.StageFocus.POSTER,
                                     modifier = Modifier.width(150.mpx).height(225.mpx),
                                 ) { _ ->
                                     coil3.compose.AsyncImage(

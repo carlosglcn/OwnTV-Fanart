@@ -45,6 +45,8 @@ fun BackgroundImageChooserDialog(
     onPickRemote: () -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit,
+    /** glcn: the app's own wallpapers (animated and pictures). */
+    onPickApp: (() -> Unit)? = null,
 ) {
     // A Stage popup with the three sources as rows: from this TV, by Remote, or clear.
     val first = remember { FocusRequester() }
@@ -55,8 +57,12 @@ fun BackgroundImageChooserDialog(
         body = stringResource(R.string.setup_background_image_description),
         width = 760.mpx,
     ) {
+        if (onPickApp != null) tv.own.owntv.ui.stage.StagePopupOption(
+            title = stringResource(R.string.glcn_wall_option), onClick = onPickApp, modifier = Modifier.focusRequester(first),
+            leading = { tv.own.owntv.ui.stage.StagePopupIcon(OwnTVIcon.IMAGE) },
+        )
         tv.own.owntv.ui.stage.StagePopupOption(
-            title = stringResource(R.string.setup_from_device), onClick = onPickLocal, modifier = Modifier.focusRequester(first),
+            title = stringResource(R.string.setup_from_device), onClick = onPickLocal, modifier = if (onPickApp == null) Modifier.focusRequester(first) else Modifier,
             leading = { tv.own.owntv.ui.stage.StagePopupIcon(OwnTVIcon.FOLDER) },
         )
         tv.own.owntv.ui.stage.StagePopupOption(

@@ -88,6 +88,7 @@ import tv.own.owntv.ui.components.rememberAppliedIcon
 import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.components.OwnTVPopup
 import tv.own.owntv.ui.components.displayText
+import tv.own.owntv.ui.components.longPressMenuGuard
 import tv.own.owntv.ui.components.trapAllFocusExit
 import tv.own.owntv.ui.stage.StageFocus
 import tv.own.owntv.ui.stage.StageMenu
@@ -437,6 +438,7 @@ internal fun FavouritesPage(
             val first = remember { FocusRequester() }
             LaunchedEffect(Unit) { withFrameNanos { }; runCatching { first.requestFocus() } }
             BackHandler { close() }
+            // Opened by a held OK: the guard keeps its repeats off the first item (Remove).
             Box(Modifier.fillMaxSize().background(stageTone(Color.Black.copy(alpha = 0.45f), StageColors.Scrim)).longPressMenuGuard().trapAllFocusExit().focusGroup(), contentAlignment = Alignment.Center) {
                 StageMenu(Modifier.width(440.mpx)) {
                     StageMenuHeader(name, null)
@@ -794,6 +796,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
     val checkedAt by vm.lastUpdateCheckAt.collectAsStateWithLifecycle()
     var showUpdate by remember { mutableStateOf(false) }
     var showToken by remember { mutableStateOf(false) }
+    var showStar by remember { mutableStateOf(false) }
     val updateFocus = remember { FocusRequester() }
     var updateWasOpen by remember { mutableStateOf(false) }
     LaunchedEffect(showUpdate) { if (showUpdate) updateWasOpen = true else if (updateWasOpen) { updateWasOpen = false; withFrameNanos { }; runCatching { updateFocus.requestFocus() } } }
@@ -806,7 +809,8 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
             BrandMark(rememberAppliedIcon(), 150.mpx)
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
-                    Wordmark(300.mpx)
+                    // glcn: "Own" in the page's ink on the light theme (cream on white could not be read).
+                    Wordmark(300.mpx, own = if (tv.own.owntv.ui.theme.LocalStagePalette.current.isLight) StageColors.Text else tv.own.owntv.ui.components.WordmarkCream)
                     Text("Fanart", style = stageText(46, 800), color = Color(0xFFFF966E))
                 }
                 Row(Modifier.padding(top = 16.mpx), horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
@@ -885,10 +889,14 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
                 }
             }
         }
+        // glcn: credit for the app's wallpapers.
+        Text(stringResource(R.string.glcn_wall_credit), style = stageText(14, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 10.mpx))
         Row(Modifier.padding(top = 14.mpx), horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
             val languages = SupportedLocales.all.count { it.packaged }
             StageTool(pluralStringResource(R.plurals.more_about_languages, languages, languages), onClick = onOpenLanguage, icon = OwnTVIcon.LIST, boxed = true, modifier = Modifier.focusRequester(entry))
             StageTool(stringResource(R.string.settings_check_updates), onClick = { showUpdate = true }, icon = OwnTVIcon.REFRESH, boxed = true, modifier = Modifier.focusRequester(updateFocus))
+            // glcn: a star on GitHub, as a QR for the phone (the TV has no browser).
+            StageTool(stringResource(R.string.glcn_star_action), onClick = { showStar = true }, icon = OwnTVIcon.STAR, boxed = true)
             // glcn: the beta's updates come from a private repository; its token is pasted here once.
             if (BuildConfig.GLCN_BETA) {
                 StageTool(stringResource(R.string.glcn_beta_token), onClick = { showToken = true }, icon = OwnTVIcon.PENCIL, boxed = true,
@@ -898,6 +906,9 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
     }
     if (showUpdate) {
         UpdateDialog(onDismiss = { showUpdate = false }, checkOnOpen = true)
+    }
+    if (showStar) {
+        tv.own.owntv.glcn.GitHubStarPopup(onDismiss = { showStar = false })
     }
     if (showToken) {
         tv.own.owntv.ui.components.TextInputDialog(

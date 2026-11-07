@@ -136,7 +136,7 @@ fun CategoryBrowserOverlay(
             selectedIndex = selectedIndex,
             groupsHeading = groupsHeading,
             sheet = true,
-            sheetGlass = tv.own.owntv.features.live.PLAYER_SHEET_GLASS,
+            sheetGlass = tv.own.owntv.glcn.PlayerGlass.share(tv.own.owntv.features.live.PLAYER_SHEET_GLASS),
             listState = listState,
             onSelect = { onSelect(entries[it].item.key) },
             onLongSelect = {},
@@ -208,7 +208,7 @@ private fun CategoryChannelsColumn(
     val wrapScope = androidx.compose.runtime.rememberCoroutineScope()
     androidx.compose.foundation.layout.Column(
         modifier
-            .stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true, share = tv.own.owntv.features.live.PLAYER_SHEET_GLASS)
+            .stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true, share = tv.own.owntv.glcn.PlayerGlass.share(tv.own.owntv.features.live.PLAYER_SHEET_GLASS))
             .padding(horizontal = 16.mpx, vertical = 22.mpx)
             .onPreviewKeyEvent { e ->
                 if (e.type == KeyEventType.KeyDown && e.key == androidx.compose.ui.input.key.Key.DirectionLeft) { onBack(); true } else false

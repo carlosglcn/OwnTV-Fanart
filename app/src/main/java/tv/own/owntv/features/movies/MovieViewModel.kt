@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
@@ -266,6 +267,21 @@ class MovieViewModel(
 
     private val _selected = MutableStateFlow<LiveKey>(LiveKey.All)
     val selectedKey: StateFlow<LiveKey> = _selected.asStateFlow()
+
+    // A playlist switch can leave a category of the previous playlist selected. The rail no longer lists
+    // it, so the heading fell back to the rail's first row while the titles kept coming from that old
+    // category. Back to All whenever the selected folder is not on one of the playlists now shown.
+    init {
+        viewModelScope.launch {
+            ctx.filter { it.profileId >= 0L }.map { it.sourceIds }.distinctUntilChanged().drop(1).collect { ids ->
+                // The hero shows the focused title until another takes focus: not one the rail no longer has.
+                if (_selectedMovie.value?.sourceId?.let { it !in ids } == true) _selectedMovie.value = null
+                val key = _selected.value as? LiveKey.Folder ?: return@collect
+                val sourceId = categoryDao.getById(key.id)?.sourceId
+                if (sourceId == null || sourceId !in ids) _selected.value = LiveKey.All
+            }
+        }
+    }
 
     // Bumped after a favourite/history mutation so the pager rebuilds its (manual, non-reactive)
     // PagingSource. Without this, unfavouriting on the Favorites category (or removing from History)
@@ -563,8 +579,10 @@ class MovieViewModel(
         _selected.value = previous
     }
 
-    fun select(key: LiveKey) {
+    /** The user picks [key] ([remember]); a jump to an item's own category passes false. */
+    fun select(key: LiveKey, remember: Boolean = true) {
         if (lockedKey != null) return
+        if (remember) categoryMemory.picked(key)
         _selected.value = key
         // Core's lazy-catalogue drain fills categories in the provider's order; tell it the user is
         // here so this one is served next. A no-op for every playlist that was not
@@ -609,7 +627,7 @@ class MovieViewModel(
                 kotlinx.coroutines.withTimeoutOrNull(2_000) { railItems.first { list -> list.any { it.key == folder } } } != null
             for (key in listOfNotNull(folder.takeIf { inRail }, LiveKey.All)) {
                 val position = pagingSource(key, c, "", sort).positionOf(movie.id, { it.id }) ?: continue
-                if (lockedKey == null) select(key)
+                if (lockedKey == null) select(key, remember = false) // the title was chosen, not the category
                 _reveal.value = tv.own.owntv.features.search.Reveal(key, movie.id, position)
                 return@launch
             }
@@ -775,6 +793,7 @@ class MovieViewModel(
                 enginePick = tv.own.owntv.core.player.EngineHint.of(
                     movie.name, movie.streamUrl, movie.qualityRank, movie.advertisedCapabilities, movie.containerExt,
                 ),
+                hdr = tv.own.owntv.core.player.EngineHint.isHdr(movie.name, movie.advertisedCapabilities),
                 // Engine pins key on this, not on playUrl (a Stalker playUrl is minted per play).
                 contentKey = pinKey,
                 // A Stalker create_link URL dies before a long film ends; give the player a way to
@@ -1116,34 +1135,36 @@ class MovieViewModel(
     private fun countFlow(key: LiveKey, c: Ctx, hiddenCats: Set<Long>, sealedCats: Set<Long>): Flow<Int> =
         movieCountFlow(key, c.profileId, c.sourceIds, hiddenCats, movieDao, customCategoryDao, sealedCats)
 
-    // Remember the last selected category (Settings → Browsing & lists → "Remember last category —
-    // Movies", on by default). Declared LAST in the class so railItems below/above is already assigned
-    // when this init runs. Mirrors LiveViewModel's identical block.
+    // "Remember last category — Movies" (Settings → Browsing & lists, on by default), each profile its own.
+    // Only a category the user picks is saved; the restore runs at start and again after each profile or
+    // playlist switch, as this view model outlives both. Declared LAST so railItems is already assigned.
+    private val categoryMemory = tv.own.owntv.features.live.LiveCategoryMemory(viewModelScope) {
+        settings.setLastMoviesCategory(it.serialize())
+    }
+
     init {
-        // Persist on change, debounced — the rail fires select() on focus as you scroll it.
         viewModelScope.launch {
-            _selected.drop(1).debounce(800).distinctUntilChanged()
-                .collect { if (lockedKey == null) settings.setLastMoviesCategory(it.serialize()) }
-        }
-        // Restore once at startup, and only while still on the default (never yank a user who already
-        // navigated). A saved folder is honoured only once it exists in this profile's rail.
-        viewModelScope.launch {
-            if (!settings.rememberCategoryMovies.first()) return@launch
-            val saved = parseLiveKey(settings.lastMoviesCategory.first()) ?: return@launch
-            // A saved Folder/Custom is honoured only while it still exists in this profile's rail —
-            // a deleted custom category or a re-synced-away folder must not resurrect on restart.
-            if (saved is LiveKey.Folder || saved is LiveKey.Custom) {
-                val ok = kotlinx.coroutines.withTimeoutOrNull(5_000) {
-                    railItems.first { list -> list.any { it.key == saved } }
-                } != null
-                if (ok && _selected.value == LiveKey.All) _selected.value = saved
-            } else if (_selected.value == LiveKey.All) {
-                _selected.value = saved
-            }
+            ctx.filter { it.profileId >= 0 }
+                .distinctUntilChanged { a, b -> a.profileId == b.profileId && a.sourceIds == b.sourceIds }
+                .collect {
+                    categoryMemory.restore(
+                        stored = { if (settings.rememberCategoryMovies.first()) settings.lastMoviesCategory.first() else null },
+                        // A folder of the new profile's playlists may take a moment to reach the rail.
+                        rail = {
+                            val wanted = parseLiveKey(settings.lastMoviesCategory.first())
+                            kotlinx.coroutines.withTimeoutOrNull(RESTORE_WAIT_MS) {
+                                railItems.first { list -> wanted == null || list.any { it.key == wanted } }
+                            } ?: railItems.value
+                        },
+                        show = { key -> if (lockedKey != null) previousKey = key else _selected.value = key },
+                    )
+                }
         }
     }
 
     private companion object {
+        /** How long the restore waits for the remembered folder to reach a new rail. */
+        const val RESTORE_WAIT_MS = 5_000L
         const val TAG = "OwnTVHome"
         val defaultRail = listOf(
             LiveRailItem(LiveKey.Favorites, icon = OwnTVIcon.FAVORITE),

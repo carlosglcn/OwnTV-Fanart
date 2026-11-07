@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- glcn: official quality artwork for the film player's badges is looked up by name
-     (glcn_badge_dolby_vision, glcn_badge_dolby_atmos, glcn_badge_hdr10, glcn_badge_4k…), so keep it. -->
-<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@drawable/glcn_badge_*" />
+     (glcn_badge_dolby_vision, glcn_badge_dolby_atmos, glcn_badge_hdr10, glcn_badge_4k…), so keep it.
+     The same for the services' own logos on the playlist marks (glcn_source_emby, glcn_source_jellyfin,
+     glcn_source_plex, glcn_source_movistar). -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@drawable/glcn_badge_*,@drawable/glcn_source_*" />

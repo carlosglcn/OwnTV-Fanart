@@ -1,5 +1,8 @@
 package tv.own.owntv.player
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.tv.material3.MaterialTheme
 import tv.own.owntv.ui.theme.hudAccent
 import tv.own.owntv.ui.theme.hudShade
@@ -180,7 +183,7 @@ internal fun LiveChannelHeader(player: PlaybackEngine, chips: List<String>, onBa
         CircleButton(OwnTVIcon.BACK, size = 40, onClick = onBack)
         Spacer(Modifier.width(14.dp))
         Box(
-            Modifier.size(width = 96.dp, height = 66.dp).clip(RoundedCornerShape(14.dp)).background(hudShade(0.45f)),
+            Modifier.size(width = 80.dp, height = 54.dp).clip(RoundedCornerShape(12.dp)).background(hudShade(0.45f)),
             contentAlignment = Alignment.Center,
         ) {
             if (!meta.logoUrl.isNullOrBlank()) {
@@ -196,26 +199,24 @@ internal fun LiveChannelHeader(player: PlaybackEngine, chips: List<String>, onBa
                     Text(it, style = MaterialTheme.typography.titleMedium, color = hudInk.copy(alpha = 0.5f), fontWeight = FontWeight.SemiBold, maxLines = 1)
                     Spacer(Modifier.width(10.dp))
                 }
-                Text(name, style = tv.own.owntv.ui.theme.stageText(32, 800), color = hudInk, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(name, style = tv.own.owntv.ui.theme.stageText(28, 800), color = hudInk, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             val shown = chips.filterNot { it.contains(':') || it == "MPV" || it == "EXO" }
             if (shown.isNotEmpty()) {
-                // Wraps to a second line when the cell is narrow, so no chip is ever cut ("STERE").
-                @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-                androidx.compose.foundation.layout.FlowRow(
-                    Modifier.padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                // glcn: one low line of small chips (they used to wrap to a second line and lift the whole bar).
+                Row(
+                    Modifier.padding(top = 5.dp).horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     shown.forEach { label ->
                         Text(
                             label,
-                            style = tv.own.owntv.ui.theme.stageText(19, 700),
+                            style = tv.own.owntv.ui.theme.stageText(15, 700),
                             color = hudInk.copy(alpha = 0.85f),
                             fontWeight = FontWeight.SemiBold,
                             // One line each: squeezed, a chip clips instead of stacking its letters.
                             maxLines = 1, softWrap = false,
-                            modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(hudInk.copy(alpha = 0.12f)).padding(horizontal = 10.dp, vertical = 3.dp),
+                            modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(hudInk.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 2.dp),
                         )
                     }
                 }
@@ -236,7 +237,11 @@ private fun ChannelLogo(logoUrl: String?, title: String?, size: Int, modifier: M
     }
 }
 
-/** The player's channel OSD: channel logo beside its name and number. */
+/**
+ * The player's channel OSD. glcn: one glass card a little in from the corner — the logo on a light glass plate, the
+ * number large in the accent and the name on one line, the programme under them (picture, title on up to two lines,
+ * progress, what follows). Zapping changes only what is inside: the card stays put.
+ */
 @Composable
 internal fun ChannelOsdCard(
     title: String?,
@@ -246,20 +251,36 @@ internal fun ChannelOsdCard(
     /** Now/next under the name on a zap; null (or a channel with no guide) keeps it name-only. */
     guide: (@Composable () -> Unit)? = null,
 ) {
-    Row(
-        modifier = modifier.widthIn(max = if (guide != null) 680.dp else 340.dp).clip(RoundedCornerShape(14.dp)).background(hudShade(0.55f)).padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    Column(
+        modifier = modifier.width(if (guide != null) 620.dp else 400.dp)
+            .clip(RoundedCornerShape(22.dp)).background(hudShade(0.62f))
+            .border(1.dp, hudInk.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
+            .padding(horizontal = 18.dp, vertical = 16.dp),
     ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF004F46)), contentAlignment = Alignment.Center) {
-            if (!logoUrl.isNullOrBlank()) AsyncImage(model = logoUrl, contentDescription = null, modifier = Modifier.fillMaxSize())
-            else Text((title ?: "?").take(3).uppercase(), style = tv.own.owntv.ui.theme.stageText(22, 700), color = Color(0xFF6FF8E4), fontWeight = FontWeight.Bold)
-        }
-        Column {
-            Text(title ?: "", style = tv.own.owntv.ui.theme.stageText(25, 500), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            subtitle?.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = tv.own.owntv.ui.theme.stageText(20, 500), color = hudInk.copy(alpha = 0.5f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // glcn: no cross-fade between channels — the outgoing channel's picture flashed up before the new one's.
+        val shownTitle = title
+        run {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Box(
+                        Modifier.size(width = 64.dp, height = 44.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.14f)).padding(5.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (!logoUrl.isNullOrBlank()) AsyncImage(model = logoUrl, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                        else Text((shownTitle ?: "?").take(3).uppercase(), style = tv.own.owntv.ui.theme.stageText(18, 800), color = hudInk)
+                    }
+                    // A channel's number ("#7") stands large in the accent; any other line stays small under the name.
+                    val number = subtitle?.filter(Char::isDigit)?.takeIf { it.isNotEmpty() && subtitle.count(Char::isLetter) == 0 }
+                    if (number != null) Text(number, style = tv.own.owntv.ui.theme.stageText(30, 800), color = hudAccent, maxLines = 1)
+                    Column(Modifier.weight(1f, fill = false)) {
+                        Text(shownTitle ?: "", style = tv.own.owntv.ui.theme.stageText(25, 600), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (number == null) subtitle?.takeIf { it.isNotBlank() }?.let {
+                            Text(it, style = tv.own.owntv.ui.theme.stageText(18, 500), color = hudInk.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                if (guide != null) Box(Modifier.padding(top = 10.dp)) { guide() }
             }
-            guide?.invoke()
         }
     }
 }
@@ -344,6 +365,8 @@ internal fun CenterControls(
     player: PlaybackEngine, nav: NavState, isPlaying: Boolean, isLive: Boolean,
     onRewindLive: (() -> Unit)?, onForwardLive: (() -> Unit)?, timeshiftOffset: () -> Int?,
     playFocus: FocusRequester, modifier: Modifier = Modifier,
+    /** glcn: the stream is loading — the play button wears the turning ring (see [LoadMorph]). */
+    buffering: Boolean = false,
 ) {
     val seekStep by player.seekStepMs.collectAsStateWithLifecycle() // Settings -> Seek step
     val rewindMode = onRewindLive != null // this is a catch-up-capable Live channel
@@ -366,7 +389,10 @@ internal fun CenterControls(
                 rewindMode -> CircleButton(OwnTVIcon.REWIND, size = 44) { onRewindLive() } // step back into the archive
                 !isLive -> CircleButton(OwnTVIcon.REWIND, size = 44) { player.seekBy(-seekStep) }
             }
-            CircleButton(if (isPlaying) OwnTVIcon.PAUSE else OwnTVIcon.PLAY, size = 64, primary = true, modifier = Modifier.focusRequester(playFocus)) { player.togglePlayPause() }
+            Box(contentAlignment = Alignment.Center) {
+                if (buffering) SpinRing(sizeDp = 76)
+                CircleButton(if (isPlaying) OwnTVIcon.PAUSE else OwnTVIcon.PLAY, size = 64, primary = true, modifier = Modifier.focusRequester(playFocus)) { player.togglePlayPause() }
+            }
             when {
                 rewindMode && timeshifting -> CircleButton(OwnTVIcon.FORWARD, size = 44) { onForwardLive?.invoke() } // toward live
                 !isLive && !rewindMode -> CircleButton(OwnTVIcon.FORWARD, size = 44) { player.seekBy(seekStep) }
@@ -396,6 +422,7 @@ internal fun BottomBar(
     onGuide: (() -> Unit)? = null,
     onOtherChannels: (() -> Unit)? = null, otherChannelsCount: Int = 0,
     onChannelCopies: (() -> Unit)? = null,
+    hasSources: Boolean = false,
     onOpenDialog: (HudDialog) -> Unit, onPip: (() -> Unit)?, onAudioMode: (() -> Unit)?,
     onMultiview: (() -> Unit)? = null, onRecordThis: (() -> Unit)? = null, recordingThis: Boolean = false,
     /** Given to whichever timeline is drawn, so Left/Right with the controls hidden can land on it. */
@@ -405,6 +432,9 @@ internal fun BottomBar(
     header: (@Composable () -> Unit)? = null,
     /** glcn: live TV — the programme on air, at the dock's right. */
     side: (@Composable () -> Unit)? = null,
+    /** glcn: Ficha banner — the tools beside the channel on its line, and [belowHeader] under them. */
+    toolsUp: Boolean = false,
+    belowHeader: (@Composable () -> Unit)? = null,
 ) {
     // Changes only while rewound into the archive. The film position is read lower still, by
     // [VodTimeline], so the tool buttons do not redraw every second.
@@ -412,62 +442,13 @@ internal fun BottomBar(
     // Only whether one runs: the countdown itself ticks every second, and this bar must not.
     val sleepLeft = org.koin.compose.koinInject<SleepTimer>().remainingMs.collectAsStateWithLifecycle()
     val sleepRunning by androidx.compose.runtime.remember { androidx.compose.runtime.derivedStateOf { sleepLeft.value != null } }
-    val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
-        if (header != null) {
-            // glcn: live TV — the channel on the left, the programme on air with its picture on the right,
-            // then every control in one full-width row below.
-            if (side != null) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { header() }
-                    Spacer(Modifier.width(18.dp))
-                    Box(Modifier.widthIn(max = 540.dp)) { side() }
-                }
-            } else header()
-            Box(Modifier.fillMaxWidth().padding(vertical = if (side != null) 2.dp else 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
-        }
-        // Band A — the instrument. The times are the bar's own end caps now; the separate time row is
-        // gone, and on live the right cap is the state badge instead of a clock.
-        when {
-            // Catch-up live channel → a scrubbable live timeline (last LIVE_WINDOW up to the live edge).
-            onScrubLive != null -> {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) {
-                        // The live edge is now; the offset says how far behind it the picture is.
-                        LiveTimelineBar(
-                            offsetSec = timeshiftOffsetSec ?: 0,
-                            programmes = liveProgrammes,
-                            liveEdgeMs = System.currentTimeMillis(),
-                            onScrub = onScrubLive,
-                            focusRequester = seekFocus,
-                            gaps = liveGaps,
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    LiveStateBadge(timeshiftOffsetSec)
-                }
-                Spacer(Modifier.height(10.dp))
-            }
-            !isLive && duration > 0 -> {
-                VodTimeline(player, position, duration, seekFocus)
-                Spacer(Modifier.height(10.dp))
-            }
-            // A live channel with no archive has no timeline to scrub, but it still has a state to
-            // report — and the badge no longer lives in the top bar.
-            // glcn: with the programme card beside the channel, the state badge sits in the tools row instead.
-            isLive && side == null -> {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { LiveStateBadge(timeshiftOffsetSec) }
-                Spacer(Modifier.height(10.dp))
-            }
-        }
-        // Band B — the tools. Each cluster hugs its own screen edge and the gap between them is the
-        // slack a focused button expands into, so growth is always toward the centre: the left cluster
-        // pushes only the buttons to its right, the right cluster only those to its left. Walk either
-        // cluster outward-in and nothing you have already passed ever moves.
-        // glcn: the tool's name in one fixed place, one focus box that slides between the tools, and the row
-        // wrapping round — ◀ from the first tool reaches Info at the far end, ▶ from the last returns.
+    // glcn: the tools as one piece, so a banner style can put them beside the channel ([toolsUp]).
+    val tools: @Composable (Modifier) -> Unit = { toolsModifier ->
+        Column(toolsModifier) {
         val toolFocus = androidx.compose.runtime.remember { ToolFocusState() }
         val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-        ToolLabelLine(toolFocus)
+        // glcn: the tool's name above the row; on the Ficha banner under it (above, it left an empty band at the top).
+        if (!toolsUp) ToolLabelLine(toolFocus)
         androidx.compose.runtime.CompositionLocalProvider(LocalToolFocus provides toolFocus) {
         Box(Modifier.fillMaxWidth().onGloballyPositioned { toolFocus.origin = it.positionInWindow() }) {
         ToolFocusBox(toolFocus, Modifier.matchParentSize())
@@ -540,6 +521,11 @@ internal fun BottomBar(
                         }
                         // Not shown on the TV: Back from the player already returns to the match page.
                         PlayerControl.MATCH -> Unit
+                        // The same channel in another quality, category or playlist. Live only; the
+                        // list is read when it opens.
+                        PlayerControl.SOURCES -> if (hasSources) {
+                            CtrlButton(OwnTVIcon.PLAYLIST, label = stringResource(R.string.player_tool_sources)) { onOpenDialog(HudDialog.SOURCES) }
+                        }
                         // Belongs to the tools cluster; `clusterFor` never hands them to this loop.
                         PlayerControl.BRIGHTNESS, PlayerControl.CHANNEL_LIST, PlayerControl.ENGINE,
                         PlayerControl.ASPECT, PlayerControl.QUALITY, PlayerControl.MINI_PLAYER, PlayerControl.AUDIO_ONLY,
@@ -582,8 +568,16 @@ internal fun BottomBar(
                         }
                         // Aspect/zoom works in every mode now — direct mode resizes the surface view
                         // itself (see MpvVideoSurface), GL mode scales internally.
+                        // A press steps to the next mode (named beside the label, so each press shows
+                        // where it landed); OK held opens the whole list.
                         PlayerControl.ASPECT ->
-                            CtrlButton(OwnTVIcon.ASPECT, active = zoomMode != ZoomMode.FIT, label = stringResource(R.string.player_tool_aspect)) { onOpenDialog(HudDialog.ZOOM) }
+                            CtrlButton(
+                                OwnTVIcon.ASPECT,
+                                active = zoomMode != ZoomMode.FIT,
+                                label = stringResource(R.string.player_tool_aspect),
+                                value = stringResource(zoomMode.labelRes),
+                                onLongClick = { onOpenDialog(HudDialog.ZOOM) },
+                            ) { player.setZoomModeByUser(ZoomMode.entries[(zoomMode.ordinal + 1) % ZoomMode.entries.size]) }
                         // Only when this stream offers several; tinted while a pick overrides Auto.
                         PlayerControl.QUALITY -> {
                             val qualities by player.videoQualities.collectAsStateWithLifecycle()
@@ -642,7 +636,7 @@ internal fun BottomBar(
                         PlayerControl.GO_LIVE, PlayerControl.VOLUME, PlayerControl.BRIGHTNESS,
                         PlayerControl.SPEED, PlayerControl.SUBTITLES, PlayerControl.AUDIO,
                         PlayerControl.FAVOURITE, PlayerControl.CATCH_UP, PlayerControl.PREVIOUS_CHANNEL,
-                        PlayerControl.OTHER_CHANNELS, PlayerControl.MATCH, PlayerControl.CHANNEL_LIST,
+                        PlayerControl.OTHER_CHANNELS, PlayerControl.MATCH, PlayerControl.SOURCES, PlayerControl.CHANNEL_LIST,
                         -> Unit
                     }
                 }
@@ -650,8 +644,74 @@ internal fun BottomBar(
         }
         }
         }
+        if (toolsUp) ToolLabelLine(toolFocus, compact = true)
+        }
     }
-    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = if (side != null) 6.dp else 20.dp)) { body() }
+    val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
+        if (header != null && toolsUp) {
+            // glcn: Ficha banner — every control on the top line (all fifteen take the panel's whole width: beside the
+            // channel they ran off its edge), then the programme with the channel named over it.
+            tools(Modifier.fillMaxWidth())
+            Box(Modifier.fillMaxWidth().padding(bottom = 4.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
+            belowHeader?.invoke()
+        } else if (header != null) {
+            // glcn: live TV — the channel on the left, the programme on air with its picture on the right,
+            // then every control in one full-width row below.
+            if (side != null) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) { header() }
+                    Spacer(Modifier.width(18.dp))
+                    Box(Modifier.widthIn(max = 540.dp)) { side() }
+                }
+            } else header()
+            // glcn: on a channel with an archive the timeline below takes this line's place — no extra row.
+            if (onScrubLive == null || side == null) {
+                Box(Modifier.fillMaxWidth().padding(vertical = if (side != null) 2.dp else 10.dp).height(1.dp).background(hudInk.copy(alpha = 0.10f)))
+            } else Spacer(Modifier.height(8.dp))
+        }
+        // Band A — the instrument. The times are the bar's own end caps now; the separate time row is
+        // gone, and on live the right cap is the state badge instead of a clock.
+        when {
+            // Catch-up live channel → a scrubbable live timeline (last LIVE_WINDOW up to the live edge).
+            onScrubLive != null -> {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) {
+                        // The live edge is now; the offset says how far behind it the picture is.
+                        LiveTimelineBar(
+                            offsetSec = timeshiftOffsetSec ?: 0,
+                            programmes = liveProgrammes,
+                            liveEdgeMs = System.currentTimeMillis(),
+                            onScrub = onScrubLive,
+                            focusRequester = seekFocus,
+                            gaps = liveGaps,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    LiveStateBadge(timeshiftOffsetSec)
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+            !isLive && duration > 0 -> {
+                VodTimeline(player, position, duration, seekFocus)
+                Spacer(Modifier.height(10.dp))
+            }
+            // A live channel with no archive has no timeline to scrub, but it still has a state to
+            // report — and the badge no longer lives in the top bar.
+            // glcn: with the programme card beside the channel, the state badge sits in the tools row instead.
+            isLive && side == null -> {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { LiveStateBadge(timeshiftOffsetSec) }
+                Spacer(Modifier.height(10.dp))
+            }
+        }
+        // Band B — the tools. Each cluster hugs its own screen edge and the gap between them is the
+        // slack a focused button expands into, so growth is always toward the centre: the left cluster
+        // pushes only the buttons to its right, the right cluster only those to its left. Walk either
+        // cluster outward-in and nothing you have already passed ever moves.
+        // glcn: the tool's name in one fixed place, one focus box that slides between the tools, and the row
+        // wrapping round — ◀ from the first tool reaches Info at the far end, ▶ from the last returns.
+        if (!toolsUp) tools(Modifier)
+    }
+    Dock(modifier = modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = if (side != null) 6.dp else 20.dp), bare = side != null) { body() }
 }
 
 private fun volumeIcon(volume: Int): OwnTVIcon = when {
@@ -728,3 +788,4 @@ internal fun NextEpisodeCard(
         }
     }
 }
+

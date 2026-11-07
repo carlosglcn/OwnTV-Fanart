@@ -81,6 +81,11 @@ fun HomeLiveRow(
             pinned = isPinned(ch),
             onPin = if (pinnable) ({ tv.own.owntv.glcn.RecentPins.toggle(ctx, tv.own.owntv.core.customize.CustomizeKeys.channel(ch)) }) else null,
             onRemove = { onRemove?.invoke(ch) },
+            // glcn: the whole row at once — every recent channel out, every pin let go.
+            onClearAll = if (pinnable) ({
+                (if (onNow) guide.channels else channels).forEach { onRemove?.invoke(it) }
+                tv.own.owntv.glcn.RecentPins.clear(ctx)
+            }) else null,
             onDismiss = { menuFor.value = null },
         )
     }
@@ -213,7 +218,7 @@ private fun programmeProgress(programme: EpgProgrammeEntity, now: Long): Float {
 
 /** glcn: hold OK on a recent channel — pin it to the front (or unpin it), or take it out of the row. */
 @Composable
-private fun RecentChannelMenu(title: String, pinned: Boolean, onPin: (() -> Unit)?, onRemove: () -> Unit, onDismiss: () -> Unit) {
+private fun RecentChannelMenu(title: String, pinned: Boolean, onPin: (() -> Unit)?, onRemove: () -> Unit, onClearAll: (() -> Unit)? = null, onDismiss: () -> Unit) {
     tv.own.owntv.ui.stage.StagePopup(onDismiss = onDismiss, title = title, width = 600.mpx) {
         onPin?.let { pin ->
             tv.own.owntv.ui.stage.StagePopupOption(
@@ -225,5 +230,11 @@ private fun RecentChannelMenu(title: String, pinned: Boolean, onPin: (() -> Unit
             title = stringResource(R.string.glcn_remove_from_recent),
             onClick = { onRemove(); onDismiss() },
         )
+        onClearAll?.let { clear ->
+            tv.own.owntv.ui.stage.StagePopupOption(
+                title = stringResource(R.string.glcn_recent_clear_all),
+                onClick = { clear(); onDismiss() },
+            )
+        }
     }
 }

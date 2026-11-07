@@ -231,6 +231,8 @@ android {
             // the "Unable to strip the following libraries, packaging them as they are" line on every
             // release task came from. Skipping it packages byte-identical libraries without the noise.
             keepDebugSymbols += "**/*.so"
+            // glcn: libmpv and libass (ASS subtitles on ExoPlayer) both ship the NDK's C++ runtime; the app needs one copy.
+            pickFirsts += "**/libc++_shared.so"
         }
     }
 

@@ -28,6 +28,7 @@ object ArtPrefetch {
     fun backdrops(context: Context, urls: List<String?>) = enqueue(context, urls, Size(1280, 720))
 
     private fun enqueue(context: Context, urls: List<String?>, size: Size) {
+        if (MemoryWatch.tight) return // glcn: memory braked — no pictures fetched ahead for a while
         val loader = SingletonImageLoader.get(context)
         val fresh = synchronized(asked) {
             urls.filterNotNull().filter { it.startsWith("http") && asked.put(it, Unit) == null }

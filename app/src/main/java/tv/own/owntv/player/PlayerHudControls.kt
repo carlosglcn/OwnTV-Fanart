@@ -109,11 +109,13 @@ internal fun CircleButton(icon: OwnTVIcon, size: Int, primary: Boolean = false, 
     // Focus fills the button with the accent and rings it in a white hairline. The glyph takes
     // onAccentOnVideo rather than a fixed dark, so a deep custom accent still gets a readable icon —
     // that role is already derived from the seed's luminance, which is the check this needs.
+    // glcn: with Glass on, the round buttons (back, play/pause) focus as tinted glass like the dock's tools, the glyph white.
+    val glass = tv.own.owntv.glcn.GlassFocus.on
     StageSurface(
         onClick = onClick,
         radius = (size / 2f).dp,
         modifier = modifier.size(size.dp),
-        focusStyle = StageFocus.FILLED,
+        focusStyle = if (glass) StageFocus.FX else StageFocus.FILLED,
         idle = Modifier.background(if (primary) hudInk.copy(alpha = 0.95f) else hudInk.copy(alpha = 0.10f), CircleShape),
         accent = hudFocus(ring = hudInk),
         contentAlignment = Alignment.Center,
@@ -121,6 +123,7 @@ internal fun CircleButton(icon: OwnTVIcon, size: Int, primary: Boolean = false, 
         OwnTVIcon(
             icon,
             tint = when {
+                focused && glass -> hudInk
                 focused -> hudOnAccent
                 primary -> tv.own.owntv.ui.theme.stageTone(Color(0xFF0E1513), Color.White)
                 else -> hudInk
@@ -152,14 +155,19 @@ internal fun TransportCapsule(modifier: Modifier = Modifier, content: @Composabl
  * as [TransportCapsule] at the dock's own 22 dp radius, so the two read as one material.
  */
 @Composable
-internal fun Dock(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+internal fun Dock(
+    modifier: Modifier = Modifier,
+    /** glcn: no panel — the screen's own shade at the foot carries the text (live TV), so more of the picture shows. */
+    bare: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     // No clip: the fill and rim already take the shape, and a clip cut off the seek bar's time bubble,
     // which floats above band A — outside the dock.
     Column(
-        modifier
+        (if (bare) modifier else modifier
             .background(hudShade(0.55f), RoundedCornerShape(22.dp))
-            .border(1.dp, hudInk.copy(alpha = 0.10f), RoundedCornerShape(22.dp))
-            .padding(horizontal = 18.dp, vertical = 12.dp),
+            .border(1.dp, hudInk.copy(alpha = 0.10f), RoundedCornerShape(22.dp)))
+            .padding(horizontal = 18.dp, vertical = if (bare) 4.dp else 12.dp),
         content = content,
     )
 }
@@ -330,7 +338,7 @@ internal fun ToolFocusBox(st: ToolFocusState, modifier: Modifier = Modifier) {
 
 /** The name of the tool in focus, in one fixed spot above the row, a margin in from the dock's edge. */
 @Composable
-internal fun ToolLabelLine(st: ToolFocusState) {
+internal fun ToolLabelLine(st: ToolFocusState, compact: Boolean = false) {
     val alpha = remember { androidx.compose.animation.core.Animatable(0f) }
     val on = st.current != null
     val fade = ownTvTween<Float>(140)
@@ -340,7 +348,7 @@ internal fun ToolLabelLine(st: ToolFocusState) {
     androidx.compose.runtime.LaunchedEffect(on) { alpha.animateTo(if (on) 1f else 0f, fade) }
     val text = st.label + (st.value?.let { " · $it" } ?: "")
     Box(
-        Modifier.fillMaxWidth().height(30.dp).padding(start = 12.dp, end = 12.dp, bottom = 4.dp).graphicsLayer { this.alpha = alpha.value },
+        Modifier.fillMaxWidth().height(if (compact) 22.dp else 30.dp).padding(start = 12.dp, end = 12.dp, bottom = if (compact) 0.dp else 4.dp).graphicsLayer { this.alpha = alpha.value },
         contentAlignment = Alignment.CenterStart,
     ) {
         AnimatedContent(
@@ -422,10 +430,15 @@ internal fun CtrlButton(
     // "favourite" everywhere in the app — browse rows, posters and the player alike.
     activeTint: Color = hudAccent,
     label: String,
+    // Shown after the label while focused, in place of the count: the current setting a press changes.
+    value: String? = null,
+    // OK held. Null = a hold is a press.
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     StageSurface(
         onClick = onClick,
+        onLongClick = onLongClick,
         radius = 12.dp,
         // A square 44 dp, always: the name is written above the row, not grown from the button.
         modifier = Modifier.height(44.dp).widthIn(min = 44.dp).toolFocus(label, badge?.let { stringResource(R.string.common_number_grouped, it) }),
@@ -465,10 +478,24 @@ private fun BoxScope.Playhead(frac: Float) {
 }
 
 @Composable
-internal fun SeekBar(positionMs: Long, durationMs: Long, bufferedMs: Long, stepMs: Long, onSeek: (Long) -> Unit, focusRequester: FocusRequester? = null) {
+internal fun SeekBar(
+    positionMs: Long, durationMs: Long, bufferedMs: Long, stepMs: Long, onSeek: (Long) -> Unit, focusRequester: FocusRequester? = null,
+    /** glcn: chapter starts, drawn as small gaps along the bar. */
+    marks: List<Long> = emptyList(),
+    /** glcn: a thumbnail of the picture at a time (the server's seek previews), shown above the playhead while seeking. */
+    preview: (@Composable (Long) -> Unit)? = null,
+) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val frac = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+    // glcn: the thumbnail shows from a press until a moment after the last one.
+    var seekedAt by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+    val previewOn by androidx.compose.runtime.produceState(false, seekedAt) {
+        if (seekedAt == 0L) return@produceState
+        value = true
+        kotlinx.coroutines.delay(SEEK_PREVIEW_HOLD_MS)
+        value = false
+    }
     // The buffer ghost: how far ahead the engine has data. Never behind the playhead, so a stale or
     // unreported value simply draws nothing rather than a stripe that contradicts the fill.
     val bufferedFrac = if (durationMs > 0) (bufferedMs.toFloat() / durationMs).coerceIn(frac, 1f) else frac
@@ -479,8 +506,8 @@ internal fun SeekBar(positionMs: Long, durationMs: Long, bufferedMs: Long, stepM
             .onKeyEvent { e ->
                 // Physical by design: left rewinds and right advances media time in every locale.
                 if (e.type == KeyEventType.KeyDown) when (e.key) {
-                    Key.DirectionLeft -> { onSeek(-stepMs); true }
-                    Key.DirectionRight -> { onSeek(stepMs); true }
+                    Key.DirectionLeft -> { seekedAt = android.os.SystemClock.uptimeMillis(); onSeek(-stepMs); true }
+                    Key.DirectionRight -> { seekedAt = android.os.SystemClock.uptimeMillis(); onSeek(stepMs); true }
                     else -> false
                 } else false
             }
@@ -490,6 +517,24 @@ internal fun SeekBar(positionMs: Long, durationMs: Long, bufferedMs: Long, stepM
         Box(Modifier.fillMaxWidth().height(if (focused) 6.dp else 4.dp).clip(RoundedCornerShape(50)).background(hudInk.copy(alpha = if (focused) 0.4f else 0.22f))) {
             Box(Modifier.fillMaxWidth(bufferedFrac).fillMaxHeight().clip(RoundedCornerShape(50)).background(hudInk.copy(alpha = 0.28f)))
             Box(Modifier.fillMaxWidth(frac).fillMaxHeight().clip(RoundedCornerShape(50)).background(hudAccent))
+            // glcn: the chapters, as thin cuts in the bar (the first, at 0, is the start and not drawn).
+            if (marks.isNotEmpty() && durationMs > 0) {
+                val cut = hudShade(0.9f)
+                androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
+                    val w = 2.dp.toPx()
+                    marks.forEach { m ->
+                        if (m <= 0 || m >= durationMs) return@forEach
+                        val x = size.width * (m.toFloat() / durationMs)
+                        drawRect(cut, topLeft = androidx.compose.ui.geometry.Offset(x - w / 2, 0f), size = androidx.compose.ui.geometry.Size(w, size.height))
+                    }
+                }
+            }
+        }
+        if (focused && previewOn && preview != null) {
+            // Above the time bubble: its bottom edge sits a few dp over the bubble's top.
+            Box(Modifier.fillMaxWidth()) {
+                Box(Modifier.atFraction(frac).offset(y = -(SEEK_PREVIEW_LIFT + SEEK_PREVIEW_HEIGHT / 2))) { preview(positionMs) }
+            }
         }
         if (focused) {
             Playhead(frac)
@@ -512,6 +557,11 @@ internal fun SeekBar(positionMs: Long, durationMs: Long, bufferedMs: Long, stepM
     }
     }
 }
+
+/** glcn: the seek thumbnail's height, how far it rises above the bar, and how long it stays after a press. */
+internal val SEEK_PREVIEW_HEIGHT = 135.dp
+private val SEEK_PREVIEW_LIFT = 56.dp
+private const val SEEK_PREVIEW_HOLD_MS = 1_500L
 
 /** Places the element centred at [fraction] of the parent's width, clamped so it stays fully inside. */
 private fun Modifier.atFraction(fraction: Float): Modifier = layout { measurable, constraints ->

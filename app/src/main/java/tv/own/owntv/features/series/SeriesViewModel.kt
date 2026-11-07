@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
@@ -272,6 +273,21 @@ class SeriesViewModel(
 
     private val _selected = MutableStateFlow<LiveKey>(LiveKey.All)
     val selectedKey: StateFlow<LiveKey> = _selected.asStateFlow()
+
+    // A playlist switch can leave a category of the previous playlist selected. The rail no longer lists
+    // it, so the heading fell back to the rail's first row while the titles kept coming from that old
+    // category. Back to All whenever the selected folder is not on one of the playlists now shown.
+    init {
+        viewModelScope.launch {
+            ctx.filter { it.profileId >= 0L }.map { it.sourceIds }.distinctUntilChanged().drop(1).collect { ids ->
+                // The hero shows the focused title until another takes focus: not one the rail no longer has.
+                if (_selectedSeries.value?.sourceId?.let { it !in ids } == true) _selectedSeries.value = null
+                val key = _selected.value as? LiveKey.Folder ?: return@collect
+                val sourceId = categoryDao.getById(key.id)?.sourceId
+                if (sourceId == null || sourceId !in ids) _selected.value = LiveKey.All
+            }
+        }
+    }
 
     // Bumped after a favourite/history mutation so the pager rebuilds its (manual, non-reactive)
     // PagingSource. Without this, unfavouriting on the Favorites category leaves the removed series in
@@ -746,6 +762,7 @@ class SeriesViewModel(
 
     fun select(key: LiveKey) {
         if (lockedKey != null) return
+        categoryMemory.picked(key)
         _selected.value = key
         // Core's lazy-catalogue drain fills categories in the provider's order; tell it the user is
         // here so this one is served next. A no-op for every playlist that was not
@@ -1124,6 +1141,7 @@ class SeriesViewModel(
                             enginePick = tv.own.owntv.core.player.EngineHint.of(
                                 ep.name, ep.streamUrl, show.qualityRank, show.advertisedCapabilities, ep.containerExt,
                             ),
+                            hdr = tv.own.owntv.core.player.EngineHint.isHdr(ep.name, show.advertisedCapabilities),
                         ),
                         resolveUrl = if (needsResolve && source != null) {
                             { streamUrlResolver.resolve(source, ep.streamUrl, vod = true, episode = ep.episodeNumber) }
@@ -1204,10 +1222,32 @@ class SeriesViewModel(
         }
     }
 
-    fun downloadSeries(series: SeriesEntity) = downloadEpisodes(series, null)
+    /** Whether the profile in use may download; every Download button follows it. */
+    val downloadsAllowed: StateFlow<Boolean> =
+        settings.activeDownloadsAllowed.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
-    /** "Download season" on the series page: only [season]'s episodes. */
-    fun downloadSeason(series: SeriesEntity, season: Int) = downloadEpisodes(series, season)
+    /** A whole show or season waiting for the user to confirm it, with how many episodes that is. */
+    data class BulkDownloadAsk(val series: SeriesEntity, val season: Int?, val episodes: Int)
+
+    private val _bulkDownloadAsk = MutableStateFlow<BulkDownloadAsk?>(null)
+    val bulkDownloadAsk: StateFlow<BulkDownloadAsk?> = _bulkDownloadAsk.asStateFlow()
+
+    /**
+     * "Download all episodes" ([season] null) or "Download season" (only [season]'s episodes). Asks
+     * first, saying how many, because one press queues every file of the show and can fill the box.
+     */
+    fun askBulkDownload(series: SeriesEntity, season: Int?) {
+        viewModelScope.launch {
+            val episodes = seriesDao.episodesBySeries(series.id).first().count { season == null || it.seasonNumber == season }
+            if (episodes > 0) _bulkDownloadAsk.value = BulkDownloadAsk(series, season, episodes)
+        }
+    }
+
+    fun answerBulkDownload(confirmed: Boolean) {
+        val ask = _bulkDownloadAsk.value ?: return
+        _bulkDownloadAsk.value = null
+        if (confirmed) downloadEpisodes(ask.series, ask.season)
+    }
 
     private fun downloadEpisodes(series: SeriesEntity, season: Int?) {
         val showDir = StorageAccess.sanitize(series.name)
@@ -1425,34 +1465,36 @@ class SeriesViewModel(
     private fun countFlow(key: LiveKey, c: Ctx, hiddenCats: Set<Long>, sealedCats: Set<Long>): Flow<Int> =
         seriesCountFlow(key, c.profileId, c.sourceIds, hiddenCats, seriesDao, customCategoryDao, sealedCats)
 
-    // Remember the last selected category (Settings → Browsing & lists → "Remember last category —
-    // Series", on by default). Declared LAST in the class so railItems is already assigned when this
-    // init runs. Mirrors LiveViewModel's identical block.
+    // "Remember last category — Series" (Settings → Browsing & lists, on by default), each profile its own.
+    // Only a category the user picks is saved; the restore runs at start and again after each profile or
+    // playlist switch, as this view model outlives both. Declared LAST so railItems is already assigned.
+    private val categoryMemory = tv.own.owntv.features.live.LiveCategoryMemory(viewModelScope) {
+        settings.setLastSeriesCategory(it.serialize())
+    }
+
     init {
-        // Persist on change, debounced — the rail fires select() on focus as you scroll it.
         viewModelScope.launch {
-            _selected.drop(1).debounce(800).distinctUntilChanged()
-                .collect { if (lockedKey == null) settings.setLastSeriesCategory(it.serialize()) }
-        }
-        // Restore once at startup, and only while still on the default (never yank a user who already
-        // navigated). A saved folder is honoured only once it exists in this profile's rail.
-        viewModelScope.launch {
-            if (!settings.rememberCategorySeries.first()) return@launch
-            val saved = parseLiveKey(settings.lastSeriesCategory.first()) ?: return@launch
-            // A saved Folder/Custom is honoured only while it still exists in this profile's rail —
-            // a deleted custom category or a re-synced-away folder must not resurrect on restart.
-            if (saved is LiveKey.Folder || saved is LiveKey.Custom) {
-                val ok = kotlinx.coroutines.withTimeoutOrNull(5_000) {
-                    railItems.first { list -> list.any { it.key == saved } }
-                } != null
-                if (ok && _selected.value == LiveKey.All) _selected.value = saved
-            } else if (_selected.value == LiveKey.All) {
-                _selected.value = saved
-            }
+            ctx.filter { it.profileId >= 0 }
+                .distinctUntilChanged { a, b -> a.profileId == b.profileId && a.sourceIds == b.sourceIds }
+                .collect {
+                    categoryMemory.restore(
+                        stored = { if (settings.rememberCategorySeries.first()) settings.lastSeriesCategory.first() else null },
+                        // A folder of the new profile's playlists may take a moment to reach the rail.
+                        rail = {
+                            val wanted = parseLiveKey(settings.lastSeriesCategory.first())
+                            kotlinx.coroutines.withTimeoutOrNull(RESTORE_WAIT_MS) {
+                                railItems.first { list -> wanted == null || list.any { it.key == wanted } }
+                            } ?: railItems.value
+                        },
+                        show = { key -> if (lockedKey != null) previousKey = key else _selected.value = key },
+                    )
+                }
         }
     }
 
     private companion object {
+        /** How long the restore waits for the remembered folder to reach a new rail. */
+        const val RESTORE_WAIT_MS = 5_000L
         const val TAG = "OwnTVHome"
 
         /**

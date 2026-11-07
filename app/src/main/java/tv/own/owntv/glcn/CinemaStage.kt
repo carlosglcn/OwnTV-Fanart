@@ -34,6 +34,8 @@ data class CinemaInfo(
     /** The catalogue's own quality marks ("Dolby Vision, Dolby Atmos"), used until the stream says more. */
     val capabilities: String? = null,
     val qualityRank: Int = 0,
+    /** glcn: the show's TMDB id, for the episode's intro times (TheIntroDB). */
+    val tmdbId: Int? = null,
 )
 
 /** One episode of the season playing, for the Episodes tab. */

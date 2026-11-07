@@ -31,8 +31,8 @@ pictures first: the guide's fanart across Home, Live TV and the guide, and a few
 
 On a TV, open **Downloader** (by AFTVnews), type the code and install — it always fetches the newest version.
 
-[![TV downloads](https://img.shields.io/github/downloads/carlosglcn/OwnTV-Fanart/total?label=TV%20downloads&color=00c2a8)](https://github.com/carlosglcn/OwnTV-Fanart/releases)
-[![Phone downloads](https://img.shields.io/github/downloads/carlosglcn/OwnTV-Fanart-Mobile/total?label=Phone%20downloads&color=00c2a8)](https://github.com/carlosglcn/OwnTV-Fanart-Mobile/releases)
+[![TV downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fcarlosglcn%2FOwnTV-Fanart%2Fstats%2Fdownloads.json&query=%24.total&label=TV%20downloads&color=00c2a8)](https://github.com/carlosglcn/OwnTV-Fanart/releases)
+[![Phone downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fcarlosglcn%2FOwnTV-Fanart-Mobile%2Fstats%2Fdownloads.json&query=%24.total&label=Phone%20downloads&color=00c2a8)](https://github.com/carlosglcn/OwnTV-Fanart-Mobile/releases)
 
 It installs **beside** the official app (its own package, `tv.own.owntv.glcn`), and tells you in-app when a new version is out.
 
@@ -58,11 +58,19 @@ OwnTV Fanart is free and made in spare time. If it makes your TV nicer, you can 
 - **Sound** — the best audio track in your language, clearer dialogue, and (on SHIELD) Dolby/DTS passthrough from mpv too.
 - **TV and phone together** — automatic sync of favourites and history, and *Watch on TV* from the phone.
 - **Emby** libraries via M3U, Android Auto and a home-screen widget on the phone, a fanart screensaver on the TV.
+- **A player on par with Kodi** — styled ASS/SSA subtitles, chapters with pictures, Blu-ray/DVD folders, skip intro and next episode at the credits, seek previews, HDR→SDR and Dolby Vision control.
+- **Styles and wallpapers** — gradient styles, animated and photo wallpapers, and 3D profile avatars.
 
 ## 📄 Licence and credits
 
 GPLv3, like OwnTV. All credit for the app itself goes to **ahXN00** and the OwnTV contributors; the
 **owntv** wordmark is by [@m3th0d93](https://github.com/m3th0d93). The OwnTV Fanart icon is original to this fork.
+
+Wallpaper photos from [Unsplash](https://unsplash.com/) (Unsplash License). The 3D profile avatars are original to this fork (AI-generated). Intro and credits times from [TheIntroDB](https://theintrodb.org/). Styled subtitles drawn with [libass](https://github.com/libass/libass) (ISC).
+
+The Jellyfin icon on playlist marks is the Jellyfin project's own artwork ([jellyfin-ux](https://github.com/jellyfin/jellyfin-ux), CC BY-SA 4.0).
+The Emby logo on playlist marks is Emby's own artwork ([MediaBrowser.Resources](https://github.com/MediaBrowser/MediaBrowser.Resources)), shown only to say a playlist comes from an Emby server; OwnTV Fanart is not made by Emby. More: [emby.media](https://emby.media).
+The Plex logo on playlist marks only shows that a playlist comes from a Plex server: Plex\* is used under license from Plex; OwnTV Fanart is not made, endorsed or sponsored by Plex.
 
 ---
 
@@ -206,7 +214,7 @@ More in **[extras/screenshots/](extras/screenshots/)**.
 | Area | Choice |
 |------|--------|
 | Language | Kotlin 2.4.20 (no `kotlin-android` plugin) |
-| Build | AGP 9.4.0 / Gradle 9.7.1, KSP2 2.3.11 |
+| Build | AGP 9.4.0 / Gradle 9.8.2, KSP2 2.3.11, JDK 25 |
 | UI | Jetpack Compose for TV (`androidx.tv:tv-material` 1.1.0), Compose BOM 2026.08.00 |
 | Media | **libmpv** (FFmpeg) · **ExoPlayer/Media3** 1.11.1 |
 | Database | Room 2.8.5 + Paging 3.5.1 + FTS4 |

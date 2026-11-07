@@ -15,13 +15,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -111,6 +109,8 @@ class SettingsViewModel(
     val remotePayload get() = companion.lastPayload
 
     fun startRemoteListener(port: Int) = companion.start(port)
+    /** The same server, serving [source]'s edit page; a submission lands on [remotePayload] already merged. */
+    fun startRemoteEditListener(port: Int, source: SourceEntity) = companion.startForSourceEdit(port, source)
     fun stopRemoteListener() = companion.stop()
     fun consumeRemotePayload() = companion.consumePayload()
 
@@ -160,9 +160,7 @@ class SettingsViewModel(
 
     /** Content counts (channels/movies/series) for a source — shown on each Playlists row. */
     fun contentCounts(sourceId: Long): kotlinx.coroutines.flow.Flow<SyncCounts> =
-        catalogSyncScheduler.observeSync(sourceId)
-            .onStart { emit(CatalogSyncState.Idle) }
-            .filter { !it.isActive }
+        catalogSyncScheduler.catalogueSettled(sourceId)
             .map { importFinalizer.contentCounts(sourceId) }
 
     fun syncState(sourceId: Long): kotlinx.coroutines.flow.Flow<CatalogSyncState> =
@@ -271,6 +269,19 @@ class SettingsViewModel(
         viewModelScope.launch { settings.setLivePreviewAudio(enabled) }
     }
 
+    val guidePreviewOnOk: StateFlow<Boolean> = settings.guidePreviewOnOk
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val livePreviewOnOk: StateFlow<Boolean> = settings.livePreviewOnOk
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    fun setGuidePreviewOnOk(enabled: Boolean) {
+        viewModelScope.launch { settings.setGuidePreviewOnOk(enabled) }
+    }
+
+    fun setLivePreviewOnOk(enabled: Boolean) {
+        viewModelScope.launch { settings.setLivePreviewOnOk(enabled) }
+    }
+
     val preferSdr: StateFlow<Boolean> = settings.preferSdr
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
@@ -278,7 +289,10 @@ class SettingsViewModel(
         viewModelScope.launch { settings.setPreferSdr(enabled) }
     }
 
-    val autoFrameRate: StateFlow<Boolean> = settings.autoFrameRate
+    val autoFrameRateFilms: StateFlow<Boolean> = settings.autoFrameRateFilms
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    val autoFrameRateLive: StateFlow<Boolean> = settings.autoFrameRateLive
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     // Multiview. The tile count is never reduced behind the user's back: the
@@ -303,8 +317,9 @@ class SettingsViewModel(
         }
     }
 
-    fun setAutoFrameRate(enabled: Boolean) {
-        viewModelScope.launch { settings.setAutoFrameRate(enabled) }
+    /** [live]: the Live TV switch; otherwise films and series. */
+    fun setAutoFrameRate(live: Boolean, enabled: Boolean) {
+        viewModelScope.launch { if (live) settings.setAutoFrameRateLive(enabled) else settings.setAutoFrameRateFilms(enabled) }
     }
 
     // The old surround BOOLEAN is gone from here: [surroundMode] replaced it, and the leftover flow
@@ -345,6 +360,8 @@ class SettingsViewModel(
     val maxVideoHeight: StateFlow<Int> = settings.maxVideoHeight.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     fun setMaxVideoHeight(height: Int) { viewModelScope.launch { settings.setMaxVideoHeight(height) } }
     val tunnelingSupported: Boolean get() = tv.own.owntv.player.Tunneling.supported
+    val dolbyVision: StateFlow<Boolean> = settings.dolbyVision.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+    fun setDolbyVision(enabled: Boolean) { viewModelScope.launch { settings.setDolbyVision(enabled) } }
     val tunneledPlayback: StateFlow<Boolean> = settings.tunneledPlayback.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
     val tunnelingFailed: StateFlow<Boolean> = settings.tunnelingFailed.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
     fun setTunneledPlayback(enabled: Boolean) {
@@ -576,10 +593,10 @@ class SettingsViewModel(
         settings.quickPinnedKeys.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     fun setQuickPinnedKeys(keys: List<String>) { viewModelScope.launch { settings.setQuickPinnedKeys(keys) } }
 
-    /** The saved order of one long-press content menu; empty = the order the app ships with. */
-    fun menuOrder(menu: tv.own.owntv.core.model.ContentMenu) = settings.menuOrder(menu.name.lowercase())
-    fun setMenuOrder(menu: tv.own.owntv.core.model.ContentMenu, keys: List<String>) {
-        viewModelScope.launch { settings.setMenuOrder(menu.name.lowercase(), keys) }
+    /** How one long-press content menu is arranged: its order and the actions hidden from it. */
+    fun menuLayout(menu: tv.own.owntv.core.model.ContentMenu) = settings.menuLayout(menu)
+    fun setMenuLayout(menu: tv.own.owntv.core.model.ContentMenu, layout: tv.own.owntv.core.menu.MenuLayout) {
+        viewModelScope.launch { settings.setMenuLayout(menu, layout) }
     }
 
     val resumeLastChannel: StateFlow<Boolean> =
@@ -1122,6 +1139,23 @@ class SettingsViewModel(
         viewModelScope.launch { settings.setRememberCategoryLive(enabled) }
     }
 
+    val guideFollowsLiveCategory: StateFlow<Boolean> =
+        settings.guideFollowsLiveCategory.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun setGuideFollowsLiveCategory(enabled: Boolean) {
+        viewModelScope.launch { settings.setGuideFollowsLiveCategory(enabled) }
+    }
+
+    val liveBuiltIns: StateFlow<tv.own.owntv.core.live.LiveBuiltIns> =
+        settings.liveBuiltIns.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), tv.own.owntv.core.live.LiveBuiltIns())
+    fun setLiveShowAllRail(enabled: Boolean) {
+        viewModelScope.launch { settings.setLiveShowAllRail(enabled) }
+    }
+
+    fun setLiveShowCatchupRail(enabled: Boolean) {
+        viewModelScope.launch { settings.setLiveShowCatchupRail(enabled) }
+    }
+
     fun setRememberCategoryMovies(enabled: Boolean) {
         viewModelScope.launch { settings.setRememberCategoryMovies(enabled) }
     }
@@ -1185,11 +1219,14 @@ class SettingsViewModel(
             val existing = sourceDao.getById(id) ?: return@launch
             // A Stalker edit re-canonicalizes the MAC; a garbled edit keeps the stored one.
             val newMac = tv.own.owntv.core.stalker.StalkerClient.canonicalizeMac(mac) ?: existing.mac
+            // A Stalker login is optional, so a cleared username removes it (and its password).
+            val stalker = existing.type == tv.own.owntv.core.model.SourceType.STALKER
+            val newUser = user.trim().takeIf { it.isNotBlank() } ?: existing.username.takeUnless { stalker }
             val updated = existing.copy(
                 name = name.ifBlank { existing.name },
                 url = urlOrServer.trim().ifBlank { existing.url },
-                username = user.trim().takeIf { it.isNotBlank() } ?: existing.username,
-                password = pass.takeIf { it.isNotBlank() } ?: existing.password,
+                username = newUser,
+                password = if (stalker && newUser == null) null else pass.takeIf { it.isNotBlank() } ?: existing.password,
                 mac = newMac,
                 stalkerSerialNumber = stalkerSerialNumber.trim().takeIf { it.isNotBlank() },
                 stalkerDeviceId = stalkerDeviceId.trim().takeIf { it.isNotBlank() },
@@ -1317,6 +1354,11 @@ class SettingsViewModel(
      * A single-connection provider cuts the oldest stream when a new one starts, so a picture left
      * running would both be killed by the measurement and corrupt its result.
      */
+    /** Per-playlist "Ignore connection limit": Multiview and recordings stop counting the provider's limit. */
+    fun setIgnoreConnectionLimit(source: SourceEntity, ignore: Boolean) {
+        viewModelScope.launch { sourceDao.updateIgnoreConnectionLimit(source.id, ignore) }
+    }
+
     fun retestSource(source: SourceEntity) {
         measureJob?.cancel()
         measureJob = viewModelScope.launch {
@@ -1383,13 +1425,15 @@ class SettingsViewModel(
         movies: SyncScopeChoice = SyncScopeChoice.Later,
         series: SyncScopeChoice = SyncScopeChoice.Later,
         httpReferer: String = "",
+        login: String = "",
+        password: String = "",
     ) = runImport {
         importer.stalker(
             name = name, portalUrl = portalUrl, mac = mac,
             serialNumber = serialNumber, deviceId = deviceId, deviceId2 = deviceId2,
             signature = signature, userAgent = userAgent, autoRefresh = autoRefresh,
             live = live, movies = movies, series = series, makeDefault = isDefault,
-            httpReferer = httpReferer,
+            httpReferer = httpReferer, login = login, password = password,
         )
     }
 

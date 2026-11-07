@@ -22,8 +22,21 @@ object TvProfiles {
 
     fun isTv(profileId: Long?): Boolean = profileId != null && profileId in ids
 
+    /** glcn: TV profiles whose Home is the Dock (TV only) instead of the full-picture TV Home. */
+    var dockIds by mutableStateOf<Set<Long>>(emptySet())
+        private set
+
+    /** Whether this TV profile's Home is the Dock. */
+    fun usesDock(profileId: Long?): Boolean = isTv(profileId) && profileId in dockIds
+
+    fun setDock(context: Context, profileId: Long, on: Boolean) {
+        dockIds = if (on) dockIds + profileId else dockIds - profileId
+        prefs(context).edit().putStringSet(KEY_DOCK, dockIds.map { it.toString() }.toSet()).apply()
+    }
+
     fun load(context: Context) {
         ids = prefs(context).getStringSet(KEY, emptySet()).orEmpty().mapNotNull { it.toLongOrNull() }.toSet()
+        dockIds = prefs(context).getStringSet(KEY_DOCK, emptySet()).orEmpty().mapNotNull { it.toLongOrNull() }.toSet()
     }
 
     fun set(context: Context, profileId: Long, on: Boolean) {
@@ -34,4 +47,5 @@ object TvProfiles {
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     private const val PREFS = "glcn_tv_profiles"
     private const val KEY = "ids"
+    private const val KEY_DOCK = "dock_ids"
 }

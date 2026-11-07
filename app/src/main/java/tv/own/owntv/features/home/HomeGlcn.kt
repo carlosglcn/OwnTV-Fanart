@@ -1,5 +1,7 @@
 package tv.own.owntv.features.home
 
+import androidx.compose.ui.layout.layout
+import androidx.compose.foundation.layout.offset
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -211,6 +213,8 @@ internal fun ArtLiveCard(
     width: Dp = LocalHomeCardWidth.current ?: 400.mpx,
     startLabel: String? = null,
     bell: Boolean = false,
+    /** glcn: the picture's shape, width ÷ height — 16:9 on Home, squarer in the zapping strip. */
+    artRatio: Float = 16f / 9f,
     /** glcn: Recent channels — "watched 10 min ago", added to the line under the title. */
     watchedAgo: String? = null,
     /** glcn: pinned to the front of Recent channels. */
@@ -227,7 +231,7 @@ internal fun ArtLiveCard(
         onClick = onClick,
         radius = StageRadii.Row,
         modifier = modifier
-            .size(width, width * 9f / 16f + CAPTION_HEIGHT)
+            .size(width, width / artRatio + CAPTION_HEIGHT)
             .onFocusChanged {
                 held = it.hasFocus
                 if (it.hasFocus) {
@@ -273,7 +277,7 @@ internal fun ArtLiveCard(
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(width * 9f / 16f)
+                    .height(width / artRatio)
                     .clip(RoundedCornerShape(topStart = StageRadii.Row, topEnd = StageRadii.Row)),
             ) {
                 Box(Modifier.fillMaxSize().graphicsLayer { scaleX = zoom; scaleY = zoom }) {
@@ -898,7 +902,11 @@ internal fun HomeCinemaBackdrop(url: String?, info: HomeFocusInfo?, greeting: @C
  * plays, OK opens it whole with sound ([CinemaTrailer]).
  */
 @Composable
-internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, modifier: Modifier = Modifier, dissolve: Boolean = true) {
+internal fun FocusTrailer(
+    trailerKey: String?, title: String?, focusKey: Any?, modifier: Modifier = Modifier, dissolve: Boolean = true,
+    /** glcn: the sound hint just under the window's corner, off the picture (the title page's small trailer window). */
+    hintBelow: Boolean = false,
+) {
     val allowed = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on && tv.own.owntv.glcn.DockPrefs.autoTrailers && !CinemaTrailer.blocked
     var ready by remember { mutableStateOf<String?>(null) }
     var start by remember { mutableStateOf(false) }
@@ -906,7 +914,9 @@ internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, m
     var startAt by remember { mutableStateOf(0f) }
     // glcn: the trailer player is got ready as soon as a page that can show one is up (see TrailerPool).
     val warmContext = androidx.compose.ui.platform.LocalContext.current
-    LaunchedEffect(allowed) { if (allowed) tv.own.owntv.ui.components.TrailerPool.warm(warmContext) }
+    // glcn: only once the page has finished opening (its entrance, logo and picture) — making the web page during
+    // the entrance is what stuttered it for seconds.
+    LaunchedEffect(allowed) { if (allowed) { delay(TRAILER_AFTER_OPEN_MS); tv.own.owntv.ui.components.TrailerPool.warm(warmContext) } }
     LaunchedEffect(focusKey, trailerKey, stop, allowed) {
         ready = null; start = false; startAt = 0f
         CinemaTrailer.playing = null
@@ -914,9 +924,10 @@ internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, m
         if (!allowed) return@LaunchedEffect
         // glcn: the trailer that was playing on Home when this title was opened goes on, at once, from where it was.
         CinemaTrailer.takeHandoff(t)?.let { at -> startAt = at; ready = t; start = true; return@LaunchedEffect }
+        // glcn: a few seconds after the page opens, whether the remote is moving or not: prepared first, then started.
         delay(TRAILER_WARM_MS)
         ready = t
-        delay(CINEMA_TRAILER_MS - TRAILER_WARM_MS)
+        delay((CINEMA_TRAILER_MS - TRAILER_WARM_MS).coerceAtLeast(0L))
         start = true
     }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { CinemaTrailer.playing = null } }
@@ -928,10 +939,17 @@ internal fun FocusTrailer(trailerKey: String?, title: String?, focusKey: Any?, m
                 key, Modifier.fillMaxSize(), start = start, muted = !CinemaTrailer.sound, startAt = startAt,
                 onSecond = { CinemaTrailer.second = it },
                 onPlaying = { CinemaTrailer.playing = key to title.orEmpty() },
+                onPaused = { CinemaTrailer.playing = null },
             ) { ready = null; CinemaTrailer.playing = null }
         }
         // The one hint while it plays: Play/Pause for its sound.
-        if (CinemaTrailer.playing?.first == key) TrailerSoundHint(Modifier.align(Alignment.TopEnd).padding(end = 56.mpx, top = TRAILER_HINT_TOP))
+        if (CinemaTrailer.playing?.first == key) TrailerSoundHint(
+            if (hintBelow) Modifier.align(Alignment.BottomEnd).padding(bottom = 10.mpx).layout { m, c ->
+                // glcn: beside the window's bottom-right corner, clear of the picture and of the title under it.
+                val p = m.measure(c.copy(minWidth = 0, minHeight = 0))
+                layout(p.width, p.height) { p.place(p.width + 16.mpx.roundToPx(), 0) }
+            } else Modifier.align(Alignment.TopEnd).padding(end = 56.mpx, top = TRAILER_HINT_TOP),
+        )
     }
 }
 
@@ -969,6 +987,8 @@ internal fun rememberFocusMeta(info: HomeFocusInfo?): tv.own.owntv.core.database
  * pressing the card; any other key quietens it. Home's root passes its keys through [onKey].
  */
 internal object CinemaTrailer {
+    /** glcn: when the remote was last pressed (uptime ms) — a trailer starts only after a calm moment. */
+    @Volatile var lastKeyAt = 0L
     /** The trailer playing silently behind the page (key, title), or null. */
     var playing by mutableStateOf<Pair<String, String>?>(null)
     var full by mutableStateOf<Pair<String, String>?>(null)
@@ -1049,8 +1069,9 @@ private fun cinemaJsonList(json: String?): List<String> {
 private const val KEN_BURNS_ZOOM = 0.12f
 private const val KEN_BURNS_MS = 24_000
 private const val CINEMA_AMBIENT = 0.16f
-private const val CINEMA_TRAILER_MS = 2_200L
-private const val TRAILER_WARM_MS = 900L
+private const val CINEMA_TRAILER_MS = 1_200L // glcn: it starts unseen almost at once and shows once YouTube's own overlays have gone (~3 s later)
+private const val TRAILER_WARM_MS = 900L // glcn: just after the page has opened (the player is made after its entrance, not during it)
+private const val TRAILER_AFTER_OPEN_MS = 800L
 private const val LIGHTS_DOWN_MS = 2_500L
 /** glcn: the trailer window's share of the screen's width, up on the right. */
 internal const val TRAILER_WINDOW_WIDTH = 0.62f

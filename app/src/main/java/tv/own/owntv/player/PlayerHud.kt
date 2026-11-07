@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -47,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.offset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
+import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -59,7 +63,6 @@ import tv.own.owntv.core.settings.RemoteShortcutAction
 import tv.own.owntv.core.settings.RemoteShortcutPress
 import tv.own.owntv.ui.components.LocalRemoteShortcuts
 import tv.own.owntv.ui.components.OwnTVIcon
-import tv.own.owntv.ui.components.OwnTVSpinner
 import tv.own.owntv.ui.components.displayText // PlayerFailureReason.displayText, for the error overlay
 import tv.own.owntv.ui.theme.gradientWash
 
@@ -82,6 +85,8 @@ private fun PlaybackFailure.displayText(): String {
 internal const val DIRECT_TUNE_TIMEOUT_MS = 2_000L
 private const val DIRECT_TUNE_FEEDBACK_MS = 1_500L
 private const val DIRECT_TUNE_PLAYBACK_WAIT_MS = 8_000L
+/** glcn: how long the next-episode card counts down once the end credits start. */
+private const val CREDITS_COUNTDOWN_MS = 15_000L
 private const val MAX_DIRECT_TUNE_DIGITS = 5
 private const val PLAYER_SHORTCUT_LONG_PRESS_MS = 600L
 
@@ -95,7 +100,21 @@ private const val TRACK_POLL_TRIES = 20
  *  Counted from the stall, which itself only starts once the buffer (~10s) has run dry. */
 private const val RECONNECT_NOTICE_AFTER_MS = 10_000L
 
-internal enum class HudDialog { NONE, AUDIO, SUBS, SPEED, ZOOM, QUALITY, VOLUME, JUMP_BACK, SLEEP_TIMER }
+internal enum class HudDialog { NONE, AUDIO, SUBS, SPEED, ZOOM, QUALITY, VOLUME, JUMP_BACK, SLEEP_TIMER, SOURCES }
+
+/**
+ * "Sources": the other versions of the live channel playing ([tv.own.owntv.core.live.ChannelVersions]).
+ * [load] is read as the list opens, never on a zap; [playingId] marks the one on screen; [onPick]
+ * tunes the pick through Live TV's normal tune.
+ */
+class HudSources(
+    val load: suspend () -> List<tv.own.owntv.core.live.ChannelVersion>,
+    val playingId: Long,
+    val onPick: (tv.own.owntv.core.database.entity.ChannelEntity) -> Unit,
+)
+
+/** The guide's answer for "Go back to…"'s first row; held in a box so "answered: no row" differs from "not answered yet". */
+private class Lookup(val start: tv.own.owntv.core.live.CatchupProgrammeStart?)
 
 /** What the top-left channel OSD shows for direct tune: the digits being typed, the channel a number
  *  resolved to, or a failure message. All three render as the same card as the channel OSD. */
@@ -156,8 +175,13 @@ fun PlayerHud(
     onPreviousChannel: (() -> Unit)? = null,
     /** glcn (TV profile): ▼ with the controls hidden raises the TV strip instead of zapping. */
     onOpenStrip: (() -> Unit)? = null,
+    /** glcn: the TV strip is up — its own card names the programme, so the zap card stays away. */
+    stripOpen: Boolean = false,
     // Archive depth of the current channel, for the exact-time picker's day/HH:MM bounds.
     jumpBackWindowSec: (() -> Int)? = null,
+    // The start of the programme on air, from the guide, offered first in "Go back to…". Looked up as
+    // the list opens; null (or a null answer) = no such row.
+    jumpBackProgrammeStart: (suspend () -> tv.own.owntv.core.live.CatchupProgrammeStart?)? = null,
     // Read as a lambda, not a value: the offset ticks once a second, and taking it as a plain Int?
     // made the shell (the caller) recompose on every tick just to hand it over. Invoked below, so the
     // per-second read lands in the HUD's own scope, which already recomposes with the position clock.
@@ -189,6 +213,8 @@ fun PlayerHud(
     // (the EPG data lives in LiveViewModel, not the player). Rendered on the right edge whenever the
     // controls are visible, like the top-bar channel card; informational only, never focusable.
     liveEpgCard: (@Composable () -> Unit)? = null,
+    /** glcn: the programme on air drawn over the picture (Cine / Lateral banner, see [tv.own.owntv.glcn.LiveBanner]). */
+    liveBannerWide: (@Composable (Modifier) -> Unit)? = null,
     // Now/next lines for the channel-change banner (the playing channel's guide). Null = name only.
     zapGuide: (@Composable () -> Unit)? = null,
     // The channel a CH+/- step moved to. The banner names it at once; the engine's metadata still
@@ -224,6 +250,11 @@ fun PlayerHud(
     cinemaEpisodes: List<tv.own.owntv.glcn.CinemaEpisode> = emptyList(),
     cinemaEpisodeIndex: Int = -1,
     onPlayEpisode: ((Int) -> Unit)? = null,
+    /** glcn: the next episode's picture (its still, or the show's fanart) and code ("T1 · E3"), for its card. */
+    nextEpisodeArt: String? = null,
+    nextEpisodeCode: String? = null,
+    // Live only: the Sources button and its list. Null hides the button.
+    sources: HudSources? = null,
     modifier: Modifier = Modifier,
 ) {
     // Nothing that ticks is read in this root scope: with the controls hidden it used to recompose
@@ -276,10 +307,27 @@ fun PlayerHud(
     // Re-arm when the queued next episode changes (i.e. after an advance to a new item).
     LaunchedEffect(nextUpTitle, nav.hasNext) { autoNextDismissed = false }
     // Derived, so the root recomposes when the card appears or goes, not on every position tick.
-    val msToAdvance: () -> Long = { if (!isLive && duration > 0L) (duration - 8_000L) - position.value else Long.MAX_VALUE }
-    val nextCardDue by remember(isLive, duration) { derivedStateOf { msToAdvance() in 0L..30_000L } }
+    // glcn: when the episode's end credits are known (a chapter, or TheIntroDB), the card comes with them and
+    // counts down CREDITS_COUNTDOWN_MS from there instead of waiting for the file's last seconds.
+    val creditsAt by tv.own.owntv.glcn.IntroSkip.creditsAt.collectAsStateWithLifecycle()
+    val atCredits = !isLive && creditsAt > 0L && duration > 0L
+    val advanceAt = if (atCredits) minOf(duration - 8_000L, creditsAt + CREDITS_COUNTDOWN_MS) else duration - 8_000L
+    val msToAdvance: () -> Long = { if (!isLive && duration > 0L) advanceAt - position.value else Long.MAX_VALUE }
+    val nextCardDue by remember(isLive, duration, atCredits, creditsAt) {
+        derivedStateOf {
+            if (atCredits) position.value >= creditsAt && msToAdvance() >= 0L else msToAdvance() in 0L..30_000L
+        }
+    }
     val showNextCard = !isLive && error == null && nav.hasNext && nextUpTitle != null && !stopsAtItemEnd &&
         nextCardDue && !autoNextDismissed
+    // glcn: the credits countdown ran out — the next episode starts now (the engine applies auto-play next).
+    val creditsRanOut by remember(atCredits, advanceAt) { derivedStateOf { atCredits && msToAdvance() <= 0L } }
+    LaunchedEffect(creditsRanOut) {
+        if (creditsRanOut && !autoNextDismissed && nav.hasNext && !stopsAtItemEnd && error == null) {
+            autoNextDismissed = true
+            player.advanceAtCredits()
+        }
+    }
 
     var controlsVisible by remember { mutableStateOf(true) }
     LaunchedEffect(controlsVisible) { onControlsVisible(controlsVisible) }
@@ -296,6 +344,19 @@ fun PlayerHud(
         onDispose { tv.own.owntv.glcn.CinemaStage.panelOpen = false }
     }
     val forceShow = error != null || dialog != HudDialog.NONE || cinemaTab != null
+    // glcn: the film's chapters (mpv reads them once the file is open — asked again when the length is known).
+    val chapters by androidx.compose.runtime.produceState(emptyList<PlayerChapter>(), cinemaMode, duration, player) {
+        value = if (cinemaMode && duration > 0) player.chapters() else emptyList()
+    }
+    // glcn: a film paused with the controls gone shows what it is after a few seconds (see CinemaPauseScreen).
+    var pauseScreen by remember { mutableStateOf(false) }
+    LaunchedEffect(cinemaMode, isPlaying, buffering, error, controlsVisible, cinemaTab) {
+        pauseScreen = false
+        if (cinemaMode && !isPlaying && !buffering && error == null && !controlsVisible && cinemaTab == null) {
+            delay(PAUSE_SCREEN_AFTER_MS)
+            pauseScreen = true
+        }
+    }
     // First Back hides the controls (instead of leaving the channel); with the controls already hidden
     // this handler is disabled, so Back falls through to the shell, which exits the player. Also disabled
     // while an error/dialog is up (a dialog handles its own Back; an error should exit).
@@ -720,6 +781,10 @@ fun PlayerHud(
             }
         },
     ) {
+        // glcn: the pause screen, a few seconds into a pause once the controls have gone (any key brings them back).
+        if (pauseScreen && cinema != null && !showNextCard) {
+            CinemaPauseScreen(cinema, position = { position.value }, duration = duration)
+        }
         if (!controlsVisible && !showNextCard) {
             Box(
                 Modifier.fillMaxSize().focusRequester(catchFocus).focusable()
@@ -742,10 +807,10 @@ fun PlayerHud(
         val tuned = (tuneOsd as? TuneOsd.Tuned)?.info
         Column(
             modifier = Modifier.align(Alignment.TopStart)
-                .padding(start = 28.dp, top = if (controlsVisible) 92.dp else 28.dp),
+                .padding(start = 44.dp, top = if (controlsVisible) 92.dp else 40.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (isLive && (tuned != null || (showFlash && !controlsVisible))) {
+            if (isLive && !stripOpen && (tuned != null || (showFlash && !controlsVisible))) {
                 // A fresh tune drives the card from the lookup result, not player metadata: the Stalker and
                 // mpv paths publish their metadata after an async resolve, which would show the old channel.
                 val named = tuned ?: zapChannel
@@ -783,6 +848,8 @@ fun PlayerHud(
                     playFocus = playFocus, seekFocus = seekFocus,
                     onOpen = { cinemaTab = it },
                     onNext = { player.next() },
+                    hasChapters = chapters.size > 1,
+                    chapterMarks = chapters.map { it.startMs },
                 )
                 Box(Modifier.align(Alignment.TopEnd).padding(top = 28.dp, end = 40.dp)) {
                     PlayerClock(watchingMs = watchingWallMs?.invoke())
@@ -803,6 +870,8 @@ fun PlayerHud(
                         onLocalSubtitle = onSelectLocalSubtitle?.let { open -> { cinemaTab = null; open() } },
                     ),
                     focus = panelFocus,
+                    chapters = chapters,
+                    position = { position.value },
                 )
             }
         } else if (controlsVisible) {
@@ -810,7 +879,12 @@ fun PlayerHud(
             val rise = remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
             val riseSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(HUD_RISE_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
             LaunchedEffect(Unit) { rise.animateTo(1f, riseSpec) }
+            var barHeightPx by remember { mutableIntStateOf(0) } // glcn: the dock's height, for the Cine / Lateral banner
+            // glcn: rewound into the archive, the dock's own card is back (it shows the replayed programme).
+            val wideBanner by remember(liveBannerWide) { androidx.compose.runtime.derivedStateOf { liveBannerWide != null && tv.own.owntv.glcn.LiveBanner.wide && watchingWallMs?.invoke() == null } }
             val risen = Modifier.graphicsLayer { translationY = (1f - rise.value) * HUD_RISE_DP.dp.toPx(); alpha = 0.25f + 0.75f * rise.value }
+            // glcn: Cine banner — the shade and the controls stay dark with white ink in both themes (over the picture).
+            val cinePalette = if (isLive && wideBanner && tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.CINE) tv.own.owntv.ui.theme.StagePalette.Dark else tv.own.owntv.ui.theme.LocalStagePalette.current
             // Scrims: a FLAT semi-transparent panel behind the controls, feathered to transparent only at
             // the inner edge. A pure gradient faded out exactly where the chips and the Now/Next text sit,
             // so those washed out on bright scenes; a hard-edged band would instead draw a visible seam
@@ -822,13 +896,18 @@ fun PlayerHud(
                     0.5f to hudShade(0.72f),
                     1.0f to Color.Transparent,
                 ))
-            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(260.dp).graphicsLayer { alpha = rise.value }
+            // glcn: live TV's bar has no panel of its own any more — this shade carries its text, a little deeper.
+            // glcn: Lateral — no wash over the picture; the controls carry their own glass strip (see the BottomBar).
+            val lateralBar = isLive && wideBanner && tv.own.owntv.glcn.LiveBanner.style == tv.own.owntv.glcn.LiveBanner.Style.LATERAL
+            androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.theme.LocalStagePalette provides cinePalette) {
+            if (!lateralBar) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(if (isLive) 280.dp else 260.dp).graphicsLayer { alpha = rise.value }
                 .gradientWash(
                     vertical = true,
                     0.0f to Color.Transparent,
-                    0.45f to hudShade(0.68f),
-                    1.0f to hudShade(0.78f),
+                    0.4f to hudShade(if (isLive) 0.74f else 0.68f),
+                    1.0f to hudShade(if (isLive) 0.88f else 0.78f),
                 ))
+            }
 
             // The active engine (MPV/EXO) leads the mini chips so users can always tell which player is on.
             // One unified strip: back · logo · chips-over-channel-name · Now/Next guide. The channel name
@@ -863,11 +942,35 @@ fun PlayerHud(
             // Hide the transport (play/seek/prev/next) and bottom bar while an error is up — the error
             // overlay owns the screen with its own Retry, so the play/rewind/forward must not show behind it.
             if (error == null) {
-                CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp)) // glcn: clear of the now/next card's top edge
+                // glcn: Cine / Lateral — the programme over the picture, clear of the dock (its height measured).
+                // glcn: each banner style lays the whole bar out its own way (see the BottomBar call below):
+                // Cine — words over the picture above a bare row of controls, the channel small in the top left;
+                // Lateral — everything but the controls in a full-height column on the left, the controls beside it;
+                // Ficha — one glass panel holding the channel, the programme and the controls (drawn in the bar).
+                val bannerStyle = tv.own.owntv.glcn.LiveBanner.style
+                if (isLive && liveBannerWide != null && wideBanner) {
+                    val barDp = with(androidx.compose.ui.platform.LocalDensity.current) { barHeightPx.toDp() }
+                    if (bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.CINE) {
+                        liveBannerWide(Modifier.align(Alignment.BottomStart).then(risen).padding(bottom = barDp))
+                        CineChannelTag(player, Modifier.align(Alignment.TopStart).then(risen).padding(start = 56.dp, top = 36.dp))
+                    } else if (bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.LATERAL) {
+                        Column(
+                            Modifier.align(Alignment.TopStart).then(risen).padding(start = 24.dp, top = 24.dp, bottom = 24.dp)
+                                .fillMaxWidth(LATERAL_SHARE).fillMaxHeight()
+                                .clip(RoundedCornerShape(24.dp)).background(hudShade(0.84f)).padding(18.dp),
+                        ) {
+                            LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack)
+                            Spacer(Modifier.height(14.dp))
+                            liveBannerWide(Modifier.weight(1f))
+                        }
+                    }
+                }
+                CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp), buffering = buffering) // glcn: clear of the now/next card's top edge
 
                 val reportDuration = duration.takeIf { it > 0 }?.let { formatTime(it) }
                 val reportSavedMessage = stringResource(R.string.player_report_saved)
 
+                androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.theme.LocalStagePalette provides cinePalette) {
                 BottomBar(
                     seekFocus = seekFocus,
                     player = player, isLive = isLive, position = { position.value }, duration = duration,
@@ -881,6 +984,7 @@ fun PlayerHud(
                     onChannels = if (isLive) onOpenChannelList?.let { open -> { controlsVisible = false; open() } } else null,
                     onGuide = if (isLive) onOpenGuide?.let { open -> { controlsVisible = false; open() } } else null,
                     onOtherChannels = onOtherChannels, otherChannelsCount = otherChannelsCount, onChannelCopies = onChannelCopies,
+                    hasSources = sources != null,
                     compatMode = compatMode, onToggleCompatMode = toggleCompat,
                     vodOnExo = vodOnExo, onToggleVodEngine = toggleVod,
                     onInfo = { if (isLive && onProgrammeInfo != null) { controlsVisible = false; onProgrammeInfo() } else showInfo = !showInfo }, infoOn = showInfo,
@@ -910,18 +1014,60 @@ fun PlayerHud(
                     favorite = favorite, onToggleFavorite = onToggleFavorite,
                     onOpenDialog = { dialog = it }, onPip = onPip, onAudioMode = onAudioMode,
                     onMultiview = onMultiview, onRecordThis = onRecordThis, recordingThis = recordingThis, onBack = onBack,
-                    modifier = Modifier.align(Alignment.BottomStart).then(risen),
-                    side = if (isLive) liveEpgCard else null,
-                    header = if (isLive) {
-                        { LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack) }
+                    modifier = Modifier.align(Alignment.BottomStart).then(risen)
+                        .then(
+                            when {
+                                !(isLive && wideBanner) -> Modifier
+                                // Lateral: the controls beside the column, not under it.
+                                bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.LATERAL ->
+                                    // Its bottom edge level with the column's, on a glass strip of the column's own shade.
+                                    Modifier.padding(start = with(androidx.compose.ui.platform.LocalConfiguration.current) { screenWidthDp.dp } * LATERAL_SHARE + 40.dp, end = 24.dp, bottom = 24.dp)
+                                        .clip(RoundedCornerShape(24.dp)).background(hudShade(0.84f)).padding(vertical = 2.dp)
+                                // Ficha: one glass panel round the channel, the programme and the controls.
+                                bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.FICHA ->
+                                    Modifier.padding(start = 20.dp, end = 20.dp, bottom = 16.dp).clip(RoundedCornerShape(26.dp)).background(hudShade(0.78f)).padding(vertical = 2.dp)
+                                else -> Modifier
+                            },
+                        )
+                        .onSizeChanged { barHeightPx = it.height },
+                    // glcn: Ficha — the channel and the controls on one line, the programme under them.
+                    toolsUp = isLive && wideBanner && bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.FICHA,
+                    belowHeader = if (isLive && wideBanner && bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.FICHA) liveBannerWide?.let { b ->
+                        {
+                            Column {
+                                FichaChannelLine(player)
+                                b(Modifier)
+                            }
+                        }
                     } else null,
+                    // glcn: the other styles keep an empty side, so the dock stays as low as with the card.
+                    side = if (isLive && !wideBanner) liveEpgCard else if (isLive) ({ }) else null,
+                    header = when {
+                        !isLive -> null
+                        // Cine and Lateral: the channel is elsewhere (top left / the column).
+                        wideBanner && bannerStyle != tv.own.owntv.glcn.LiveBanner.Style.FICHA -> null
+                        wideBanner && liveBannerWide != null -> { { LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack) } }
+                        else -> { { LiveChannelHeader(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, onBack) } }
+                    },
                 )
+                }
             }
         }
 
         // Next-episode countdown card (VOD queue only) — surfaces the automatic advance with Play now /
         // Cancel. Shown independently of the main controls so it appears even after they auto-hide.
-        if (showNextCard) {
+        if (showNextCard && cinemaMode) {
+            // glcn: films and episodes — the next one's picture in the corner.
+            CinemaNextCard(
+                seconds = { ((msToAdvance() + 999L) / 1000L).toInt().coerceIn(0, 30) },
+                title = nextUpTitle ?: "",
+                art = nextEpisodeArt, code = nextEpisodeCode,
+                playFocus = nextFocus,
+                onPlayNow = { autoNextDismissed = true; player.next() },
+                onCancel = { autoNextDismissed = true; player.cancelAutoNext() },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 48.dp, bottom = 48.dp),
+            )
+        } else if (showNextCard) {
             NextEpisodeCard(
                 seconds = { ((msToAdvance() + 999L) / 1000L).toInt().coerceIn(0, 30) },
                 title = nextUpTitle ?: "",
@@ -951,6 +1097,14 @@ fun PlayerHud(
                 )
             }
         }
+
+        // glcn: the one loading sign — a ring where the play button sits, which closes into the play sign when the
+        // picture comes. Hidden while the HUD's own play button is up (that button wears the ring then).
+        LoadMorph(
+            loading = buffering && error == null,
+            hidden = controlsVisible && error == null && !(cinemaMode && cinema != null),
+            modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp),
+        )
 
         // Status overlay (always shown).
         when {
@@ -1015,7 +1169,8 @@ fun PlayerHud(
             // the panel's own countdown and the engine re-asks by itself. The line under the spinner says
             // why nothing is happening yet, so nobody reaches for Retry (or thinks the channel is dead).
             buffering -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                OwnTVSpinner(sizeDp = 56)
+                // The sign itself is [LoadMorph], above; the lines under it start below its ring.
+                Spacer(Modifier.height(56.dp))
                 val stalledSince = stalledSinceMs
                 if (providerBackOff == null && stalledSince != null) {
                     val showNotice by produceState(false, stalledSince) {
@@ -1115,6 +1270,9 @@ fun PlayerHud(
             QualityDialog(heights, pick, onSelect = { player.selectVideoQuality(it); dialog = HudDialog.NONE }, onDismiss = { dialog = HudDialog.NONE })
         }
         HudDialog.VOLUME -> VolumeDialog(player, onDismiss = { dialog = HudDialog.NONE })
+        HudDialog.SOURCES -> sources?.let { s ->
+            SourcesDialog(s, onDismiss = { dialog = HudDialog.NONE })
+        } ?: run { dialog = HudDialog.NONE }
         HudDialog.SLEEP_TIMER -> SleepTimerDialog(
             timer = org.koin.compose.koinInject(),
             programmeEndMs = remember { sleepProgrammeEndMs?.invoke() },
@@ -1125,13 +1283,20 @@ fun PlayerHud(
         HudDialog.JUMP_BACK -> {
             val options = remember { jumpBackOptions?.invoke().orEmpty() }
             val windowSec = remember { jumpBackWindowSec?.invoke() ?: 0 }
-            if (options.isEmpty()) {
-                dialog = HudDialog.NONE
-            } else {
-                tv.own.owntv.features.live.CatchupJumpDialog(
+            // The list waits for the guide's answer (bounded in core), so the first focus lands on the
+            // "Start of …" row when there is one instead of moving there after the user has started to scroll.
+            val programmeStart by produceState<Lookup?>(null) {
+                value = Lookup(jumpBackProgrammeStart?.invoke())
+            }
+            val start = programmeStart?.start
+            when {
+                programmeStart == null -> Unit // still waiting for the guide
+                options.isEmpty() && start == null -> dialog = HudDialog.NONE
+                else -> tv.own.owntv.features.live.CatchupJumpDialog(
                     title = stringResource(R.string.content_catchup_jump),
                     offsetsSec = options,
                     windowSec = windowSec,
+                    programmeStart = start,
                     onPick = { dialog = HudDialog.NONE; onJumpBack?.invoke(it) },
                     onDismiss = { dialog = HudDialog.NONE },
                 )
@@ -1144,3 +1309,32 @@ fun PlayerHud(
 /** glcn: the player bar's rise when it is called — how long, and from how far below. */
 private const val HUD_RISE_MS = 420
 private const val HUD_RISE_DP = 90
+
+/** glcn: how long a film stays paused, with the controls gone, before the pause screen comes up. */
+private const val PAUSE_SCREEN_AFTER_MS = 5_000L
+
+/** glcn: Lateral banner — the column's share of the screen's width. */
+private const val LATERAL_SHARE = 0.30f
+
+/** glcn: Cine banner — the channel, small, in the top left ("#7  Movistar Plus HD"). */
+@Composable
+private fun CineChannelTag(player: PlaybackEngine, modifier: Modifier = Modifier) {
+    val meta by player.currentMeta.collectAsStateWithLifecycle()
+    val name = meta.title?.takeIf { it.isNotBlank() } ?: return
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        meta.subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, style = tv.own.owntv.ui.theme.stageText(20, 600), color = Color.White.copy(alpha = 0.7f), maxLines = 1) }
+        Text(name, style = tv.own.owntv.ui.theme.stageText(22, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** glcn: Ficha banner — the channel, small, over the programme ("#37  WARNERTV"); the controls hold the top line. */
+@Composable
+private fun FichaChannelLine(player: PlaybackEngine) {
+    val meta by player.currentMeta.collectAsStateWithLifecycle()
+    val name = meta.title?.takeIf { it.isNotBlank() } ?: return
+    Row(Modifier.padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!meta.logoUrl.isNullOrBlank()) coil3.compose.AsyncImage(model = meta.logoUrl, contentDescription = null, modifier = Modifier.size(width = 40.dp, height = 26.dp))
+        meta.subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, style = tv.own.owntv.ui.theme.stageText(18, 600), color = tv.own.owntv.ui.theme.hudInk.copy(alpha = 0.55f), maxLines = 1) }
+        Text(name, style = tv.own.owntv.ui.theme.stageText(19, 700), color = tv.own.owntv.ui.theme.hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}

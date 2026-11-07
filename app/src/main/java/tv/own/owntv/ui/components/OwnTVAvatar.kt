@@ -26,7 +26,9 @@ import androidx.compose.ui.graphics.drawscope.Fill
  * music, gamepad); pass an id and the matching icon-on-color tile is drawn deterministically.
  */
 object OwnTVAvatars {
+    /** glcn: 24 objects (the old drawings' subjects, same numbers, so every profile keeps its own) and 24 characters. */
     const val COUNT = tv.own.owntv.core.profile.PROFILE_AVATAR_COUNT
+    const val OBJECTS = 24
 }
 
 @Composable
@@ -43,8 +45,14 @@ fun OwnTVAvatar(avatarId: Int, modifier: Modifier = Modifier, imagePath: String 
         // reason it is done this way — it is what the user sees if the picture has gone: a profile
         // whose image was cleaned up with the app's storage falls back to the tile it always had,
         // instead of a blank hole, with no file-existence check on every single composition.
+        // glcn: 3D clay pictures instead of the flat drawings — objects 0–23 (same subjects as before), characters 24–47.
         if (avatarId != -1) {
-            Canvas(modifier = Modifier.matchParentSize()) { drawAvatar(i) }
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(AVATAR_ART[i]),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize().clip(AvatarShape),
+            )
         }
         if (imagePath.isNotBlank()) {
             AsyncImage(
@@ -60,8 +68,111 @@ fun OwnTVAvatar(avatarId: Int, modifier: Modifier = Modifier, imagePath: String 
 /** glcn: the colour of a preset avatar's tile (the default silhouette's teal for none) — the profile gate's glow. */
 fun avatarColor(avatarId: Int): Color {
     if (avatarId < 0) return Color(0xFF54F2E2)
-    return BG[((avatarId % OwnTVAvatars.COUNT) + OwnTVAvatars.COUNT) % OwnTVAvatars.COUNT % BG.size]
+    return GLOW[((avatarId % OwnTVAvatars.COUNT) + OwnTVAvatars.COUNT) % OwnTVAvatars.COUNT]
 }
+
+/** glcn: each picture's tile colour, made richer — the profile screen's glow. */
+private val GLOW = listOf(
+    Color(0xFFE69255),
+    Color(0xFF6B55E6),
+    Color(0xFF55E672),
+    Color(0xFF558FE6),
+    Color(0xFF5CDFD2),
+    Color(0xFF6155E6),
+    Color(0xFFE66455),
+    Color(0xFFE69F55),
+    Color(0xFF7055E6),
+    Color(0xFFE59556),
+    Color(0xFFE6BB55),
+    Color(0xFFE66555),
+    Color(0xFFE6AA55),
+    Color(0xFFE69155),
+    Color(0xFFE68755),
+    Color(0xFFE68955),
+    Color(0xFFE65555),
+    Color(0xFF5588E6),
+    Color(0xFFE65569),
+    Color(0xFFE67055),
+    Color(0xFFE69B55),
+    Color(0xFF55ADE6),
+    Color(0xFF7655E6),
+    Color(0xFFE6B655),
+    Color(0xFFE66C55),
+    Color(0xFF55E6B5),
+    Color(0xFF766BD0),
+    Color(0xFFDEA65D),
+    Color(0xFF68BBD3),
+    Color(0xFFE68B55),
+    Color(0xFF558BE6),
+    Color(0xFFE65B55),
+    Color(0xFFE6AE55),
+    Color(0xFFE67C55),
+    Color(0xFF558FE6),
+    Color(0xFFE6BD55),
+    Color(0xFFE6B555),
+    Color(0xFF8B5AE1),
+    Color(0xFF55E669),
+    Color(0xFFE6A155),
+    Color(0xFF5997E2),
+    Color(0xFF685BE1),
+    Color(0xFFE65D55),
+    Color(0xFF5A9BE1),
+    Color(0xFFE67455),
+    Color(0xFFE6B255),
+    Color(0xFFE67155),
+    Color(0xFFE69355),
+)
+
+private val AVATAR_ART = listOf(
+    tv.own.owntv.R.drawable.glcn_av_00,
+    tv.own.owntv.R.drawable.glcn_av_01,
+    tv.own.owntv.R.drawable.glcn_av_02,
+    tv.own.owntv.R.drawable.glcn_av_03,
+    tv.own.owntv.R.drawable.glcn_av_04,
+    tv.own.owntv.R.drawable.glcn_av_05,
+    tv.own.owntv.R.drawable.glcn_av_06,
+    tv.own.owntv.R.drawable.glcn_av_07,
+    tv.own.owntv.R.drawable.glcn_av_08,
+    tv.own.owntv.R.drawable.glcn_av_09,
+    tv.own.owntv.R.drawable.glcn_av_10,
+    tv.own.owntv.R.drawable.glcn_av_11,
+    tv.own.owntv.R.drawable.glcn_av_12,
+    tv.own.owntv.R.drawable.glcn_av_13,
+    tv.own.owntv.R.drawable.glcn_av_14,
+    tv.own.owntv.R.drawable.glcn_av_15,
+    tv.own.owntv.R.drawable.glcn_av_16,
+    tv.own.owntv.R.drawable.glcn_av_17,
+    tv.own.owntv.R.drawable.glcn_av_18,
+    tv.own.owntv.R.drawable.glcn_av_19,
+    tv.own.owntv.R.drawable.glcn_av_20,
+    tv.own.owntv.R.drawable.glcn_av_21,
+    tv.own.owntv.R.drawable.glcn_av_22,
+    tv.own.owntv.R.drawable.glcn_av_23,
+    tv.own.owntv.R.drawable.glcn_av_24,
+    tv.own.owntv.R.drawable.glcn_av_25,
+    tv.own.owntv.R.drawable.glcn_av_26,
+    tv.own.owntv.R.drawable.glcn_av_27,
+    tv.own.owntv.R.drawable.glcn_av_28,
+    tv.own.owntv.R.drawable.glcn_av_29,
+    tv.own.owntv.R.drawable.glcn_av_30,
+    tv.own.owntv.R.drawable.glcn_av_31,
+    tv.own.owntv.R.drawable.glcn_av_32,
+    tv.own.owntv.R.drawable.glcn_av_33,
+    tv.own.owntv.R.drawable.glcn_av_34,
+    tv.own.owntv.R.drawable.glcn_av_35,
+    tv.own.owntv.R.drawable.glcn_av_36,
+    tv.own.owntv.R.drawable.glcn_av_37,
+    tv.own.owntv.R.drawable.glcn_av_38,
+    tv.own.owntv.R.drawable.glcn_av_39,
+    tv.own.owntv.R.drawable.glcn_av_40,
+    tv.own.owntv.R.drawable.glcn_av_41,
+    tv.own.owntv.R.drawable.glcn_av_42,
+    tv.own.owntv.R.drawable.glcn_av_43,
+    tv.own.owntv.R.drawable.glcn_av_44,
+    tv.own.owntv.R.drawable.glcn_av_45,
+    tv.own.owntv.R.drawable.glcn_av_46,
+    tv.own.owntv.R.drawable.glcn_av_47,
+)
 
 /** Matches the rounding the drawn tiles use, so a picture sits in the same shape as a tile. */
 private val AvatarShape = RoundedCornerShape(percent = 30)

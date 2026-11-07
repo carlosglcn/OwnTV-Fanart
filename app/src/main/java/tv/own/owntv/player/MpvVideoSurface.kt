@@ -1,5 +1,6 @@
 package tv.own.owntv.player
 
+import io.github.peerless2012.ass.media.kt.withAssSupport
 import android.content.Context
 import android.graphics.SurfaceTexture
 import android.view.Surface
@@ -73,7 +74,9 @@ private class MpvSurfaceView(context: Context, private val player: OwnTVPlayer) 
 fun MpvVideoSurface(
     player: OwnTVPlayer,
     modifier: Modifier = Modifier,
-    autoFrameRate: Boolean = true,
+    // Settings › Picture › Frame rate: one switch for films and series, one for Live TV.
+    autoFrameRateFilms: Boolean = true,
+    autoFrameRateLive: Boolean = true,
     // Auto frame rate's two film extras (Settings › Picture › Frame rate). Ignored on live.
     afrMatchResolution: Boolean = false,
     afrHoldSecs: Int = 0,
@@ -88,6 +91,7 @@ fun MpvVideoSurface(
     // composition, and a new item always recomposes (its size arrives), so live vs film is current.
     val engine = androidx.compose.runtime.remember(player) { MpvPlaybackEngine(player) }
     val film = engine.takeIf { !player.isLiveContent }
+    val autoFrameRate = if (film != null) autoFrameRateFilms else autoFrameRateLive
     AutoFrameRateEffect(fps, autoFrameRate, film = film, videoSize = videoSize, matchResolution = afrMatchResolution, holdSecs = afrHoldSecs)
 
     BoxWithConstraints(modifier.background(Color.Black).clipToBounds(), contentAlignment = Alignment.Center) {
@@ -129,7 +133,9 @@ fun MpvVideoSurface(
         val exoSubOn by player.exoSubtitleOn.collectAsStateWithLifecycle()
         if (exoActive && exoSubOn) {
             val cues by player.exoCues.collectAsStateWithLifecycle()
-            StyledSubtitleView(cues = cues, modifier = viewModifier)
+            // glcn: an ASS/SSA track is drawn by libass on a layer inside the same view, as made.
+            val ass by player.exoAssHandler.collectAsStateWithLifecycle()
+            StyledSubtitleView(cues = cues, modifier = viewModifier, ass = ass)
         }
         // Freeze-frame: the last mpv frame, shown over the surface during the mpv→ExoPlayer swap so the
         // decoder switch doesn't flash black. Same geometry as the surface; cleared on Exo's first frame.
@@ -273,7 +279,11 @@ fun ExoPreviewSurface(
  */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
-private fun StyledSubtitleView(cues: List<androidx.media3.common.text.Cue>, modifier: Modifier = Modifier) {
+private fun StyledSubtitleView(
+    cues: List<androidx.media3.common.text.Cue>,
+    modifier: Modifier = Modifier,
+    ass: io.github.peerless2012.ass.media.AssHandler? = null,
+) {
     val settings = org.koin.compose.koinInject<SettingsRepository>()
     val styleOn by settings.subtitleStyleEnabled.collectAsStateWithLifecycle(initialValue = false)
     // Media3 cues, so this is the ExoPlayer size — both the live ExoPlayer path and the VOD
@@ -290,9 +300,14 @@ private fun StyledSubtitleView(cues: List<androidx.media3.common.text.Cue>, modi
     val customPosition = if (styleOn) position else SubtitleStyle.Position.DEFAULT
     val textScale = if (styleOn) scale else SubtitleStyle.SCALE_DEFAULT
 
+    androidx.compose.runtime.key(ass) {
     AndroidView(
         modifier = modifier,
-        factory = { ctx -> androidx.media3.ui.SubtitleView(ctx) },
+        factory = { ctx ->
+            androidx.media3.ui.SubtitleView(ctx).also { v ->
+                ass?.let { h -> v.withAssSupport(h) }
+            }
+        },
         update = { view ->
             val stock = androidx.media3.ui.CaptionStyleCompat.DEFAULT
             if (customColor || customBackground || customFont) {
@@ -317,6 +332,7 @@ private fun StyledSubtitleView(cues: List<androidx.media3.common.text.Cue>, modi
             )
         },
     )
+    }
 }
 
 /** Re-anchor a text cue to one of the six fixed screen positions; bitmap cues pass through as-is. */

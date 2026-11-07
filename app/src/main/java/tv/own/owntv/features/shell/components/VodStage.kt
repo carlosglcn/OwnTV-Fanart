@@ -1,5 +1,8 @@
 package tv.own.owntv.features.shell.components
 
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import tv.own.owntv.ui.theme.stageTone
 import tv.own.owntv.ui.stage.StageTitleArt
 import tv.own.owntv.ui.stage.backdropLeftWash
@@ -266,6 +269,7 @@ internal fun VodCinematicBackdrop(
     expand: Float = 0f,
 ) {
     var settled by remember { mutableStateOf(url) }
+    LaunchedEffect(settled) { tv.own.owntv.glcn.FanartAmbient.url = settled } // glcn: Fanart vivo's colours
     // Art already shown once is in the image cache: it swaps at once; only new art waits the settle.
     val seen = remember { HashSet<String>() }
     LaunchedEffect(url) {
@@ -291,7 +295,20 @@ internal fun VodCinematicBackdrop(
     // runs, a soft hole opens in the picture's middle and the video shows through. So the window's edges are always
     // the picture melting into the real page (tint and light included) — a painted fade into a flat page colour left
     // a hard line wherever the page behind was tinted. Both masks are on still layers: no video frame redraws them.
-    val playingNow = trailer != null && tv.own.owntv.features.home.CinemaTrailer.playing?.first == trailer
+    // glcn: on a title's page the trailer plays in its own window in the free room above the words, at the top left,
+    // and the picture stays whole; with too little room there (a tall logo, a long synopsis) it plays in the picture
+    // as before.
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val textTop = tv.own.owntv.glcn.TitleRoom.textTop
+    val winLeft = with(density) { 96.mpx.toPx() }
+    val winTop = with(density) { TRAILER_WINDOW_TOP.mpx.toPx() }
+    val winMaxW = with(density) { TRAILER_WINDOW_MAX_W.mpx.toPx() }
+    val winH0 = (textTop - with(density) { 30.mpx.toPx() } - winTop)
+    val winW = minOf(winMaxW, winH0 * 16f / 9f)
+    val winH = winW * 9f / 16f
+    val leftWindow = trailer != null && textTop > 0f && winH >= with(density) { TRAILER_WINDOW_MIN_H.mpx.toPx() }
+    var boxRoot by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    val playingNow = trailer != null && !leftWindow && tv.own.owntv.features.home.CinemaTrailer.playing?.first == trailer
     val holeSpec = ownTvTween<Float>(TRAILER_HOLE_MS)
     val hole by androidx.compose.animation.core.animateFloatAsState(if (playingNow) 1f else 0f, holeSpec, label = "vodTrailerHole")
     // glcn: the video takes most of the window: it starts well inside the picture's melting edge, and while it plays
@@ -302,9 +319,9 @@ internal fun VodCinematicBackdrop(
     fun stepped(v: Float) = (kotlin.math.round(v / EDGE_STEP) * EDGE_STEP).coerceAtLeast(0.02f)
     val imageStart = stepped(edgeStart + (vidStart - edgeStart) * hole)
     val imageBottom = stepped(edgeBottom + (vidBottom - edgeBottom) * hole)
-    Box(sized) {
-        tv.own.owntv.features.home.FocusTrailer(
-            trailer, trailerTitle, focusKey, Modifier.fillMaxSize().insetFraction(vidStart, vidBottom), dissolve = false,
+    Box(sized.onGloballyPositioned { boxRoot = it.positionInRoot() }) {
+        if (!leftWindow) tv.own.owntv.features.home.FocusTrailer(
+            trailer, trailerTitle, focusKey, Modifier.fillMaxSize().insetFraction(vidStart, vidBottom), dissolve = true,
         )
         Box(
             Modifier.fillMaxSize().dissolveEdges(start = imageStart, bottom = imageBottom)
@@ -316,7 +333,10 @@ internal fun VodCinematicBackdrop(
                         alpha = h, blendMode = androidx.compose.ui.graphics.BlendMode.DstOut,
                     )
                 }
-                .graphicsLayer { alpha = hold },
+                // glcn: while the trailer plays the still picture goes altogether — around the video it showed a
+                // different frame (a band at the side, another scene underneath); the video's own edges melt into
+                // the page instead, and the page's tint steps aside meanwhile (see ArtTint's callers).
+                .graphicsLayer { alpha = hold * (1f - hole) },
         ) {
             Crossfade(targetState = settled, animationSpec = ownTvTween(420), label = "vodBackdrop") { u ->
                 if (!u.isNullOrBlank()) {
@@ -338,8 +358,35 @@ internal fun VodCinematicBackdrop(
             ),
         )
         }
+        if (leftWindow) {
+            // glcn: the trailer's own window at the top left, over the page. A small dark screen with rounded corners, shown only once the video plays (nothing while it loads): the
+            // trailer's own black bars belong to it, instead of a pale fade around a dark picture. No clip around the
+            // web view (a clipped video surface played badly on the box): the video sits inside the screen's margin.
+            val winPlaying = tv.own.owntv.features.home.CinemaTrailer.playing?.first == trailer
+            val screenAlpha by androidx.compose.animation.core.animateFloatAsState(if (winPlaying) 1f else 0f, ownTvTween(TRAILER_HOLE_MS), label = "trailerWindowEdges")
+            Box(
+                Modifier
+                    .offset { androidx.compose.ui.unit.IntOffset((winLeft - boxRoot.x).toInt(), (winTop - boxRoot.y).toInt()) }
+                    .size(with(density) { winW.toDp() }, with(density) { winH.toDp() }),
+            ) {
+                Box(
+                    Modifier.fillMaxSize().graphicsLayer { alpha = screenAlpha }
+                        .drawBehind {
+                            val r = 20.mpx.toPx()
+                            drawRoundRect(Color.Black.copy(alpha = 0.35f), topLeft = androidx.compose.ui.geometry.Offset(0f, 10.mpx.toPx()), size = size, cornerRadius = androidx.compose.ui.geometry.CornerRadius(r + 6.mpx.toPx()))
+                            drawRoundRect(Color.Black, cornerRadius = androidx.compose.ui.geometry.CornerRadius(r))
+                        },
+                )
+                tv.own.owntv.features.home.FocusTrailer(trailer, trailerTitle, focusKey, Modifier.fillMaxSize().padding(10.mpx), dissolve = false, hintBelow = true)
+            }
+        }
     }
 }
+
+/** glcn: the trailer window above a title page's words — its top (under the menu bar), widest and least height. */
+private const val TRAILER_WINDOW_TOP = 150
+private const val TRAILER_WINDOW_MAX_W = 900
+private const val TRAILER_WINDOW_MIN_H = 230
 
 /**
  * The Cinematic hero: title art 170 high (the name in 92/800 when there is none or it
@@ -681,8 +728,8 @@ internal const val VodGroupDetails = 3
 
 /**
  * ☰ Title options, 540 wide at the right: the poster 52×78, the title and "2026 ·
- * Disney+ Kids Movies", then the actions under their group labels, in the order the user set in
- * Settings › Long-press menus. Keys in [disabled] are drawn at 45% and do nothing ("Remove from history"
+ * Disney+ Kids Movies", then the actions in the order the user set in Settings › Long-press menus —
+ * under their group labels while that is the shipped order. Keys in [disabled] are drawn at 45% and do nothing ("Remove from history"
  * for a title never watched); [values] are the dim right-hand values. Focus starts on the favourite.
  */
 @Composable
@@ -709,7 +756,8 @@ internal fun VodOptionsMenu(
         R.string.content_menu_group_watch, R.string.content_menu_group_library,
         R.string.content_menu_group_organise, R.string.content_menu_group_details,
     ).map { stringResource(it).uppercase(locale) }
-    val ordered = arranged(menu, actions)
+    val arrangedMenu = arranged(menu, actions)
+    val ordered = arrangedMenu.actions
     val focusKey = ordered.firstOrNull { it.key == firstFocusKey && it.key !in disabled }?.key ?: ordered.firstOrNull { it.key !in disabled }?.key
     GuideMenuHost(x = x, top = top, width = 540.mpx, onDismiss = onDismiss) {
         StageMenuHeader(
@@ -722,7 +770,7 @@ internal fun VodOptionsMenu(
         )
         var previousGroup: Int? = null
         ordered.forEach { action ->
-            if (action.group != previousGroup) StageGroupLabel(labels[action.group])
+            if (arrangedMenu.headings && action.group != previousGroup) StageGroupLabel(labels[action.group])
             previousGroup = action.group
             StageMenuItem(
                 text = action.label, icon = action.icon, value = values[action.key],
@@ -746,6 +794,8 @@ internal fun vodCategoryEntries(
     series: Boolean,
 ): Pair<List<LiveCategoryEntry>, String> {
     val allLabel = if (series) R.string.content_category_all_series else R.string.content_category_all_movies
+    // glcn: no playlist mark when every category comes from the same playlist.
+    val oneSource = railItems.mapNotNull { it.sourceId }.distinct().size <= 1
     val entries = railItems.map { item ->
         val label = item.displayLabel(allLabel)
         val parsed = if (item.key is LiveKey.Folder || item.key is LiveKey.Custom) ProviderTags.parse(label) else null
@@ -761,7 +811,7 @@ internal fun vodCategoryEntries(
                 else -> if (item.locked) OwnTVIcon.LOCK else null
             },
             count = if (item.sealed) null else counts[item.key],
-            mark = item.sourceId?.let(marks::get),
+            mark = if (oneSource) null else item.sourceId?.let(marks::get),
         )
     }
     return entries to stringResource(R.string.content_vod_providers).uppercase(androidx.compose.ui.text.intl.Locale.current.platformLocale)

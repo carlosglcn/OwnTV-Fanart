@@ -30,8 +30,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -158,7 +156,13 @@ fun SettingsScreen(
     /** More › Settings: open at a root group, or with search open. */
     start: SettingsStart? = null,
     onStartConsumed: () -> Unit = {},
+    /** Settings → Sports → My teams: OK on a followed team opens its page in the Sports section. */
+    onOpenSportsTeam: (tv.own.owntv.core.sports.FollowedTeam) -> Unit = {},
 ) {
+    // glcn: the test switch — ▲ ▼ four times in a row anywhere in Settings turns the hidden features on or off (Labs).
+    val labsContext = androidx.compose.ui.platform.LocalContext.current
+    @Suppress("NAME_SHADOWING")
+    val modifier = modifier.onPreviewKeyEvent { e -> tv.own.owntv.glcn.Labs.observe(labsContext, e); false }
     // A cross-script language change recreates the Activity so Android can apply the new script's
     // shaping and font fallback. Keep the open settings sub-screen across that configuration change
     // instead of dropping back to the Settings root/sidebar.
@@ -190,6 +194,8 @@ fun SettingsScreen(
     var showStartup by remember { mutableStateOf(false) }
     var showStartupChannelPicker by remember { mutableStateOf(false) }
     var showAfrWarning by remember { mutableStateOf(false) }
+    // Which switch the warning turns on: Live TV's, or films and series'.
+    var afrWarningLive by remember { mutableStateOf(false) }
     var showLivePreviewPanelWarning by remember { mutableStateOf(false) }
     var showBgImageChooser by remember { mutableStateOf(false) }
     var showHomePicker by remember { mutableStateOf(false) }
@@ -288,7 +294,8 @@ fun SettingsScreen(
     val livePreviewPanelActive by settingsVm.livePreviewPanelActive.collectAsStateWithLifecycle()
     val previewAudio by settingsVm.livePreviewAudio.collectAsStateWithLifecycle()
     val hdr by settingsVm.preferSdr.collectAsStateWithLifecycle()
-    val autoFrameRate by settingsVm.autoFrameRate.collectAsStateWithLifecycle()
+    val autoFrameRateFilms by settingsVm.autoFrameRateFilms.collectAsStateWithLifecycle()
+    val autoFrameRateLive by settingsVm.autoFrameRateLive.collectAsStateWithLifecycle()
     val surroundMode by settingsVm.surroundMode.collectAsStateWithLifecycle()
     val autoPlayNext by settingsVm.autoPlayNext.collectAsStateWithLifecycle()
     val updateCheckOnStart by settingsVm.updateCheckOnStart.collectAsStateWithLifecycle()
@@ -345,6 +352,7 @@ fun SettingsScreen(
     }
     val weatherEnabled by settingsVm.weatherEnabled.collectAsStateWithLifecycle()
     val startupMode by settingsVm.startupMode.collectAsStateWithLifecycle()
+    val autoStart = rememberAutoStartSettingsState()
     val startupChannel by settingsVm.startupChannel.collectAsStateWithLifecycle()
     val chNavEnabled by settingsVm.chNavEnabled.collectAsStateWithLifecycle()
     val rememberLastLive by settingsVm.rememberLastLive.collectAsStateWithLifecycle()
@@ -361,13 +369,15 @@ fun SettingsScreen(
     // below Android 12 there is no way to ask the display which refresh rates it can reach without
     // blanking. Turning it on there therefore asks first; turning it off remains immediate.
     val afrNeedsWarning = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S
-    val toggleAutoFrameRate: (FocusRequester) -> Unit = { returnFocus ->
-        if (!autoFrameRate && afrNeedsWarning) {
+    val toggleAutoFrameRate: (FocusRequester, Boolean) -> Unit = { returnFocus, live ->
+        val on = if (live) autoFrameRateLive else autoFrameRateFilms
+        if (!on && afrNeedsWarning) {
             saveScroll()
             dialogReturn = returnFocus
+            afrWarningLive = live
             showAfrWarning = true
         } else {
-            settingsVm.setAutoFrameRate(!autoFrameRate)
+            settingsVm.setAutoFrameRate(live, !on)
         }
     }
     val toggleLivePreview: (FocusRequester) -> Unit = { returnFocus ->
@@ -426,6 +436,7 @@ fun SettingsScreen(
     // A full page's search hands over to Settings search, keyboard up.
     val openSearch: () -> Unit = { lastTab = null; searchQuery = ""; searchMode = true; searchFromMore = false; searchAutoEdit = true; tab = SettingsTab.ROOT }
     if (tab != SettingsTab.ROOT) {
+    GlcnPageSlide(tab) {
     CompositionLocalProvider(tv.own.owntv.features.settings.LocalSettingsSearch provides openSearch) {
     when (tab) {
         SettingsTab.LANGUAGE -> { LanguageSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
@@ -453,6 +464,7 @@ fun SettingsScreen(
                 onBack = { tab = SettingsTab.ROOT }, modifier = modifier,
             )
             SettingsTab.ROOT -> Unit
+    }
     }
     }
     return
@@ -525,67 +537,14 @@ fun SettingsScreen(
             chipTone = if (glcnStyle != null) TileTone.PRIMARY else TileTone.SECONDARY,
             onClick = { showGlcnStyle = true },
         ),
-        RootRow(
-            "glcn_accessible", TileTone.PRIMARY, OwnTVIcon.PERSON,
-            title = stringResource(R.string.glcn_accessible_title),
-            desc = stringResource(R.string.glcn_accessible_desc),
-            chip = stringResource(if (tv.own.owntv.glcn.Accessible.on) R.string.common_on else R.string.common_off),
-            chipTone = if (tv.own.owntv.glcn.Accessible.on) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { tv.own.owntv.glcn.Accessible.set(accessibleContext, !tv.own.owntv.glcn.Accessible.on) },
-        ),
-        RootRow(
-            "glcn_category_icons", TileTone.PRIMARY, OwnTVIcon.SPARKLE,
-            title = stringResource(R.string.glcn_category_icons_title),
-            desc = stringResource(R.string.glcn_category_icons_desc),
-            chip = stringResource(if (tv.own.owntv.glcn.CategoryIcons.on) R.string.common_on else R.string.common_off),
-            chipTone = if (tv.own.owntv.glcn.CategoryIcons.on) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { tv.own.owntv.glcn.CategoryIcons.setOn(accessibleContext, !tv.own.owntv.glcn.CategoryIcons.on) },
-        ),
-        RootRow(
-            "glcn_home_backdrop", TileTone.PRIMARY, OwnTVIcon.THEME,
-            title = stringResource(R.string.glcn_home_backdrop_title),
-            desc = stringResource(R.string.glcn_home_backdrop_desc),
-            chip = stringResource(
-                when (homeBackdrop) {
-                    1 -> R.string.glcn_home_backdrop_cinema
-                    2 -> R.string.glcn_home_backdrop_panel
-                    3 -> R.string.glcn_home_backdrop_dock
-                    else -> R.string.glcn_home_backdrop_classic
-                },
-            ),
-            chipTone = TileTone.PRIMARY,
-            onClick = { showHomeLayout = true },
-        ),
-        RootRow(
-            "glcn_home_cover", TileTone.PRIMARY, OwnTVIcon.IMAGE,
-            title = stringResource(R.string.glcn_home_cover_title),
-            desc = stringResource(R.string.glcn_home_cover_desc),
-            chip = stringResource(when (homeCover) { 1 -> R.string.glcn_home_cover_app; 2 -> R.string.glcn_home_cover_mine; else -> R.string.glcn_home_cover_art }),
-            chipTone = TileTone.PRIMARY,
-            onClick = { settingsVm.cycleHomeCover() },
-        ),
-        RootRow(
-            "glcn_home_image", TileTone.PRIMARY, OwnTVIcon.IMAGE,
-            title = stringResource(R.string.glcn_home_image_title),
-            desc = stringResource(R.string.glcn_home_image_desc),
-            chip = stringResource(if (homeImagePath.isBlank()) R.string.glcn_home_image_none else R.string.glcn_home_image_change),
-            chipTone = TileTone.PRIMARY,
-            onClick = { showHomePicker = true },
-        ),
-        RootRow(
-            "glcn_home_dim", TileTone.SECONDARY, OwnTVIcon.GLOW,
-            title = stringResource(R.string.glcn_home_dim_title),
-            desc = stringResource(R.string.glcn_home_dim_desc),
-            chip = stringResource(
-                when (homeCoverDim) {
-                    1 -> R.string.glcn_home_dim_soft
-                    2 -> R.string.glcn_home_dim_softer
-                    else -> R.string.glcn_home_dim_normal
-                },
-            ),
-            chipTone = TileTone.SECONDARY,
-            onClick = { settingsVm.cycleHomeCoverDim() },
-        ),
+        glcnAccessibleRow(accessibleContext),
+        glcnEmbyGroupsRow(accessibleContext),
+        glcnCategoryIconsRow(accessibleContext),
+        // glcn: a TV profile has a Home of its own — the layouts and backdrops of the other Homes mean nothing there.
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) glcnTvHomeRow(accessibleContext) else glcnHomeBackdropRow(homeBackdrop) { showHomeLayout = true },
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeCoverRow(homeCover) { settingsVm.cycleHomeCover() },
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeImageRow(homeImagePath) { showHomePicker = true },
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeDimRow(homeCoverDim) { settingsVm.cycleHomeCoverDim() },
         RootRow(
             "glcn_season", TileTone.SECONDARY, OwnTVIcon.THEME,
             title = stringResource(R.string.glcn_season_title),
@@ -814,9 +773,9 @@ fun SettingsScreen(
         RootRow(
             "theme", TileTone.PRIMARY, OwnTVIcon.THEME,
             title = stringResource(R.string.settings_theme), desc = stringResource(R.string.settings_theme_description),
-            chip = themeLabel(themeMode), chipTone = TileTone.PRIMARY,
+            chip = glcnStyle?.let { stringResource(R.string.glcn_theme_fixed, it.label()) } ?: themeLabel(themeMode), chipTone = TileTone.PRIMARY,
             focus = themeRowFocus,
-            onClick = { saveScroll(); dialogReturn = themeRowFocus; showTheme = true },
+            onClick = { if (glcnStyle == null) { saveScroll(); dialogReturn = themeRowFocus; showTheme = true } },
         ),
         RootRow(
             "accent", TileTone.SECONDARY, OwnTVIcon.PALETTE,
@@ -1029,6 +988,7 @@ fun SettingsScreen(
             focus = startupRowFocus,
             onClick = { saveScroll(); dialogReturn = startupRowFocus; showStartup = true },
         ),
+        *autoStartRootRows(autoStart).toTypedArray(),
         RootRow(
             "check_updates", TileTone.PRIMARY, OwnTVIcon.REFRESH,
             title = stringResource(R.string.settings_check_updates), desc = stringResource(R.string.settings_check_updates_description),
@@ -1043,6 +1003,9 @@ fun SettingsScreen(
             chipTone = if (updateCheckOnStart) TileTone.PRIMARY else TileTone.SECONDARY,
             onClick = { settingsVm.setUpdateCheckOnStart(!updateCheckOnStart) },
         ),
+        // glcn (test feature): open the app when the TV starts — off unless chosen here; only with the Labs switch on.
+        // glcn: our "Open when the TV starts" test row gave way to upstream's Auto start (Settings › App startup).
+        null,
         RootRow(
             tabRowKey(SettingsTab.NETWORK), TileTone.SECONDARY, OwnTVIcon.NETWORK,
             heading = stringResource(R.string.settings_group_network),
@@ -1287,8 +1250,10 @@ fun SettingsScreen(
             SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_mini"), stringResource(R.string.settings_mini_player_root), stringResource(R.string.settings_search_keywords_mini), OwnTVIcon.PIP, TileTone.TERTIARY) { openMiniPlayer = true; jumpVideo("vp_mini", false) },
             SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_hdr"), stringResource(R.string.settings_quick_prefer_sdr), stringResource(R.string.settings_search_keywords_prefer_sdr), OwnTVIcon.VIDEO, TileTone.PRIMARY,
                 chip = if (hdr) stringResource(R.string.common_on) else stringResource(R.string.common_off), chipTone = if (hdr) TileTone.PRIMARY else TileTone.SECONDARY, showChevron = false) { settingsVm.setPreferSdr(!hdr) },
-            SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_afr"), stringResource(R.string.settings_auto_frame_rate), stringResource(R.string.settings_search_keywords_afr), OwnTVIcon.VIDEO, TileTone.PRIMARY,
-                chip = if (autoFrameRate) stringResource(R.string.common_on) else stringResource(R.string.common_off), chipTone = if (autoFrameRate) TileTone.PRIMARY else TileTone.SECONDARY, showChevron = false) { toggleAutoFrameRate(searchFieldFocus) },
+            SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_afr"), stringResource(R.string.settings_auto_frame_rate_films), stringResource(R.string.settings_search_keywords_afr), OwnTVIcon.VIDEO, TileTone.PRIMARY,
+                chip = if (autoFrameRateFilms) stringResource(R.string.common_on) else stringResource(R.string.common_off), chipTone = if (autoFrameRateFilms) TileTone.PRIMARY else TileTone.SECONDARY, showChevron = false) { toggleAutoFrameRate(searchFieldFocus, false) },
+            SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_afr_live"), stringResource(R.string.settings_auto_frame_rate_live), stringResource(R.string.settings_search_keywords_afr), OwnTVIcon.LIVE_TV, TileTone.PRIMARY,
+                chip = if (autoFrameRateLive) stringResource(R.string.common_on) else stringResource(R.string.common_off), chipTone = if (autoFrameRateLive) TileTone.PRIMARY else TileTone.SECONDARY, showChevron = false) { toggleAutoFrameRate(searchFieldFocus, true) },
             SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_surround"), stringResource(R.string.settings_surround_sound), stringResource(R.string.settings_search_keywords_surround), OwnTVIcon.AUDIO, TileTone.SECONDARY,
                 chip = surroundModeLabel(surroundMode), chipTone = if (surroundMode == SurroundMode.STEREO) TileTone.SECONDARY else TileTone.PRIMARY, showChevron = false) { settingsVm.cycleSurroundMode() },
             SettingsSearchEntry(tv.own.owntv.features.settings.videoRowPath("vp_autoplay"), stringResource(R.string.settings_autoplay_next), stringResource(R.string.settings_search_keywords_autoplay), OwnTVIcon.AUTOPLAY_NEXT, TileTone.SECONDARY,
@@ -1320,6 +1285,7 @@ fun SettingsScreen(
             *subScreenSearchEntries { t -> open(t) }.toTypedArray(),
             SettingsSearchEntry(stringResource(R.string.settings_group_app), stringResource(R.string.settings_app_startup), stringResource(R.string.settings_search_keywords_startup), OwnTVIcon.POWER, TileTone.SECONDARY,
                 chip = startupLabel(startupMode)) { saveScroll(); dialogReturn = searchFieldFocus; showStartup = true },
+            *autoStartSearchEntries(autoStart).toTypedArray(),
             SettingsSearchEntry(stringResource(R.string.settings_group_app), stringResource(R.string.settings_check_updates), stringResource(R.string.settings_search_keywords_updates), OwnTVIcon.REFRESH, TileTone.PRIMARY,
                 chip = "v${tv.own.owntv.BuildConfig.VERSION_NAME}") { saveScroll(); dialogReturn = searchFieldFocus; showUpdate = true },
             SettingsSearchEntry(stringResource(R.string.settings_group_app), stringResource(R.string.settings_update_startup), stringResource(R.string.settings_search_keywords_update_auto), OwnTVIcon.REFRESH, TileTone.SECONDARY,
@@ -1329,7 +1295,7 @@ fun SettingsScreen(
         // in place, or carry a confirmation the search field has to own — so the catalogue skips them
         // rather than listing them a second time.
         val bespokeVideoKeys = setOf(
-            "vp_live_preview", "vp_preview_audio", "vp_channel_numbers", "vp_mini", "vp_hdr", "vp_afr",
+            "vp_live_preview", "vp_preview_audio", "vp_channel_numbers", "vp_mini", "vp_hdr", "vp_afr", "vp_afr_live",
             "vp_surround", "vp_autoplay", "vp_sub_style", "vp_live_latency", "vp_preroll", "vp_logging",
         )
         // …and every OTHER player-group row, taken straight from the catalogue those groups already draw
@@ -1612,7 +1578,7 @@ fun SettingsScreen(
     if (showAmbientGlow) AmbientGlowHost(settingsVm, ambientGlowEnabled, ambientGlowPulse, onClose = { showAmbientGlow = false })
     if (showAfrWarning) {
         AutoFrameRateWarningDialog(
-            onEnable = { settingsVm.setAutoFrameRate(true); showAfrWarning = false },
+            onEnable = { settingsVm.setAutoFrameRate(afrWarningLive, true); showAfrWarning = false },
             onDismiss = { showAfrWarning = false },
         )
     }
@@ -1696,77 +1662,6 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun StartupChannelPickerDialog(
-    query: String,
-    channels: List<tv.own.owntv.core.database.entity.ChannelEntity>,
-    selected: tv.own.owntv.core.settings.StartupChannelRef?,
-    onQueryChange: (String) -> Unit,
-    onSelect: (tv.own.owntv.core.database.entity.ChannelEntity) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    // A long list picked from: in the page's panel on a settings page, a Stage popup elsewhere.
-    val list: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
-        StartupChannelList(query, channels, selected, onQueryChange, onSelect)
-    }
-    if (tv.own.owntv.features.settings.panelEditor(onDismiss) { list() }) return
-    tv.own.owntv.ui.stage.StagePopup(onDismiss = onDismiss, title = stringResource(R.string.settings_startup_specific_channel), scroll = false, content = list)
-}
-
-/** The search field, then the channels as radio rows (number, name); focus starts in the search. */
-@Composable
-private fun androidx.compose.foundation.layout.ColumnScope.StartupChannelList(
-    query: String,
-    channels: List<tv.own.owntv.core.database.entity.ChannelEntity>,
-    selected: tv.own.owntv.core.settings.StartupChannelRef?,
-    onQueryChange: (String) -> Unit,
-    onSelect: (tv.own.owntv.core.database.entity.ChannelEntity) -> Unit,
-) {
-    val searchFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { kotlinx.coroutines.delay(80); runCatching { searchFocus.requestFocus() } }
-    tv.own.owntv.ui.stage.StageSearchField(
-        query = query,
-        onQueryChange = onQueryChange,
-        placeholder = stringResource(R.string.common_search_hint),
-        modifier = Modifier.fillMaxWidth().padding(bottom = 12.mpx).focusRequester(searchFocus),
-    )
-    if (channels.isEmpty()) {
-        Text(
-            if (query.isBlank()) stringResource(R.string.content_no_channels_here) else stringResource(R.string.content_no_channels_found, query),
-            style = tv.own.owntv.ui.theme.stageText(17, 500), color = tv.own.owntv.ui.theme.StageColors.Muted,
-            modifier = Modifier.padding(vertical = 20.mpx),
-        )
-        return
-    }
-    LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(2.mpx)) {
-        items(channels, key = { it.id }) { channel ->
-            val isSelected = selected?.let { ref ->
-                ref.sourceId == channel.sourceId &&
-                    if (!ref.remoteId.isNullOrBlank() && !channel.remoteId.isNullOrBlank()) ref.remoteId == channel.remoteId else ref.name == channel.name
-            } == true
-            tv.own.owntv.ui.stage.StageSurface(
-                onClick = { onSelect(channel) },
-                radius = 14.mpx,
-                focusStyle = tv.own.owntv.ui.stage.StageFocus.FX,
-                modifier = Modifier.fillMaxWidth().height(52.mpx),
-            ) { focused ->
-                Row(Modifier.padding(horizontal = 14.mpx), horizontalArrangement = Arrangement.spacedBy(12.mpx), verticalAlignment = Alignment.CenterVertically) {
-                    tv.own.owntv.features.settings.StageRadio(isSelected)
-                    if (tv.own.owntv.glcn.LocalShowChannelNumbers.current) Text(
-                        channel.number?.toString().orEmpty(), style = tv.own.owntv.ui.theme.stageText(16, 700),
-                        color = tv.own.owntv.ui.theme.StageColors.Dim, modifier = Modifier.width(54.mpx), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        channel.name, style = tv.own.owntv.ui.theme.stageText(18, 600),
-                        color = if (isSelected || focused) tv.own.owntv.ui.theme.StageColors.Text else tv.own.owntv.ui.theme.StageColors.Muted,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun themeLabel(mode: ThemeMode): String = stringResource(
     when (mode) {
         ThemeMode.DARK -> R.string.settings_theme_dark
@@ -1775,17 +1670,6 @@ private fun themeLabel(mode: ThemeMode): String = stringResource(
     },
 )
 
-@Composable
-private fun startupLabel(mode: tv.own.owntv.core.settings.StartupMode): String = stringResource(
-    when (mode) {
-        tv.own.owntv.core.settings.StartupMode.HOME -> R.string.settings_startup_home
-        tv.own.owntv.core.settings.StartupMode.LAST_CHANNEL -> R.string.settings_startup_last_channel
-        tv.own.owntv.core.settings.StartupMode.LAST_CHANNEL_GUIDE -> R.string.settings_startup_last_channel_guide
-        tv.own.owntv.core.settings.StartupMode.LAST_CHANNEL_LIVE -> R.string.settings_startup_last_channel_live
-        tv.own.owntv.core.settings.StartupMode.FAVORITES -> R.string.settings_startup_favorites
-        tv.own.owntv.core.settings.StartupMode.SPECIFIC_CHANNEL -> R.string.settings_startup_specific_channel
-    },
-)
 
 /**
  * The Movies & Series layout picker. Moved out of [SettingsScreen] unchanged, because that function's
@@ -1889,44 +1773,6 @@ private fun ThemeDialogHost(settingsVm: SettingsViewModel, themeMode: ThemeMode,
         options = ThemeMode.entries.map { it.name to themeLabel(it) },
         selected = themeMode.name,
         onSelect = { settingsVm.setThemeMode(ThemeMode.valueOf(it)); onClose() },
-        onDismiss = { onClose() },
-    )
-}
-
-@Composable
-private fun StartupDialogHost(settingsVm: SettingsViewModel, startupMode: tv.own.owntv.core.settings.StartupMode, onClose: () -> Unit, onPickChannel: () -> Unit) {
-    tv.own.owntv.features.settings.PickerDialog(
-        title = stringResource(R.string.settings_app_startup_dialog),
-        options = tv.own.owntv.core.settings.StartupMode.entries.map { it.name to startupLabel(it) },
-        selected = startupMode.name,
-        onSelect = {
-            val mode = tv.own.owntv.core.settings.StartupMode.valueOf(it)
-            onClose()
-            if (mode == tv.own.owntv.core.settings.StartupMode.SPECIFIC_CHANNEL) {
-                settingsVm.setStartupChannelQuery("")
-                settingsVm.refreshStartupChannelPicker()
-                onPickChannel()
-            } else {
-                settingsVm.setStartupMode(mode)
-            }
-        },
-        onDismiss = { onClose() },
-    )
-}
-
-@Composable
-private fun StartupChannelPickerHost(settingsVm: SettingsViewModel, startupChannel: tv.own.owntv.core.settings.StartupChannelRef?, onClose: () -> Unit) {
-    val startupChannelQuery by settingsVm.startupChannelQuery.collectAsStateWithLifecycle()
-    val startupChannelResults by settingsVm.startupChannelResults.collectAsStateWithLifecycle()
-    StartupChannelPickerDialog(
-        query = startupChannelQuery,
-        channels = startupChannelResults,
-        selected = startupChannel,
-        onQueryChange = settingsVm::setStartupChannelQuery,
-        onSelect = {
-            settingsVm.setStartupChannel(it)
-            onClose()
-        },
         onDismiss = { onClose() },
     )
 }
@@ -2546,6 +2392,8 @@ private fun GlassEffectSettingsScreen(onBack: () -> Unit, modifier: Modifier = M
     var showBackgroundChooser by remember { mutableStateOf(false) }
     var showLocalPicker by remember { mutableStateOf(false) }
     var showRemotePicker by remember { mutableStateOf(false) }
+    var showWallGallery by remember { mutableStateOf(false) }
+    var showGateWall by remember { mutableStateOf(false) }
     val ingestScope = rememberCoroutineScope()
 
     val background by settingsVm.backgroundConfig.collectAsStateWithLifecycle()
@@ -2572,7 +2420,9 @@ private fun GlassEffectSettingsScreen(onBack: () -> Unit, modifier: Modifier = M
         onReset = settingsVm::resetGlassAndBackground,
         onBack = onBack,
         modifier = modifier,
+        onOpenGateWall = { showGateWall = true },
     )
+    if (showGateWall) tv.own.owntv.glcn.GateWallGalleryPopup(onDismiss = { showGateWall = false })
 
     if (showBackgroundChooser) {
         BackgroundImageChooserDialog(
@@ -2581,7 +2431,19 @@ private fun GlassEffectSettingsScreen(onBack: () -> Unit, modifier: Modifier = M
                 onPickRemote = { showBackgroundChooser = false; showRemotePicker = true },
                 onClear = { settingsVm.setBgImagePath(""); showBackgroundChooser = false },
                 onDismiss = { showBackgroundChooser = false },
+                onPickApp = { showBackgroundChooser = false; showWallGallery = true },
             )
+    }
+    if (showWallGallery) {
+        tv.own.owntv.glcn.WallpaperGalleryPopup(
+            current = bgImagePath,
+            onPicked = { path, picture ->
+                settingsVm.setNewBackgroundPicture(path)
+                // The app's pictures are soft already: shown clear, only lightly darkened.
+                if (picture) settingsVm.setPictureLook(tv.own.owntv.core.theme.PictureLook.SHARP)
+            },
+            onDismiss = { showWallGallery = false },
+        )
     }
     if (showRemotePicker) {
         val context = LocalContext.current
@@ -2766,7 +2628,7 @@ private fun EpgOffsetSettingDialog(
  * dialog, and Back from a sub-screen) need the *index* of a row that may be scrolled off-screen and
  * therefore not composed at all. Neither is knowable from a plain Column of 36 inline rows.
  */
-private sealed interface RootItem {
+internal sealed interface RootItem {
     val key: String
 }
 
@@ -2778,7 +2640,7 @@ private data class RootGroup(
     val summary: String,
 ) : RootItem
 
-private data class RootRow(
+internal data class RootRow(
     override val key: String,
     val tone: TileTone,
     val icon: OwnTVIcon,
@@ -2993,6 +2855,7 @@ private fun stageRowExtras(
     val brandAccent by vm.brandAccentTriangle.collectAsStateWithLifecycle()
     val focusHighlight by vm.focusHighlight.collectAsStateWithLifecycle()
     val focusWidth by vm.focusHighlightWidth.collectAsStateWithLifecycle()
+    val styleNow by vm.glcnStyle.collectAsStateWithLifecycle()
     val sep = stringResource(R.string.content_epg_bits_separator)
     fun <T> cycle(all: List<T>, now: T, step: Int): T = all[(all.indexOf(now) + step).mod(all.size)]
 
@@ -3026,11 +2889,19 @@ private fun stageRowExtras(
             SettingValue.Opens(playlistsKnown?.let { pluralStringResource(R.plurals.more_playlist_count, it.size, it.size) }),
             extra = { tv.own.owntv.features.settings.PlaylistSyncList(playlists) },
         ),
-        "theme" to RowExtra(
+        // glcn: a style is made for its own tone — while one is on, light or dark is its call, said plainly.
+        "theme" to (styleNow?.let { st ->
+            RowExtra(
+                SettingValue.Action(stringResource(R.string.glcn_theme_fixed, st.label())),
+                onStep = {},
+                onClick = {},
+                help = stringResource(R.string.glcn_theme_fixed_help),
+            )
+        } ?: RowExtra(
             SettingValue.Segmented(themeNames, themes.indexOf(themeMode)),
             onStep = { vm.setThemeMode(cycle(themes, themeMode, it)) },
             onClick = { vm.setThemeMode(cycle(themes, themeMode, 1)) },
-        ),
+        )),
         "accent" to RowExtra(
             SettingValue.Custom {
                 AccentSwatches(presetColors, current)
@@ -3178,4 +3049,154 @@ private fun serviceRowExtras(vm: SettingsViewModel): Map<String, RowExtra> {
         "tab_NETWORK" to RowExtra(SettingValue.Opens(if (proxy.usable) "${proxy.host}:${proxy.port}" else off)),
         "tab_DNS" to RowExtra(SettingValue.Opens(if (dns.enabled && dnsHost.isNotBlank()) dnsHost else if (dns.enabled) on else off)),
     )
+}
+
+/** glcn: a Settings page's way in — how long, and how far from the right it slides. */
+private const val PAGE_IN_MS = 300
+private val PAGE_IN_SHIFT = 60.mpx
+
+// glcn: rows kept out of SettingsScreen so its method stays under the JVM size limit.
+
+@Composable
+private fun glcnAccessibleRow(ctx: android.content.Context): RootRow = RootRow(
+    "glcn_accessible", TileTone.PRIMARY, OwnTVIcon.PERSON,
+    title = stringResource(R.string.glcn_accessible_title),
+    desc = stringResource(R.string.glcn_accessible_desc),
+    chip = stringResource(if (tv.own.owntv.glcn.Accessible.on) R.string.common_on else R.string.common_off),
+    chipTone = if (tv.own.owntv.glcn.Accessible.on) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = { tv.own.owntv.glcn.Accessible.set(ctx, !tv.own.owntv.glcn.Accessible.on) },
+)
+
+@Composable
+private fun glcnEmbyGroupsRow(ctx: android.content.Context): RootRow = RootRow(
+    "glcn_emby_groups", TileTone.PRIMARY, OwnTVIcon.LAYERS,
+    title = stringResource(R.string.glcn_emby_groups_title),
+    desc = stringResource(R.string.glcn_emby_groups_desc),
+    chip = stringResource(
+        when (tv.own.owntv.glcn.EmbyGroupsPref.mode) {
+            tv.own.owntv.core.sync.EmbyGroups.Mode.GENRE -> R.string.glcn_emby_groups_genre
+            tv.own.owntv.core.sync.EmbyGroups.Mode.PLATFORM -> R.string.glcn_emby_groups_platform
+            tv.own.owntv.core.sync.EmbyGroups.Mode.LIBRARY -> R.string.glcn_emby_groups_library
+        },
+    ),
+    chipTone = TileTone.PRIMARY,
+    onClick = { tv.own.owntv.glcn.EmbyGroupsPref.cycle(ctx) },
+)
+
+@Composable
+private fun glcnCategoryIconsRow(ctx: android.content.Context): RootRow = RootRow(
+    "glcn_category_icons", TileTone.PRIMARY, OwnTVIcon.SPARKLE,
+    title = stringResource(R.string.glcn_category_icons_title),
+    desc = stringResource(R.string.glcn_category_icons_desc),
+    chip = stringResource(
+        when (tv.own.owntv.glcn.CategoryIcons.mode) {
+            tv.own.owntv.glcn.CategoryIcons.Mode.TEXT -> R.string.glcn_category_icons_text
+            tv.own.owntv.glcn.CategoryIcons.Mode.ICONS -> R.string.glcn_category_icons_icons
+            tv.own.owntv.glcn.CategoryIcons.Mode.LOGOS -> R.string.glcn_category_icons_logos
+        },
+    ),
+    chipTone = if (tv.own.owntv.glcn.CategoryIcons.on) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = { tv.own.owntv.glcn.CategoryIcons.cycle(ctx) },
+)
+
+@Composable
+private fun glcnHomeBackdropRow(homeBackdrop: Int, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_home_backdrop", TileTone.PRIMARY, OwnTVIcon.THEME,
+    title = stringResource(R.string.glcn_home_backdrop_title),
+    desc = stringResource(R.string.glcn_home_backdrop_desc),
+    chip = stringResource(
+        when (homeBackdrop) {
+            1 -> R.string.glcn_home_backdrop_cinema
+            2 -> R.string.glcn_home_backdrop_panel
+            3 -> R.string.glcn_home_backdrop_dock
+            else -> R.string.glcn_home_backdrop_classic
+        },
+    ),
+    chipTone = TileTone.PRIMARY,
+    onClick = onClick,
+)
+
+/** glcn (test feature): "Open when the TV starts" — off by default; turning it on asks Android's overlay permission once. */
+@Composable
+private fun glcnAutostartRow(ctx: android.content.Context): RootRow {
+    val on = tv.own.owntv.glcn.Labs.autostart
+    return RootRow(
+        "glcn_autostart", TileTone.SECONDARY, OwnTVIcon.POWER,
+        title = stringResource(R.string.glcn_autostart_title),
+        desc = stringResource(R.string.glcn_autostart_desc),
+        chip = stringResource(if (on) R.string.common_on else R.string.common_off),
+        chipTone = if (on) TileTone.PRIMARY else TileTone.SECONDARY,
+        onClick = {
+            if (!on && !tv.own.owntv.glcn.BootStart.canStart(ctx)) tv.own.owntv.glcn.BootStart.askPermission(ctx)
+            tv.own.owntv.glcn.Labs.setAutostart(ctx, !on)
+        },
+    )
+}
+
+/** glcn: a TV profile's own Home — the full picture (TV Home) or the Dock, TV only. Kept per profile. */
+@Composable
+private fun glcnTvHomeRow(ctx: android.content.Context): RootRow {
+    val id = tv.own.owntv.glcn.TvProfiles.active
+    val dock = tv.own.owntv.glcn.TvProfiles.usesDock(id)
+    return RootRow(
+        "glcn_tv_home", TileTone.PRIMARY, OwnTVIcon.THEME,
+        title = stringResource(R.string.glcn_tv_home_title),
+        desc = stringResource(R.string.glcn_tv_home_desc),
+        chip = stringResource(if (dock) R.string.glcn_home_backdrop_dock else R.string.glcn_tv_home_full),
+        chipTone = TileTone.PRIMARY,
+        onClick = { id?.let { tv.own.owntv.glcn.TvProfiles.setDock(ctx, it, !dock) } },
+    )
+}
+
+@Composable
+private fun glcnHomeCoverRow(homeCover: Int, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_home_cover", TileTone.PRIMARY, OwnTVIcon.IMAGE,
+    title = stringResource(R.string.glcn_home_cover_title),
+    desc = stringResource(R.string.glcn_home_cover_desc),
+    chip = stringResource(when (homeCover) { 1 -> R.string.glcn_home_cover_app; 2 -> R.string.glcn_home_cover_mine; else -> R.string.glcn_home_cover_art }),
+    chipTone = TileTone.PRIMARY,
+    onClick = onClick,
+)
+
+@Composable
+private fun glcnHomeImageRow(homeImagePath: String, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_home_image", TileTone.PRIMARY, OwnTVIcon.IMAGE,
+    title = stringResource(R.string.glcn_home_image_title),
+    desc = stringResource(R.string.glcn_home_image_desc),
+    chip = stringResource(if (homeImagePath.isBlank()) R.string.glcn_home_image_none else R.string.glcn_home_image_change),
+    chipTone = TileTone.PRIMARY,
+    onClick = onClick,
+)
+
+@Composable
+private fun glcnHomeDimRow(homeCoverDim: Int, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_home_dim", TileTone.SECONDARY, OwnTVIcon.GLOW,
+    title = stringResource(R.string.glcn_home_dim_title),
+    desc = stringResource(R.string.glcn_home_dim_desc),
+    chip = stringResource(
+        when (homeCoverDim) {
+            1 -> R.string.glcn_home_dim_soft
+            2 -> R.string.glcn_home_dim_softer
+            else -> R.string.glcn_home_dim_normal
+        },
+    ),
+    chipTone = TileTone.SECONDARY,
+    onClick = onClick,
+)
+
+/** glcn: a page opens sliding in a little from the right as it fades up, the way iOS and Apple TV go one level down. */
+@Composable
+private fun GlcnPageSlide(tab: Any, content: @Composable () -> Unit) {
+    val pageAnimated = tv.own.owntv.glcn.DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn
+    val pageIn = remember(tab) { androidx.compose.animation.core.Animatable(if (pageAnimated) 0f else 1f) }
+    LaunchedEffect(tab) {
+        if (pageIn.value < 1f) pageIn.animateTo(1f, androidx.compose.animation.core.tween(PAGE_IN_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+    }
+    androidx.compose.foundation.layout.Box(
+        Modifier.fillMaxSize().graphicsLayer {
+            val e = pageIn.value
+            translationX = (1f - e) * PAGE_IN_SHIFT.toPx()
+            alpha = 0.25f + 0.75f * e
+        },
+    ) { content() }
 }

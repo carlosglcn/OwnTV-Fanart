@@ -102,7 +102,7 @@ internal fun videoSectionCounts(vm: SettingsViewModel): List<Int> {
         5 + (if (vm.tunnelingSupported) 1 else 0),
         3,
         3,
-        4 + (if (livePreview) 1 else 0) + (if (timeshift) 1 else 0),
+        4 + (if (livePreview) 2 else 0) + (if (timeshift) 1 else 0),
         3 + (if (perPlaylist) 3 else 0),
         2,
         2 + (if (multiview) 1 else 0) + (if (tv.own.owntv.features.pip.PictureInPicture.supported()) 1 else 0),
@@ -155,10 +155,13 @@ internal val VIDEO_QUICK_ROWS: List<VideoQuickRef> = listOf(
     VideoQuickRef("vp_hw", SECTION_PICTURE, OwnTVIcon.VIDEO, R.string.settings_hardware_decoding, R.string.settings_hardware_decoding_description),
     VideoQuickRef("vp_sw_above_1080p", SECTION_PICTURE, OwnTVIcon.VIDEO, R.string.settings_software_decode_above_1080p, R.string.settings_software_decode_above_1080p_description),
     VideoQuickRef("vp_hdr", SECTION_PICTURE, OwnTVIcon.VIDEO, R.string.settings_quick_prefer_sdr, R.string.settings_prefer_sdr_description),
+    VideoQuickRef("vp_dolby_vision", SECTION_PICTURE, OwnTVIcon.VIDEO, R.string.glcn_settings_dolby_vision, R.string.glcn_settings_dolby_vision_desc),
     VideoQuickRef("vp_max_quality", SECTION_PICTURE, OwnTVIcon.VIDEO, R.string.settings_max_video_quality, R.string.settings_max_video_quality_description),
     VideoQuickRef("vp_tunneled", SECTION_PICTURE, OwnTVIcon.VIDEO, R.string.settings_tunneled_playback, R.string.settings_tunneled_playback_description),
     VideoQuickRef("vp_zoom", SECTION_PICTURE, OwnTVIcon.ASPECT, R.string.settings_default_zoom, R.string.settings_default_zoom_description),
-    VideoQuickRef("vp_afr", SECTION_FRAME_RATE, OwnTVIcon.VIDEO, R.string.settings_auto_frame_rate, R.string.settings_auto_frame_rate_description),
+    VideoQuickRef("vp_reset_zoom", SECTION_PICTURE, OwnTVIcon.ASPECT, R.string.settings_reset_saved_zoom, R.string.settings_reset_saved_zoom_description),
+    VideoQuickRef("vp_afr", SECTION_FRAME_RATE, OwnTVIcon.VIDEO, R.string.settings_auto_frame_rate_films, R.string.settings_auto_frame_rate_films_description),
+    VideoQuickRef("vp_afr_live", SECTION_FRAME_RATE, OwnTVIcon.LIVE_TV, R.string.settings_auto_frame_rate_live, R.string.settings_auto_frame_rate_live_description),
     VideoQuickRef("vp_afr_pause", SECTION_FRAME_RATE, OwnTVIcon.PAUSE, R.string.settings_afr_pause, R.string.settings_afr_pause_description),
     VideoQuickRef("vp_afr_resolution", SECTION_FRAME_RATE, OwnTVIcon.ASPECT, R.string.settings_afr_resolution, R.string.settings_afr_resolution_description),
     VideoQuickRef("vp_vod_buffer", SECTION_STREAMING, OwnTVIcon.DOWNLOADS, R.string.settings_vod_buffer, R.string.settings_vod_buffer_description),
@@ -167,6 +170,7 @@ internal val VIDEO_QUICK_ROWS: List<VideoQuickRef> = listOf(
     VideoQuickRef("vp_channel_numbers", SECTION_LIVE, OwnTVIcon.LIVE_TV, R.string.settings_channel_numbers, R.string.settings_channel_numbers_description),
     VideoQuickRef("vp_live_preview", SECTION_LIVE, OwnTVIcon.LIVE_TV, R.string.settings_quick_live_preview, R.string.settings_live_preview_description),
     VideoQuickRef("vp_preview_audio", SECTION_LIVE, OwnTVIcon.AUDIO, R.string.settings_preview_audio, R.string.settings_preview_audio_description),
+    VideoQuickRef("vp_preview_on_ok", SECTION_LIVE, OwnTVIcon.LIVE_TV, R.string.settings_preview_on_ok, R.string.settings_preview_on_ok_description),
     VideoQuickRef("vp_timeshift", SECTION_LIVE, OwnTVIcon.REWIND, R.string.settings_timeshift, R.string.settings_timeshift_description),
     VideoQuickRef("vp_timeshift_window", SECTION_LIVE, OwnTVIcon.REWIND, R.string.settings_timeshift_window, R.string.settings_timeshift_window_description),
     VideoQuickRef("vp_timeshift_resume", SECTION_LIVE, OwnTVIcon.PLAY, R.string.settings_timeshift_resume, R.string.settings_timeshift_resume_description),
@@ -248,6 +252,10 @@ internal fun videoQuickBinding(key: String, vm: SettingsViewModel): VideoQuickBi
             val on by vm.preferSdr.collectAsStateWithLifecycle()
             toggle(onOff(on), on) { vm.setPreferSdr(!on) }
         }
+        "vp_dolby_vision" -> {
+            val on by vm.dolbyVision.collectAsStateWithLifecycle()
+            toggle(onOff(on), on) { vm.setDolbyVision(!on) }
+        }
         "vp_max_quality" -> {
             val height by vm.maxVideoHeight.collectAsStateWithLifecycle()
             link(videoQualityLabel(height), height > 0)
@@ -274,11 +282,12 @@ internal fun videoQuickBinding(key: String, vm: SettingsViewModel): VideoQuickBi
                 tiles > tv.own.owntv.core.live.DEFAULT_MULTIVIEW_TILES,
             )
         }
-        "vp_afr" -> {
-            val on by vm.autoFrameRate.collectAsStateWithLifecycle()
+        "vp_afr", "vp_afr_live" -> {
+            val live = key == "vp_afr_live"
+            val on by (if (live) vm.autoFrameRateLive else vm.autoFrameRateFilms).collectAsStateWithLifecycle()
             // Below Android 12 turning it ON asks first, and that warning lives on the screen itself.
             val needsWarning = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S
-            if (!on && needsWarning) link(onOff(on)) else toggle(onOff(on), on) { vm.setAutoFrameRate(!on) }
+            if (!on && needsWarning) link(onOff(on)) else toggle(onOff(on), on) { vm.setAutoFrameRate(live, !on) }
         }
         "vp_live_engine" -> {
             val engine by vm.liveEnginePreference.collectAsStateWithLifecycle()
@@ -349,6 +358,11 @@ internal fun videoQuickBinding(key: String, vm: SettingsViewModel): VideoQuickBi
         "vp_preview_audio" -> {
             val on by vm.livePreviewAudio.collectAsStateWithLifecycle()
             toggle(onOff(on), on) { vm.setLivePreviewAudio(!on) }
+        }
+        "vp_preview_on_ok" -> {
+            val guide by vm.guidePreviewOnOk.collectAsStateWithLifecycle()
+            val live by vm.livePreviewOnOk.collectAsStateWithLifecycle()
+            link(previewOnOkChip(guide, live), guide || live)
         }
         "vp_live_latency" -> {
             val mode by vm.liveLatencyMode.collectAsStateWithLifecycle()
@@ -581,7 +595,8 @@ internal fun VideoPlayerGroupRows(
     // The playback settings that Quick and Settings search also offer. Their rows live here, so these
     // groups are the one complete list; a pin or a search result is a shortcut to the same value.
     val hdr by vm.preferSdr.collectAsStateWithLifecycle()
-    val autoFrameRate by vm.autoFrameRate.collectAsStateWithLifecycle()
+    val autoFrameRateFilms by vm.autoFrameRateFilms.collectAsStateWithLifecycle()
+    val autoFrameRateLive by vm.autoFrameRateLive.collectAsStateWithLifecycle()
     val multiviewEnabled by vm.multiviewEnabled.collectAsStateWithLifecycle()
     val multiviewTiles by vm.multiviewTiles.collectAsStateWithLifecycle()
     val multiviewWarningAccepted by vm.multiviewWarningAccepted.collectAsStateWithLifecycle()
@@ -593,10 +608,13 @@ internal fun VideoPlayerGroupRows(
     val mpvPassthrough by vm.mpvPassthrough.collectAsStateWithLifecycle()
     val maxVideoHeight by vm.maxVideoHeight.collectAsStateWithLifecycle()
     val tunneledPlayback by vm.tunneledPlayback.collectAsStateWithLifecycle()
+    val dolbyVision by vm.dolbyVision.collectAsStateWithLifecycle()
     val tunnelingFailed by vm.tunnelingFailed.collectAsStateWithLifecycle()
     val autoPlayNext by vm.autoPlayNext.collectAsStateWithLifecycle()
     val livePreview by vm.livePreviewEnabled.collectAsStateWithLifecycle()
     val previewAudio by vm.livePreviewAudio.collectAsStateWithLifecycle()
+    val guidePreviewOnOk by vm.guidePreviewOnOk.collectAsStateWithLifecycle()
+    val livePreviewOnOk by vm.livePreviewOnOk.collectAsStateWithLifecycle()
     val livePreviewPanelActive by vm.livePreviewPanelActive.collectAsStateWithLifecycle()
     val sources by vm.sources.collectAsStateWithLifecycle()
     // The playlist whose per-playlist "Pre-buffer" override is being edited.
@@ -695,11 +713,12 @@ internal fun VideoPlayerGroupRows(
     // for the refresh rates it can reach without blanking it. Turning it off stays immediate. This is
     // the same rule the root row follows, and both go through the same warning popup.
     val afrNeedsWarning = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S
-    val toggleAutoFrameRate = {
-        if (!autoFrameRate && afrNeedsWarning) {
-            savedScroll = scrollState.value; dialog = Dialog.AFR_WARNING
+    val toggleAutoFrameRate = { live: Boolean ->
+        val on = if (live) autoFrameRateLive else autoFrameRateFilms
+        if (!on && afrNeedsWarning) {
+            savedScroll = scrollState.value; dialog = if (live) Dialog.AFR_LIVE_WARNING else Dialog.AFR_WARNING
         } else {
-            vm.setAutoFrameRate(!autoFrameRate)
+            vm.setAutoFrameRate(live, !on)
         }
     }
     // Turning Live preview ON while the layout leaves no room for the preview panel would do nothing
@@ -827,6 +846,15 @@ internal fun VideoPlayerGroupRows(
             value = SettingValue.Switch(hdr),
             onClick = { vm.setPreferSdr(!hdr) },
         )
+        // glcn: off for a receiver or TV without Dolby Vision — such films play as HDR10.
+        KeyedSettingRow(
+            quickKey = "vp_dolby_vision",
+            icon = OwnTVIcon.VIDEO,
+            title = stringResource(R.string.glcn_settings_dolby_vision),
+            desc = stringResource(R.string.glcn_settings_dolby_vision_desc),
+            value = SettingValue.Switch(dolbyVision),
+            onClick = { vm.setDolbyVision(!dolbyVision) },
+        )
         // The Settings limit; the player's Quality button picks within a stream.
         KeyedSettingRow(
             quickKey = "vp_max_quality",
@@ -868,12 +896,22 @@ internal fun VideoPlayerGroupRows(
         KeyedSettingRow(
             quickKey = "vp_afr",
             icon = OwnTVIcon.VIDEO,
-            title = stringResource(R.string.settings_auto_frame_rate),
-            desc = stringResource(R.string.settings_auto_frame_rate_description) +
+            title = stringResource(R.string.settings_auto_frame_rate_films),
+            desc = stringResource(R.string.settings_auto_frame_rate_films_description) +
                 if (afrNeedsWarning) " " + stringResource(R.string.settings_auto_frame_rate_warning_suffix) else "",
-            value = SettingValue.Switch(autoFrameRate),
+            value = SettingValue.Switch(autoFrameRateFilms),
             modifier = Modifier.focusRequester(dialogRowFocus.getValue(Dialog.AFR_WARNING)),
-            onClick = toggleAutoFrameRate,
+            onClick = { toggleAutoFrameRate(false) },
+        )
+        KeyedSettingRow(
+            quickKey = "vp_afr_live",
+            icon = OwnTVIcon.LIVE_TV,
+            title = stringResource(R.string.settings_auto_frame_rate_live),
+            desc = stringResource(R.string.settings_auto_frame_rate_live_description) +
+                if (afrNeedsWarning) " " + stringResource(R.string.settings_auto_frame_rate_warning_suffix) else "",
+            value = SettingValue.Switch(autoFrameRateLive),
+            modifier = Modifier.focusRequester(dialogRowFocus.getValue(Dialog.AFR_LIVE_WARNING)),
+            onClick = { toggleAutoFrameRate(true) },
         )
         // Both only act for a film with Auto frame rate on; shown always, like every row here.
         KeyedSettingRow(
@@ -959,16 +997,35 @@ internal fun VideoPlayerGroupRows(
                 value = SettingValue.Switch(previewAudio),
                 onClick = { vm.setLivePreviewAudio(!previewAudio) },
             )
-            // glcn: the preview waits for OK instead of opening a stream on every step of the list.
-            val okContext = androidx.compose.ui.platform.LocalContext.current
             KeyedSettingRow(
+                quickKey = "vp_preview_on_ok",
                 icon = OwnTVIcon.LIVE_TV,
-                title = stringResource(R.string.glcn_preview_ok_title),
-                desc = stringResource(R.string.glcn_preview_ok_desc),
-                value = SettingValue.Switch(tv.own.owntv.glcn.LowRam.previewOnOk),
-                onClick = { tv.own.owntv.glcn.LowRam.setPreviewOnOk(okContext, !tv.own.owntv.glcn.LowRam.previewOnOk) },
+                title = stringResource(R.string.settings_preview_on_ok),
+                desc = stringResource(R.string.settings_preview_on_ok_description),
+                value = SettingValue.Opens(previewOnOkChip(guidePreviewOnOk, livePreviewOnOk)),
+                modifier = Modifier.focusRequester(dialogRowFocus.getValue(Dialog.PREVIEW_ON_OK)),
+                onClick = { savedScroll = scrollState.value; dialog = Dialog.PREVIEW_ON_OK },
             )
         }
+        // glcn: how the programme on air shows on a live channel — Compact (as always), Card, Cinema or Side.
+        val bannerCtx = androidx.compose.ui.platform.LocalContext.current
+        val bannerLabels = listOf(
+            stringResource(R.string.glcn_live_banner_compact),
+            stringResource(R.string.glcn_live_banner_ficha),
+            stringResource(R.string.glcn_live_banner_cine),
+            stringResource(R.string.glcn_live_banner_lateral),
+        )
+        val bannerStyle = tv.own.owntv.glcn.LiveBanner.style
+        val bannerStyles = tv.own.owntv.glcn.LiveBanner.Style.entries
+        KeyedSettingRow(
+            icon = OwnTVIcon.LIVE_TV,
+            title = stringResource(R.string.glcn_live_banner_title),
+            desc = stringResource(R.string.glcn_live_banner_desc),
+            value = SettingValue.Stepper(bannerLabels[bannerStyle.ordinal]),
+            choices = bannerLabels, chosen = bannerStyle.ordinal, recommended = 0,
+            onClick = { tv.own.owntv.glcn.LiveBanner.set(bannerCtx, bannerStyles[(bannerStyle.ordinal + 1) % bannerStyles.size]) },
+            onStep = { d -> tv.own.owntv.glcn.LiveBanner.set(bannerCtx, bannerStyles[(bannerStyle.ordinal + d).coerceIn(0, bannerStyles.size - 1)]) },
+        )
         KeyedSettingRow(
             quickKey = "vp_timeshift",
             icon = OwnTVIcon.REWIND,
@@ -1711,6 +1768,24 @@ internal fun VideoPlayerGroupRows(
             onDismiss = { dialog = Dialog.NONE },
         )
         Dialog.RESET_ALL -> ResetAllDialog(vm = vm, onDismiss = { dialog = Dialog.NONE })
+        Dialog.PREVIEW_ON_OK -> PreviewOnOkDialog(
+            guide = guidePreviewOnOk, live = livePreviewOnOk,
+            onGuide = { vm.setGuidePreviewOnOk(!guidePreviewOnOk) },
+            onLive = { vm.setLivePreviewOnOk(!livePreviewOnOk) },
+            onDismiss = { dialog = Dialog.NONE },
+        )
+        Dialog.RESET_PINS -> ConfirmResetDialog(
+            title = stringResource(R.string.settings_reset_player_choices_confirm),
+            description = stringResource(R.string.settings_reset_player_choices_confirm_description),
+            onConfirm = { vm.clearVodEnginePins(); dialog = Dialog.NONE },
+            onCancel = { dialog = Dialog.NONE },
+        )
+        Dialog.RESET_LIVE_PINS -> ConfirmResetDialog(
+            title = stringResource(R.string.settings_reset_live_player_choices_confirm),
+            description = stringResource(R.string.settings_reset_live_player_choices_confirm_description),
+            onConfirm = { vm.clearLivePins(); dialog = Dialog.NONE },
+            onCancel = { dialog = Dialog.NONE },
+        )
         Dialog.VOLUME -> StepperDialog(
             title = stringResource(R.string.settings_default_volume),
             // The same 0–150 range and 5% step the player's own volume dialog uses, so a level found
@@ -1790,8 +1865,26 @@ internal fun VideoPlayerGroupRows(
             onSelect = { vm.setLiveRewindStepSec(it.toIntOrNull() ?: tv.own.owntv.core.settings.SeekSteps.DEFAULT_LIVE_REWIND_STEP_SEC); dialog = Dialog.NONE },
             onDismiss = { dialog = Dialog.NONE },
         )
-        Dialog.AFR_WARNING -> AutoFrameRateWarningDialog(
-            onEnable = { vm.setAutoFrameRate(true); dialog = Dialog.NONE },
+        Dialog.RESET_SAVED_ZOOM -> ConfirmResetDialog(
+            title = stringResource(R.string.settings_reset_saved_zoom_confirm),
+            description = stringResource(R.string.settings_reset_saved_zoom_confirm_description),
+            onConfirm = { vm.clearSavedZoom(); dialog = Dialog.NONE },
+            onCancel = { dialog = Dialog.NONE },
+        )
+        Dialog.RESET_SAVED_VOLUME -> ConfirmResetDialog(
+            title = stringResource(R.string.settings_reset_saved_volume_confirm),
+            description = stringResource(R.string.settings_reset_saved_volume_confirm_description),
+            onConfirm = { vm.clearSavedVolume(); dialog = Dialog.NONE },
+            onCancel = { dialog = Dialog.NONE },
+        )
+        Dialog.RESET_SAVED_AUDIO_DELAY -> ConfirmResetDialog(
+            title = stringResource(R.string.settings_reset_saved_audio_delay_confirm),
+            description = stringResource(R.string.settings_reset_saved_audio_delay_confirm_description),
+            onConfirm = { vm.clearSavedAudioDelay(); dialog = Dialog.NONE },
+            onCancel = { dialog = Dialog.NONE },
+        )
+        Dialog.AFR_WARNING, Dialog.AFR_LIVE_WARNING -> AutoFrameRateWarningDialog(
+            onEnable = { vm.setAutoFrameRate(dialog == Dialog.AFR_LIVE_WARNING, true); dialog = Dialog.NONE },
             onDismiss = { dialog = Dialog.NONE },
         )
         Dialog.MULTIVIEW_TILES -> run {
@@ -1896,6 +1989,7 @@ private fun ResetAllDialog(vm: SettingsViewModel, onDismiss: () -> Unit) {
 /** The dialog a pinned row opens when Quick jumps into this screen. Null for rows that toggle. */
 private fun dialogForQuickKey(key: String): Dialog? = when (key) {
     "vp_afr" -> Dialog.AFR_WARNING
+    "vp_afr_live" -> Dialog.AFR_LIVE_WARNING
     "vp_multiview_tiles" -> Dialog.MULTIVIEW_TILES
     "vp_live_engine" -> Dialog.LIVE_ENGINE
     "vp_live_engine_sources" -> Dialog.LIVE_ENGINE_SOURCES
@@ -1904,6 +1998,7 @@ private fun dialogForQuickKey(key: String): Dialog? = when (key) {
     "vp_ffmpeg_audio" -> Dialog.FFMPEG_AUDIO
     "vp_reset_all" -> Dialog.RESET_ALL
     "vp_external" -> Dialog.EXTERNAL_PLAYER
+    "vp_preview_on_ok" -> Dialog.PREVIEW_ON_OK
     "vp_zoom" -> Dialog.ZOOM
     "vp_seek_step" -> Dialog.SEEK_STEP
     "vp_afr_pause" -> Dialog.AFR_PAUSE
@@ -1930,7 +2025,7 @@ private fun dialogForQuickKey(key: String): Dialog? = when (key) {
     else -> null
 }
 
-private enum class Dialog { NONE, LIVE_ENGINE, LIVE_ENGINE_SOURCES, LIVE_ENGINE_SOURCE, LIVE_LATENCY_SOURCES, LIVE_LATENCY_SOURCE, LIVE_LATENCY_CUSTOM_SOURCE, VOD_ENGINE, VOD_ENGINE_SOURCES, VOD_ENGINE_SOURCE, ZOOM, VOLUME, RESET_ALL, SEEK_STEP, LIVE_REWIND_STEP, SUB_STYLE, SUB_LANG, AUDIO_LANG, SURROUND, FFMPEG_AUDIO, AUDIO_SYNC, OUTPUT_AUDIO_DELAY, RESUME, LIVE_LATENCY, LIVE_CUSTOM, LIVE_PREROLL, LIVE_TUNE_TIMEOUT, LIVE_TUNE_TIMEOUT_SOURCES, LIVE_TUNE_TIMEOUT_SOURCE, LIVE_PREROLL_SOURCES, LIVE_PREROLL_SOURCE, EXTERNAL_PLAYER, AFR_WARNING, AFR_PAUSE, VOD_BUFFER, VOD_TIMEOUT, VOD_RECONNECTS, TIMESHIFT_WINDOW, TIMESHIFT_RESUME, MAX_QUALITY, LIVE_PREVIEW_PANEL, MINI_PLAYER, MULTIVIEW_TILES, MULTIVIEW_WARNING }
+private enum class Dialog { NONE, LIVE_ENGINE, LIVE_ENGINE_SOURCES, LIVE_ENGINE_SOURCE, LIVE_LATENCY_SOURCES, LIVE_LATENCY_SOURCE, LIVE_LATENCY_CUSTOM_SOURCE, VOD_ENGINE, VOD_ENGINE_SOURCES, VOD_ENGINE_SOURCE, ZOOM, VOLUME, RESET_ALL, RESET_SAVED_ZOOM, RESET_SAVED_VOLUME, RESET_SAVED_AUDIO_DELAY, SEEK_STEP, LIVE_REWIND_STEP, SUB_STYLE, SUB_LANG, AUDIO_LANG, SURROUND, FFMPEG_AUDIO, AUDIO_SYNC, OUTPUT_AUDIO_DELAY, RESUME, LIVE_LATENCY, LIVE_CUSTOM, LIVE_PREROLL, LIVE_TUNE_TIMEOUT, LIVE_TUNE_TIMEOUT_SOURCES, LIVE_TUNE_TIMEOUT_SOURCE, LIVE_PREROLL_SOURCES, LIVE_PREROLL_SOURCE, EXTERNAL_PLAYER, PREVIEW_ON_OK, RESET_PINS, RESET_LIVE_PINS, AFR_WARNING, AFR_LIVE_WARNING, AFR_PAUSE, VOD_BUFFER, VOD_TIMEOUT, VOD_RECONNECTS, TIMESHIFT_WINDOW, TIMESHIFT_RESUME, MAX_QUALITY, LIVE_PREVIEW_PANEL, MINI_PLAYER, MULTIVIEW_TILES, MULTIVIEW_WARNING }
 
 /** "Auto" for 0, else seconds ("60s") — the film buffer and network timeout choices. */
 @Composable
@@ -2068,6 +2163,31 @@ private fun ExternalPlayerDialog(
     // Three switches: in the page's panel, a Stage popup elsewhere.
     if (panelEditor(onDismiss) { switches() }) return
     tv.own.owntv.ui.stage.StagePopup(onDismiss = onDismiss, title = stringResource(R.string.settings_external_player), body = stringResource(R.string.settings_external_player_description)) { switches() }
+}
+
+/** Row chip for OK previews first: "Off", "On" (both screens), or the one screen it is on for. */
+@Composable
+private fun previewOnOkChip(guide: Boolean, live: Boolean): String = when {
+    guide && live -> stringResource(R.string.common_on)
+    guide -> stringResource(R.string.common_nav_guide)
+    live -> stringResource(R.string.common_nav_live_tv)
+    else -> stringResource(R.string.common_off)
+}
+
+/** OK previews first, one switch per screen; stays open as they are flipped, like [ExternalPlayerDialog]. */
+@Composable
+private fun PreviewOnOkDialog(guide: Boolean, live: Boolean, onGuide: () -> Unit, onLive: () -> Unit, onDismiss: () -> Unit) {
+    val switches: @Composable () -> Unit = {
+        PanelSwitches(
+            listOf(
+                Triple(stringResource(R.string.common_nav_live_tv), live, onLive),
+                Triple(stringResource(R.string.common_nav_guide), guide, onGuide),
+            ),
+            onDone = onDismiss,
+        )
+    }
+    if (panelEditor(onDismiss) { switches() }) return
+    tv.own.owntv.ui.stage.StagePopup(onDismiss = onDismiss, title = stringResource(R.string.settings_preview_on_ok), body = stringResource(R.string.settings_preview_on_ok_description)) { switches() }
 }
 
 /** The quick text-color presets offered above the full picker (label → "#RRGGBB"). */

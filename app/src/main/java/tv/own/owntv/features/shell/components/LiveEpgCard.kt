@@ -1,5 +1,6 @@
 package tv.own.owntv.features.shell.components
 
+import androidx.compose.ui.draw.drawBehind
 import androidx.tv.material3.MaterialTheme
 import tv.own.owntv.ui.theme.hudInk
 import tv.own.owntv.ui.theme.hudShade
@@ -123,13 +124,24 @@ fun LiveEpgCard(
             val span = (now.stopMs - now.startMs).toFloat()
             if (span > 0f) {
                 val progress = ((nowMs - now.startMs) / span).coerceIn(0f, 1f)
+                val accentFill = tv.own.owntv.ui.theme.stageAccent.accent
                 Spacer(Modifier.height(6.dp))
                 Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(hudInk.copy(alpha = 0.2f))) {
-                    Box(Modifier.fillMaxWidth(progress).height(3.dp).clip(RoundedCornerShape(2.dp)).background(tv.own.owntv.ui.theme.stageAccent.accent))
+                    // glcn: the bar fills to where the programme is when the card comes up, instead of being there already.
+                    val fill = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.DeviceClass.richMotion) 0f else 1f) }
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        if (fill.value < 1f) fill.animateTo(1f, androidx.compose.animation.core.tween(PROGRESS_FILL_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+                    }
+                    Box(
+                        Modifier.fillMaxWidth().height(3.dp).drawBehind {
+                            drawRoundRect(accentFill, size = androidx.compose.ui.geometry.Size(size.width * progress * fill.value, size.height), cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
+                        },
+                    )
                 }
             }
             // What the programme actually IS, not just what it is called.
-            now.description?.takeIf { it.isNotBlank() }?.let { synopsis ->
+            // glcn: not in the player's bar (bare): it is on the programme's Info screen, and the bar stays low.
+            now.description?.takeIf { it.isNotBlank() && !bare }?.let { synopsis ->
                 // glcn: three lines, and a longer text drifts slowly down and back instead of ending in "…".
                 DriftingSynopsis(
                     synopsis,
@@ -174,18 +186,17 @@ fun LiveEpgCard(
 @Composable
 fun LiveEpgCardWithArt(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier) {
     if (epg == null || (epg.now == null && epg.next == null)) return
-    if (art.isNullOrBlank()) { LiveEpgCard(epg, modifier); return }
+    // glcn: without a picture it is the same short card (no synopsis), not the taller standalone one.
+    if (art.isNullOrBlank()) { LiveEpgCard(epg, modifier.padding(vertical = 4.dp), bare = true); return }
+    // glcn: no panel of its own (the bar's shade is behind it); the picture 144 × 81, big enough to tell what is on.
     Row(
-        modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(hudShade(0.72f))
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier.padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         tv.own.owntv.ui.components.ProgrammeArt(
             url = art,
-            modifier = Modifier.size(width = 128.dp, height = 72.dp).clip(RoundedCornerShape(10.dp)),
+            modifier = Modifier.size(width = 144.dp, height = 81.dp).clip(RoundedCornerShape(10.dp)),
         )
         LiveEpgCard(epg, bare = true)
     }
@@ -205,7 +216,7 @@ fun ZapGuideLines(epg: EpgNowNext?, modifier: Modifier = Modifier) {
     Column(modifier.padding(top = 8.dp)) {
         epg.now?.let { entry ->
             SlotLabel(stringResource(R.string.content_live_now), tv.own.owntv.ui.theme.stageAccent.accent)
-            Text(entry.title, style = tv.own.owntv.ui.theme.stageText(25, 400), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(entry.title, style = tv.own.owntv.ui.theme.stageText(24, 500), color = hudInk, maxLines = 2, overflow = TextOverflow.Ellipsis) // glcn: two lines, not cut
             val remaining = ((entry.stopMs - nowMs) / 60_000L).toInt()
             Text(
                 if (remaining in 1..600) stringResource(R.string.glcn_pi_ends_left, formatTime(entry.stopMs), remaining)
@@ -251,3 +262,6 @@ private fun SlotLabel(text: String, color: Color) {
         modifier = Modifier.padding(bottom = 1.dp),
     )
 }
+
+/** glcn: how long the programme bar takes to fill when the card comes up. */
+private const val PROGRESS_FILL_MS = 650

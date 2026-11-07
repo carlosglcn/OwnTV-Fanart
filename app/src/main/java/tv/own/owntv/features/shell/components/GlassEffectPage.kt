@@ -89,6 +89,8 @@ internal fun GlassBackgroundPage(
     onReset: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: opens the profile screen background's gallery. */
+    onOpenGateWall: (() -> Unit)? = null,
 ) {
     val rowsFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { rowsFocus.requestFocus() } }
@@ -103,12 +105,12 @@ internal fun GlassBackgroundPage(
     StageFullPage(
         parents = listOf(stringResource(R.string.settings_group_appearance)),
         title = stringResource(R.string.settings_glass_bg_title),
-        count = pluralStringResource(R.plurals.settings_setting_count, 9, 9),
+        count = pluralStringResource(R.plurals.settings_setting_count, 10, 10),
         onBack = onBack,
         modifier = modifier,
         rowsFocus = rowsFocus,
     ) {
-        StageSettingsHeading(stringResource(R.string.settings_bg_background), 6, first = true)
+        StageSettingsHeading(stringResource(R.string.settings_bg_background), 7, first = true)
 
         val styles = listOf(BackgroundStyle.STAGE, BackgroundStyle.PICTURE, BackgroundStyle.PLAIN)
         val styleLabels = listOf(stringResource(R.string.settings_bg_stage), stringResource(R.string.settings_bg_picture), stringResource(R.string.settings_bg_plain))
@@ -173,6 +175,20 @@ internal fun GlassBackgroundPage(
             help = SettingHelp(accentTitle, accentLine, hints = okHints, extra = preview),
         )
 
+        // glcn: the profile screen's own background — none, the app's, or one of the photos.
+        if (onOpenGateWall != null) {
+            val gateTitle = stringResource(R.string.glcn_gate_wall_title)
+            val gateLine = stringResource(R.string.glcn_gate_wall_desc)
+            StageSettingRow(
+                icon = OwnTVIcon.IMAGE,
+                title = gateTitle,
+                desc = gateLine,
+                value = SettingValue.Opens(tv.own.owntv.glcn.gateWallLabel()),
+                onClick = onOpenGateWall,
+                help = SettingHelp(gateTitle, gateLine, hints = okHints),
+            )
+        }
+
         StageSettingsHeading(stringResource(R.string.settings_glass_section), 2)
         val glassTitle = stringResource(R.string.settings_glass_section)
         val glassHelp = stringResource(R.string.settings_help_glass_chrome)
@@ -194,6 +210,28 @@ internal fun GlassBackgroundPage(
             onClick = { onSetAlpha((alphaPercent + 5).let { if (it > 100) 20 else it }) },
             onStep = { d -> onSetAlpha((alphaPercent + d * 5).coerceIn(20, 100)) },
             help = SettingHelp(opacityTitle + dotSeparator() + previewTitle, glassHelp, hints = stepHints, extra = preview),
+        )
+
+        // glcn: the panels over the video (player sheets, zapping) — their own five levels, independent of the glass above.
+        val playerCtx = androidx.compose.ui.platform.LocalContext.current
+        val playerTitle = stringResource(R.string.glcn_player_glass_title)
+        val playerLine = stringResource(R.string.glcn_player_glass_desc)
+        val playerLabels = listOf(
+            stringResource(R.string.glcn_player_glass_0),
+            stringResource(R.string.glcn_player_glass_1),
+            stringResource(R.string.glcn_player_glass_2),
+            stringResource(R.string.glcn_player_glass_3),
+            stringResource(R.string.glcn_player_glass_4),
+        )
+        val playerLevel = tv.own.owntv.glcn.PlayerGlass.level
+        StageSettingRow(
+            icon = OwnTVIcon.LAYERS,
+            title = playerTitle,
+            desc = playerLine,
+            value = SettingValue.Stepper(playerLabels[playerLevel]),
+            onClick = { tv.own.owntv.glcn.PlayerGlass.set(playerCtx, (playerLevel + 1) % tv.own.owntv.glcn.PlayerGlass.LEVELS) },
+            onStep = { d -> tv.own.owntv.glcn.PlayerGlass.set(playerCtx, playerLevel + d) },
+            help = SettingHelp(playerTitle, playerLine, playerLabels, chosen = playerLevel, recommended = tv.own.owntv.glcn.PlayerGlass.NORMAL, hints = stepHints),
         )
 
         val resetTitle = stringResource(tv.own.owntv.R.string.common_reset)

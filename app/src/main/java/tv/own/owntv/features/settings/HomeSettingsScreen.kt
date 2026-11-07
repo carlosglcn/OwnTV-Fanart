@@ -66,7 +66,7 @@ fun HomeSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     val ok = stringResource(R.string.common_ok)
     val back = stringResource(R.string.common_back)
     val layout = stringResource(R.string.settings_group_layout)
-    val rowCount = (if (trendingEnabled) 2 else 1) + config.settingsRows.size
+    val rowCount = (if (trendingEnabled) 2 else 1) + 2 + config.settingsRows.size
     StageFullPage(
         parents = listOf(layout),
         title = stringResource(R.string.settings_home_screen),
@@ -106,6 +106,23 @@ fun HomeSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 onStep = { step -> vm.setTrendingStyle(if (step < 0) HomeTrendingStyle.HERO else HomeTrendingStyle.POSTERS) },
                 help = settingHelp(null, styleTitle, stringResource(R.string.home_row_trending_description), styleValue, choices = styleValue.options, pinnable = false),
             )
+        }
+
+        // glcn: the films / series trending rows belong with Trending (on Home they sit right under it).
+        listOf(HomeRow.TRENDING_MOVIES, HomeRow.TRENDING_SERIES).forEach { row ->
+            key(row) {
+                val on = row !in config.hidden
+                val title = row.displayTitle()
+                val value = SettingValue.Switch(on)
+                StageSettingRow(
+                    icon = row.icon,
+                    title = title,
+                    desc = row.settingsDescription(),
+                    value = value,
+                    onClick = { vm.setRowHidden(row, on) },
+                    help = settingHelp(null, title, row.settingsDescription(), value, pinnable = false),
+                )
+            }
         }
 
         StageSettingsHeading(stringResource(R.string.settings_sections), config.settingsRows.size)
@@ -261,6 +278,8 @@ private val HomeRow.icon: OwnTVIcon get() = when (this) {
     HomeRow.TONIGHT -> OwnTVIcon.BELL
     HomeRow.GENRES -> OwnTVIcon.MOVIES
     HomeRow.STARTING_SOON -> OwnTVIcon.BELL
+    HomeRow.TRENDING_MOVIES -> OwnTVIcon.MOVIES
+    HomeRow.TRENDING_SERIES -> OwnTVIcon.SERIES
 }
 
 @Composable

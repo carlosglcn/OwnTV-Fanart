@@ -100,9 +100,8 @@ open class MainActivity : ComponentActivity() {
     private var startupSettled = false
 
     private val player: tv.own.owntv.player.OwnTVPlayer by inject()
-    private val previewEngine: tv.own.owntv.player.LivePreviewEngine by inject()
-    private val heroPreviewEngine: tv.own.owntv.player.HeroPreviewEngine by inject()
     private val engines: tv.own.owntv.player.PlaybackEngines by inject()
+    private val visibility: tv.own.owntv.core.player.PlaybackVisibilityWatch by inject()
     private val handOff: tv.own.owntv.features.pip.AppHandOff by inject()
     // Activity-scoped: the same instance Compose retrieves via koinViewModel() inside setContent.
     private val shellViewModel: ShellViewModel by viewModel()
@@ -129,19 +128,31 @@ open class MainActivity : ComponentActivity() {
         Log.d(TAG, "onNewIntent deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}")
     }
 
+    /**
+     * Left the app — Home, another app, exited, logged out, the picture-in-picture window closed, or the
+     * television switched off while this activity kept running: stop playback and free the demuxer cache +
+     * decoder buffers — holding them while invisible got the process LMK-killed on real TVs. Every engine:
+     * mpv, the Live engine (its audio must stop too), each Multiview tile and the hero. The relock first: it
+     * reads what is playing before the engines free it.
+     *
+     * Back: bring back what was freed — a VOD restored paused at its position, a live channel re-tuned to
+     * the live edge — so Play resumes instead of sitting on a dead stream. No-op on a fresh launch. Not
+     * before the relock check is done: what it found sealed must not come back first.
+     */
+    private val onVisibility: (Boolean) -> Unit = { visible ->
+        if (visible) shellViewModel.afterSealCheck { engines.onAppForegrounded() }
+        else { shellViewModel.relockCategories(); engines.onAppBackgrounded() }
+    }
+
     override fun onStop() {
         super.onStop()
         if (!isChangingConfigurations) get<tv.own.owntv.core.sync.local.AutoSyncManager>().onBackground() // glcn
-        // Backgrounded (Home / another app), exited, logged out, or the picture-in-picture window closed:
-        // stop playback and free the demuxer cache + decoder buffers — holding them while invisible got
-        // the process LMK-killed on real TVs. Every engine: mpv, the Live engine (its audio must stop
-        // too), each Multiview tile and the hero. A picture-in-picture window only pauses the activity,
-        // so playback there never reaches it. The relock first: it reads what is playing before the
-        // engines free it.
-        if (!isChangingConfigurations) { shellViewModel.relockCategories(); engines.onAppBackgrounded() }
+        // A picture-in-picture window only pauses the activity, so playback there never reaches this.
+        if (!isChangingConfigurations) visibility.activityStopped()
         handOff.onActivityStopped()
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
+
 
     override fun onResume() {
         super.onResume()
@@ -156,11 +167,8 @@ open class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         get<tv.own.owntv.core.sync.local.AutoSyncManager>().onForeground() // glcn
-        // Paired with onStop: bring back what was freed while backgrounded (notably the TV screensaver, which
-        // kicks in during a long pause) — a VOD restored paused at its position, and a live channel re-tuned
-        // to the live edge — so Play resumes instead of sitting on a dead/empty stream. No-op on fresh launch.
-        // Not before the relock check is done: what it found sealed must not come back first.
-        shellViewModel.afterSealCheck { engines.onAppForegrounded() }
+        // Paired with onStop (see [onVisibility]); notably the TV screensaver, which kicks in during a long pause.
+        visibility.activityStarted()
         // Staleness-based auto refresh on resume (interval modes only — STARTUP is cold-start only). The
         // ViewModel throttles this internally so a quick toggle doesn't re-run the check.
         shellViewModel.checkAutoRefresh(includeStartup = false)
@@ -212,6 +220,8 @@ open class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        visibility.removeListener(onVisibility)
+        tv.own.owntv.glcn.FrameWatch.detach(this)
         tv.own.owntv.ui.components.TrailerPool.free() // glcn: the trailer player was made on this activity
         super.onDestroy()
     }
@@ -220,6 +230,7 @@ open class MainActivity : ComponentActivity() {
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         tv.own.owntv.glcn.UiSounds.onKey(event)
         tv.own.owntv.player.KeyLog.onKey(event) // glcn: the last presses, for the playback report
+        if (event.action == android.view.KeyEvent.ACTION_DOWN) tv.own.owntv.features.home.CinemaTrailer.lastKeyAt = android.os.SystemClock.uptimeMillis() // glcn: trailers wait for a calm moment
         tv.own.owntv.ui.stage.FocusMotion.onKey(event) // glcn: which way the focus went, for the card's lean
         if (tv.own.owntv.glcn.BackHold.onKey(event)) return true
         return super.dispatchKeyEvent(event)
@@ -230,6 +241,7 @@ open class MainActivity : ComponentActivity() {
         // postSplashScreenTheme (Theme.OwnTV), so the activity ends up in the same theme as before.
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        tv.own.owntv.glcn.FrameWatch.attach(this) // glcn: frame timing per screen, into the report
         // glcn: the app went down last time — show what happened (and let it be shared) before anything else runs.
         // (The application has already opened the report in its own process; this window steps aside.)
         if (tv.own.owntv.glcn.CrashScreen.pending(this)) {
@@ -243,6 +255,7 @@ open class MainActivity : ComponentActivity() {
         // The window only pauses the activity, so onStop's relock never runs while it is open: going into
         // it is leaving the app, and a channel from a category the PIN opened stops there too.
         addOnPictureInPictureModeChangedListener { if (it.isInPictureInPictureMode) shellViewModel.relockCategories() }
+        visibility.addListener(onVisibility)
         val splashDeadline = SystemClock.uptimeMillis() + SPLASH_TIMEOUT_MS
         var readyAt = 0L
         splash.setKeepOnScreenCondition {
@@ -378,6 +391,7 @@ open class MainActivity : ComponentActivity() {
             }
             val bgImagePath by viewModel.bgImagePath.collectAsStateWithLifecycle()
             val glassConfig by viewModel.glassConfig.collectAsStateWithLifecycle()
+            tv.own.owntv.glcn.GlassFocus.on = glassConfig.enabled // glcn: the focus drawn as tinted glass
             val background by viewModel.backgroundConfig.collectAsStateWithLifecycle()
             val avatarId by viewModel.avatarId.collectAsStateWithLifecycle()
             val avatarPath by viewModel.avatarPath.collectAsStateWithLifecycle()
@@ -492,7 +506,7 @@ open class MainActivity : ComponentActivity() {
                 // Glass & background: a picture is drawn blurred (its Blur) and glass frosts it, so the
                 // blurred copy is built whenever a picture is shown, glass on or off. The blur itself is
                 // CPU work done once per picture, so every device gets it.
-                val needsBackdropAssets = background.showsPicture
+                val needsBackdropAssets = background.showsPicture && tv.own.owntv.glcn.Wallpapers.animKind(background.imagePath) == null
                 val supportsFrostPyramid = true
                 val blurred by produceState<BlurredBackdrop?>(
                     initialValue = null,
@@ -544,7 +558,17 @@ open class MainActivity : ComponentActivity() {
                     ) {
                         // Background image sits behind everything when a path is set; otherwise the solid
                         // base color shows through and glass renders over that instead.
-                        if (background.showsPicture) BackgroundLayer(background, blurred)
+                        val wallAnim = tv.own.owntv.glcn.Wallpapers.animKind(background.imagePath)
+                        val busyBackdrop = background.showsPicture ||
+                            (glcnStyle?.isGradient == true && themeMode != tv.own.owntv.core.theme.ThemeMode.LIGHT)
+                        androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.BusyBackdrop.on = busyBackdrop }
+                        // glcn: an animated wallpaper of the app's own, drawn live, in place of a picture file.
+                        if (background.showsPicture && wallAnim != null) tv.own.owntv.glcn.AnimatedWallpaper(wallAnim, Modifier.fillMaxSize())
+                        else if (background.showsPicture) BackgroundLayer(background, blurred)
+                        // glcn: a gradient style's backdrop (Aurora, Crepúsculo, Océano, Fanart vivo) when no picture is set.
+                        else glcnStyle?.takeIf { it.isGradient && themeMode != tv.own.owntv.core.theme.ThemeMode.LIGHT }?.let {
+                            tv.own.owntv.glcn.GradientBackdrop(it, Modifier.fillMaxSize())
+                        }
 
                         Box(modifier = Modifier.fillMaxSize()) {
                         tv.own.owntv.glcn.LowRamPrompt()
@@ -613,7 +637,7 @@ open class MainActivity : ComponentActivity() {
                                 onStartupSettled = { startupSettled = true },
                                 onSwitchProfile = {
                                     // Stop playback and return to the "Who's watching?" gate — no app restart.
-                                    player.onAppBackgrounded(); player.discardBackgroundRestore(); previewEngine.stop(); previewEngine.discardBackgroundRestore(); heroPreviewEngine.stop()
+                                    tv.own.owntv.features.profiles.stopPlaybackForProfileGate(shellViewModel, engines)
                                     // Force the gate open even with a single unpinned profile (cold-start gate would
                                     // skip it). requestSwitchProfile() clears the active profile
                                     // authentication and raises the request.

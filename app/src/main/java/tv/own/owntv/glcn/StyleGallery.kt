@@ -1,5 +1,6 @@
 package tv.own.owntv.glcn
 
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,14 +45,24 @@ fun StylePickerPopup(current: GlcnStyle?, onPick: (GlcnStyle?) -> Unit, onDismis
     LaunchedEffect(Unit) { delay(80); runCatching { first.requestFocus() } }
     StagePopup(onDismiss = onDismiss, title = stringResource(R.string.glcn_style_title), body = stringResource(R.string.glcn_style_desc), width = 1700.mpx) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.mpx)) {
-            GlcnStyle.entries.chunked(5).forEachIndexed { r, row ->
+            // glcn: two groups in the one picker — the classic styles and the gradient ones — each sketch in its real colours.
+            var shown = 0
+            listOf(
+                R.string.glcn_style_group_classic to GlcnStyle.entries.filter { !it.isGradient },
+                R.string.glcn_style_group_gradient to GlcnStyle.entries.filter { it.isGradient },
+            ).forEach { (heading, group) ->
+            tv.own.owntv.ui.stage.StageGroupLabel(stringResource(heading), sheet = true)
+            group.chunked(5).forEach { row ->
+                val r = shown / 5
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
-                    row.forEachIndexed { c, st ->
+                    row.forEachIndexed { c0, st ->
+                        val c = c0
+                        val idx = shown + c0
                         val picked = st == current
                         StageSurface(
                             onClick = { onPick(st); onDismiss() },
                             radius = 18.mpx,
-                            modifier = Modifier.weight(1f).staggerAt(r * 5 + c, step = 55).then(if ((current == null && r == 0 && c == 0) || picked) Modifier.focusRequester(first) else Modifier),
+                            modifier = Modifier.weight(1f).staggerAt(idx, step = 45).then(if ((current == null && idx == 0) || picked) Modifier.focusRequester(first) else Modifier),
                         ) { focused ->
                             Column(Modifier.padding(10.mpx), verticalArrangement = Arrangement.spacedBy(6.mpx)) {
                                 StyleSketch(st, focused, Modifier.fillMaxWidth().height(112.mpx))
@@ -66,7 +77,11 @@ fun StylePickerPopup(current: GlcnStyle?, onPick: (GlcnStyle?) -> Unit, onDismis
                             }
                         }
                     }
+                    // Keep the row's columns even when it is short.
+                    repeat(5 - row.size) { Box(Modifier.weight(1f)) }
                 }
+                shown += row.size
+            }
             }
             StageSurface(onClick = { onPick(null); onDismiss() }, radius = 14.mpx, modifier = Modifier.fillMaxWidth().staggerIn(GlcnStyle.entries.size * 55 + 40)) { focused ->
                 Column(Modifier.padding(horizontal = 18.mpx, vertical = 12.mpx)) {
@@ -102,8 +117,14 @@ private fun DrawScope.drawStyle(style: GlcnStyle) {
     val panel = Color(style.glassTint)
     val corner = CornerRadius(14f, 14f)
     drawRoundRect(page, size = size, cornerRadius = corner)
+    // glcn: gradient styles show their real backdrop (the lights at rest, or the still gradient).
+    style.gradient?.map { Color(it) }?.let { stops ->
+        clipPath(androidx.compose.ui.graphics.Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, w, h, corner)) }) {
+            if (style.motion == GlcnStyle.MOTION_STILL) drawStill(stops) else drawLights(stops.take(3), stops.last(), 0.18f)
+        }
+    }
     // Glass styles show a soft glow of the accent through their panels; flat ones stay flat.
-    if (style.glass) {
+    if (style.glass && !style.isGradient) {
         drawRoundRect(
             Brush.radialGradient(listOf(accent.copy(alpha = 0.35f), Color.Transparent), Offset(w * 0.75f, h * 0.2f), w * 0.6f),
             size = size, cornerRadius = corner,
