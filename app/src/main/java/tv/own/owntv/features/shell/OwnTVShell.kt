@@ -2284,6 +2284,7 @@ fun OwnTVShell(
                 PlayerHud(
                     player = if (liveOnExo) liveVm.previewEngine else mpvEngine, // HUD drives the active engine
                     onOpenStrip = if (isTunedLive && tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId)) ({ showTvStrip = true }) else null,
+                    stripOpen = showTvStrip,
                     // glcn: Settings → Back in the player = Window keeps a live channel playing small.
                     onBack = if (isTunedLive && backToWindow) dockPlayer else exitPlayer,
                     onPip = dockPlayer, // PiP/dock works for live on either engine now
@@ -2402,7 +2403,7 @@ fun OwnTVShell(
                                 // glcn: the picture's place is kept while it loads (the channel's logo on a quiet plate), so the
                                 // lines beside it never jump sideways when it arrives.
                                 androidx.compose.foundation.layout.Box(
-                                    Modifier.size(width = 192.dp, height = 108.dp)
+                                    Modifier.size(width = 160.dp, height = 90.dp)
                                         .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                                         .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f)),
                                     contentAlignment = androidx.compose.ui.Alignment.Center,

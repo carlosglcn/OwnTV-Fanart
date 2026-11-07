@@ -161,6 +161,8 @@ fun PlayerHud(
     onPreviousChannel: (() -> Unit)? = null,
     /** glcn (TV profile): ▼ with the controls hidden raises the TV strip instead of zapping. */
     onOpenStrip: (() -> Unit)? = null,
+    /** glcn: the TV strip is up — its own card names the programme, so the zap card stays away. */
+    stripOpen: Boolean = false,
     // Archive depth of the current channel, for the exact-time picker's day/HH:MM bounds.
     jumpBackWindowSec: (() -> Int)? = null,
     // Read as a lambda, not a value: the offset ticks once a second, and taking it as a plain Int?
@@ -789,7 +791,7 @@ fun PlayerHud(
                 .padding(start = 44.dp, top = if (controlsVisible) 92.dp else 40.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (isLive && (tuned != null || (showFlash && !controlsVisible))) {
+            if (isLive && !stripOpen && (tuned != null || (showFlash && !controlsVisible))) {
                 // A fresh tune drives the card from the lookup result, not player metadata: the Stalker and
                 // mpv paths publish their metadata after an async resolve, which would show the old channel.
                 val named = tuned ?: zapChannel

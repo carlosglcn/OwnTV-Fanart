@@ -252,7 +252,7 @@ internal fun ChannelOsdCard(
     guide: (@Composable () -> Unit)? = null,
 ) {
     Column(
-        modifier = modifier.width(if (guide != null) 760.dp else 420.dp)
+        modifier = modifier.width(if (guide != null) 620.dp else 400.dp)
             .clip(RoundedCornerShape(22.dp)).background(hudShade(0.62f))
             .border(1.dp, hudInk.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
             .padding(horizontal = 18.dp, vertical = 16.dp),
