@@ -48,6 +48,14 @@ CHANNELS = [
 ]
 MAIN_MIN, SHORT_MIN = 30, 15
 
+# Las mismas películas, también en la sección Películas.
+MOVIES = [
+    ("bbb",    f"{GCS}/BigBuckBunny.mp4"),
+    ("sintel", f"{GCS}/Sintel.mp4"),
+    ("tos",    f"{GCS}/TearsOfSteel.mp4"),
+    ("ed",     f"{GCS}/ElephantsDream.mp4"),
+]
+
 TZ = timezone(timedelta(hours=1))  # Madrid en invierno (sin horario de verano hasta finales de marzo)
 
 
@@ -83,6 +91,12 @@ def make_m3u(path):
     for cid, name, _c, _s, url, *_ in CHANNELS:
         lines.append(f'#EXTINF:-1 tvg-id="{cid}.demo" tvg-name="{name}" '
                      f'tvg-logo="{REPO_RAW}/logos/{cid}.png" tvg-type="live" group-title="Demo",{name}')
+        lines.append(url)
+    # Películas: sin tvg-logo a propósito, para que la app use póster, fanart y tráiler de TMDB.
+    for fid, url in MOVIES:
+        title, year, _cat, _desc = FILMS[fid]
+        lines.append(f'#EXTINF:-1 tvg-name="{title} ({year})" tvg-type="movie" '
+                     f'group-title="Demo",{title} ({year})')
         lines.append(url)
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
