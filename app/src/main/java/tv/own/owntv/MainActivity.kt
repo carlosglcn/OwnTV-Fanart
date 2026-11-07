@@ -551,6 +551,9 @@ open class MainActivity : ComponentActivity() {
                         // Background image sits behind everything when a path is set; otherwise the solid
                         // base color shows through and glass renders over that instead.
                         val wallAnim = tv.own.owntv.glcn.Wallpapers.animKind(background.imagePath)
+                        val busyBackdrop = background.showsPicture ||
+                            (glcnStyle?.isGradient == true && themeMode != tv.own.owntv.core.theme.ThemeMode.LIGHT)
+                        androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.BusyBackdrop.on = busyBackdrop }
                         // glcn: an animated wallpaper of the app's own, drawn live, in place of a picture file.
                         if (background.showsPicture && wallAnim != null) tv.own.owntv.glcn.AnimatedWallpaper(wallAnim, Modifier.fillMaxSize())
                         else if (background.showsPicture) BackgroundLayer(background, blurred)

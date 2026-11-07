@@ -79,3 +79,11 @@ private fun lift(c: Color): Color = androidx.compose.ui.graphics.lerp(c, Color.W
 private fun shift(c: Color): Color = Color(c.blue, c.red * 0.8f, c.green, 1f)
 
 private const val DRIFT_MS = 40_000
+
+/**
+ * glcn: true while something with its own colour fills the screen behind the app — a photo, an animated wallpaper or
+ * a gradient style. Screens that would lay a picture of their own behind their text use a quiet glass panel instead.
+ */
+object BusyBackdrop {
+    var on by androidx.compose.runtime.mutableStateOf(false)
+}

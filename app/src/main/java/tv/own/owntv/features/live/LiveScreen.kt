@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
 import tv.own.owntv.ui.stage.stageGlass
 import tv.own.owntv.ui.theme.stageText
 import androidx.compose.ui.text.style.TextOverflow
@@ -701,7 +702,22 @@ fun LiveScreen(
             val backdrop = nowNext?.takeIf { it.now != null }?.nowDetails?.imageUrl?.takeIf { it.isNotBlank() }
                 // glcn: a programme the guide gives no picture borrows the one looked up by its title, behind as well.
                 ?: tv.own.owntv.glcn.LentLiveArt.forTitle(nowNext?.now?.title)
-            if (backdrop != null && tv.own.owntv.glcn.LivePaneLayout.FICHA) {
+            if (tv.own.owntv.glcn.LivePaneLayout.FICHA && tv.own.owntv.glcn.BusyBackdrop.on) {
+                // glcn: over a photo, an animated wallpaper or a gradient the blurred picture fought the backdrop (a
+                // muddy patch) — a quiet dark glass panel behind the text instead, tinted with the programme's tone.
+                val tone = tv.own.owntv.ui.components.rememberArtColor(backdrop)
+                val tint by androidx.compose.animation.animateColorAsState(tone ?: Color.Transparent, tv.own.owntv.ui.theme.ownTvTween(400), label = "fichaTint")
+                val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+                val roomTop = 120.mpx + stageW * tv.own.owntv.glcn.LivePaneLayout.FICHA_VIDEO_W * 9f / 16f
+                Box(
+                    Modifier.align(Alignment.BottomEnd).padding(end = (margin - 14.mpx).coerceAtLeast(0.dp), bottom = 14.mpx)
+                        .width(stageW + 14.mpx).height((maxHeight - roomTop - 4.mpx).coerceAtLeast(1.dp))
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(26.mpx))
+                        .background(if (light) Color.White.copy(alpha = 0.62f) else Color(0xFF070A12).copy(alpha = 0.58f))
+                        .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(tint.copy(alpha = if (light) 0.16f else 0.32f), Color.Transparent)))
+                        .then(Modifier.border(1.mpx, (if (light) Color.Black else Color.White).copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(26.mpx))),
+                )
+            } else if (backdrop != null && tv.own.owntv.glcn.LivePaneLayout.FICHA) {
                 // glcn: Ficha — the programme's picture only behind the text under the video, softly blurred (a small
                 // copy scaled up) and dimmed into the page at its edges, so the words over it read at a glance.
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
