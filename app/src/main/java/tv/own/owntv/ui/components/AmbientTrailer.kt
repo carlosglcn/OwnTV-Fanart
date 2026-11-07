@@ -141,6 +141,8 @@ object TrailerPool {
     private val main = Handler(Looper.getMainLooper())
     private var view: YouTubePlayerView? = null
     private var player: YouTubePlayer? = null
+    /** glcn: the trailer's web page, to switch YouTube's captions off (the window's overscan cut them in half). */
+    private var web: android.webkit.WebView? = null
     private var request: Request? = null
     /** The video the player holds now (cued or playing), and whether it is playing — a page taking over the same
      *  trailer keeps it going rather than loading it again (that reload was the slow step on opening a title). */
@@ -331,6 +333,7 @@ object TrailerPool {
      */
     private fun guardRenderer(root: android.view.View) {
         val web = findWebView(root) ?: return
+        this.web = web
         if (android.os.Build.VERSION.SDK_INT >= 29) {
             web.setWebViewRenderProcessClient(watcher, object : android.webkit.WebViewRenderProcessClient() {
                 override fun onRenderProcessUnresponsive(view: android.webkit.WebView, renderer: android.webkit.WebViewRenderProcess?) {
@@ -432,6 +435,9 @@ object TrailerPool {
             }
             when (state) {
                 PlayerConstants.PlayerState.PLAYING -> if (r.started) {
+                    // glcn: no captions on a trailer — YouTube can turn them on by itself (the viewer's or the video's
+                    // own setting), and the window's overscan cut them in half at the foot.
+                    runCatching { web?.evaluateJavascript(CAPTIONS_OFF_JS, null) }
                     val first = !r.loggedPlay
                     if (first) { r.loggedPlay = true; tv.own.owntv.player.LiveDiagnosticsLog.event("trailer: playing after ${(android.os.SystemClock.uptimeMillis() - r.startedAt) / 100 / 10.0}s") }
                     // glcn: YouTube lays its title, channel, Share and logo over the first seconds of a video (and again
@@ -478,3 +484,6 @@ private const val TRAILER_RENDER_W = 960f
 private const val TRAILER_FADE_MS = 450
 private const val VIEW_RETRIES = 5
 private const val VIEW_RETRY_MS = 2_000L
+
+/** glcn: unloads YouTube's caption module in the trailer page (the player is the page's global `player`). */
+private const val CAPTIONS_OFF_JS = "try{player.unloadModule('captions');player.unloadModule('cc');}catch(e){}"
