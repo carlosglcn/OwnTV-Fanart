@@ -204,3 +204,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏭️ Next episode at the end credits: when the episode's credits are known (a chapter named so, or TheIntroDB), the next-episode card comes as they start and plays the next one 15 s later (Play now / Cancel as before); otherwise it still comes in the last seconds.
 - 🔤 Styled subtitles (ASS/SSA) on ExoPlayer: drawn as made with libass (fonts, colours, positions, animation), so a Dolby Vision film keeps its styled subtitles. Other films with ASS still start on mpv.
 - 🖼️ Seek previews: on films and episodes from Emby or Jellyfin, a thumbnail of the picture shows above the bar while seeking — when the server has made them (Jellyfin "Trickplay", Emby "Seek previews").
+- 🖼️ Live TV (Ficha): the programme's blurred picture behind the text shows clearly again over an animated wallpaper, a gradient or a photo (it had faded almost away); its edges still melt.

@@ -726,18 +726,19 @@ fun LiveScreen(
                             drawContent()
                             val keep = androidx.compose.ui.graphics.Color.Black
                             val gone = androidx.compose.ui.graphics.Color.Transparent
-                            drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to gone, 0.3f to keep), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
-                            drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to gone, 0.32f to keep, 0.78f to keep, 1f to gone), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+                            drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to gone, 0.22f to keep), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+                            drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to gone, 0.2f to keep, 0.85f to keep, 1f to keep.copy(alpha = 0.35f)), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
                         },
                 ) {
                     coil3.compose.AsyncImage(
                         model = soft, contentDescription = null,
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                         filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
-                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.4f else 0.6f },
+                        // Fuller than over a plain page: it now sits on whatever is behind (a wallpaper, a gradient), not on the page.
+                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (light) 0.8f else 0.85f },
                     )
                     // A general dim so white (or dark) text always reads.
-                    Box(Modifier.fillMaxSize().background(page.copy(alpha = if (light) 0.45f else 0.4f)))
+                    Box(Modifier.fillMaxSize().background(page.copy(alpha = if (light) 0.4f else 0.38f)))
                 }
             } else if (backdrop != null) {
                 val page = tv.own.owntv.ui.theme.LocalStagePalette.current.page
