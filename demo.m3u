@@ -1,0 +1,11 @@
+#EXTM3U url-tvg="https://raw.githubusercontent.com/carlosglcn/OwnTV-Fanart/demo/epg.xml.gz" x-tvg-url="https://raw.githubusercontent.com/carlosglcn/OwnTV-Fanart/demo/epg.xml.gz"
+#EXTINF:-1 tvg-id="cinelibre.demo" tvg-name="Cine Libre" tvg-logo="https://raw.githubusercontent.com/carlosglcn/OwnTV-Fanart/demo/logos/cinelibre.png" group-title="Demo",Cine Libre
+https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4
+#EXTINF:-1 tvg-id="fantasia.demo" tvg-name="Fantasía Libre" tvg-logo="https://raw.githubusercontent.com/carlosglcn/OwnTV-Fanart/demo/logos/fantasia.png" group-title="Demo",Fantasía Libre
+https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4
+#EXTINF:-1 tvg-id="scifi.demo" tvg-name="Sci-Fi Libre" tvg-logo="https://raw.githubusercontent.com/carlosglcn/OwnTV-Fanart/demo/logos/scifi.png" group-title="Demo",Sci-Fi Libre
+https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4
+#EXTINF:-1 tvg-id="animacion.demo" tvg-name="Animación Libre" tvg-logo="https://raw.githubusercontent.com/carlosglcn/OwnTV-Fanart/demo/logos/animacion.png" group-title="Demo",Animación Libre
+https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4
+#EXTINF:-1 tvg-id="cinelibrehls.demo" tvg-name="Cine Libre HLS" tvg-logo="https://raw.githubusercontent.com/carlosglcn/OwnTV-Fanart/demo/logos/cinelibrehls.png" group-title="Demo",Cine Libre HLS
+https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
