@@ -573,6 +573,9 @@ fun LiveScreen(
         .collectAsStateWithLifecycle()
     // The channel whose Program details page is open; focus returns to its row when it closes.
     var programmeDetails by remember { mutableStateOf<ChannelEntity?>(null) }
+    // glcn: ▶ from the list enters next / later under the stage; OK on one opens its menu.
+    val scheduleFocus = remember { FocusRequester() }
+    var openProgramme by remember { mutableStateOf<Pair<ChannelEntity, tv.own.owntv.core.parser.XtEpgEntry>?>(null) }
     LaunchedEffect(categoriesOpen) {
         if (categoriesOpen) { withFrameNanos { }; runCatching { railFocus.requestFocus() } }
         // However the sheet closed (Back, a pick, ◀ to the rail), the next one starts fresh.
@@ -1289,6 +1292,7 @@ fun LiveScreen(
                 autoMatch = false,
             ),
             leadMinutes = leadMinutes,
+            onDetails = { openProgramme = null; programmeDetails = ch },
             onDismiss = { openProgramme = null; runCatching { scheduleFocus.requestFocus() } },
         )
     }
@@ -1906,7 +1910,7 @@ private fun ChannelContextMenu(
     // Only inside a custom category: take the channel out of that category alone.
     onRemoveFromCategory: (() -> Unit)?,
     // This channel's Program details page (a TV-only action in core's catalogue).
-    onDetails: () -> Unit,
+    onDetails: (() -> Unit)? = null,
     onDismiss: () -> Unit,
     /** glcn: in Favourites or one of its groups — put the channel in a group. */
     onMoveToGroup: (() -> Unit)? = null,
@@ -1924,7 +1928,7 @@ private fun ChannelContextMenu(
     val watch = 0; val chan = 1; val guide = 2; val organise = 3; val details = 4
     val actions = buildList {
         add(MenuAction("synopsis", stringResource(R.string.glcn_synopsis_full), OwnTVIcon.INFO, group = watch, onClick = onSynopsis))
-        add(MenuAction("programme_details", stringResource(R.string.content_programme_details), OwnTVIcon.INFO, group = details, onClick = onDetails))
+        if (onDetails != null) add(MenuAction("programme_details", stringResource(R.string.content_programme_details), OwnTVIcon.INFO, group = details, onClick = onDetails))
         if (channel.catchup) add(MenuAction("catchup", stringResource(R.string.content_catchup), OwnTVIcon.REWIND, group = watch, onClick = onCatchup))
         // Record this channel from now. The guide's Record needs a programme, so a channel
         // the provider publishes no guide for can only be recorded from here. While it records, the
@@ -1968,8 +1972,9 @@ private fun ChannelContextMenu(
             channel = channel, subtitle = subtitle, onAir = onAir, onDismiss = onDismiss,
         ) {
             var previousGroup: Int? = null
-            arranged(ContentMenu.LIVE, actions).forEachIndexed { index, action ->
-                if (action.group != previousGroup) tv.own.owntv.ui.stage.StageGroupLabel(groupLabels[action.group])
+            val menu = arranged(ContentMenu.LIVE, actions)
+            menu.actions.forEachIndexed { index, action ->
+                if (menu.headings && action.group != previousGroup) tv.own.owntv.ui.stage.StageGroupLabel(groupLabels[action.group])
                 previousGroup = action.group
                 tv.own.owntv.ui.stage.StageMenuItem(
                     text = action.label,

@@ -851,10 +851,11 @@ class LiveViewModel(
                             ?.let(multiSourceNames::get),
                     )
                 }
-            }.combine(favoriteGroups.observeNames(c.profileId)) { rail, groups ->
+            }.combine(favoriteGroups.observeNames(c.profileId)) { snap, groups ->
                 // glcn: Favourites' groups, right under it.
-                if (groups.isEmpty()) rail
-                else rail.flatMap { item ->
+                val (owner, rail) = snap
+                if (groups.isEmpty()) snap
+                else owner to rail.flatMap { item ->
                     if (item.key != LiveKey.Favorites) listOf(item)
                     else listOf(item) + groups.map { g -> LiveRailItem(LiveKey.Custom(tv.own.owntv.core.live.FavoriteGroups.keyOf(g)), title = g, nested = true) }
                 }

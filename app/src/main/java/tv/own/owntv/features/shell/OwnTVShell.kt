@@ -1668,10 +1668,6 @@ fun OwnTVShell(
                             onEpgAddConsumed = { openEpgAdd = false },
                             start = settingsStart,
                             onStartConsumed = { settingsStart = null },
-                            onOpenSportsTeam = { t ->
-                                sportsMatchRequests.pendingTeam.value = t
-                                onSelectSection(MainSection.SPORTS)
-                            },
                             modifier = Modifier
                                 .fillMaxSize()
                                 .onFocusChanged { if (it.hasFocus) focusedLayer = ShellLayer.CONTENT }
