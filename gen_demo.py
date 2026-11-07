@@ -43,10 +43,10 @@ FILMS = {
 
 # Canal: id, nombre, color del logo, siglas, stream, película principal, dos cortos que alternan
 CHANNELS = [
-    ("cinelibre",  "Cine Libre",      "#E4572E", "CL", f"{BBB}",  "bbb",    ("spring", "llama")),
-    ("fantasia",   "Fantasía Libre",  "#7B5EA7", "FL", f"{SINTEL}", "sintel", ("cosmos", "coffee")),
-    ("scifi",      "Sci-Fi Libre",    "#1F8A9E", "SF", f"{TOS}",  "tos",    ("charge", "agent")),
-    ("cinelibrehls","Cine Libre HLS", "#D9A21B", "HLS","https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "bbb", ("sprite", "spring")),
+    ("cinelibre",  "Cine Libre",      "#E4572E", "CL", f"{BBB}",  "bbb",    ("llama", "cosmos")),
+    ("fantasia",   "Fantasía Libre",  "#7B5EA7", "FL", f"{SINTEL}", "sintel", ("sprite", "agent")),
+    ("scifi",      "Sci-Fi Libre",    "#1F8A9E", "SF", f"{TOS}",  "tos",    ("agent", "cosmos")),
+    ("cinelibrehls","Cine Libre HLS", "#D9A21B", "HLS","https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "bbb", ("sprite", "llama")),
 ]
 MAIN_MIN, SHORT_MIN = 30, 15
 
