@@ -7,6 +7,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.background
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
@@ -266,12 +267,16 @@ internal fun MovieTitlePage(
             ) {
                 Text(info.title, style = stageText(30, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 // One focus stop for the reading part, so ▼ always has somewhere to land.
+                // glcn: it shows when it has the focus — an accent outline and heading — so you always know where you are.
+                var lowerFocused by remember { mutableStateOf(false) }
                 Column(
-                    Modifier.focusRequester(lowerFocus).focusable(),
+                    Modifier.focusRequester(lowerFocus).onFocusChanged { lowerFocused = it.isFocused }.focusable()
+                        .then(Modifier.border(2.5.mpx, if (lowerFocused) stageAccent.accent else Color.Transparent, RoundedCornerShape(16.mpx)))
+                        .padding(horizontal = 14.mpx, vertical = 10.mpx),
                     verticalArrangement = Arrangement.spacedBy(22.mpx),
                 ) {
                     if (info.cast.isNotEmpty()) {
-                        Text(stringResource(R.string.content_media_cast), style = stageText(20, 700), color = StageColors.Text)
+                        Text(stringResource(R.string.content_media_cast), style = stageText(20, 700), color = if (lowerFocused) stageAccent.accent else StageColors.Text)
                         tv.own.owntv.features.shell.components.VodCast(info.cast, 10)
                     }
                 }
@@ -284,7 +289,7 @@ internal fun MovieTitlePage(
                         extras.forEach { x ->
                             Column(Modifier.width(300.mpx)) {
                                 tv.own.owntv.ui.stage.StageSurface(
-                                    onClick = { fullTrailer = x.key }, radius = 12.mpx,
+                                    onClick = { fullTrailer = x.key }, radius = 12.mpx, focusStyle = tv.own.owntv.ui.stage.StageFocus.POSTER,
                                     modifier = Modifier.width(300.mpx).height(169.mpx),
                                 ) { _ ->
                                     Box(Modifier.fillMaxSize()) {
@@ -311,7 +316,7 @@ internal fun MovieTitlePage(
                         related.take(10).forEach { r ->
                             Column(Modifier.width(150.mpx)) {
                                 tv.own.owntv.ui.stage.StageSurface(
-                                    onClick = { onOpenRelated(r) }, radius = 12.mpx,
+                                    onClick = { onOpenRelated(r) }, radius = 12.mpx, focusStyle = tv.own.owntv.ui.stage.StageFocus.POSTER,
                                     modifier = Modifier.width(150.mpx).height(225.mpx),
                                 ) { _ ->
                                     coil3.compose.AsyncImage(

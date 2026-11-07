@@ -208,3 +208,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📏 Channel-change banner smaller (narrower card, smaller picture), and it stays away while the TV strip is up — the strip's own card already names the programme, so they no longer overlap.
 - 🩹 Light theme: the focused row no longer drags a blue band under it — its accent shadow is now faint and close (Glass focus and the plain one).
 - 🏷️ Live TV preview: the quality chips (1080p, 5.1…) moved to the foot of the window, level with the channel's name — at the top right they covered the channel's own logo.
+- 🎯 Film page: the focus always shows in the lower part — Extras and "You may like" cards get the poster ring outside the picture (with Glass on it was drawn under the picture, unseen), and the cast block lights an accent outline and heading when it has the focus.
