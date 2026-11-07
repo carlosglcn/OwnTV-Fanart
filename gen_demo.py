@@ -10,7 +10,10 @@ from datetime import datetime, timedelta, timezone
 from xml.sax.saxutils import escape
 
 REPO_RAW = "https://raw.githubusercontent.com/carlosglcn/OwnTV-Fanart/demo"
-GCS = "https://storage.googleapis.com/gtv-videos-bucket/sample"
+# Archivos oficiales de Blender (y la réplica de demos de Kodi en el MIT para Big Buck Bunny).
+BBB = "https://mirrors.mit.edu/kodi/demo-files/BBB/bbb_sunflower_1080p_30fps_normal.mp4"
+SINTEL = "https://download.blender.org/demo/movies/Sintel.2010.720p.mkv"
+TOS = "https://download.blender.org/demo/movies/ToS/tears_of_steel_720p.mov"
 
 # Películas abiertas de Blender (Creative Commons BY). Títulos tal cual en TMDB.
 FILMS = {
@@ -40,20 +43,18 @@ FILMS = {
 
 # Canal: id, nombre, color del logo, siglas, stream, película principal, dos cortos que alternan
 CHANNELS = [
-    ("cinelibre",  "Cine Libre",        "#E4572E", "CL", f"{GCS}/BigBuckBunny.mp4",   "bbb",    ("spring", "llama")),
-    ("fantasia",   "Fantasía Libre",    "#7B5EA7", "FL", f"{GCS}/Sintel.mp4",         "sintel", ("cosmos", "coffee")),
-    ("scifi",      "Sci-Fi Libre",      "#1F8A9E", "SF", f"{GCS}/TearsOfSteel.mp4",   "tos",    ("charge", "agent")),
-    ("animacion",  "Animación Libre",   "#3E9E4F", "AL", f"{GCS}/ElephantsDream.mp4", "ed",     ("sprite", "llama")),
-    ("cinelibrehls","Cine Libre HLS",   "#D9A21B", "HLS","https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "bbb", ("agent", "spring")),
+    ("cinelibre",  "Cine Libre",      "#E4572E", "CL", f"{BBB}",  "bbb",    ("spring", "llama")),
+    ("fantasia",   "Fantasía Libre",  "#7B5EA7", "FL", f"{SINTEL}", "sintel", ("cosmos", "coffee")),
+    ("scifi",      "Sci-Fi Libre",    "#1F8A9E", "SF", f"{TOS}",  "tos",    ("charge", "agent")),
+    ("cinelibrehls","Cine Libre HLS", "#D9A21B", "HLS","https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "bbb", ("sprite", "spring")),
 ]
 MAIN_MIN, SHORT_MIN = 30, 15
 
 # Las mismas películas, también en la sección Películas.
 MOVIES = [
-    ("bbb",    f"{GCS}/BigBuckBunny.mp4"),
-    ("sintel", f"{GCS}/Sintel.mp4"),
-    ("tos",    f"{GCS}/TearsOfSteel.mp4"),
-    ("ed",     f"{GCS}/ElephantsDream.mp4"),
+    ("bbb",    BBB),
+    ("sintel", SINTEL),
+    ("tos",    TOS),
 ]
 
 TZ = timezone(timedelta(hours=1))  # Madrid en invierno (sin horario de verano hasta finales de marzo)

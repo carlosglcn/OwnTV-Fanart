@@ -14,6 +14,6 @@ Canales de demostración libres y legales para probar OwnTV Fanart y grabar el v
 ## Credits / Créditos
 
 - Films: Big Buck Bunny, Sintel, Tears of Steel, Elephants Dream and the other titles in the guide © Blender Foundation | www.blender.org — licensed under Creative Commons Attribution (CC BY).
-- Video files served from Google's public sample bucket (`gtv-videos-bucket`) and Mux test streams.
+- Video files served from download.blender.org, the MIT Kodi demo mirror and Mux test streams.
 - Channel logos and guide texts: made for this demo, free to use.
 - This product uses the TMDB API but is not endorsed or certified by TMDB (artwork is looked up by title inside the app).
