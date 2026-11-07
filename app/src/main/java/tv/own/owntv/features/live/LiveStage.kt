@@ -374,7 +374,9 @@ internal fun LiveStagePane(
                 val reallyLive = nowTitle?.let { t -> tv.own.owntv.core.live.SportsNow.displayTitle(t) != t } ?: false
                 if (reallyLive) Box(Modifier.align(Alignment.TopStart).padding(start = 24.mpx, top = 22.mpx)) { StageLiveBadge(stringResource(R.string.player_live)) }
                 if (playing && streamChips.isNotEmpty()) {
-                    Row(Modifier.align(Alignment.TopEnd).padding(end = 22.mpx, top = 22.mpx), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
+                    // glcn: at the foot, level with the channel's name — at the top right they sat over the channel's own
+                    // on-screen logo.
+                    Row(Modifier.align(Alignment.BottomEnd).padding(end = 22.mpx, bottom = 24.mpx), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
                         // Three facts — quality, frame rate, sound: the
                         // engine's aspect ratio ("16:9") and declared bitrate ("4.2 Mbps") are left out.
                         streamChips.filterNot { it.contains(':') || it.endsWith("Mbps") }.forEach { StageSpecChip(it) }

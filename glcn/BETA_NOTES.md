@@ -207,3 +207,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Live TV (Ficha): the programme's blurred picture behind the text shows clearly again over an animated wallpaper, a gradient or a photo (it had faded almost away); its edges still melt.
 - 📏 Channel-change banner smaller (narrower card, smaller picture), and it stays away while the TV strip is up — the strip's own card already names the programme, so they no longer overlap.
 - 🩹 Light theme: the focused row no longer drags a blue band under it — its accent shadow is now faint and close (Glass focus and the plain one).
+- 🏷️ Live TV preview: the quality chips (1080p, 5.1…) moved to the foot of the window, level with the channel's name — at the top right they covered the channel's own logo.
