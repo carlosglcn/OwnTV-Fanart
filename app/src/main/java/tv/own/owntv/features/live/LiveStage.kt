@@ -279,8 +279,8 @@ internal fun detailsLine(now: XtEpgEntry, details: EpgDetails?): String {
 /**
  * The stage (`cLiveStage`): the preview video (16:9, radius 28) with the LIVE badge, the stream facts
  * and the channel in the lower corner; below it the programme title 42/800, the details line, the
- * progress and time left, the synopsis, and what is on next (accent time) and later. ▶ from the list
- * enters next / later ([scheduleFocus]); OK on one opens it through [onOpenProgramme].
+ * progress and time left, the synopsis, and what is on next (accent time) and later. It is for reading
+ * only: the whole schedule, with what each programme can do, is the Program details page.
  */
 @Composable
 internal fun LiveStagePane(
@@ -290,9 +290,6 @@ internal fun LiveStagePane(
     previewEngine: tv.own.owntv.player.LivePreviewEngine,
     showVideo: Boolean,
     singleSessionBlocked: Boolean,
-    scheduleFocus: FocusRequester,
-    onOpenProgramme: (XtEpgEntry) -> Unit,
-    onBackToList: () -> Unit,
     modifier: Modifier = Modifier,
     /** glcn: the channel's guide rows (with their pictures), for the pictures over what follows. */
     loadSchedule: (suspend (ChannelEntity) -> List<tv.own.owntv.core.database.entity.EpgProgrammeEntity>)? = null,
@@ -503,7 +500,7 @@ internal fun LiveStagePane(
 
 /**
  * One "20:30  Kingdom of the Planet of the Apes" entry under the stage, 18 px. Next has the accent
- * time and full-colour title, later is muted. Focused = FILLED.
+ * time and full-colour title, later is muted. Display only.
  */
 @Composable
 private fun LiveScheduleItem(

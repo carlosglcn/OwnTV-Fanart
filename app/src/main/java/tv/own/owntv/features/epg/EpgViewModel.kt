@@ -117,6 +117,7 @@ class EpgViewModel(
     /** "Recently watched" in the category list reads the same history Live TV does. */
     private val historyDao: tv.own.owntv.core.database.dao.HistoryDao,
     private val reminderManager: tv.own.owntv.core.reminder.ReminderManager,
+    private val archiveGuide: tv.own.owntv.core.epg.ArchiveGuideFiller,
 ) : ViewModel() {
 
     /** The categories' search text, held here so it survives the player (see LiveViewModel). */
@@ -303,6 +304,25 @@ class EpgViewModel(
 
     private fun cachedRowCount(): Int = synchronized(rowCache) { rowCache.size }
 
+    /**
+     * Ask for the past days a catch-up [channel]'s guide feed lacks, from its provider's archive. Called
+     * for a row that stays on screen, so the past is there by the time the user scrolls back to it; the
+     * queue, its pacing and the "once every few hours per channel" rule are core's
+     * ([tv.own.owntv.core.epg.ArchiveGuideFiller]).
+     */
+    fun requestArchiveGuide(channel: ChannelEntity) = archiveGuide.request(channel, custom.value)
+
+    /** Drop the cached rows of one channel (every shift), so the next read of that row goes to the DB. */
+    private fun dropRows(channelId: Long) {
+        val prefix = "$channelId|"
+        synchronized(rowCache) { rowCache.keys.removeAll { it.startsWith(prefix) } }
+    }
+
+    override fun onCleared() {
+        // Rows of a guide nobody is looking at any more are not asked for.
+        archiveGuide.forgetPending()
+    }
+
     /** The row prefetch in flight. One at a time — see [prefetchAfter]. */
     private var prefetchJob: kotlinx.coroutines.Job? = null
 
@@ -374,6 +394,11 @@ class EpgViewModel(
             }
         }
     }
+
+    /** One channel's programmes from [dayStart] for a day, whole — synopsis and details — for the
+     *  Program details page. Not cached: the page reads one day at a time, on demand. */
+    suspend fun dayProgrammes(channel: ChannelEntity, dayStart: Long): List<EpgProgrammeEntity> =
+        guideReader.row(channel, custom.value, epgOffset.value, dayStart, dayStart + DAY_MS, withText = true)
 
     /** The whole programme — synopsis and details — for the programme block (the grid load drops both). */
     suspend fun programmeFull(programmeId: Long): EpgProgrammeEntity? =
@@ -453,6 +478,16 @@ class EpgViewModel(
             .drop(if (epgActivity.active.value.isEmpty()) 1 else 0)
             .onEach { load() }
             .launchIn(viewModelScope)
+        // Re-read a row when its channel's past days arrive from the provider's archive (asked for by the
+        // rows on screen, see requestArchiveGuide). They are stored apart from every feed, so the stored
+        // count load() compares does not move: that channel's cached rows are dropped instead, and the
+        // other visible rows answer from the cache.
+        archiveGuide.added
+            .onEach {
+                dropRows(it)
+                _cacheRevision.value++
+            }
+            .launchIn(viewModelScope)
         // Reload when a category lock closes or opens (the relock on leaving the app, a PIN entry), so
         // the grid and the zap list armed from it follow. drop(1): the screen triggers the initial load.
         settings.activeProfileId
@@ -515,6 +550,10 @@ class EpgViewModel(
     fun setGuidePreview(show: Boolean) {
         viewModelScope.launch { settings.setGuidePreview(show) }
     }
+
+    /** "OK previews first" for the Guide: on, OK brings a channel into the preview; off, OK watches it. */
+    val guidePreviewOnOk: StateFlow<Boolean> = settings.guidePreviewOnOk
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     /** The Order menu's choice; remembered, so the guide opens this way next time. */
     fun setGuideSort(sort: SettingsRepository.GuideSort) {

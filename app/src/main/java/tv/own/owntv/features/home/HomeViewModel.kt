@@ -50,6 +50,7 @@ import tv.own.owntv.core.metadata.MetadataImages
 import tv.own.owntv.core.metadata.MetadataRepository
 import tv.own.owntv.core.settings.SettingsRepository
 import tv.own.owntv.core.categorylock.sealedCategoryKeys
+import tv.own.owntv.core.sync.LibraryLoading
 import tv.own.owntv.player.HeroPreviewEngine
 
 @Immutable
@@ -159,6 +160,7 @@ class HomeViewModel(
     private val reminderManager: tv.own.owntv.core.reminder.ReminderManager,
     private val sourceRepository: tv.own.owntv.core.repository.SourceRepository,
     private val customize: CustomizationStore,
+    private val libraryLoading: LibraryLoading,
 ) : ViewModel() {
 
     /** The Dock's long press: take this row off Home, where Settings › Home rows would show it again. */
@@ -362,6 +364,10 @@ class HomeViewModel(
         _uiState.value = _uiState.value.copy(activeTrendingIndex = index)
         resolveTrendingExtras(items[index])
     }
+
+    /** Titles stored so far while one of this profile's playlists still loads after setup; 0 once none does. */
+    val libraryLoadingTitles: StateFlow<Int> = libraryLoading.titles
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     /** Favourite ids per type, for the hero's ♥ (the same favourites Movies and Series show). */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)

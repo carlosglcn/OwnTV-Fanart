@@ -100,9 +100,8 @@ open class MainActivity : ComponentActivity() {
     private var startupSettled = false
 
     private val player: tv.own.owntv.player.OwnTVPlayer by inject()
-    private val previewEngine: tv.own.owntv.player.LivePreviewEngine by inject()
-    private val heroPreviewEngine: tv.own.owntv.player.HeroPreviewEngine by inject()
     private val engines: tv.own.owntv.player.PlaybackEngines by inject()
+    private val visibility: tv.own.owntv.core.player.PlaybackVisibilityWatch by inject()
     private val handOff: tv.own.owntv.features.pip.AppHandOff by inject()
     // Activity-scoped: the same instance Compose retrieves via koinViewModel() inside setContent.
     private val shellViewModel: ShellViewModel by viewModel()
@@ -129,19 +128,34 @@ open class MainActivity : ComponentActivity() {
         Log.d(TAG, "onNewIntent deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}")
     }
 
+    /**
+     * Left the app — Home, another app, exited, logged out, the picture-in-picture window closed, or the
+     * television switched off while this activity kept running: stop playback and free the demuxer cache +
+     * decoder buffers — holding them while invisible got the process LMK-killed on real TVs. Every engine:
+     * mpv, the Live engine (its audio must stop too), each Multiview tile and the hero. The relock first: it
+     * reads what is playing before the engines free it.
+     *
+     * Back: bring back what was freed — a VOD restored paused at its position, a live channel re-tuned to
+     * the live edge — so Play resumes instead of sitting on a dead stream. No-op on a fresh launch. Not
+     * before the relock check is done: what it found sealed must not come back first.
+     */
+    private val onVisibility: (Boolean) -> Unit = { visible ->
+        if (visible) shellViewModel.afterSealCheck { engines.onAppForegrounded() }
+        else { shellViewModel.relockCategories(); engines.onAppBackgrounded() }
+    }
+
     override fun onStop() {
         super.onStop()
-        tv.own.owntv.glcn.AppForeground.visible = false // glcn: BootStart's wake check
         if (!isChangingConfigurations) get<tv.own.owntv.core.sync.local.AutoSyncManager>().onBackground() // glcn
-        // Backgrounded (Home / another app), exited, logged out, or the picture-in-picture window closed:
-        // stop playback and free the demuxer cache + decoder buffers — holding them while invisible got
-        // the process LMK-killed on real TVs. Every engine: mpv, the Live engine (its audio must stop
-        // too), each Multiview tile and the hero. A picture-in-picture window only pauses the activity,
-        // so playback there never reaches it. The relock first: it reads what is playing before the
-        // engines free it.
-        if (!isChangingConfigurations) { shellViewModel.relockCategories(); engines.onAppBackgrounded() }
+        // A picture-in-picture window only pauses the activity, so playback there never reaches this.
+        if (!isChangingConfigurations) visibility.activityStopped()
         handOff.onActivityStopped()
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
+    override fun onDestroy() {
+        visibility.removeListener(onVisibility)
+        super.onDestroy()
     }
 
     override fun onResume() {
@@ -156,13 +170,9 @@ open class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        tv.own.owntv.glcn.AppForeground.visible = true // glcn: BootStart's wake check
         get<tv.own.owntv.core.sync.local.AutoSyncManager>().onForeground() // glcn
-        // Paired with onStop: bring back what was freed while backgrounded (notably the TV screensaver, which
-        // kicks in during a long pause) — a VOD restored paused at its position, and a live channel re-tuned
-        // to the live edge — so Play resumes instead of sitting on a dead/empty stream. No-op on fresh launch.
-        // Not before the relock check is done: what it found sealed must not come back first.
-        shellViewModel.afterSealCheck { engines.onAppForegrounded() }
+        // Paired with onStop (see [onVisibility]); notably the TV screensaver, which kicks in during a long pause.
+        visibility.activityStarted()
         // Staleness-based auto refresh on resume (interval modes only — STARTUP is cold-start only). The
         // ViewModel throttles this internally so a quick toggle doesn't re-run the check.
         shellViewModel.checkAutoRefresh(includeStartup = false)
@@ -248,6 +258,7 @@ open class MainActivity : ComponentActivity() {
         // The window only pauses the activity, so onStop's relock never runs while it is open: going into
         // it is leaving the app, and a channel from a category the PIN opened stops there too.
         addOnPictureInPictureModeChangedListener { if (it.isInPictureInPictureMode) shellViewModel.relockCategories() }
+        visibility.addListener(onVisibility)
         val splashDeadline = SystemClock.uptimeMillis() + SPLASH_TIMEOUT_MS
         var readyAt = 0L
         splash.setKeepOnScreenCondition {
@@ -629,7 +640,7 @@ open class MainActivity : ComponentActivity() {
                                 onStartupSettled = { startupSettled = true },
                                 onSwitchProfile = {
                                     // Stop playback and return to the "Who's watching?" gate — no app restart.
-                                    player.onAppBackgrounded(); player.discardBackgroundRestore(); previewEngine.stop(); previewEngine.discardBackgroundRestore(); heroPreviewEngine.stop()
+                                    tv.own.owntv.features.profiles.stopPlaybackForProfileGate(shellViewModel, engines)
                                     // Force the gate open even with a single unpinned profile (cold-start gate would
                                     // skip it). requestSwitchProfile() clears the active profile
                                     // authentication and raises the request.

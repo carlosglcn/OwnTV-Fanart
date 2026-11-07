@@ -26,9 +26,38 @@
 - **🪟 Picture-in-picture when leaving the app** (community PR #278 by @Kevsosmooth)
 - **📺 Live TV: the preview keeps playing while you browse the categories** (community PR #270 by @Kevsosmooth)
 - **🔑 Stalker portals: an optional username and password**
+- **🏆 Sports: Scores | Calendar | Leagues tabs**
+- **📅 Sports Calendar: the month of every followed league, with the day's matches**
+- **🗂️ Sports Leagues: tables, fixtures and results; F1 drivers, constructors and races; tennis rankings**
+- **👕 Team pages: fixtures, results, next match, last five and table place**
+- **🆕 54 more leagues, with Volleyball and Lacrosse**
+- **🔄 Calendar refresh setting**
+- **📚 Home says the library is still loading, with the titles so far** (community PR #333 by @DevenP)
+- **🧭 The menu widens in place from its capsule, at a steady height** (community PR #328 by @DevenP)
+- **🏷️ Home rows show their heading when focus enters them** (community PR #332 by @DevenP)
+- **👁️ Long-press menus: hide actions, and the default order matches the menus**
+- **📺 Hide All channels or Catch-up from the Live TV categories (#322)** (community PR #337 by @sarmadsoomro)
+- **⬇️ Allow downloads per profile; a whole show or season asks first with the episode count (#339)**
+- **📅 TV Guide: catch-up channels show their past days from the provider's archive** (community PR #324 by @Zangetsu-Sama)
+- **⏮️ "Start of the programme" first in "Go back to…"** (community PR #326 by @Zangetsu-Sama)
+- **🖼️ Aspect: a press steps to the next mode, hold OK for the list (#319)**
+- **🎞️ Auto frame rate: separate switches for films and series, and Live TV (#318)**
+- **🔓 Ignore connection limit, per playlist (#244)**
+- **🔀 Sources: switch to another version of the channel playing** (community PR #317 by @Aaronnn17)
+- **⏻ Auto start on boot and on wake-up** (community PR #279 by @Kevsosmooth)
+- **📱 Edit a playlist from another device (#250)**
+- **🧭 TV Guide follows Live TV's category, as a switch in Browsing & lists** (community PR #325 by @Zangetsu-Sama)
+- **👤 Each profile remembers its own last category and channel**
+- **👆 OK previews first, then full screen: a switch for Live TV and one for the TV Guide (#344)**
+- **📄 Program details: the channel's whole day as a page, with what each programme can do (#345)**
+- **📺 Full-screen channel browser: ◀◀ shows the categories beside their channels (#323)**
 
 ### 🐛 Fixes
 - **🗑️ Deleting a download or recording asks first**
+- **📺 Expanding the mini player returns to the channel playing, not the one browsed (#307)**
+- **🔢 Browsing categories in the player no longer changes what CH+/CH− step through; the channel you pick does**
+- **🔁 Re-test measures the connection limit on Xtream, and the next sync keeps it (#244)**
+- **🕘 "Live now" shows the programme's start and end**
 - **↕️ Moved categories, channels, films and series keep their place in A–Z and Provider; the rest follow the sort**
 - **📺 Back to the TV Guide focuses the channel that was playing and previews it**
 - **📋 TV Guide order follows Live TV, moved channels included**
@@ -55,6 +84,21 @@
 - **Stalker sync slows down on portals that refuse parallel requests and loses no page; fast portals keep full speed**
 - **Stalker series listed among the films go to Series when the portal has no series section**
 - **Playlist rows show the full catalogue once the background download finishes**
+- **A live channel whose decoder fails to start is retried a few more times before giving up (#321)**
+- **Dolby Vision profile 5 films and series play with the right colours on mpv (#313)**
+- **Apple FairPlay channels say why they cannot play; FairPlay-labelled ClearKey channels play**
+- **Deleting a profile: the confirmation stays open after the long press** (community PR #329 by @DevenP)
+- **Holding OK on Favorites and on the Sports reorder no longer acts on what opens** (community PR #334 by @DevenP)
+- **Movies and Series no longer keep a category from the playlist you just switched away from**
+- **Large playlists keep loading in the background after a pause, and a minute after playback stops**
+- **Films tagged " - CAM" find their poster**
+- **Stalker series filed under films get their episodes**
+- **📺 Live TV comes back on the category you chose, even on a large playlist; a startup or a jump to a channel no longer replaces it** (community PR #325 by @Zangetsu-Sama)
+- **📚 Series whose episodes carry two dates load their episodes again (#342)**
+- **📡 A guide download cut off midway no longer deletes the rest of the guide**
+- **📺 Live comes back by itself at the live edge when the TV is switched off and on (#343)**
+- **⏯️ Play after a pause of over a minute on a live channel goes to the live edge**
+- **🔗 Panels that serve some channels as HLS behind a .ts address open faster and no longer fail after an offline channel** (community PRs ahXN00/OwnTV_Core#76 and #77 by @SirKitboard)
 
 ## v5.2.1 — 2026-10-21
 

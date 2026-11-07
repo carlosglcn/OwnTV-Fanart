@@ -88,6 +88,7 @@ import tv.own.owntv.ui.components.rememberAppliedIcon
 import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.components.OwnTVPopup
 import tv.own.owntv.ui.components.displayText
+import tv.own.owntv.ui.components.longPressMenuGuard
 import tv.own.owntv.ui.components.trapAllFocusExit
 import tv.own.owntv.ui.stage.StageFocus
 import tv.own.owntv.ui.stage.StageMenu
@@ -437,6 +438,7 @@ internal fun FavouritesPage(
             val first = remember { FocusRequester() }
             LaunchedEffect(Unit) { withFrameNanos { }; runCatching { first.requestFocus() } }
             BackHandler { close() }
+            // Opened by a held OK: the guard keeps its repeats off the first item (Remove).
             Box(Modifier.fillMaxSize().background(stageTone(Color.Black.copy(alpha = 0.45f), StageColors.Scrim)).longPressMenuGuard().trapAllFocusExit().focusGroup(), contentAlignment = Alignment.Center) {
                 StageMenu(Modifier.width(440.mpx)) {
                     StageMenuHeader(name, null)
