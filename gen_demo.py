@@ -82,7 +82,7 @@ def make_m3u(path):
     lines = [f'#EXTM3U url-tvg="{REPO_RAW}/epg.xml.gz" x-tvg-url="{REPO_RAW}/epg.xml.gz"']
     for cid, name, _c, _s, url, *_ in CHANNELS:
         lines.append(f'#EXTINF:-1 tvg-id="{cid}.demo" tvg-name="{name}" '
-                     f'tvg-logo="{REPO_RAW}/logos/{cid}.png" group-title="Demo",{name}')
+                     f'tvg-logo="{REPO_RAW}/logos/{cid}.png" tvg-type="live" group-title="Demo",{name}')
         lines.append(url)
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
