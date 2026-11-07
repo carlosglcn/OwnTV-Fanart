@@ -1418,6 +1418,8 @@ class LiveViewModel(
         is LiveKey.Folder -> channelsInCategory(key.id)
         is LiveKey.Custom -> channelsInCustom(key)
         else -> channelsInRail(key)
+    }
+
     // --- Full-screen channel browser (◀◀: categories beside a category's channels) ---
     private val peek = LiveCategoryPeek(viewModelScope)
     val peekChannels: StateFlow<List<ChannelEntity>> = peek.channels

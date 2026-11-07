@@ -153,10 +153,6 @@ open class MainActivity : ComponentActivity() {
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
-    override fun onDestroy() {
-        visibility.removeListener(onVisibility)
-        super.onDestroy()
-    }
 
     override fun onResume() {
         super.onResume()
@@ -224,6 +220,7 @@ open class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        visibility.removeListener(onVisibility)
         tv.own.owntv.glcn.FrameWatch.detach(this)
         tv.own.owntv.ui.components.TrailerPool.free() // glcn: the trailer player was made on this activity
         super.onDestroy()
