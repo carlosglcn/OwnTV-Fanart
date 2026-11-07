@@ -183,6 +183,7 @@ fun SearchScreen(
     val jumpFocus = remember { FocusRequester() }
     val rowFocus = remember { HashMap<String, FocusRequester>() }
     fun requesterFor(key: String) = rowFocus.getOrPut(key) { FocusRequester() }
+    val searchScheduleFocus = remember { FocusRequester() } // glcn: our stage's coming programmes
 
     val searching = query.trim().length >= 2
     val showingResults = searching || intent != null
@@ -439,6 +440,10 @@ fun SearchScreen(
                     previewEngine = liveVm.previewEngine,
                     showVideo = previewOn,
                     singleSessionBlocked = singleSessionBlocked,
+                    scheduleFocus = searchScheduleFocus,
+                    // Search only shows: a programme picked here goes to the channel, where its menu lives.
+                    onOpenProgramme = { goTo(active) },
+                    onBackToList = { runCatching { requesterFor(active.key).requestFocus() } },
                     modifier = panelModifier,
                 )
                 active is Entry.Movie -> PosterPanel(
