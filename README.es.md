@@ -10,7 +10,17 @@ imágenes en primer plano: el fanart de la guía en Inicio, TV en directo y la g
 
 > Los problemas de esta versión, por favor, repórtalos **aquí**, no al autor original.
 
-https://github.com/user-attachments/assets/faacb82b-6903-47c0-ae53-6854024aa5b6
+<p align="center"><a href="https://youtu.be/2MLIILmz8F8"><img src="https://img.youtube.com/vi/2MLIILmz8F8/maxresdefault.jpg" alt="Ver el vídeo" width="720"></a></p>
+
+| Inicio | TV en directo |
+|---|---|
+| ![Inicio](extras/glcn/promo/01-inicio.gif) | ![TV en directo](extras/glcn/promo/02-tv-en-directo.gif) |
+| **Zapping** | **Películas** |
+| ![Zapping](extras/glcn/promo/03-zapping.gif) | ![Películas](extras/glcn/promo/04-peliculas.gif) |
+| **Tráileres** | **Fondos** |
+| ![Tráileres](extras/glcn/promo/05-trailer.gif) | ![Fondos](extras/glcn/promo/06-fondos.gif) |
+
+<sub>Películas de muestra © Blender Foundation (CC BY).</sub>
 
 ## ⬇️ Descarga
 

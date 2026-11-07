@@ -10,7 +10,17 @@ pictures first: the guide's fanart across Home, Live TV and the guide, and a few
 
 > Please report problems with this version **here**, not to the original author.
 
-https://github.com/user-attachments/assets/faacb82b-6903-47c0-ae53-6854024aa5b6
+<p align="center"><a href="https://youtu.be/wYbJVrBuSvM"><img src="https://img.youtube.com/vi/wYbJVrBuSvM/maxresdefault.jpg" alt="Watch the video" width="720"></a></p>
+
+| Home | Live TV |
+|---|---|
+| ![Home](extras/glcn/promo/01-inicio.gif) | ![Live TV](extras/glcn/promo/02-tv-en-directo.gif) |
+| **Channel surfing** | **Movies** |
+| ![Channel surfing](extras/glcn/promo/03-zapping.gif) | ![Movies](extras/glcn/promo/04-peliculas.gif) |
+| **Trailers** | **Backgrounds** |
+| ![Trailers](extras/glcn/promo/05-trailer.gif) | ![Backgrounds](extras/glcn/promo/06-fondos.gif) |
+
+<sub>Sample films © Blender Foundation (CC BY).</sub>
 
 ## ⬇️ Download
 
