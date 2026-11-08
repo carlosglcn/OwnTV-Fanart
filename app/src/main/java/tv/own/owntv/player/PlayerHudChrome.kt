@@ -201,26 +201,34 @@ internal fun LiveChannelHeader(player: PlaybackEngine, chips: List<String>, onBa
                 }
                 Text(name, style = tv.own.owntv.ui.theme.stageText(28, 800), color = hudInk, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            val shown = chips.filterNot { it.contains(':') || it == "MPV" || it == "EXO" }
-            if (shown.isNotEmpty()) {
-                // glcn: one low line of small chips (they used to wrap to a second line and lift the whole bar).
-                Row(
-                    Modifier.padding(top = 5.dp).horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    shown.forEach { label ->
-                        Text(
-                            label,
-                            style = tv.own.owntv.ui.theme.stageText(15, 700),
-                            color = hudInk.copy(alpha = 0.85f),
-                            fontWeight = FontWeight.SemiBold,
-                            // One line each: squeezed, a chip clips instead of stacking its letters.
-                            maxLines = 1, softWrap = false,
-                            modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(hudInk.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 2.dp),
-                        )
-                    }
-                }
-            }
+            StreamChipRow(chips, hudInk, Modifier.padding(top = 5.dp))
+        }
+    }
+}
+
+/**
+ * The stream's facts (4K · 50 Hz · HDR…) as one low line of small chips — shared by the classic header and the
+ * Cine / Ficha banners, so every banner style tells what is playing. The engine and key:value lines stay out.
+ */
+@Composable
+internal fun StreamChipRow(chips: List<String>, ink: Color, modifier: Modifier = Modifier, size: Int = 15) {
+    val shown = chips.filterNot { it.contains(':') || it == "MPV" || it == "EXO" }
+    if (shown.isEmpty()) return
+    // glcn: one low line of small chips (they used to wrap to a second line and lift the whole bar).
+    Row(
+        modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        shown.forEach { label ->
+            Text(
+                label,
+                style = tv.own.owntv.ui.theme.stageText(size, 700),
+                color = ink.copy(alpha = 0.85f),
+                fontWeight = FontWeight.SemiBold,
+                // One line each: squeezed, a chip clips instead of stacking its letters.
+                maxLines = 1, softWrap = false,
+                modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(ink.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 2.dp),
+            )
         }
     }
 }

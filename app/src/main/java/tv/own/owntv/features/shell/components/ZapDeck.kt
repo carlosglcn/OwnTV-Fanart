@@ -209,6 +209,19 @@ fun ZapDeck(
     }
 
     val page = 8
+    // glcn: the widths chosen in Settings → Layout → Panel widths; while the channels or the schedule have the
+    // cursor the groups fold to their icons and the programme column takes the room they leave.
+    val widths = tv.own.owntv.glcn.DeckWidths.shares
+    val groupsOpen = tv.own.owntv.glcn.DeckWidths.width(widths.groups)
+    val groupsFolded = tv.own.owntv.glcn.DeckWidths.FOLDED_GROUPS.coerceAtMost(groupsOpen)
+    val foldTarget = if (column == 1 || column == 2) 1f else 0f
+    val fold by androidx.compose.animation.core.animateFloatAsState(
+        foldTarget,
+        if (tv.own.owntv.glcn.LowRam.on) androidx.compose.animation.core.snap<Float>() else tween<Float>(260, easing = FastOutSlowInEasing),
+        label = "deckFold",
+    )
+    val groupsW = groupsOpen + (groupsFolded - groupsOpen) * fold
+    val programmeW = tv.own.owntv.glcn.DeckWidths.width(widths.programme) + (groupsOpen - groupsFolded) * fold
     val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
     Box(
         modifier
@@ -285,21 +298,23 @@ fun ZapDeck(
                 .padding(horizontal = 14.mpx, vertical = 8.mpx)
                 .fillMaxHeight(),
         ) {
-            // glcn: both parts on a share of the same glass, so the picture shows through everywhere: the groups and
-            // channels on a little more of it, so their words still read; the column on the right on less.
+            // glcn: both parts on a share of the same glass, so the picture shows through everywhere, both solid
+            // enough for their words to read over a bright picture or its subtitles.
             Box(Modifier.fillMaxHeight()) {
             Box(Modifier.matchParentSize().graphicsLayer { alpha = tv.own.owntv.glcn.PlayerGlass.share(DECK_LIST_GLASS) }.stageGlass(StageRadii.Sheet, overContent = true))
             Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
             // ---- Groups (and the playlists above them).
-            Column(Modifier.width(280.mpx).fillMaxHeight().padding(start = 14.mpx, end = 8.mpx)) {
+            Column(Modifier.width(groupsW).fillMaxHeight().padding(start = 14.mpx, end = 8.mpx)) {
+                // Folded, the chips and the heading fade out but keep their place, so the rows never jump.
+                val words = Modifier.graphicsLayer { alpha = 1f - fold }
                 if (chips.isNotEmpty()) {
-                    DeckChips(chips, activeChip, if (column == -1) chipIdx else -1)
+                    Box(words) { DeckChips(chips, activeChip, if (column == -1) chipIdx else -1) }
                     Spacer(Modifier.height(10.mpx))
                 }
                 Text(
                     stringResource(R.string.content_category_browser_title),
-                    style = stageText(17, 700), color = StageColors.Dim, maxLines = 1,
-                    modifier = Modifier.padding(start = 14.mpx, bottom = 8.mpx),
+                    style = stageText(17, 700), color = StageColors.Dim, maxLines = 1, softWrap = false,
+                    modifier = Modifier.padding(start = 14.mpx, bottom = 8.mpx).then(words),
                 )
                 GlideColumn(
                     count = entries.size,
@@ -327,17 +342,26 @@ fun ZapDeck(
                         entry.icon?.let { OwnTVIcon(it, tint, Modifier.size(20.mpx)) }
                         val glyph = entry.groupGlyph()
                         glyph?.let { tv.own.owntv.glcn.CategoryGlyphView(it, tint, size = 20.mpx, name = entry.label) }
-                        Text(
-                            if (tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) "" else entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                        )
-                        entry.count?.let { Text(it.toString(), style = stageText(15, 500), color = tint.copy(alpha = 0.7f), maxLines = 1) }
+                        Box(Modifier.weight(1f)) {
+                            Text(
+                                if (tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) "" else entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
+                                modifier = Modifier.graphicsLayer { alpha = 1f - fold },
+                            )
+                            // glcn: folded, a group with no icon of its own keeps its first letters.
+                            if (entry.icon == null && glyph == null && fold > 0f) Text(
+                                entry.label.filter { it.isLetterOrDigit() }.take(2).uppercase(), style = stageText(18, 800), color = tint,
+                                maxLines = 1, softWrap = false, modifier = Modifier.graphicsLayer { alpha = fold },
+                            )
+                        }
+                        // Folded past halfway the count leaves the row, so the icon or the letters keep their room.
+                        if (fold < 0.5f) entry.count?.let { Text(it.toString(), style = stageText(15, 500), color = tint.copy(alpha = 0.7f), maxLines = 1, softWrap = false, modifier = Modifier.graphicsLayer { alpha = 1f - fold }) }
                     }
                 }
             }
             DeckDivider()
             // ---- Channels of the shown group.
-            Column(Modifier.width(570.mpx).fillMaxHeight().padding(horizontal = 10.mpx)) {
+            Column(Modifier.width(tv.own.owntv.glcn.DeckWidths.width(widths.channels)).fillMaxHeight().padding(horizontal = 10.mpx)) {
                 val groupName = entries.firstOrNull { it.item.key == shownKey }?.label.orEmpty()
                 Row(
                     Modifier.padding(start = 14.mpx, end = 14.mpx, bottom = 12.mpx),
@@ -388,12 +412,12 @@ fun ZapDeck(
             Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
             if (detail == 1) {
                 ZapSchedulePanel(
-                    channel = focusedChannel, loadSchedule = loadSchedule, modifier = Modifier.width(480.mpx), loadNow = cachedNow, joined = true, peek = { nowCache[it.id] },
+                    channel = focusedChannel, loadSchedule = loadSchedule, modifier = Modifier.width(programmeW), loadNow = cachedNow, joined = true, peek = { nowCache[it.id] },
                     selected = if (column == 2) schedIdx else -1,
                     onRowCount = { schedCount = it },
                 )
             } else {
-                Column(Modifier.width(480.mpx).fillMaxHeight().padding(horizontal = 22.mpx)) {
+                Column(Modifier.width(programmeW).fillMaxHeight().padding(horizontal = 22.mpx)) {
                     focusedChannel?.let { ch ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -589,4 +613,5 @@ private fun DeckDivider() {
 
 /** glcn: how much of the stage glass the panel draws: the list keeps enough to read; the detail lets more picture through. */
 private const val DECK_LIST_GLASS = 0.74f
-private const val DECK_DETAIL_GLASS = 0.5f
+// glcn: as solid as the list — at 0.5 the schedule mixed with the subtitles of the picture behind it.
+private const val DECK_DETAIL_GLASS = 0.74f

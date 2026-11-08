@@ -1069,6 +1069,7 @@ fun OwnTVShell(
             RemoteShortcutAction.OPEN_AUDIO_CONTROLS,
             RemoteShortcutAction.OPEN_ASPECT_CONTROLS,
             RemoteShortcutAction.TOGGLE_PLAYBACK_INFO,
+            RemoteShortcutAction.OPEN_PROGRAMME_INFO,
             -> if (playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO) expandPlayer()
             RemoteShortcutAction.PAGE_TOWARD_FIRST,
             RemoteShortcutAction.PAGE_TOWARD_LAST,
@@ -1084,7 +1085,7 @@ fun OwnTVShell(
             RemoteShortcutAction.SLEEP_TIMER, RemoteShortcutAction.TOGGLE_ENGINE, RemoteShortcutAction.NEXT_AUDIO_TRACK,
             RemoteShortcutAction.TOGGLE_SUBTITLES, RemoteShortcutAction.OPEN_SUBTITLE_CONTROLS,
             RemoteShortcutAction.OPEN_AUDIO_CONTROLS, RemoteShortcutAction.OPEN_ASPECT_CONTROLS,
-            RemoteShortcutAction.TOGGLE_PLAYBACK_INFO, RemoteShortcutAction.TOGGLE_FAVORITE,
+            RemoteShortcutAction.TOGGLE_PLAYBACK_INFO, RemoteShortcutAction.OPEN_PROGRAMME_INFO, RemoteShortcutAction.TOGGLE_FAVORITE,
             RemoteShortcutAction.RETURN_TO_LIVE, RemoteShortcutAction.PREVIOUS_CHANNEL, RemoteShortcutAction.PLAY_PAUSE,
         )
     }

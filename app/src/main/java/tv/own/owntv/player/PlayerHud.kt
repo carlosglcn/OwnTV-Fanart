@@ -560,6 +560,8 @@ fun PlayerHud(
             RemoteShortcutAction.OPEN_AUDIO_CONTROLS -> { controlsVisible = true; dialog = HudDialog.AUDIO }
             RemoteShortcutAction.OPEN_ASPECT_CONTROLS -> { controlsVisible = true; dialog = HudDialog.ZOOM }
             RemoteShortcutAction.TOGGLE_PLAYBACK_INFO -> showInfo = !showInfo
+            // glcn: the programme in full (its picture and synopsis); on films and episodes, their own info.
+            RemoteShortcutAction.OPEN_PROGRAMME_INFO -> if (isLive && onProgrammeInfo != null) { controlsVisible = false; onProgrammeInfo() } else showInfo = !showInfo
             // glcn: the SHIELD remote's one-touch actions.
             RemoteShortcutAction.CHANNEL_NEXT -> if (canZap) zap(1)
             RemoteShortcutAction.CHANNEL_PREVIOUS -> if (canZap) zap(-1)
@@ -952,7 +954,7 @@ fun PlayerHud(
                     val barDp = with(androidx.compose.ui.platform.LocalDensity.current) { barHeightPx.toDp() }
                     if (bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.CINE) {
                         liveBannerWide(Modifier.align(Alignment.BottomStart).then(risen).padding(bottom = barDp))
-                        CineChannelTag(player, Modifier.align(Alignment.TopStart).then(risen).padding(start = 56.dp, top = 36.dp))
+                        CineChannelTag(player, streamChips.ifEmpty { listOfNotNull(videoRes) }, Modifier.align(Alignment.TopStart).then(risen).padding(start = 56.dp, top = 36.dp))
                     } else if (bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.LATERAL) {
                         Column(
                             Modifier.align(Alignment.TopStart).then(risen).padding(start = 24.dp, top = 24.dp, bottom = 24.dp)
@@ -1035,7 +1037,7 @@ fun PlayerHud(
                     belowHeader = if (isLive && wideBanner && bannerStyle == tv.own.owntv.glcn.LiveBanner.Style.FICHA) liveBannerWide?.let { b ->
                         {
                             Column {
-                                FichaChannelLine(player)
+                                FichaChannelLine(player, streamChips.ifEmpty { listOfNotNull(videoRes) })
                                 b(Modifier)
                             }
                         }
@@ -1318,23 +1320,29 @@ private const val LATERAL_SHARE = 0.30f
 
 /** glcn: Cine banner — the channel, small, in the top left ("#7  Movistar Plus HD"). */
 @Composable
-private fun CineChannelTag(player: PlaybackEngine, modifier: Modifier = Modifier) {
+private fun CineChannelTag(player: PlaybackEngine, chips: List<String>, modifier: Modifier = Modifier) {
     val meta by player.currentMeta.collectAsStateWithLifecycle()
     val name = meta.title?.takeIf { it.isNotBlank() } ?: return
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        meta.subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, style = tv.own.owntv.ui.theme.stageText(20, 600), color = Color.White.copy(alpha = 0.7f), maxLines = 1) }
-        Text(name, style = tv.own.owntv.ui.theme.stageText(22, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    // glcn: the stream's facts (resolution, Hz, HDR…) under the channel, as the other banner styles show them.
+    Column(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            meta.subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, style = tv.own.owntv.ui.theme.stageText(20, 600), color = Color.White.copy(alpha = 0.7f), maxLines = 1) }
+            Text(name, style = tv.own.owntv.ui.theme.stageText(22, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        StreamChipRow(chips, Color.White, Modifier.padding(top = 6.dp), size = 14)
     }
 }
 
 /** glcn: Ficha banner — the channel, small, over the programme ("#37  WARNERTV"); the controls hold the top line. */
 @Composable
-private fun FichaChannelLine(player: PlaybackEngine) {
+private fun FichaChannelLine(player: PlaybackEngine, chips: List<String>) {
     val meta by player.currentMeta.collectAsStateWithLifecycle()
     val name = meta.title?.takeIf { it.isNotBlank() } ?: return
     Row(Modifier.padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (!meta.logoUrl.isNullOrBlank()) coil3.compose.AsyncImage(model = meta.logoUrl, contentDescription = null, modifier = Modifier.size(width = 40.dp, height = 26.dp))
         meta.subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, style = tv.own.owntv.ui.theme.stageText(18, 600), color = tv.own.owntv.ui.theme.hudInk.copy(alpha = 0.55f), maxLines = 1) }
-        Text(name, style = tv.own.owntv.ui.theme.stageText(19, 700), color = tv.own.owntv.ui.theme.hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(name, style = tv.own.owntv.ui.theme.stageText(19, 700), color = tv.own.owntv.ui.theme.hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        // glcn: the stream's facts on the same line, after the name.
+        StreamChipRow(chips, tv.own.owntv.ui.theme.hudInk, Modifier.padding(start = 6.dp), size = 14)
     }
 }
