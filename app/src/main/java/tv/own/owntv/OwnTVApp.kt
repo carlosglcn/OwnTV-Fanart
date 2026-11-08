@@ -235,7 +235,10 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))
             .build()
         return ImageLoader.Builder(context)
-            .components { add(OkHttpNetworkFetcherFactory(callFactory = { imageHttpClient })) }
+            .components {
+                add(OkHttpNetworkFetcherFactory(callFactory = { imageHttpClient }))
+                add(tv.own.owntv.glcn.LogoMatteInterceptor()) // glcn: channel logos lose a plain white backdrop
+            }
             // glcn: the picture cache grows with the box — a 3 GB box (the SHIELD) keeps twice the fanart and backdrops in
             // memory, so going back to a row or a title shows its pictures at once instead of decoding them again.
             .memoryCache {

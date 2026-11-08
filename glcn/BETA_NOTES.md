@@ -11,3 +11,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📡 Channel logos: a channel your list brings without a logo (a tuner's channels, a brand-new one) now takes the guide's picon instead of the generic TV icon.
 - 🌅 New launch screen: the icon's sunset as a wide landscape with the logo, instead of the icon on black; it fades into the app once it is ready.
 - 🎬 Featured: recently added films you have already watched (or started) no longer appear.
+- 🏷️ Channel logos that come on a plain white square (e.g. La Séptima) lose that backdrop and sit on the tile like the others.
