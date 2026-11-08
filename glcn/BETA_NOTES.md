@@ -12,3 +12,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌅 New launch screen: the icon's sunset as a wide landscape with the logo, instead of the icon on black; it fades into the app once it is ready.
 - 🎬 Featured: recently added films you have already watched (or started) no longer appear.
 - 🏷️ Channel logos that come on a plain white square (e.g. La Séptima) lose that backdrop and sit on the tile like the others.
+- 🎞️ Trailers: a title with no trailer in Spanish or English (a Polish or Korean series…) now gets the one in its own language; titles saved without a trailer are checked again.
