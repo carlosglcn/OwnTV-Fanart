@@ -17,7 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -49,14 +48,12 @@ fun LaunchCurtain(visible: Boolean) {
         Box(Modifier.fillMaxSize().background(LAUNCH_SKY)) {
             Image(
                 painterResource(R.drawable.glcn_launch_backdrop), contentDescription = null,
-                contentScale = ContentScale.Crop, filterQuality = FilterQuality.High,
                 modifier = Modifier.fillMaxSize(),
             )
             // Placed as in the artwork's design (1920 × 1080): the mark a little above the middle,
             // the name over the glow just above the ridges.
             Image(
                 painterResource(R.drawable.glcn_launch_mark), contentDescription = null,
-                filterQuality = FilterQuality.High,
                 modifier = Modifier.align(Alignment.Center).offset(x = 10.mpx, y = (-90).mpx).size(560.mpx),
             )
             Row(Modifier.align(Alignment.TopCenter).padding(top = 690.mpx), horizontalArrangement = Arrangement.Center) {
