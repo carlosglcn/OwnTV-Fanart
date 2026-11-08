@@ -401,6 +401,8 @@ internal fun ZapPreviewPanel(
     showing: Pair<EpgProgrammeEntity, EpgProgrammeEntity?>? = null,
     /** glcn: false where what follows is already listed beside it (the joined schedule). */
     showNext: Boolean = true,
+    /** glcn: false where the channel's own picture already plays beside it (the zap deck's squeeze-back). */
+    picture: Boolean = true,
 ) {
     // glcn: the previous channel's programme goes at once — a stale poster for seconds was worse than none.
     var programme by remember(channel?.id) { mutableStateOf(channel?.let { peek?.invoke(it) }) }
@@ -423,7 +425,7 @@ internal fun ZapPreviewPanel(
         // not cropped into a blurred strip, nor floating faint in a short box.
         val shape = if (framed) 16f / 9f else bareAspect
         val pic = art ?: logo
-        if (pic != null) PreviewPicture(url = pic, logoLike = art == null || art == logo, aspect = shape)
+        if (pic != null && picture) PreviewPicture(url = pic, logoLike = art == null || art == logo, aspect = shape)
         Text(p.title, style = stageText(24, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(
             fmt.format(java.util.Date(p.startMs)) + " – " + fmt.format(java.util.Date(p.stopMs)),
