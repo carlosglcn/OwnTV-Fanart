@@ -87,8 +87,8 @@ open class MainActivity : ComponentActivity() {
      * during backup restore cannot bring the splash back; the foreground gate still refuses to
      * compose the shell until the loaded list and active-id check are valid.
      */
-    @Volatile
-    private var contentReady = false
+    // glcn: Compose state, so the launch curtain (glcn/LaunchCurtain.kt) follows it too.
+    private var contentReady by mutableStateOf(false)
 
     /**
      * Whether the shell has opened where the profile's start-up choice says (the TV Guide, Live TV, the
@@ -96,8 +96,7 @@ open class MainActivity : ComponentActivity() {
      * stays up until then and Home never flashes on the way. Owned by this activity, so a relaunch in a
      * process that is still alive waits again.
      */
-    @Volatile
-    private var startupSettled = false
+    private var startupSettled by mutableStateOf(false)
 
     private val player: tv.own.owntv.player.OwnTVPlayer by inject()
     private val engines: tv.own.owntv.player.PlaybackEngines by inject()
@@ -256,15 +255,9 @@ open class MainActivity : ComponentActivity() {
         // it is leaving the app, and a channel from a category the PIN opened stops there too.
         addOnPictureInPictureModeChangedListener { if (it.isInPictureInPictureMode) shellViewModel.relockCategories() }
         visibility.addListener(onVisibility)
-        val splashDeadline = SystemClock.uptimeMillis() + SPLASH_TIMEOUT_MS
-        var readyAt = 0L
-        splash.setKeepOnScreenCondition {
-            val now = SystemClock.uptimeMillis()
-            if (!contentReady) return@setKeepOnScreenCondition now < splashDeadline
-            if (readyAt == 0L) readyAt = now
-            // Then until the shell is on the start-up screen, so Home does not flash first.
-            !startupSettled && now < readyAt + STARTUP_SETTLE_TIMEOUT_MS
-        }
+        // glcn: Android's icon splash only until the first frame; from there the launch curtain covers
+        // the app (same rules: until the start-up screen is settled, within the same time limits).
+        splash.setKeepOnScreenCondition { false }
         pendingDeepLink = LauncherDeepLink.parse(intent.data)
         Log.d(TAG, "onCreate deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}")
         // glcn: what a paired phone asks this TV to play arrives as a link, like a launcher tile's.
@@ -347,7 +340,7 @@ open class MainActivity : ComponentActivity() {
         }
         // glcn: how the screen keeps up, to suggest light mode once if it stutters again and again.
         tv.own.owntv.glcn.JankWatch.install(this)
-        setContent {
+        setContent { Box(Modifier.fillMaxSize()) {
             // First composition pass — splits "process start → Compose is running" from
             // "Compose is running → the destination's data arrived".
             // Deliberately a Unit-returning remember: the point is the side effect happening DURING
@@ -657,7 +650,13 @@ open class MainActivity : ComponentActivity() {
                     } // end LocalizedContent
                 }
             }
-        }
+            // glcn: the launch screen over everything until the start-up screen is in place — as long
+            // as the system splash used to stay, and no longer (a slow start shows the app, not a wall).
+            var curtainTimedOut by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) { kotlinx.coroutines.delay(SPLASH_TIMEOUT_MS); if (!contentReady) curtainTimedOut = true }
+            LaunchedEffect(contentReady) { if (contentReady) { kotlinx.coroutines.delay(STARTUP_SETTLE_TIMEOUT_MS); curtainTimedOut = true } }
+            tv.own.owntv.glcn.LaunchCurtain(visible = !curtainTimedOut && !(contentReady && startupSettled))
+        } }
     }
 }
 

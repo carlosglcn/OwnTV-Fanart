@@ -39,6 +39,8 @@
         <item name="windowSplashScreenAnimatedIcon">@drawable/owntv_splash_static_board</item>
     </style>
     <style name="Theme.OwnTV.Starting.Eggshell">
+        <!-- glcn: the night sky of the launch screen (glcn/LaunchCurtain.kt), so the hand-off does not flash. -->
+        <item name="windowSplashScreenBackground">@color/glcn_launch_sky</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/owntv_splash_static_eggshell</item>
     </style>
     <style name="Theme.OwnTV.Starting.Olive">
