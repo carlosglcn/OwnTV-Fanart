@@ -241,7 +241,6 @@ fun ZapDeck(
     // glcn: the picture's place is fixed — half the screen's width, up on the right — and set once: it never follows
     // the list's columns (folding groups, the schedule…), because every resize of a playing picture costs the box a
     // stutter. The programme is told under it, the groups open over the channels instead of pushing them.
-    val density = LocalDensity.current
     val pictureMargin = with(density) { 56.mpx.toPx() }
     val pictureTop = with(density) { 64.mpx.toPx() }
     val pictureLocal = remember(deckBox.width, deckBox.height) {
