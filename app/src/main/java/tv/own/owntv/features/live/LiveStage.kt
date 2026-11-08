@@ -569,6 +569,8 @@ private const val LATER_CARD_RATIO = 2.1f
 internal val edgeScrollSpec = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
     override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float> get() = tv.own.owntv.glcn.SmoothScroll.animation
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        // glcn: a held ▲/▼ turns the list itself (ListWheel); focus only follows, so it must not scroll too.
+        if (tv.own.owntv.glcn.ListWheel.active) return 0f
         // One row of room kept ahead of the highlight, so the next row is already laid out: a held
         // ▲/▼ otherwise outran the list at the edge and stopped.
         val room = size.coerceAtMost((containerSize - size).coerceAtLeast(0f) / 2f)

@@ -14,3 +14,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏷️ Channel logos that come on a plain white square (e.g. La Séptima) lose that backdrop and sit on the tile like the others.
 - 🎞️ Trailers: a title with no trailer in Spanish or English (a Polish or Korean series…) now gets the one in its own language; titles saved without a trailer are checked again.
 - 💬 Full-screen trailers in another language (English, Polish…) play with Spanish subtitles when the video has them; Spanish ones play clean.
+- 🎡 Live TV: holding ▲/▼ turns the channel list like a wheel — it glides on the screen's frames, speeds up gently while held, the highlight stays put and the rows slide under it; let go and it rolls on to the next channel and settles.

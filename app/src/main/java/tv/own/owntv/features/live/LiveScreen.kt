@@ -359,6 +359,12 @@ fun LiveScreen(
             stepTarget = null
         }
     }
+    // glcn: a held ▲/▼ turns the list like a wheel (see ListWheel): smooth, on the screen's frames.
+    val channelCount = androidx.compose.runtime.rememberUpdatedState(channels.itemCount)
+    val wheel = remember(effectiveListState) {
+        tv.own.owntv.glcn.ListWheel(effectiveListState, scope, { channelCount.value }) { i -> runCatching { rowFocus(i).requestFocus() } }
+    }
+    androidx.compose.runtime.DisposableEffect(wheel) { onDispose { wheel.stop() } }
     // glcn: the held scroll bar's jump of ten — one smooth glide of the list (no snap to the row), then the focus.
     fun glideTo(i: Int, from: Int) {
         stepTarget = i
@@ -1146,7 +1152,17 @@ fun LiveScreen(
                                         selectedId = if (isTarget) channel.id else null, selectedFocus = selFocus,
                                         firstItemFocus = firstItemFocus,
                                     ).focusRequester(rowFocus(index)).onPreviewKeyEvent { e ->
+                                        val upDown = e.key == androidx.compose.ui.input.key.Key.DirectionDown || e.key == androidx.compose.ui.input.key.Key.DirectionUp
+                                        // glcn: letting go of a held ▲/▼ lets the wheel roll on to its row and stop.
+                                        if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyUp && upDown && wheel.turning) { wheel.release(); return@onPreviewKeyEvent true }
                                         if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                        if (upDown && !barHeld) {
+                                            val dir = if (e.key == androidx.compose.ui.input.key.Key.DirectionDown) 1 else -1
+                                            // Held: the wheel takes over from the key's repeats.
+                                            if (e.nativeKeyEvent.repeatCount > 0) { wheel.hold(dir, stepTarget ?: index); return@onPreviewKeyEvent true }
+                                            // A fresh press while it still rolls: stop it there and step as usual.
+                                            if (wheel.turning) wheel.stop()
+                                        }
                                         when (e.key) {
                                             // The remote's Menu key opens the same menu as holding OK.
                                             androidx.compose.ui.input.key.Key.Info -> { synopsisChannel = channel; true }
