@@ -499,6 +499,8 @@ object InfoStage {
      * really laid out when known, else as the screen lays it out at 1920 × 1080 (end 96, top 150, 420 × 236).
      */
     fun windowRect(w: Float, h: Float, origin: androidx.compose.ui.geometry.Offset = androidx.compose.ui.geometry.Offset.Zero): androidx.compose.ui.geometry.Rect {
+        // glcn: the zap deck's squeeze-back takes the same road for the picture, to its own place.
+        if (!liveWindow && ZapStage.liveWindow) return ZapStage.rect(origin) ?: androidx.compose.ui.geometry.Rect(0f, 0f, w, h)
         frame?.let { return it.translate(-origin.x, -origin.y) }
         val sx = w / 1920f
         val sy = h / 1080f

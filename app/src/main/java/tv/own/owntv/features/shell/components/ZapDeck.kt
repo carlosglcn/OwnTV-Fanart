@@ -1,5 +1,8 @@
 package tv.own.owntv.features.shell.components
 
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import tv.own.owntv.glcn.groupGlyph
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
@@ -223,12 +226,48 @@ fun ZapDeck(
     val groupsW = groupsOpen + (groupsFolded - groupsOpen) * fold
     val programmeW = tv.own.owntv.glcn.DeckWidths.width(widths.programme) + (groupsOpen - groupsFolded) * fold
     val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
+    // glcn: squeeze-back — the picture shrinks into the free space right of the list (ZapStage) and the list stands
+    // on a plain page beside it: nothing covers the picture, and nothing behind the words can make them hard to read.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        tv.own.owntv.glcn.ZapStage.liveWindow = true
+        onDispose { tv.own.owntv.glcn.ZapStage.liveWindow = false; tv.own.owntv.glcn.ZapStage.frame = null }
+    }
+    var deckBox by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
+    var deckRight by remember { mutableStateOf(0f) }
+    val pictureGap = with(LocalDensity.current) { 28.mpx.toPx() }
+    val pictureMargin = with(LocalDensity.current) { 56.mpx.toPx() }
+    LaunchedEffect(deckBox, deckRight) {
+        if (deckBox.width > 0f && deckRight > 0f) tv.own.owntv.glcn.ZapStage.frame = tv.own.owntv.glcn.ZapStage.fit(
+            left = deckRight + pictureGap, right = deckBox.right - pictureMargin,
+            top = deckBox.top + pictureMargin, bottom = deckBox.bottom - pictureMargin,
+        )
+    }
+    val pictureRadius = with(LocalDensity.current) { 18.mpx.toPx() }
     Box(
         modifier
             .fillMaxSize()
+            .onGloballyPositioned { deckBox = it.boundsInWindow() }
             .okAfterFreshPress()
-            .graphicsLayer { alpha = enter.value }
-            .gradientWash(false, 0f to shade.copy(alpha = 0.78f), 0.55f to shade.copy(alpha = 0.5f), 0.85f to Color.Transparent)
+            .graphicsLayer { alpha = enter.value; compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+            .drawWithContent {
+                // The page, with a hole where the picture is on its way to (or sits in) its place.
+                drawRect(shade)
+                val p = tv.own.owntv.glcn.ZapStage.progress
+                val f = tv.own.owntv.glcn.ZapStage.frame
+                if (f != null) {
+                    val r = f.translate(-deckBox.left, -deckBox.top)
+                    val left = r.left * p
+                    val top = r.top * p
+                    val w = size.width + (r.width - size.width) * p
+                    val h = size.height + (r.height - size.height) * p
+                    drawRoundRect(
+                        Color.Black, topLeft = androidx.compose.ui.geometry.Offset(left, top), size = androidx.compose.ui.geometry.Size(w, h),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(pictureRadius * p),
+                        blendMode = androidx.compose.ui.graphics.BlendMode.Clear,
+                    )
+                } else drawRect(Color.Black, blendMode = androidx.compose.ui.graphics.BlendMode.Clear)
+                drawContent()
+            }
             .focusRequester(focus)
             .focusable()
             .onPreviewKeyEvent { e ->
@@ -293,6 +332,7 @@ fun ZapDeck(
     ) {
         Row(
             Modifier
+                .onGloballyPositioned { deckRight = it.boundsInWindow().right }
                 .graphicsLayer { translationX = (1f - enter.value) * -slidePx }
                 .align(Alignment.CenterStart)
                 .padding(horizontal = 14.mpx, vertical = 8.mpx)

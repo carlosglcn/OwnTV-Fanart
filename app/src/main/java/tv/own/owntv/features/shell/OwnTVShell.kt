@@ -2179,14 +2179,14 @@ fun OwnTVShell(
             if (liveOnExo) {
                 // glcn: the programme info screen shows the channel in a small window up on the right.
                 val infoShift by androidx.compose.animation.core.animateFloatAsState(
-                    if (isFull && !inPip && tv.own.owntv.glcn.InfoStage.liveWindow) 1f else 0f,
+                    if (isFull && !inPip && (tv.own.owntv.glcn.InfoStage.liveWindow || tv.own.owntv.glcn.ZapStage.liveWindow)) 1f else 0f,
                     androidx.compose.animation.core.tween(
                         if (tv.own.owntv.glcn.DeviceClass.richMotion) INFO_SHIFT_MS else 0,
                         easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f), // glcn: the cinema panel's curve
                     ),
                     label = "infoShift",
                 )
-                androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.InfoStage.progress = infoShift }
+                androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.InfoStage.progress = infoShift; tv.own.owntv.glcn.ZapStage.progress = infoShift }
                 tv.own.owntv.player.ExoPreviewSurface(
                     engine = liveVm.previewEngine, modifier = Modifier.fillMaxSize().infoWindow(infoShift),
                     keepAwake = true, autoFrameRate = isFull && !inPip && autoFrameRateLive, holdLastFrame = isFull && !inPip,
@@ -2199,14 +2199,14 @@ fun OwnTVShell(
                     label = "cinemaShift",
                 )
                 val infoShiftMpv by androidx.compose.animation.core.animateFloatAsState(
-                    if (isFull && !inPip && tv.own.owntv.glcn.InfoStage.liveWindow) 1f else 0f,
+                    if (isFull && !inPip && (tv.own.owntv.glcn.InfoStage.liveWindow || tv.own.owntv.glcn.ZapStage.liveWindow)) 1f else 0f,
                     androidx.compose.animation.core.tween(
                         if (tv.own.owntv.glcn.DeviceClass.richMotion) INFO_SHIFT_MS else 0,
                         easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f), // glcn: the cinema panel's curve
                     ),
                     label = "infoShiftMpv",
                 )
-                androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.InfoStage.progress = infoShiftMpv }
+                androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.InfoStage.progress = infoShiftMpv; tv.own.owntv.glcn.ZapStage.progress = infoShiftMpv }
                 MpvVideoSurface(
                     player = player, modifier = Modifier.fillMaxSize().cinemaInset(cinemaShift).infoWindow(infoShiftMpv),
                     autoFrameRateFilms = isFull && !inPip && autoFrameRateFilms,
