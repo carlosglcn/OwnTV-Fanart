@@ -139,13 +139,17 @@ private fun TrailerPlayerContent(videoKey: String, title: String?, onExit: () ->
         return
     }
 
-    val playerOptions = remember(context) {
+    // glcn: a trailer in another language than the viewer's (a Polish series, an English film) plays with
+    // subtitles in the viewer's language when the video has them; one in their own language plays clean.
+    val subtitles = remember(videoKey) { tv.own.owntv.core.metadata.TrailerKeys.wantsSubtitles(videoKey, keys.first()) }
+    val playerOptions = remember(context, subtitles) {
         IFramePlayerOptions.Builder(context)
             .controls(0)
             .fullscreen(0)
             .rel(0)
             .ivLoadPolicy(3)
-            .ccLoadPolicy(0)
+            .ccLoadPolicy(if (subtitles) 1 else 0)
+            .apply { if (subtitles) langPref(java.util.Locale.getDefault().language) }
             .build()
     }
 

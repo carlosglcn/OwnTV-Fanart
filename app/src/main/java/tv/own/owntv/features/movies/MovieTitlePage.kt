@@ -229,7 +229,7 @@ internal fun MovieTitlePage(
                         modifier = Modifier.onFocusChanged { if (it.isFocused) focusedLabel = label },
                     )
                     if (resume) roundButton(stringResource(R.string.glcn_title_start_over), OwnTVIcon.REWIND) { playChosen(0L) }
-                    meta?.trailerKey?.let { stored -> roundButton(stringResource(R.string.glcn_dock_trailer), OwnTVIcon.VIDEO) { fullTrailer = trailerKeysFirst(stored) } }
+                    meta?.trailerKey?.let { stored -> roundButton(stringResource(R.string.glcn_dock_trailer), OwnTVIcon.VIDEO) { fullTrailer = stored } }
                     // glcn: the trailer's sound, for remotes whose volume never reaches the box (a TV's own, by HDMI).
                     if (meta?.trailerKey != null) roundButton(
                         stringResource(if (tv.own.owntv.features.home.CinemaTrailer.sound) R.string.glcn_trailer_sound_off else R.string.glcn_trailer_sound_on),
