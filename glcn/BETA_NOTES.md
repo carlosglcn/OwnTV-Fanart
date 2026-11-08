@@ -20,3 +20,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 Player channel list (◀ while watching): the picture slides aside and shrinks into the space beside the list, still playing — nothing covers it any more.
 - 🔑 Emby/Jellyfin: the app keeps its sign-in across restarts, so the server no longer lists a new login every time the app opens.
 - 🧹 Keep watching: a film or show you take out stays out, even if your Emby/Jellyfin server still has it half-watched (it comes back if you watch it again).
+- 🛠️ Fixed a crash while watching live TV: the channel list's programme read could run past the end of a list that had just changed group.

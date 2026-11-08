@@ -175,7 +175,10 @@ fun ZapDeck(
     // What is on: the rows around the cursor, read once the cursor rests.
     LaunchedEffect(listVersion, chIdx / 12, list.size) {
         delay(120)
-        val window = list.subList((chIdx - 30).coerceAtLeast(0), (chIdx + 31).coerceAtMost(list.size)).filter { it.id !in nowMap }
+        // glcn: read once, then clamped — the list may have changed group in the 120 ms (a crash: fromIndex past its end).
+        val rows = list
+        val at = chIdx.coerceIn(0, (rows.size - 1).coerceAtLeast(0))
+        val window = rows.subList((at - 30).coerceAtLeast(0), (at + 31).coerceAtMost(rows.size)).filter { it.id !in nowMap }
         if (window.isNotEmpty()) {
             val got = runCatching { loadNowMany(window) }.getOrDefault(emptyMap())
             if (got.isNotEmpty()) nowMap = nowMap + got

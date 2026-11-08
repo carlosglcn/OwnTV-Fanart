@@ -92,7 +92,8 @@ fun ZapPosterOverlay(
     // A window of pictures around what is on screen, once per stop.
     LaunchedEffect(channels) {
         snapshotFlow { listState.firstVisibleItemIndex }.collect { at ->
-            val window = channels.subList((at - 2).coerceAtLeast(0), (at + 10).coerceAtMost(channels.size))
+            val from = (at - 2).coerceIn(0, channels.size) // glcn: never past the end (a stale index after the list changed)
+            val window = channels.subList(from, (at + 10).coerceIn(from, channels.size))
                 .filter { it.id !in programmes }
             if (window.isEmpty()) return@collect
             val got = runCatching { loadNow(window) }.getOrDefault(emptyMap())
