@@ -16,3 +16,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 💬 Full-screen trailers in another language (English, Polish…) play with Spanish subtitles when the video has them; Spanish ones play clean.
 - 🎡 Live TV: holding ▲/▼ turns the channel list like a wheel — it glides on the screen's frames, speeds up gently while held, the highlight stays put and the rows slide under it; let go and it rolls on to the next channel and settles.
 - 🖼️ Programme info (ⓘ): the live picture now sits exactly in its frame with any UI zoom or safe area (it drifted off on some TVs).
+- ✂️ Player bar: the channel's facts (1080p, fps, Mbps…) show only as whole chips — those that do not fit are left out instead of cut — and the programme beside takes at most about half the row.

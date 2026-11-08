@@ -214,21 +214,38 @@ internal fun LiveChannelHeader(player: PlaybackEngine, chips: List<String>, onBa
 internal fun StreamChipRow(chips: List<String>, ink: Color, modifier: Modifier = Modifier, size: Int = 15) {
     val shown = chips.filterNot { it.contains(':') || it == "MPV" || it == "EXO" }
     if (shown.isEmpty()) return
-    // glcn: one low line of small chips (they used to wrap to a second line and lift the whole bar).
-    Row(
-        modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        shown.forEach { label ->
-            Text(
-                label,
-                style = tv.own.owntv.ui.theme.stageText(size, 700),
-                color = ink.copy(alpha = 0.85f),
-                fontWeight = FontWeight.SemiBold,
-                // One line each: squeezed, a chip clips instead of stacking its letters.
-                maxLines = 1, softWrap = false,
-                modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(ink.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 2.dp),
-            )
+    // glcn: one low line of small chips (they used to wrap to a second line and lift the whole bar). Only whole
+    // chips: those that do not fit are left out, from the end, instead of being cut through the middle.
+    androidx.compose.ui.layout.Layout(
+        content = {
+            shown.forEach { label ->
+                Text(
+                    label,
+                    style = tv.own.owntv.ui.theme.stageText(size, 700),
+                    color = ink.copy(alpha = 0.85f),
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, softWrap = false,
+                    modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(ink.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 2.dp),
+                )
+            }
+        },
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val gap = 6.dp.roundToPx()
+        val loose = constraints.copy(minWidth = 0, maxWidth = androidx.compose.ui.unit.Constraints.Infinity)
+        val placeables = measurables.map { it.measure(loose) }
+        val room = if (constraints.hasBoundedWidth) constraints.maxWidth else Int.MAX_VALUE
+        var used = 0
+        val kept = ArrayList<androidx.compose.ui.layout.Placeable>()
+        for (pl in placeables) {
+            val need = (if (kept.isEmpty()) 0 else gap) + pl.width
+            if (used + need > room) break
+            kept += pl; used += need
+        }
+        val height = kept.maxOfOrNull { it.height } ?: 0
+        layout(used, height) {
+            var x = 0
+            kept.forEach { pl -> pl.place(x, (height - pl.height) / 2); x += pl.width + gap }
         }
     }
 }
@@ -666,10 +683,15 @@ internal fun BottomBar(
             // glcn: live TV — the channel on the left, the programme on air with its picture on the right,
             // then every control in one full-width row below.
             if (side != null) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { header() }
-                    Spacer(Modifier.width(18.dp))
-                    Box(Modifier.widthIn(max = 540.dp)) { side() }
+                // glcn: the programme beside never takes more than about half the row, so the channel's name and its
+                // facts keep room (on a narrower screen or a bigger zoom they were cut through).
+                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val sideMax = minOf(540.dp, maxWidth * 0.46f)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { header() }
+                        Spacer(Modifier.width(18.dp))
+                        Box(Modifier.widthIn(max = sideMax)) { side() }
+                    }
                 }
             } else header()
             // glcn: on a channel with an archive the timeline below takes this line's place — no extra row.
