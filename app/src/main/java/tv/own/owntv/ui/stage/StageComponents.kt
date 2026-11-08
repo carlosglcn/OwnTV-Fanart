@@ -233,7 +233,8 @@ fun StageSurface(
     content: @Composable BoxScope.(focused: Boolean) -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val real = interaction.collectIsFocusedAsState().value
+    // glcn: while a list turns like a wheel, its highlight stands in for the row that keeps focus (ListWheel).
+    val real = interaction.collectIsFocusedAsState().value && !tv.own.owntv.glcn.LocalQuietFocus.current
     val focused = real || highlighted
     val palette = LocalStagePalette.current
     // glcn: inside a list or menu with a sliding focus box, the item leaves the focus drawing to it.

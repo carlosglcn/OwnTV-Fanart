@@ -1,5 +1,8 @@
 package tv.own.owntv.features.live
 
+import tv.own.owntv.ui.stage.drawStageFocus
+import androidx.compose.ui.graphics.drawscope.inset
+import androidx.compose.ui.draw.drawBehind
 import coil3.request.allowHardware
 import coil3.request.transformations
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -1098,7 +1101,12 @@ fun LiveScreen(
                     // and then slid the whole list back under it — a double step.
                     // glcn: the first rows of a category arrive one after another; later ones are just there.
                     val rowsGate = tv.own.owntv.glcn.rememberStaggerGate(selectedKey)
-                    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
+                    val lensAccent = tv.own.owntv.ui.theme.stageAccent
+                    val lensPalette = tv.own.owntv.ui.theme.LocalStagePalette.current
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec,
+                        tv.own.owntv.glcn.LocalQuietFocus provides wheel.turning,
+                    ) {
                     LazyColumn(
                         state = effectiveListState,
                         verticalArrangement = Arrangement.spacedBy(8.mpx),
@@ -1110,12 +1118,20 @@ fun LiveScreen(
                                 ),
                             )
                             layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(-extra, 0) }
+                        }.drawBehind {
+                            // glcn: the wheel's highlight, still while the rows slide through it (ListWheel).
+                            if (wheel.turning && wheel.lensHeight > 0f) {
+                                val side = glowRoom.toPx()
+                                inset(side, wheel.lensTop, side, size.height - wheel.lensTop - wheel.lensHeight) {
+                                    drawStageFocus(tv.own.owntv.ui.stage.StageFocus.FX, tv.own.owntv.ui.theme.StageRadii.Row, lensAccent, lensPalette)
+                                }
+                            }
                         }.fastScrollbar(
                             effectiveListState, channels.itemCount, endInset = glowRoom, bottomInset = 48.mpx,
                             resting = { if (channelPaneFocused) 0.45f else 0f },
                             held = { barHeld && channelPaneFocused },
                             // glcn: the bubble names the focused channel by its number (or its place in the list).
-                            label = { (stepTarget ?: focusedRow).let { i -> channels.peek(i)?.number?.toString() ?: (i + 1).toString() } },
+                            label = { (wheel.row ?: stepTarget ?: focusedRow).let { i -> channels.peek(i)?.number?.toString() ?: (i + 1).toString() } },
                         ),
                         // glcn: room at the foot so the last row never sits on the edge of the TV (overscan).
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(start = glowRoom, end = glowRoom, bottom = 48.mpx),
@@ -1160,8 +1176,8 @@ fun LiveScreen(
                                             val dir = if (e.key == androidx.compose.ui.input.key.Key.DirectionDown) 1 else -1
                                             // Held: the wheel takes over from the key's repeats.
                                             if (e.nativeKeyEvent.repeatCount > 0) { wheel.hold(dir, stepTarget ?: index); return@onPreviewKeyEvent true }
-                                            // A fresh press while it still rolls: stop it there and step as usual.
-                                            if (wheel.turning) wheel.stop()
+                                            // A fresh press while it still rolls: it settles on its row first.
+                                            if (wheel.turning) { wheel.release(); return@onPreviewKeyEvent true }
                                         }
                                         when (e.key) {
                                             // The remote's Menu key opens the same menu as holding OK.
