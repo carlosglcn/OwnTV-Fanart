@@ -720,14 +720,36 @@ fun LiveScreen(
                 val tint by androidx.compose.animation.animateColorAsState(tone ?: androidx.compose.ui.graphics.Color.Transparent, tv.own.owntv.ui.theme.ownTvTween(400), label = "fichaTint")
                 val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
                 val roomTop = 120.mpx + stageW * tv.own.owntv.glcn.LivePaneLayout.FICHA_VIDEO_W * 9f / 16f
+                // glcn: inside its frame the panel holds the programme's picture too, softly blurred and dimmed — the
+                // frame keeps it apart from the wallpaper, so it reads as the programme, not as a muddy patch.
+                val ctx = androidx.compose.ui.platform.LocalContext.current
+                val soft = androidx.compose.runtime.remember(backdrop) {
+                    backdrop?.let {
+                        coil3.request.ImageRequest.Builder(ctx).data(it).size(160, 90)
+                            .precision(coil3.size.Precision.EXACT)
+                            .memoryCacheKey("$backdrop#soft160b")
+                            .allowHardware(false).transformations(tv.own.owntv.glcn.SoftBlur()).build()
+                    }
+                }
+                val panelShape = androidx.compose.foundation.shape.RoundedCornerShape(26.mpx)
                 Box(
                     Modifier.align(Alignment.BottomEnd).padding(end = (margin - 14.mpx).coerceAtLeast(0.dp), bottom = 14.mpx)
                         .width(stageW + 14.mpx).height((maxHeight - roomTop - 4.mpx).coerceAtLeast(1.dp))
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(26.mpx))
-                        .background(if (light) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.62f) else androidx.compose.ui.graphics.Color(0xFF070A12).copy(alpha = 0.58f))
-                        .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(tint.copy(alpha = if (light) 0.16f else 0.32f), androidx.compose.ui.graphics.Color.Transparent)))
-                        .then(Modifier.border(1.mpx, (if (light) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White).copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(26.mpx))),
-                )
+                        .clip(panelShape),
+                ) {
+                    if (soft != null) coil3.compose.AsyncImage(
+                        model = soft, contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    Box(
+                        Modifier.fillMaxSize()
+                            .background(if (light) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.62f) else androidx.compose.ui.graphics.Color(0xFF070A12).copy(alpha = 0.58f))
+                            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(tint.copy(alpha = if (light) 0.16f else 0.32f), androidx.compose.ui.graphics.Color.Transparent)))
+                            .border(1.mpx, (if (light) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White).copy(alpha = 0.08f), panelShape),
+                    )
+                }
             } else if (backdrop != null && tv.own.owntv.glcn.LivePaneLayout.FICHA) {
                 // glcn: Ficha — the programme's picture only behind the text under the video, softly blurred (a small
                 // copy scaled up) and dimmed into the page at its edges, so the words over it read at a glance.

@@ -7,3 +7,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 Cine and Ficha banners: the stream's facts (resolution, Hz, HDR…) are shown next to the channel, as in the other styles.
 - 🖼️ Cine banner: the programme's picture beside the title.
 - 🎮 Remote shortcuts: new "Programme info" action — opens the programme on air in full (picture, synopsis, what follows) with one button.
+- 🖼️ Live TV, Ficha layout: with a wallpaper, photo or gradient as background, the programme picture now shows inside the panel behind the text (blurred and dimmed).
