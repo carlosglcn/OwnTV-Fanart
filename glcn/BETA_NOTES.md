@@ -15,3 +15,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ Trailers: a title with no trailer in Spanish or English (a Polish or Korean series…) now gets the one in its own language; titles saved without a trailer are checked again.
 - 💬 Full-screen trailers in another language (English, Polish…) play with Spanish subtitles when the video has them; Spanish ones play clean.
 - 🎡 Live TV: holding ▲/▼ turns the channel list like a wheel — it glides on the screen's frames, speeds up gently while held, the highlight stays put and the rows slide under it; let go and it rolls on to the next channel and settles.
+- 🖼️ Programme info (ⓘ): the live picture now sits exactly in its frame with any UI zoom or safe area (it drifted off on some TVs).

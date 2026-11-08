@@ -1,5 +1,8 @@
 package tv.own.owntv.glcn
 
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import kotlinx.coroutines.launch
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.key
@@ -251,8 +254,10 @@ fun ProgrammeInfoScreen(
         )
         // glcn: the backdrop, with a window cut in it up on the right where the channel goes on playing.
         val windowRadius = 18.mpx
+        var holeOrigin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
         Box(
             Modifier.fillMaxSize()
+                .onGloballyPositioned { holeOrigin = it.positionInWindow() }
                 .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
                 // glcn: the backdrop comes up as the picture shrinks, and the window follows the picture all the way —
                 // the TV seems to fold itself into its place on the right instead of jumping there.
@@ -260,7 +265,7 @@ fun ProgrammeInfoScreen(
                 .drawWithContent {
                     drawContent()
                     val p = InfoStage.progress
-                    val r = InfoStage.windowRect(size.width, size.height)
+                    val r = InfoStage.windowRect(size.width, size.height, holeOrigin)
                     val left = r.left * p
                     val top = r.top * p
                     val w = size.width + (r.width - size.width) * p
@@ -287,6 +292,9 @@ fun ProgrammeInfoScreen(
         // A fine frame round the window, and the word "Live" on it.
         Box(
             Modifier.align(Alignment.TopEnd).padding(end = 96.mpx, top = WINDOW_TOP).width(WINDOW_W).height(WINDOW_H)
+                // glcn: where the frame really is on screen (before its slide), so the picture and the hole follow it
+                // whatever the UI zoom or the safe area — they were worked out for 1920 × 1080 and drifted otherwise.
+                .onGloballyPositioned { InfoStage.frame = it.boundsInWindow() }
                 .then(slideInRight)
                 .border(1.5.mpx, Ink.copy(alpha = 0.22f), RoundedCornerShape(windowRadius)),
         ) {
@@ -483,8 +491,15 @@ object InfoStage {
     /** glcn: how far the picture has shrunk into the window (0 full screen → 1 in the window), set by the shell. */
     var progress by mutableStateOf(0f)
 
-    /** The window in a [w] × [h] screen, as the screen lays it out at 1920 × 1080 (end 96, top 150, 420 × 236). */
-    fun windowRect(w: Float, h: Float): androidx.compose.ui.geometry.Rect {
+    /** glcn: the frame round the window as laid out, in window coordinates; null until it is. */
+    var frame by mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+
+    /**
+     * The window in a [w] × [h] box whose top-left corner is at [origin] in the window: the frame as it was
+     * really laid out when known, else as the screen lays it out at 1920 × 1080 (end 96, top 150, 420 × 236).
+     */
+    fun windowRect(w: Float, h: Float, origin: androidx.compose.ui.geometry.Offset = androidx.compose.ui.geometry.Offset.Zero): androidx.compose.ui.geometry.Rect {
+        frame?.let { return it.translate(-origin.x, -origin.y) }
         val sx = w / 1920f
         val sy = h / 1080f
         val left = (1920f - 96f - 420f) * sx

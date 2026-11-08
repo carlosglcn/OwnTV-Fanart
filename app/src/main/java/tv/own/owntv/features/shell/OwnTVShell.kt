@@ -1,5 +1,8 @@
 package tv.own.owntv.features.shell
 
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -3020,6 +3023,9 @@ private fun cinemaJsonList(json: String?): List<String> {
     }.getOrDefault(emptyList())
 }
 
+/** glcn: the video box's top-left corner on screen while it moves into the info window (see infoWindow). */
+private var infoSurfaceOrigin = androidx.compose.ui.geometry.Offset.Zero
+
 /** glcn: how long the film takes to slide aside for the cinema panel. */
 private const val CINEMA_SHIFT_MS = 380
 /** glcn: the picture folding into the programme info's window — long enough to be seen, eased to land softly. */
@@ -3031,10 +3037,13 @@ private const val INFO_SHIFT_MS = 420
  * follows its layout box but not a drawing transform.
  */
 /** glcn: the picture moved into the programme info screen's live window ([tv.own.owntv.glcn.InfoStage]) as [p] goes 0 → 1. */
-private fun Modifier.infoWindow(p: Float): Modifier = if (p <= 0f) this else this.layout { measurable, constraints ->
+private fun Modifier.infoWindow(p: Float): Modifier = if (p <= 0f) this else this
+    // glcn: where this box sits on screen, so the measured frame of the info screen lands in its own terms.
+    .onGloballyPositioned { infoSurfaceOrigin = it.positionInWindow() }
+    .layout { measurable, constraints ->
     val fullW = constraints.maxWidth
     val fullH = constraints.maxHeight
-    val r = tv.own.owntv.glcn.InfoStage.windowRect(fullW.toFloat(), fullH.toFloat())
+    val r = tv.own.owntv.glcn.InfoStage.windowRect(fullW.toFloat(), fullH.toFloat(), infoSurfaceOrigin)
     val w = (fullW + (r.width - fullW) * p).toInt()
     val h = (fullH + (r.height - fullH) * p).toInt()
     val x = (r.left * p).toInt()
