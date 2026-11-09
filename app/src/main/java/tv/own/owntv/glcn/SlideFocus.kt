@@ -59,9 +59,24 @@ class SlideFocusState {
     var damping = 1f
     /** glcn: the box stretches as it goes — its leading edge gets there first, the trailing one follows (menu bars). */
     var stretch = false
+    /** glcn: the box came over from another host: it shows at once (no fade in) while it glides in. */
+    var arrived = false
 }
 
 val LocalSlideFocus = compositionLocalOf<SlideFocusState?> { null }
+
+/**
+ * glcn: where the last sliding box on screen was drawn, and when — across all hosts. When focus jumps from one list
+ * or menu to another (the top bar to a row, a menu to its page) the new host's box sets off from there, so one box
+ * seems to travel between them instead of one going out and another coming on.
+ */
+object SlideFocusTrail {
+    var rect: Rect = Rect.Zero
+    var at: Long = 0L
+    /** A jump older than this starts in place, as before (a screen just opened, a dialog closed…). */
+    const val FRESH_MS = 350L
+    fun fresh(): Rect? = rect.takeIf { it != Rect.Zero && android.os.SystemClock.uptimeMillis() - at < FRESH_MS }
+}
 
 /** Wraps a list or a menu: draws the sliding box behind [content] and tells its items to leave focus drawing to it. */
 @Composable
@@ -74,7 +89,9 @@ fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, stret
     val palette = LocalStagePalette.current
     val on = st.current != null
     val fade = ownTvTween<Float>(140)
-    LaunchedEffect(on) { st.alpha.animateTo(if (on) 1f else 0f, fade) }
+    LaunchedEffect(on) {
+        if (on && st.arrived) { st.arrived = false; st.alpha.snapTo(1f) } else st.alpha.animateTo(if (on) 1f else 0f, fade)
+    }
     Box(modifier) {
         Canvas(Modifier.matchParentSize().onGloballyPositioned { st.origin = it.positionInWindow() }) {
             val a = st.alpha.value
@@ -99,6 +116,7 @@ fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, stret
                 l = left - st.origin.x; t = top - st.origin.y; w = rightEdge - left; h = bottom - top
             }
             st.drawn = Rect(l + st.origin.x, t + st.origin.y, l + st.origin.x + w, t + st.origin.y + h)
+            if (a > 0.5f && st.current != null) { SlideFocusTrail.rect = st.drawn; SlideFocusTrail.at = android.os.SystemClock.uptimeMillis() }
             inset(l, t, size.width - l - w, size.height - t - h) {
                 drawAtAlpha(a, Rect(-SLIDE_GLOW_ROOM, -SLIDE_GLOW_ROOM, size.width + SLIDE_GLOW_ROOM, size.height + SLIDE_GLOW_ROOM)) {
                     drawStageFocus(st.style, st.radius, accent, palette)
@@ -127,6 +145,7 @@ fun Modifier.slideRegion(region: SlideRegion): Modifier = onGloballyPositioned {
 fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp, accent: StageAccent, region: SlideRegion? = null): Modifier {
     val id = remember { Any() }
     var rect by remember { mutableStateOf(Rect.Zero) }
+    val anim = tv.own.owntv.ui.theme.animationsOn
     val scope = rememberCoroutineScope()
     if (region != null) {
         androidx.compose.runtime.SideEffect {
@@ -139,8 +158,12 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
             if (it.isFocused) {
                 // The gap from where the box was drawn to this item, so it starts where it is and glides in.
                 val visible = st.current != null || st.alpha.value > 0.05f
-                val from = st.drawn
-                st.gap = if (visible && from != Rect.Zero && rect != Rect.Zero)
+                // glcn: coming from another host's box (just drawn somewhere else on screen): set off from there.
+                val crossing = if (!visible && !LowRam.on && anim) SlideFocusTrail.fresh() else null
+                if (crossing != null) st.arrived = true
+                val from = crossing ?: st.drawn
+                val visible2 = visible || crossing != null
+                st.gap = if (visible2 && from != Rect.Zero && rect != Rect.Zero)
                     Rect(from.left - rect.left, from.top - rect.top, from.left - rect.left + (from.width - rect.width), from.top - rect.top + (from.height - rect.height))
                 else Rect.Zero
                 st.style = style; st.radius = radius; st.accent = accent

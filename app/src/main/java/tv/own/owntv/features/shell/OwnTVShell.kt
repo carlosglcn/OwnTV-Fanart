@@ -1582,8 +1582,23 @@ fun OwnTVShell(
                     onSelectSection(MainSection.SERIES)
                 }
                 // glcn: sections change with a clean cut — the small sideways slide read as a judder.
+                // glcn: a new section comes in with a short fade and a slight rise, instead of appearing all at once (the
+                // old one goes at once: never two sections built side by side). Instant with animations off or light mode.
+                val sectionIn = remember { androidx.compose.animation.core.Animatable(1f) }
+                val sectionAnim = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
+                LaunchedEffect(selectedSection) {
+                    if (!sectionAnim) return@LaunchedEffect
+                    sectionIn.snapTo(0f)
+                    sectionIn.animateTo(1f, androidx.compose.animation.core.tween(SECTION_IN_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                }
+                val sectionRise = with(androidx.compose.ui.platform.LocalDensity.current) { SECTION_RISE.toPx() }
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth()
+                        .graphicsLayer {
+                            val k = sectionIn.value
+                            alpha = 0.25f + 0.75f * k
+                            translationY = (1f - k) * sectionRise
+                        }
                         .then(
                             // The floating rail sits over the content, so the content starts at the screen
                             // edge (or beside a docked rail).
@@ -3067,3 +3082,7 @@ private fun Modifier.cinemaInset(p: Float): Modifier = if (p <= 0f) this else th
     val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w.coerceAtLeast(1), h.coerceAtLeast(1)))
     layout(fullW, fullH) { placeable.place(x, y) }
 }
+
+/** glcn: a section's way in — how long, and from how far below. */
+private const val SECTION_IN_MS = 260
+private val SECTION_RISE = 18.mpx
