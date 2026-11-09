@@ -202,7 +202,7 @@ fun ZapDeck(
         { ch -> nowCache[ch.id] ?: loadNow(ch).also { nowCache[ch.id] = it } }
     }
     NeighbourArtPrefetch(list, chIdx, cachedNow)
-    if (detail == 1) LaunchedEffect(chIdx, listVersion) {
+    LaunchedEffect(chIdx, listVersion) {
         delay(200)
         for (d in buildList { for (k in 1..6) { add(k); add(-k) } }) list.getOrNull(chIdx + d)?.let { runCatching { loadSchedule(it) } }
     }
@@ -246,17 +246,23 @@ fun ZapDeck(
     // glcn: the picture's place is fixed — half the screen's width, up on the right — and set once: it never follows
     // the list's columns (folding groups, the schedule…), because every resize of a playing picture costs the box a
     // stutter. The programme is told under it, the groups open over the channels instead of pushing them.
-    val pictureMargin = with(density) { 56.mpx.toPx() }
-    val pictureTop = with(density) { 64.mpx.toPx() }
-    val pictureLocal = remember(deckBox.width, deckBox.height) {
-        val pw = deckBox.width * PICTURE_SHARE
+    // glcn: the picture takes all the width the list leaves (from just past the list to the screen's edge), as large
+    // as it can be while the programme and what follows it still have their room under it.
+    val chW = tv.own.owntv.glcn.DeckWidths.width(widths.channels).coerceIn(320.mpx, 860.mpx)
+    val pictureMargin = with(density) { 40.mpx.toPx() }
+    val pictureTop = with(density) { 40.mpx.toPx() }
+    val pictureGap = with(density) { 28.mpx.toPx() }
+    val listEdge = with(density) { (14.mpx + chW).toPx() }
+    val underRoom = with(density) { UNDER_PICTURE.toPx() }
+    val pictureLocal = remember(deckBox.width, deckBox.height, listEdge) {
+        var pw = (deckBox.width - pictureMargin - listEdge - pictureGap).coerceAtLeast(0f)
+        val maxH = (deckBox.height - pictureTop - underRoom).coerceAtLeast(0f)
+        if (pw * 9f / 16f > maxH) pw = maxH * 16f / 9f
         androidx.compose.ui.geometry.Rect(deckBox.width - pictureMargin - pw, pictureTop, deckBox.width - pictureMargin, pictureTop + pw * 9f / 16f)
     }
     LaunchedEffect(deckBox) {
         if (deckBox.width > 0f) tv.own.owntv.glcn.ZapStage.frame = pictureLocal.translate(deckBox.left, deckBox.top)
     }
-    // Room left of the picture for the folded groups and the channels.
-    val listRoom = with(density) { (pictureLocal.left - 48.mpx.toPx()).coerceAtLeast(0f).toDp() }
     val pictureRadius = with(LocalDensity.current) { 18.mpx.toPx() }
     // glcn: a held ▲/▼ on the channels turns the list like a wheel — steps on the screen's frames at an even pace
     // instead of the key's own repeats, then coasts a few rows and stops — and what is under the picture waits
@@ -372,10 +378,9 @@ fun ZapDeck(
                             // ▶ from the channels gives the picture back, as Back does.
                             // glcn: in the schedule view ▶ walks into the coming programmes (their picture and synopsis below).
                             1 -> if (first) {
-                                if (detail == 1 && schedCount > 0) { column = 2; schedIdx = 0 } // glcn: from the programme on air, at the top
-                                else if (onCycleDetail != null) onCycleDetail() else onDismiss()
+                                if (schedCount > 1) { column = 2; schedIdx = 1 } // glcn: into what follows, at the first of it
+                                else onDismiss()
                             }
-                            2 -> if (first) { column = 1; if (onCycleDetail != null) onCycleDetail() }
                             -1 -> chipIdx = (chipIdx + 1).coerceAtMost(chips.lastIndex)
                         }
                         true
@@ -423,7 +428,6 @@ fun ZapDeck(
             // ---- Groups (and the playlists above them).
             // glcn: as TiviMate does — folded, the groups are not there at all (no column of initials); ◀ opens them
             // over the channels, which dim behind them, with their whole names, counts and playlist tags.
-            val chW = tv.own.owntv.glcn.DeckWidths.width(widths.channels).coerceAtMost((listRoom - 40.mpx).coerceAtLeast(320.mpx))
             val groupsOpen = groupsOpenSet.coerceAtMost(chW + 20.mpx)
             val slideGroupsPx = with(density) { 40.mpx.toPx() }
             Box(Modifier.width(0.mpx).fillMaxHeight().wrapContentWidth(Alignment.Start, unbounded = true).zIndex(1f)) {
@@ -516,8 +520,7 @@ fun ZapDeck(
                     listOfNotNull(
                         stringResource(R.string.common_ok) to stringResource(R.string.content_key_watch),
                         "◀" to stringResource(R.string.content_category_browser_title),
-                        if (detail == 1) "▶" to stringResource(R.string.glcn_zap_coming_up)
-                        else if (onCycleDetail != null) "▶" to stringResource(R.string.glcn_zap_view_next) else null,
+                        "▶" to stringResource(R.string.glcn_zap_coming_up),
                         (if (onCycleDetail != null) stringResource(R.string.common_back) else "▶ / " + stringResource(R.string.common_back)) to stringResource(R.string.content_close),
                     ),
                     textSize = 15,
@@ -537,34 +540,27 @@ fun ZapDeck(
         ) { with(density) {
             Column(
                 Modifier
-                    .offset { androidx.compose.ui.unit.IntOffset(pictureLocal.left.toInt(), (pictureLocal.bottom + 22.mpx.toPx()).toInt()) }
+                    .offset { androidx.compose.ui.unit.IntOffset(pictureLocal.left.toInt(), (pictureLocal.bottom + 24.mpx.toPx()).toInt()) }
                     .width(pictureLocal.width.toDp())
-                    .height((deckBox.height - pictureLocal.bottom - 22.mpx.toPx() - 36.mpx.toPx()).coerceAtLeast(0f).toDp())
+                    .height((deckBox.height - pictureLocal.bottom - 24.mpx.toPx() - 28.mpx.toPx()).coerceAtLeast(0f).toDp())
                     .graphicsLayer { alpha = enter.value }
                     .clipToBounds(),
             ) {
-                if (detail == 1) {
-                    ZapSchedulePanel(
-                        channel = focusedChannel, loadSchedule = loadSchedule, modifier = Modifier.fillMaxWidth().weight(1f), loadNow = cachedNow, joined = true, peek = { nowCache[it.id] },
+                androidx.compose.animation.Crossfade(focusedChannel, modifier = Modifier.fillMaxWidth().weight(1f), animationSpec = tween(140), label = "deckDetail") { ch ->
+                    if (ch != null) DeckInfoPanel(
+                        channel = ch, loadNow = cachedNow, loadSchedule = loadSchedule,
+                        peek = { nowCache[it.id] },
                         selected = if (column == 2) schedIdx else -1,
                         onRowCount = { schedCount = it },
-                        compact = true,
                     )
-                } else {
-                    androidx.compose.animation.Crossfade(focusedChannel, modifier = Modifier.fillMaxWidth().weight(1f), animationSpec = tween(140), label = "deckDetail") { ch ->
-                        if (ch != null) DeckNowPanel(
-                            channel = ch, loadNow = cachedNow, loadSchedule = loadSchedule,
-                            peek = { nowCache[it.id] },
-                        )
-                    }
                 }
             }
         } }
     }
 }
 
-/** glcn: the picture's width beside the channel list, as a share of the screen. */
-private const val PICTURE_SHARE = 0.58f
+/** glcn: the room kept under the picture for the programme and what follows it. */
+private val UNDER_PICTURE = 330.mpx
 
 /** glcn: the channel wheel's pace (rows a second): from rest up to cruise, more only after a long hold; its coast. */
 private const val WHEEL_CRUISE = 12f
@@ -601,7 +597,7 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
     val density = LocalDensity.current
     val fade = with(density) { 90.mpx.toPx() }
     val left = (picture.left - fade).coerceAtLeast(0f)
-    val top = picture.top + picture.height * 0.45f
+    val top = picture.bottom - with(density) { 24.mpx.toPx() } // tucked under the picture's rounded foot
     Box(
         Modifier
             .fillMaxSize()
@@ -628,24 +624,15 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
                         model = u,
                         contentDescription = null,
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        alignment = Alignment.TopCenter,
+                        alignment = Alignment.Center,
                         modifier = Modifier.fillMaxSize(),
                     )
                     Box(
                         Modifier.fillMaxSize().drawBehind {
-                            // Darker towards the foot, under the text.
-                            val textTop = picture.bottom - top
-                            drawRect(
-                                androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    0f to Color.Black.copy(alpha = 0.15f),
-                                    (textTop / size.height).coerceIn(0f, 1f) to Color.Black.copy(alpha = 0.55f),
-                                    ((textTop + fade) / size.height).coerceIn(0f, 1f) to Color.Black.copy(alpha = 0.78f),
-                                    1f to Color.Black.copy(alpha = 0.86f),
-                                ),
-                            )
-                            // Melts into the page at its left edge and its top.
+                            // Dark enough for light text, a little more towards the foot.
+                            drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.5f), 1f to Color.Black.copy(alpha = 0.78f)))
+                            // Melts into the page at its left edge.
                             drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to shade, fade / size.width to shade.copy(alpha = 0f)))
-                            drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to shade, (fade * 1.2f) / size.height to shade.copy(alpha = 0f)))
                         },
                     )
                 }
@@ -655,81 +642,105 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
 }
 
 /**
- * glcn: under the playing picture (the boceto's 2C) — the programme on air, its time and what is left of it, how far
- * through it is, two lines of its synopsis; then what follows, as three cards with their pictures.
+ * glcn: under the playing picture, two columns. On the left the programme — on air, or the one picked on the right
+ * with ▶ ▲ ▼ — its title, time (and what is left of it), progress and synopsis; on the right what follows, one row a
+ * programme, as many as fit, the window following the pick down the evening.
  */
 @Composable
-private fun DeckNowPanel(
+private fun DeckInfoPanel(
     channel: ChannelEntity,
     loadNow: suspend (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>,
     loadSchedule: suspend (ChannelEntity) -> List<EpgProgrammeEntity>,
     peek: (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?,
+    /** The programme picked (an index of the schedule, 0 = on air), or -1. */
+    selected: Int,
+    onRowCount: (Int) -> Unit,
 ) {
-    var programme by remember(channel.id) { mutableStateOf(peek(channel)) }
+    var onAir by remember(channel.id) { mutableStateOf(peek(channel)?.first) }
     LaunchedEffect(channel.id) {
-        if (programme == null) programme = runCatching { loadNow(channel) }.getOrNull()
+        if (onAir == null) onAir = runCatching { loadNow(channel).first }.getOrNull()
     }
-    var coming by remember(channel.id) { mutableStateOf<List<EpgProgrammeEntity>>(emptyList()) }
+    var rows by remember(channel.id) { mutableStateOf<List<EpgProgrammeEntity>>(emptyList()) }
     LaunchedEffect(channel.id) {
-        delay(160) // a channel only passed over reads nothing
+        delay(120) // a channel only passed over reads nothing
         val now = System.currentTimeMillis()
-        coming = runCatching { loadSchedule(channel) }.getOrDefault(emptyList()).filter { it.startMs > now }.sortedBy { it.startMs }.take(3)
+        rows = runCatching { loadSchedule(channel) }.getOrDefault(emptyList()).filter { it.stopMs > now }.sortedBy { it.startMs }
+        onRowCount(rows.size)
     }
-    val p = programme?.first
+    // The schedule's rows are the guide's light ones: the picked one's synopsis is read on its own.
+    val guideReader: tv.own.owntv.core.live.GuideReader = org.koin.compose.koinInject()
+    val picked = rows.getOrNull(selected)?.takeIf { selected > 0 }
+    var pickedWhole by remember(picked?.id) { mutableStateOf(picked) }
+    LaunchedEffect(picked?.id) {
+        val p = picked ?: return@LaunchedEffect
+        if (p.description.isNullOrBlank()) {
+            delay(150)
+            pickedWhole = p.copy(description = runCatching { guideReader.description(p.id) }.getOrNull())
+        }
+    }
+    val p = pickedWhole ?: onAir ?: rows.firstOrNull()
     val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
-        if (p == null) {
-            Text(ProviderTags.displayName(channel.name), style = stageText(28, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        } else {
-            Text(p.title, style = stageText(28, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            val left = ((p.stopMs - System.currentTimeMillis()) / 60_000L).toInt().coerceAtLeast(0)
-            Text(
-                fmt.format(java.util.Date(p.startMs)) + " – " + stringResource(R.string.content_live_time_remaining, fmt.format(java.util.Date(p.stopMs)), left),
-                style = stageText(18, 500), color = StageColors.Muted, maxLines = 1,
-            )
-            val span = (p.stopMs - p.startMs).coerceAtLeast(1L)
-            val f = ((System.currentTimeMillis() - p.startMs).toFloat() / span).coerceIn(0f, 1f)
-            Box(Modifier.padding(vertical = 4.mpx).fillMaxWidth().height(5.mpx).clip(RoundedCornerShape(3.mpx)).background(StageColors.Ink.copy(alpha = 0.12f))) {
-                Box(Modifier.fillMaxWidth(f).height(5.mpx).background(stageAccent.accent))
+    val nowMs = remember(channel.id, rows) { System.currentTimeMillis() }
+    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(36.mpx)) {
+        // ---- The programme.
+        Column(Modifier.weight(1.15f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.mpx)) {
+            if (p == null) {
+                Text(ProviderTags.displayName(channel.name), style = stageText(28, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                return@Column
+            }
+            Text(p.title, style = stageText(28, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            val live = nowMs in p.startMs until p.stopMs
+            val time = fmt.format(java.util.Date(p.startMs)) + " – " +
+                if (live) stringResource(R.string.content_live_time_remaining, fmt.format(java.util.Date(p.stopMs)), ((p.stopMs - nowMs) / 60_000L).toInt().coerceAtLeast(0))
+                else fmt.format(java.util.Date(p.stopMs))
+            Text(time, style = stageText(18, 500), color = StageColors.Muted, maxLines = 1)
+            if (live) {
+                val span = (p.stopMs - p.startMs).coerceAtLeast(1L)
+                val f = ((nowMs - p.startMs).toFloat() / span).coerceIn(0f, 1f)
+                Box(Modifier.padding(vertical = 4.mpx).fillMaxWidth().height(5.mpx).clip(RoundedCornerShape(3.mpx)).background(StageColors.Ink.copy(alpha = 0.18f))) {
+                    Box(Modifier.fillMaxWidth(f).height(5.mpx).background(stageAccent.accent))
+                }
             }
             p.description?.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = stageText(17, 400), color = StageColors.Body, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(it, style = stageText(17, 400), color = StageColors.Body, maxLines = 5, overflow = TextOverflow.Ellipsis)
             }
         }
-        if (coming.isNotEmpty()) Row(
-            Modifier.fillMaxWidth().weight(1f).padding(top = 10.mpx),
-            horizontalArrangement = Arrangement.spacedBy(16.mpx),
-        ) {
-            for (k in 0 until 3) {
-                val c = coming.getOrNull(k)
-                Box(Modifier.weight(1f).fillMaxHeight()) { if (c != null) ComingCard(c, channel, fmt) }
+        // ---- What follows.
+        val coming = rows.withIndex().filter { (i, r) -> i > 0 || r.startMs > nowMs }
+        if (coming.isNotEmpty()) Column(Modifier.weight(1f).fillMaxHeight()) {
+            Text(
+                stringResource(R.string.content_live_next).uppercase(), style = stageText(16, 800), color = stageAccent.accent,
+                maxLines = 1, modifier = Modifier.padding(start = 12.mpx, bottom = 6.mpx),
+            )
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                val fit = (maxHeight / 50.mpx).toInt().coerceAtLeast(1)
+                val at = coming.indexOfFirst { it.index == selected }
+                val start = if (at >= fit) at - fit + 1 else 0
+                Column(verticalArrangement = Arrangement.spacedBy(2.mpx)) {
+                    for ((i, r) in coming.drop(start).take(fit)) {
+                        val lit = i == selected
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(48.mpx)
+                                .clip(RoundedCornerShape(12.mpx))
+                                .background(if (lit) stageAccent.accent else Color.Transparent)
+                                .padding(horizontal = 12.mpx),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.mpx),
+                        ) {
+                            Text(
+                                fmt.format(java.util.Date(r.startMs)), style = stageText(19, 700),
+                                color = if (lit) stageAccent.onAccent else stageAccent.accent, maxLines = 1, modifier = Modifier.width(70.mpx),
+                            )
+                            Text(
+                                r.title, style = stageText(19, if (lit) 800 else 600), color = if (lit) stageAccent.onAccent else StageColors.Text,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
             }
-        }
-    }
-}
-
-@Composable
-private fun ComingCard(p: EpgProgrammeEntity, channel: ChannelEntity, fmt: java.text.DateFormat) {
-    val art = tv.own.owntv.ui.components.programmeArtOrTmdb(p)
-    Box(
-        Modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(16.mpx))
-            .background(StageColors.Ink.copy(alpha = 0.08f)),
-    ) {
-        if (art != null) tv.own.owntv.ui.components.ProgrammeArt(art, Modifier.fillMaxSize())
-        else channel.displayLogoUrl?.takeIf { it.isNotBlank() }?.let {
-            ChannelLogoTile(logoUrl = it, modifier = Modifier.align(Alignment.Center).padding(bottom = 30.mpx).width(110.mpx).height(66.mpx), fill = Color.Transparent) { }
-        }
-        Column(
-            Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth()
-                .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f))))
-                .padding(start = 14.mpx, end = 14.mpx, top = 28.mpx, bottom = 10.mpx),
-        ) {
-            Text(fmt.format(java.util.Date(p.startMs)), style = stageText(16, 700), color = Color(0xFF9FD0FF), maxLines = 1)
-            Text(p.title, style = stageText(18, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
