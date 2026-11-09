@@ -40,3 +40,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Player channel list: walking "Up next", the card's picture follows the picked programme.
 - ✨ Sections now come in with a short fade and a slight rise instead of appearing all at once.
 - 🎯 The focus box travels: jumping from the top bar to a row, or from a menu to its page, the highlight glides over from where it was instead of switching off in one place and on in another.
+- 🌤️ Three new light wallpapers: Bruma perla, Amanecer pastel and Arena (Wallpapers › Light).

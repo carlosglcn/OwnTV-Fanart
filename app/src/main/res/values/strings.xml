@@ -28,6 +28,9 @@
     <string name="glcn_wall_downloading">Downloading… %1$d%%</string>
     <string name="glcn_wall_failed">Could not download it. Check the connection and try again.</string>
     <string name="glcn_wall_credit">Wallpapers: photos from Unsplash (Unsplash License)</string>
+    <string name="glcn_wall_bruma_perla">Pearl haze</string>
+    <string name="glcn_wall_amanecer_pastel">Pastel dawn</string>
+    <string name="glcn_wall_arena">Sand</string>
     <string name="glcn_wall_humo">Teal haze</string>
     <string name="glcn_wall_via_lactea">Milky Way</string>
     <string name="glcn_wall_aurora_nieve">Aurora over snow</string>
