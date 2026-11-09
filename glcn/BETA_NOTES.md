@@ -24,3 +24,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 Player channel list: the picture keeps one size — half the screen, up on the right — whatever the list shows; the programme is told under it, and the groups open over the channels instead of pushing the picture aside.
 - 🎨 Player channel list, new look: under the picture, the programme on air with its time left, progress and a short synopsis, then the next three programmes as picture cards; the focused programme's picture softly fills the page behind.
 - 🗂️ Player channel list: no more column of initials — ◀ opens the categories over the channels with their full names, counts and, with several playlists, each playlist's coloured tag.
+- 🌊 Smoother scrolling everywhere: lists, rows and grids now glide on a spring that keeps its speed — they set off gently, flow under a held key and slow down softly instead of stopping dead.
+- 🎡 Live TV fast scroll (hold ▲/▼): starts from rest, keeps an even pace, and on release coasts a few channels before settling; the rows hold their programme info while turning so it no longer stutters.

@@ -12,7 +12,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import kotlin.math.exp
 import kotlin.math.max
 
 /**
@@ -86,14 +85,16 @@ class ListWheel(
         state.scroll {
             var last = withFrameNanos { it }
             val began = last
-            var speed = START_ROWS_PER_S
+            var speed = 0f
             while (held) {
                 val now = withFrameNanos { it }
                 val dt = ((now - last) / 1e9f).coerceIn(0f, 0.05f)
                 last = now
                 val t = (now - began) / 1e9f
-                val target = START_ROWS_PER_S + (TOP_ROWS_PER_S - START_ROWS_PER_S) * smooth(((t - RAMP_DELAY_S) / RAMP_S).coerceIn(0f, 1f))
-                speed += (target - speed) * (1f - exp(-dt / EASE_S))
+                // glcn: sets off from rest (no lurch), cruises at one even pace, and only after a long hold picks up a
+                // little more — gently, never the sudden rush that made the rows hard to follow.
+                speed = CRUISE_ROWS_PER_S * smooth((t / START_S).coerceIn(0f, 1f)) +
+                    (TOP_ROWS_PER_S - CRUISE_ROWS_PER_S) * smooth(((t - RAMP_DELAY_S) / RAMP_S).coerceIn(0f, 1f))
                 val pitch = pitch()
                 if (pitch <= 0f) break
                 val want = dir * speed * pitch * dt
@@ -116,25 +117,26 @@ class ListWheel(
         withFrameNanos { }
     }
 
-    /** Roll on until the row ahead sits in the highlight, slowing from the wheel's speed to rest. Returns that row. */
+    /**
+     * Roll on and come to rest with a row in the highlight. glcn: not on the very next row — stopping a fast list
+     * within one row was the hard brake. It coasts on as far as its speed naturally carries it (a few rows), then
+     * lands on the nearest row there, slowing smoothly from the wheel's own speed to rest. Returns that row.
+     */
     private suspend fun ScrollScope.settle(current: Int, lens: Float, speed: Float): Int {
         val info = state.layoutInfo
-        val here = info.visibleItemsInfo.firstOrNull { it.index == current } ?: return current
-        var target = current
-        var distance = here.offset + here.size / 2f - lens
-        // Already past the middle of this row in the direction of travel: the next one, never back.
-        if (dir > 0 && distance < 0f || dir < 0 && distance > 0f) {
-            val next = current + dir
-            info.visibleItemsInfo.firstOrNull { it.index == next }?.let { r ->
-                target = next
-                distance = r.offset + r.size / 2f - lens
-            }
-        }
+        val pitch = max(pitch(), 1f)
+        val glide = speed * pitch * COAST_S // how far it would coast
+        val aim = lens + dir * glide
+        val ahead = info.visibleItemsInfo.filter { val c = it.offset + it.size / 2f; if (dir > 0) c - lens > 0.5f else lens - c > 0.5f }
+        val pick = ahead.minByOrNull { abs(it.offset + it.size / 2f - aim) }
+            ?: info.visibleItemsInfo.firstOrNull { it.index == current }
+            ?: return current
+        val target = pick.index
+        val distance = pick.offset + pick.size / 2f - lens
         row = target
         if (abs(distance) < 0.5f) return target
-        val pitch = max(pitch(), 1f)
-        // About as long as the wheel's own speed would take to come to rest over that distance.
-        val seconds = (2f * abs(distance) / max(speed * pitch, 1f)).coerceIn(SETTLE_MIN_S, SETTLE_MAX_S)
+        // Leaves at the wheel's speed (an ease-out cubic starts at 3 × distance / time) and lands at rest.
+        val seconds = (3f * abs(distance) / max(speed * pitch, 1f)).coerceIn(SETTLE_MIN_S, SETTLE_MAX_S)
         var done = 0f
         var stuck = 0f
         val began = withFrameNanos { it }
@@ -171,13 +173,14 @@ class ListWheel(
         @Volatile var active: Boolean = false
             private set
 
-        private const val START_ROWS_PER_S = 9f   // about the key's own repeat, so the start does not lurch
-        private const val TOP_ROWS_PER_S = 24f
-        private const val RAMP_DELAY_S = 0.4f     // a short hold stays slow and readable
+        private const val CRUISE_ROWS_PER_S = 12f // an even, readable pace
+        private const val START_S = 0.3f          // from rest up to it
+        private const val TOP_ROWS_PER_S = 18f    // only after a long hold
+        private const val RAMP_DELAY_S = 1.4f
         private const val RAMP_S = 1.6f
-        private const val EASE_S = 0.15f
-        private const val SETTLE_MIN_S = 0.16f
-        private const val SETTLE_MAX_S = 0.42f
+        private const val COAST_S = 0.2f          // how far it coasts after the key comes up, as time at full speed
+        private const val SETTLE_MIN_S = 0.22f
+        private const val SETTLE_MAX_S = 0.8f
 
         private fun smooth(x: Float) = x * x * (3f - 2f * x)
     }

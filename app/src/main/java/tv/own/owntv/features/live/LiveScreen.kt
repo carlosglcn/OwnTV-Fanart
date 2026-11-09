@@ -1101,6 +1101,11 @@ fun LiveScreen(
                     // and then slid the whole list back under it — a double step.
                     // glcn: the first rows of a category arrive one after another; later ones are just there.
                     val rowsGate = tv.own.owntv.glcn.rememberStaggerGate(selectedKey)
+                    // glcn: while the wheel turns, the rows keep the programmes they had: what is on for the rows coming into
+                    // view arrives in batches, and each batch recomposed every row on screen mid-turn (the stutter). They
+                    // fill in once the list stands still.
+                    val rowNow = androidx.compose.runtime.remember(wheel.turning) { if (wheel.turning) nowProgrammes else null } ?: nowProgrammes
+                    val rowNowTitle = androidx.compose.runtime.remember(wheel.turning) { if (wheel.turning) nowPlaying else null } ?: nowPlaying
                     val lensAccent = tv.own.owntv.ui.theme.stageAccent
                     val lensPalette = tv.own.owntv.ui.theme.LocalStagePalette.current
                     androidx.compose.runtime.CompositionLocalProvider(
@@ -1155,8 +1160,8 @@ fun LiveScreen(
                                     name = parsed,
                                     // The channel under the cursor answers from the preview itself, so the row
                                     // and the stage beside it can never disagree.
-                                    now = if (isPreviewed && nowNextFor == channel.id) nowNext?.now ?: nowProgrammes[channel.id] else nowProgrammes[channel.id],
-                                    nowTitle = nowPlaying[channel.id],
+                                    now = if (isPreviewed && nowNextFor == channel.id) nowNext?.now ?: rowNow[channel.id] else rowNow[channel.id],
+                                    nowTitle = rowNowTitle[channel.id],
                                     isFavorite = favoriteIds.contains(channel.id),
                                     showNumber = showChannelNumbers,
                                     // glcn: no playlist mark when every channel here comes from the same playlist.

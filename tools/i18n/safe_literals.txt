@@ -1338,6 +1338,7 @@
 2	technical	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	\0
 1	regex	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	(?i)\\b(?:8K|4K|UHD|2160P|FHD|1080P|HD|720P|SD|HEVC|H265)\\b
 1	regex	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	[^\\p{L}\\p{N}]+
+1	technical	app/src/main/java/tv/own/owntv/glcn/SmoothScroll.kt	UNCHECKED_CAST
 1	technical	app/src/main/java/tv/own/owntv/glcn/SoftBlur.kt	glcn.softblur.$radius.$passes
 1	technical	app/src/main/java/tv/own/owntv/glcn/TvProfiles.kt	dock_ids
 1	technical	app/src/main/java/tv/own/owntv/glcn/TvProfiles.kt	glcn_tv_profiles
