@@ -32,3 +32,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📐 Player channel list: the picture now takes all the width beside the list; the programme's picture sits between it and the foot of the screen, with the programme (title, time left, synopsis) on the left and what follows on the right — ▶ walks through it.
 - 🌫️ New wallpaper: "Bruma azul" (teal haze), in Wallpapers › Dark.
 - 🃏 Player channel list: the picture and a dark card under it form one piece; the programme's picture shows whole at the card's right, genres appear as a tag and the synopsis drops the guide's "(Genre)" and "País:" clutter.
+- ↕️ Fast scrolling: the wheel is gone from Live TV and the player's channel list — holding ▲/▼ steps channel by channel again, gliding on the new smooth scrolling; the panel under the picture waits until you let go.

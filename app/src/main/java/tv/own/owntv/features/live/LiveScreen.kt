@@ -1177,13 +1177,9 @@ fun LiveScreen(
                                         // glcn: letting go of a held ▲/▼ lets the wheel roll on to its row and stop.
                                         if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyUp && upDown && wheel.turning) { wheel.release(); return@onPreviewKeyEvent true }
                                         if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                                        if (upDown && !barHeld) {
-                                            val dir = if (e.key == androidx.compose.ui.input.key.Key.DirectionDown) 1 else -1
-                                            // Held: the wheel takes over from the key's repeats.
-                                            if (e.nativeKeyEvent.repeatCount > 0) { wheel.hold(dir, stepTarget ?: index); return@onPreviewKeyEvent true }
-                                            // A fresh press while it still rolls: it settles on its row first.
-                                            if (wheel.turning) { wheel.release(); return@onPreviewKeyEvent true }
-                                        }
+                                        // glcn: the wheel (ListWheel) is off — a held ▲/▼ steps row by row again, the list gliding on the
+                                        // app's speed-keeping spring (SmoothScroll), which proved the smoother of the two on the TV.
+                                        if (upDown && !barHeld && wheel.turning) { wheel.release(); return@onPreviewKeyEvent true }
                                         when (e.key) {
                                             // The remote's Menu key opens the same menu as holding OK.
                                             androidx.compose.ui.input.key.Key.Info -> { synopsisChannel = channel; true }

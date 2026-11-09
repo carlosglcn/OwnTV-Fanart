@@ -332,18 +332,17 @@ fun ZapDeck(
             .focusable()
             .onPreviewKeyEvent { e ->
                 // glcn: the key comes up — the wheel coasts and stops.
-                if (e.type == KeyEventType.KeyUp && (e.key == Key.DirectionUp || e.key == Key.DirectionDown) && wheelHeld) {
-                    wheelHeld = false; return@onPreviewKeyEvent true
+                if (e.type == KeyEventType.KeyUp && (e.key == Key.DirectionUp || e.key == Key.DirectionDown) && wheelTurning) {
+                    wheelTurning = false; return@onPreviewKeyEvent true
                 }
                 if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 val first = e.nativeKeyEvent.repeatCount == 0
                 when (e.key) {
                     Key.DirectionUp, Key.DirectionDown -> {
                         val up = e.key == Key.DirectionUp
-                        if (column == 1 && !tv.own.owntv.glcn.LowRam.on && list.size > 1) {
-                            if (!first) { turnWheel(if (up) -1 else 1); return@onPreviewKeyEvent true }
-                            if (wheelTurning) { wheelHeld = false; return@onPreviewKeyEvent true }
-                        }
+                        // glcn: the wheel (turnWheel) is off: a held key steps row by row, the column's springs glide it; what
+                        // is under the picture waits for the key to come up, so the run is not slowed by it.
+                        if (column == 1 && !first) wheelTurning = true
                         when (column) {
                             2 -> schedIdx = (schedIdx + if (up) -1 else 1).coerceIn(0, (schedCount - 1).coerceAtLeast(0))
                             1 -> if (list.size > 1) chIdx = if (up) (if (chIdx == 0) list.lastIndex else chIdx - 1) else (if (chIdx == list.lastIndex) 0 else chIdx + 1)
