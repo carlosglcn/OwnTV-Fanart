@@ -715,7 +715,8 @@ private fun DeckInfoPanel(
     }
     // The schedule's rows are the guide's light ones: the picked one's synopsis is read on its own.
     val guideReader: tv.own.owntv.core.live.GuideReader = org.koin.compose.koinInject()
-    val picked = rows.getOrNull(selected)?.takeIf { selected > 0 }
+    // A coming programme picked on the right (not the one on air, which the column already tells).
+    val picked = rows.getOrNull(selected)?.takeIf { it.startMs > System.currentTimeMillis() }
     LaunchedEffect(picked?.id) { onPicked(picked) }
     var pickedWhole by remember(picked?.id) { mutableStateOf(picked) }
     LaunchedEffect(picked?.id) {
