@@ -245,9 +245,13 @@
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history profile=$pid channelId=${channel.id}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	ensurePlaying history record failed channelId=${channel.id} profile=$pid
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	film
+1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	locked category
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	movie
+1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	no active profile
+1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	not allowed on this profile
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	pelicula
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	stalker resolve failed channelId=${channel.id}
+1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	tune refused '${channel.name}': $why
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	tuneByNumber($number) failed
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	zap: tune wait ${delayMs}ms — ${zapWaitReason(lastZapPressMs, now, singleConnection)}
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveZapList.kt	LiveZapList

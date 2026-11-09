@@ -1942,9 +1942,23 @@ class LiveViewModel(
     /** Internal playback: the canonical ExoPlayer / mpv / Stalker / history side-effects for a
      *  channel. Direct-tune's background rebuild path calls this without cancelling the rebuild
      *  so the in-flight rebuild it owns isn't killed by its own play. */
-    private suspend fun playChannel(channel: ChannelEntity) {
-        val pid = currentProfileId() ?: return
-        if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, channel.categoryId, profileDao, categoryDao) || customize.sealsCategory(pid, channel.categoryId)) return
+    private suspend fun playChannel(picked: ChannelEntity) {
+        val pid = currentProfileId() ?: run { tuneRefused(picked, "no active profile", null); return }
+        // glcn: a sync while the list was on screen leaves its rows pointing at a category that is gone,
+        // and a gone category reads as locked whenever the profile has any lock — the channel then did
+        // nothing at all on OK. Its own row, read again, carries the category it is in now.
+        val channel = withContext(Dispatchers.IO) {
+            picked.categoryId?.takeIf { categoryDao.getById(it) == null }
+                ?.let { channelDao.getById(picked.id) }
+                ?.takeIf { it.categoryId != picked.categoryId }
+                ?.copy(name = picked.name)
+        } ?: picked
+        if (!tv.own.owntv.core.content.AdultCategoryClassifier.allows(pid, channel.categoryId, profileDao, categoryDao)) {
+            tuneRefused(channel, "not allowed on this profile", tv.own.owntv.R.string.glcn_tune_refused_profile); return
+        }
+        if (customize.sealsCategory(pid, channel.categoryId)) {
+            tuneRefused(channel, "locked category", tv.own.owntv.R.string.glcn_tune_refused_locked); return
+        }
         // Live TV set to play externally: hand the channel over instead of tuning an in-app engine.
         // History is still recorded, so the channel shows up in History/Recently watched either way.
         // A protected channel stays in-app whatever this setting says: no standard intent extra
@@ -1957,6 +1971,14 @@ class LiveViewModel(
         // ladder and starts the engine — the same code the phone runs.
         live.start(channel, getSource(channel.sourceId))
         recordLiveHistory(channel)
+    }
+
+    /** glcn: a channel the app will not open says why, on screen and in the playback report, instead of OK doing nothing. */
+    private suspend fun tuneRefused(channel: ChannelEntity, why: String, message: Int?) {
+        tv.own.owntv.player.LiveDiagnosticsLog.event("tune refused '${channel.name}': $why")
+        if (message != null) withContext(Dispatchers.Main) {
+            android.widget.Toast.makeText(appContext, message, android.widget.Toast.LENGTH_LONG).show()
+        }
     }
 
     /** HUD "compatibility mode" toggle: flip the current channel's engine and pin the choice. */
