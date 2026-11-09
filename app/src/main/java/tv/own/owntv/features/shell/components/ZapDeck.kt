@@ -139,6 +139,8 @@ fun ZapDeck(
     // glcn: the coming programme picked in the schedule (column 2), and how many there are.
     var schedIdx by remember { mutableIntStateOf(0) }
     var schedCount by remember { mutableIntStateOf(0) }
+    // glcn: the first programme of "Up next" (1 when the schedule starts with the one on air, else 0).
+    var schedFirst by remember { mutableIntStateOf(1) }
     var groupIdx by remember { mutableIntStateOf(entries.indexOfFirst { it.item.key == currentKey }.coerceAtLeast(0)) }
     var chipIdx by remember { mutableIntStateOf(chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0)) }
     // The group whose channels are shown: the zap list itself when it is that group's, else the group read whole.
@@ -344,7 +346,9 @@ fun ZapDeck(
                         // is under the picture waits for the key to come up, so the run is not slowed by it.
                         if (column == 1 && !first) wheelTurning = true
                         when (column) {
-                            2 -> schedIdx = (schedIdx + if (up) -1 else 1).coerceIn(0, (schedCount - 1).coerceAtLeast(0))
+                            // glcn: ▲ on the first of "Up next" gives the picture back, full screen (a fresh press, not a held run).
+                            2 -> if (up && schedIdx <= schedFirst) { if (first) onDismiss() }
+                                else schedIdx = (schedIdx + if (up) -1 else 1).coerceIn(schedFirst, (schedCount - 1).coerceAtLeast(schedFirst))
                             1 -> if (list.size > 1) chIdx = if (up) (if (chIdx == 0) list.lastIndex else chIdx - 1) else (if (chIdx == list.lastIndex) 0 else chIdx + 1)
                             0 -> when {
                                 up && groupIdx == 0 && chips.isNotEmpty() -> { column = -1; chipIdx = chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0) }
@@ -377,7 +381,7 @@ fun ZapDeck(
                             // ▶ from the channels gives the picture back, as Back does.
                             // glcn: in the schedule view ▶ walks into the coming programmes (their picture and synopsis below).
                             1 -> if (first) {
-                                if (schedCount > 1) { column = 2; schedIdx = 1 } // glcn: into what follows, at the first of it
+                                if (schedCount > schedFirst) { column = 2; schedIdx = schedFirst } // glcn: into what follows, at the first of it
                                 else onDismiss()
                             }
                             -1 -> chipIdx = (chipIdx + 1).coerceAtMost(chips.lastIndex)
@@ -551,6 +555,7 @@ fun ZapDeck(
                         peek = { nowCache[it.id] },
                         selected = if (column == 2) schedIdx else -1,
                         onRowCount = { schedCount = it },
+                        onFirstRow = { schedFirst = it },
                     )
                 }
             }
@@ -683,6 +688,7 @@ private fun DeckInfoPanel(
     /** The programme picked (an index of the schedule, 0 = on air), or -1. */
     selected: Int,
     onRowCount: (Int) -> Unit,
+    onFirstRow: (Int) -> Unit = {},
 ) {
     var onAir by remember(channel.id) { mutableStateOf(peek(channel)?.first) }
     LaunchedEffect(channel.id) {
@@ -693,6 +699,7 @@ private fun DeckInfoPanel(
         delay(120) // a channel only passed over reads nothing
         val now = System.currentTimeMillis()
         rows = runCatching { loadSchedule(channel) }.getOrDefault(emptyList()).filter { it.stopMs > now }.sortedBy { it.startMs }
+        onFirstRow(if (rows.firstOrNull()?.let { now >= it.startMs } == true) 1 else 0)
         onRowCount(rows.size)
     }
     // The schedule's rows are the guide's light ones: the picked one's synopsis is read on its own.
