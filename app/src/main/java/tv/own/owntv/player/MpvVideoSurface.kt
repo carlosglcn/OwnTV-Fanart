@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -299,6 +300,7 @@ private fun StyledSubtitleView(
     val customFont = styleOn && font != null
     val customPosition = if (styleOn) position else SubtitleStyle.Position.DEFAULT
     val textScale = if (styleOn) scale else SubtitleStyle.SCALE_DEFAULT
+    val lifted = SubtitleLift.raised
 
     androidx.compose.runtime.key(ass) {
     AndroidView(
@@ -327,6 +329,8 @@ private fun StyledSubtitleView(
                 view.setStyle(stock)
             }
             view.setFractionalTextSize(androidx.media3.ui.SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * textScale)
+            // glcn: while the player's controls are up, the lines sit above them instead of behind the bar.
+            view.setBottomPaddingFraction(if (lifted) SUBTITLE_LIFTED_FRACTION else androidx.media3.ui.SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION)
             view.setCues(
                 if (customPosition == SubtitleStyle.Position.DEFAULT) cues else cues.map { anchor(it, customPosition) },
             )
@@ -470,3 +474,11 @@ private const val ZAP_SETTLE_MS = 120L
 private const val ZAP_FADE_MS = 320
 private const val ZAP_DIM = 0.28f
 private const val ZAP_BLACK_LEVEL = 10
+
+/** glcn: whether the player's controls are on screen, so subtitles can rise above the bar. */
+internal object SubtitleLift {
+    var raised by androidx.compose.runtime.mutableStateOf(false)
+}
+
+/** glcn: where subtitles sit while the controls are up — above the dock's bar. */
+private const val SUBTITLE_LIFTED_FRACTION = 0.32f

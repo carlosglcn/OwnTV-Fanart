@@ -330,7 +330,8 @@ fun PlayerHud(
     }
 
     var controlsVisible by remember { mutableStateOf(true) }
-    LaunchedEffect(controlsVisible) { onControlsVisible(controlsVisible) }
+    LaunchedEffect(controlsVisible) { onControlsVisible(controlsVisible); SubtitleLift.raised = controlsVisible }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { SubtitleLift.raised = false } }
     var showInfo by remember { mutableStateOf(false) } // stream technical-info overlay
     // Used only by "Report this stream", which writes the current readout into the playback log.
     val reportContext = androidx.compose.ui.platform.LocalContext.current

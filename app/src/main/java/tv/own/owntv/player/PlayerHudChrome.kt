@@ -509,7 +509,8 @@ internal fun BottomBar(
         // glcn: the tool's name above the row; on the Ficha banner under it (above, it left an empty band at the top).
         if (!toolsUp) ToolLabelLine(toolFocus)
         androidx.compose.runtime.CompositionLocalProvider(LocalToolFocus provides toolFocus) {
-        Box(Modifier.fillMaxWidth().onGloballyPositioned { toolFocus.origin = it.positionInWindow() }) {
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().onGloballyPositioned { toolFocus.origin = it.positionInWindow() }) {
+        val toolsMaxWidth = maxWidth * 0.62f
         ToolFocusBox(toolFocus, Modifier.matchParentSize())
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -528,7 +529,13 @@ internal fun BottomBar(
                 true
             },
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            // glcn: the media cluster takes the room the tools leave and scrolls within it, so at a large
+            // interface size no button is cut off or squeezed (the focused one is brought into view).
+            Row(
+                Modifier.weight(1f).horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 // The ORDER comes from core's canonical list, not from the order these lines
                 // happen to be written in. Each control keeps its own composable and its own
                 // condition; only the sequence is shared, which is what makes this bar and the
@@ -601,12 +608,17 @@ internal fun BottomBar(
                     CtrlButton(OwnTVIcon.EPG, label = stringResource(R.string.common_nav_guide)) { onGuide() }
                 }
             }
-            Spacer(Modifier.weight(1f))
             if (isLive && side != null && onScrubLive == null) {
+                Spacer(Modifier.width(8.dp))
                 LiveStateBadge(timeshiftOffsetSec)
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            // glcn: the tools keep their own width up to most of the bar, and scroll past it.
+            Row(
+                Modifier.widthIn(max = toolsMaxWidth).horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 // The ORDER is core's, exactly as in the media cluster above. Each control
                 // keeps its own composable and condition; only the sequence is shared.
                 PlayerControl.clusterFor(tv = true, cluster = ControlCluster.TOOLS).forEach { control ->

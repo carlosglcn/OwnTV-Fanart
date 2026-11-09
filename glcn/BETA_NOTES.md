@@ -44,3 +44,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ✔️ The watched check on posters stays visible with a white accent and on the focused poster.
 - 📂 Player channel list: the categories panel is wider so names read whole, and a ‹ before the group's name shows that ◀ opens them.
 - 🔒 **A channel that won't open says why:** a locked category or a channel not allowed on the profile shows a message instead of OK doing nothing, and the reason goes into the playback report; a channel left on a category a sync replaced opens from its current one
+- 🔍 **Player bar at any interface size:** when the buttons don't fit (a larger interface size), each group scrolls as you move instead of buttons being cut off; EXO/MPV stays on one line, and subtitles rise above the bar while the controls are up
