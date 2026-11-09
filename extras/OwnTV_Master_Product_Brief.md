@@ -244,8 +244,9 @@ matches, on now or in the next 12 hours, and OK goes to the channel.
 **Sports** — live scores, today's and tomorrow's matches and match pages from ESPN, for the
 sports and leagues the profile follows (none at first; Settings → App → Sports). A match page has the
 score, venue, timeline, stats, line-ups, table, form and Broadcasts, and **Find channels** ranks the
-channels in the user's own guide that show it (from 30 minutes before kick-off), with a filter by
-language, country, picture and playlist. Matching runs on the device; no playlist data leaves it.
+channels in the user's own guide that show it (from 30 minutes before kick-off), then the channels
+named after the competition by any of its names, with a filter by language, country, picture and
+playlist and a switch for those usual channels. Matching runs on the device; no playlist data leaves it.
 The page has three tabs sharing one set of sport and league buttons: **Scores** (the above),
 **Calendar** (a month grid of the followed leagues with the chosen day's matches; months saved on the
 device and fetched again per the Calendar refresh setting) and **Leagues** (league cards, then one
@@ -312,7 +313,7 @@ session appear at once.
 
 Folder rails with Favorites and History per section; full category names, never abbreviated; a
 category search box. **Customize** (per profile) hides, renames and reorders categories and
-individual items, recovers hidden ones, filters to All/Visible/Hidden, and can be **PIN-locked**.
+individual items, recovers hidden ones, and filters to All/Visible/Hidden; it holds the **category lock PIN**.
 **Bulk rename** applies ordered prefix/suffix rules with automatic cleanup, a review step and a
 restore-original undo — over a category's items, or over the category names themselves (⋯ menu). **Custom combined categories** gather items from anywhere. A category can also
 be hidden, moved or restored to the playlist's default (hidden items, items moved out and custom
@@ -382,7 +383,8 @@ again on every wake.
 
 Record from the **Guide** (following the programme's times, with padding), from the **channel list**,
 or from the **player**, on live channels. **Record every showing** sets a standing rule for that
-programme on that channel. A catch-up programme can be saved from the provider's archive. Recordings
+programme on that channel; every rule is listed at the top of **Downloads → Recordings**, where it
+can be stopped. A catch-up programme can be saved from the provider's archive. Recordings
 appear in **Downloads → Recordings** with duration, size and full path. Padding (start early, keep
 going after the end) and keeping one stream free are set in Watching & recording → Recording.
 
@@ -412,7 +414,12 @@ wrong number. **Settings → Playlists → Info** shows it; **Re-test** re-measu
 ## 6. Profiles
 
 Multiple profiles, each with its own favourites, history, resume positions and layout. Optional
-**PIN locks** (salted hash) and a **"Who's watching?"** launch gate. **Kids mode** hides adult
+**PIN locks** (salted hash) and a **"Who's watching?"** launch gate. Three separate locks, each with its
+own PIN and wrong-entry limit — profile, category and a per-profile **Settings lock** (Settings, Backup &
+Restore, Local sync, and optionally long-press changes). A profile with a profile or Settings lock is
+**protected**: a new profile does not inherit its playlists, and another profile backs it up, merges or
+replaces it in a restore, edits or deletes it only after one of its PINs. Local sync is profile-based:
+the profile in use merges with the one in use on the other device. **Kids mode** hides adult
 provider categories and items across every surface — Live, Movies, Series, Home, Search, Guide,
 catch-up, downloads, launcher recommendations and direct playback — and excludes adult TMDB results;
 the Guide itself is hidden. Detection uses multilingual category markers with an *Adult Swim*
