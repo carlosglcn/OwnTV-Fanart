@@ -46,6 +46,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.TransformOrigin
@@ -972,10 +973,13 @@ fun StagePoster(
                 Modifier.align(Alignment.BottomStart).padding(start = 8.mpx, bottom = if (progress != null && progress > 0f) 14.mpx else 8.mpx),
             )
             if (watched) {
+                // glcn: a solid accent disc with a white check and rim — the old dark disc vanished on dark posters. With a
+                // white (or very light) accent the disc would be white on white: then it is dark.
+                val pale = accent.accent.luminance() > WATCHED_PALE
                 Box(
-                    // glcn: a solid accent disc with a white check and rim — the old dark disc vanished on dark posters.
                     Modifier.align(Alignment.TopEnd).padding(8.mpx).size(if (compact) 26.mpx else 30.mpx)
-                        .background(accent.accent, CircleShape).border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
+                        .background(if (pale) Color(0xF0111820) else accent.accent, CircleShape)
+                        .border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) { StageIcon(OwnTVIcon.CHECK, Color.White, if (compact) 15.mpx else 17.mpx) }
             } else if (fresh && (progress == null || progress <= 0f)) {
@@ -1360,3 +1364,6 @@ private const val POSTER_WAIT_BOTTOM = 0.13f
 
 /** glcn: how much lower an unfocused poster's name rests. */
 private val POSTER_TITLE_DROP = 5.mpx
+
+/** glcn: an accent lighter than this cannot carry the watched disc's white check. */
+private const val WATCHED_PALE = 0.7f
