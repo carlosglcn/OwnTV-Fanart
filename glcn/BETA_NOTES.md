@@ -22,3 +22,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🧹 Keep watching: a film or show you take out stays out, even if your Emby/Jellyfin server still has it half-watched (it comes back if you watch it again).
 - 🛠️ Fixed a crash while watching live TV: the channel list's programme read could run past the end of a list that had just changed group.
 - 📺 Player channel list: the picture keeps one size — half the screen, up on the right — whatever the list shows; the programme is told under it, and the groups open over the channels instead of pushing the picture aside.
+- 🎨 Player channel list, new look: under the picture, the programme on air with its time left, progress and a short synopsis, then the next three programmes as picture cards; the focused programme's picture softly fills the page behind.
+- 🗂️ Player channel list: no more column of initials — ◀ opens the categories over the channels with their full names, counts and, with several playlists, each playlist's coloured tag.

@@ -919,6 +919,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/WeatherConditionIcon.kt	sunny
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/WeatherConditionIcon.kt	thunder
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckBackdrop
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckChip
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckDetail
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckFill
@@ -926,6 +927,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckGroupText
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckRowSub
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckRowText
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	–
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▶
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▶ /
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	◀

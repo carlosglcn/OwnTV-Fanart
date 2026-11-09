@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.blur
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import tv.own.owntv.glcn.groupGlyph
@@ -126,6 +129,10 @@ fun ZapDeck(
         playlists?.let { listOf(-1L to allText) + it.playlists.map { p -> p.id to p.name } }.orEmpty()
     }
     val activeChip = playlists?.activeId?.takeIf { it > 0L } ?: -1L
+    // glcn: each playlist's coloured tag (its place in the profile picks the colour), for the categories and the heading.
+    val marks = remember(playlists?.playlists) {
+        playlists?.playlists?.withIndex()?.associate { (i, s) -> s.id to tv.own.owntv.ui.stage.PlaylistMark.of(s.name, i) }.orEmpty()
+    }
 
     // 0 = groups, 1 = channels, -1 = the playlist chips, 2 = the focused channel's coming programmes.
     var column by remember { mutableIntStateOf(1) }
@@ -221,15 +228,13 @@ fun ZapDeck(
     // glcn: the widths chosen in Settings → Layout → Panel widths; while the channels or the schedule have the
     // cursor the groups fold to their icons and the programme column takes the room they leave.
     val widths = tv.own.owntv.glcn.DeckWidths.shares
-    val groupsOpen = tv.own.owntv.glcn.DeckWidths.width(widths.groups)
-    val groupsFolded = tv.own.owntv.glcn.DeckWidths.FOLDED_GROUPS.coerceAtMost(groupsOpen)
+    val groupsOpenSet = tv.own.owntv.glcn.DeckWidths.width(widths.groups)
     val foldTarget = if (column == 1 || column == 2) 1f else 0f
     val fold by androidx.compose.animation.core.animateFloatAsState(
         foldTarget,
         if (tv.own.owntv.glcn.LowRam.on) androidx.compose.animation.core.snap<Float>() else tween<Float>(260, easing = FastOutSlowInEasing),
         label = "deckFold",
     )
-    val groupsW = groupsOpen + (groupsFolded - groupsOpen) * fold
     val shade = tv.own.owntv.ui.theme.stageTone(Color(2, 5, 6), Color(244, 247, 245))
     // glcn: squeeze-back — the picture shrinks into the free space right of the list (ZapStage) and the list stands
     // on a plain page beside it: nothing covers the picture, and nothing behind the words can make them hard to read.
@@ -262,20 +267,12 @@ fun ZapDeck(
             .drawWithContent {
                 // The page, with a hole where the picture is on its way to (or sits in) its place.
                 drawRect(shade)
-                val p = tv.own.owntv.glcn.ZapStage.progress
-                val f = tv.own.owntv.glcn.ZapStage.frame
-                if (f != null) {
-                    val r = f.translate(-deckBox.left, -deckBox.top)
-                    val left = r.left * p
-                    val top = r.top * p
-                    val w = size.width + (r.width - size.width) * p
-                    val h = size.height + (r.height - size.height) * p
-                    drawRoundRect(
-                        Color.Black, topLeft = androidx.compose.ui.geometry.Offset(left, top), size = androidx.compose.ui.geometry.Size(w, h),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(pictureRadius * p),
-                        blendMode = androidx.compose.ui.graphics.BlendMode.Clear,
-                    )
-                } else drawRect(Color.Black, blendMode = androidx.compose.ui.graphics.BlendMode.Clear)
+                val hole = deckHole(size, deckBox, pictureRadius)
+                drawRoundRect(
+                    Color.Black, topLeft = hole.rect.topLeft, size = hole.rect.size,
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(hole.radius),
+                    blendMode = androidx.compose.ui.graphics.BlendMode.Clear,
+                )
                 drawContent()
             }
             .focusRequester(focus)
@@ -340,6 +337,20 @@ fun ZapDeck(
                 }
             },
     ) {
+        // glcn: the focused programme's picture behind the page, soft, faint behind the list and fuller on the right;
+        // it changes only once the cursor rests, so zapping through the list does not flicker.
+        val restingChannel = list.getOrNull(chIdx)
+        var backdropProgramme by remember { mutableStateOf<EpgProgrammeEntity?>(null) }
+        LaunchedEffect(restingChannel?.id) {
+            val ch = restingChannel ?: return@LaunchedEffect
+            delay(BACKDROP_REST_MS)
+            backdropProgramme = runCatching { cachedNow(ch).first }.getOrNull()
+        }
+        DeckBackdrop(
+            url = tv.own.owntv.ui.components.programmeArtOrTmdb(backdropProgramme),
+            shade = shade,
+            hole = { sz -> deckHole(sz, deckBox, pictureRadius) },
+        )
         Row(
             Modifier
                 .graphicsLayer { translationX = (1f - enter.value) * -slidePx }
@@ -353,21 +364,23 @@ fun ZapDeck(
             Box(Modifier.matchParentSize().graphicsLayer { alpha = tv.own.owntv.glcn.PlayerGlass.share(DECK_LIST_GLASS) }.stageGlass(StageRadii.Sheet, overContent = true))
             Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
             // ---- Groups (and the playlists above them).
-            // Folded, the groups take their narrow place; open, they spread over the channels on a page of their own.
-            Box(Modifier.width(groupsFolded).fillMaxHeight().wrapContentWidth(Alignment.Start, unbounded = true).zIndex(1f)) {
-            Box(Modifier.width(groupsW).fillMaxHeight()) {
-            Box(Modifier.matchParentSize().graphicsLayer { alpha = 1f - fold }.clip(RoundedCornerShape(StageRadii.Sheet)).background(shade))
+            // glcn: as TiviMate does — folded, the groups are not there at all (no column of initials); ◀ opens them
+            // over the channels, which dim behind them, with their whole names, counts and playlist tags.
+            val chW = tv.own.owntv.glcn.DeckWidths.width(widths.channels).coerceAtMost((listRoom - 40.mpx).coerceAtLeast(320.mpx))
+            val groupsOpen = groupsOpenSet.coerceAtMost(chW + 20.mpx)
+            val slideGroupsPx = with(density) { 40.mpx.toPx() }
+            Box(Modifier.width(0.mpx).fillMaxHeight().wrapContentWidth(Alignment.Start, unbounded = true).zIndex(1f)) {
+            if (fold < 0.999f) Box(Modifier.width(groupsOpen).fillMaxHeight().graphicsLayer { alpha = 1f - fold; translationX = -slideGroupsPx * fold }) {
+            Box(Modifier.matchParentSize().clip(RoundedCornerShape(StageRadii.Sheet)).background(shade))
             Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx)) {
-                // Folded, the chips and the heading fade out but keep their place, so the rows never jump.
-                val words = Modifier.graphicsLayer { alpha = 1f - fold }
                 if (chips.isNotEmpty()) {
-                    Box(words) { DeckChips(chips, activeChip, if (column == -1) chipIdx else -1) }
+                    DeckChips(chips, activeChip, if (column == -1) chipIdx else -1)
                     Spacer(Modifier.height(10.mpx))
                 }
                 Text(
                     stringResource(R.string.content_category_browser_title),
                     style = stageText(17, 700), color = StageColors.Dim, maxLines = 1, softWrap = false,
-                    modifier = Modifier.padding(start = 14.mpx, bottom = 8.mpx).then(words),
+                    modifier = Modifier.padding(start = 14.mpx, bottom = 8.mpx),
                 )
                 GlideColumn(
                     count = entries.size,
@@ -379,9 +392,10 @@ fun ZapDeck(
                 ) { i, focused ->
                     val entry = entries.getOrNull(i) ?: return@GlideColumn
                     val shown = entry.item.key == shownKey
+                    val lit = focused && column == 0
                     val tint by animateColorAsState(
                         when {
-                            focused && column == 0 -> stageAccent.onAccent
+                            lit -> stageAccent.onAccent
                             shown -> StageColors.Text
                             else -> StageColors.Muted
                         },
@@ -395,35 +409,30 @@ fun ZapDeck(
                         entry.icon?.let { OwnTVIcon(it, tint, Modifier.size(20.mpx)) }
                         val glyph = entry.groupGlyph()
                         glyph?.let { tv.own.owntv.glcn.CategoryGlyphView(it, tint, size = 20.mpx, name = entry.label) }
-                        Box(Modifier.weight(1f)) {
-                            Text(
-                                if (tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) "" else entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
-                                modifier = Modifier.graphicsLayer { alpha = 1f - fold },
-                            )
-                            // glcn: folded, a group with no icon of its own keeps its first letters.
-                            if (entry.icon == null && glyph == null && fold > 0f) Text(
-                                entry.label.filter { it.isLetterOrDigit() }.take(2).uppercase(), style = stageText(18, 800), color = tint,
-                                maxLines = 1, softWrap = false, modifier = Modifier.graphicsLayer { alpha = fold },
-                            )
-                        }
-                        // Folded past halfway the count leaves the row, so the icon or the letters keep their room.
-                        if (fold < 0.5f) entry.count?.let { Text(it.toString(), style = stageText(15, 500), color = tint.copy(alpha = 0.7f), maxLines = 1, softWrap = false, modifier = Modifier.graphicsLayer { alpha = 1f - fold }) }
+                        Text(
+                            if (tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) "" else entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // The playlist it comes from, when all playlists are listed together.
+                        if (activeChip == -1L) entry.item.sourceId?.let(marks::get)?.let { tv.own.owntv.ui.stage.StagePlaylistMark(it, onLight = lit) }
+                        entry.count?.let { Text(it.toString(), style = stageText(15, 500), color = tint.copy(alpha = 0.7f), maxLines = 1, softWrap = false) }
                     }
                 }
             }
             }
             }
-            DeckDivider()
             // ---- Channels of the shown group.
-            Column(Modifier.width(tv.own.owntv.glcn.DeckWidths.width(widths.channels).coerceAtMost((listRoom - groupsFolded - 40.mpx).coerceAtLeast(320.mpx))).fillMaxHeight().padding(horizontal = 10.mpx)) {
-                val groupName = entries.firstOrNull { it.item.key == shownKey }?.label.orEmpty()
+            Column(Modifier.width(chW).fillMaxHeight().graphicsLayer { alpha = 0.3f + 0.7f * fold }.padding(horizontal = 10.mpx)) {
+                val shownEntry = entries.firstOrNull { it.item.key == shownKey }
+                val groupName = shownEntry?.label.orEmpty()
                 Row(
                     Modifier.padding(start = 14.mpx, end = 14.mpx, bottom = 12.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.mpx),
                 ) {
                     Text(groupName, style = stageText(26, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    shownEntry?.item?.sourceId?.let(marks::get)?.let { tv.own.owntv.ui.stage.StagePlaylistMark(it) }
                     Text(
                         pluralStringResource(R.plurals.content_live_channel_count, list.size, list.size),
                         style = stageText(17, 500), color = StageColors.Muted, maxLines = 1,
@@ -472,17 +481,6 @@ fun ZapDeck(
                     .graphicsLayer { alpha = enter.value }
                     .clipToBounds(),
             ) {
-                // The schedule names its channel in its own heading; the programme card gets the channel's line.
-                if (detail != 1) focusedChannel?.let { ch ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.mpx),
-                        modifier = Modifier.padding(bottom = 10.mpx),
-                    ) {
-                        ChannelLogoTile(logoUrl = ch.displayLogoUrl, modifier = Modifier.width(64.mpx).height(42.mpx), fill = Color.Transparent) { }
-                        Text(ProviderTags.displayName(ch.name), style = stageText(22, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
                 if (detail == 1) {
                     ZapSchedulePanel(
                         channel = focusedChannel, loadSchedule = loadSchedule, modifier = Modifier.fillMaxWidth().weight(1f), loadNow = cachedNow, joined = true, peek = { nowCache[it.id] },
@@ -492,8 +490,8 @@ fun ZapDeck(
                     )
                 } else {
                     androidx.compose.animation.Crossfade(focusedChannel, animationSpec = tween(140), label = "deckDetail") { ch ->
-                        if (ch != null) ZapPreviewPanel(
-                            channel = ch, loadNow = cachedNow, framed = false, bareLines = 3, picture = false,
+                        if (ch != null) DeckNowPanel(
+                            channel = ch, loadNow = cachedNow, loadSchedule = loadSchedule,
                             peek = { nowCache[it.id] },
                         )
                     }
@@ -505,6 +503,141 @@ fun ZapDeck(
 
 /** glcn: the picture's width beside the channel list, as a share of the screen. */
 private const val PICTURE_SHARE = 0.5f
+
+/** glcn: how long the cursor rests on a channel before its programme's picture becomes the page's backdrop. */
+private const val BACKDROP_REST_MS = 450L
+
+/** glcn: where the page is open onto the playing picture, on its way to (or in) its place beside the list. */
+private class DeckHole(val rect: androidx.compose.ui.geometry.Rect, val radius: Float)
+
+private fun deckHole(size: androidx.compose.ui.geometry.Size, deckBox: androidx.compose.ui.geometry.Rect, radius: Float): DeckHole {
+    val p = tv.own.owntv.glcn.ZapStage.progress
+    val f = tv.own.owntv.glcn.ZapStage.frame ?: return DeckHole(androidx.compose.ui.geometry.Rect(Offset.Zero, size), 0f)
+    val r = f.translate(-deckBox.left, -deckBox.top)
+    val w = size.width + (r.width - size.width) * p
+    val h = size.height + (r.height - size.height) * p
+    return DeckHole(androidx.compose.ui.geometry.Rect(Offset(r.left * p, r.top * p), androidx.compose.ui.geometry.Size(w, h)), radius * p)
+}
+
+/**
+ * glcn: the page's backdrop — the focused programme's picture, read tiny and drawn large (soft without a blur, which
+ * the SHIELD's Android cannot draw), under a wash of the page's own colour: almost solid behind the list, thinner
+ * towards the right. It stays out of the picture's place.
+ */
+@Composable
+private fun DeckBackdrop(url: String?, shade: Color, hole: (androidx.compose.ui.geometry.Size) -> DeckHole) {
+    if (tv.own.owntv.glcn.LowRam.on) return
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    Box(
+        Modifier
+            .fillMaxSize()
+            .drawWithContent {
+                val h = hole(size)
+                val path = androidx.compose.ui.graphics.Path().apply {
+                    addRoundRect(androidx.compose.ui.geometry.RoundRect(h.rect, androidx.compose.ui.geometry.CornerRadius(h.radius)))
+                }
+                clipPath(path, androidx.compose.ui.graphics.ClipOp.Difference) { this@drawWithContent.drawContent() }
+            },
+    ) {
+        androidx.compose.animation.Crossfade(url, animationSpec = tween(600), label = "deckBackdrop") { u ->
+            if (u != null) coil3.compose.AsyncImage(
+                model = remember(u) { coil3.request.ImageRequest.Builder(ctx).data(u).size(coil3.size.Size(160, 90)).build() },
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
+                modifier = Modifier.fillMaxSize().blur(24.mpx),
+            )
+        }
+        Box(
+            Modifier.fillMaxSize().background(
+                androidx.compose.ui.graphics.Brush.horizontalGradient(
+                    0f to shade.copy(alpha = 0.94f), 0.42f to shade.copy(alpha = 0.86f), 1f to shade.copy(alpha = 0.58f),
+                ),
+            ),
+        )
+    }
+}
+
+/**
+ * glcn: under the playing picture (the boceto's 2C) — the programme on air, its time and what is left of it, how far
+ * through it is, two lines of its synopsis; then what follows, as three cards with their pictures.
+ */
+@Composable
+private fun DeckNowPanel(
+    channel: ChannelEntity,
+    loadNow: suspend (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>,
+    loadSchedule: suspend (ChannelEntity) -> List<EpgProgrammeEntity>,
+    peek: (ChannelEntity) -> Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>?,
+) {
+    var programme by remember(channel.id) { mutableStateOf(peek(channel)) }
+    LaunchedEffect(channel.id) {
+        if (programme == null) programme = runCatching { loadNow(channel) }.getOrNull()
+    }
+    var coming by remember(channel.id) { mutableStateOf<List<EpgProgrammeEntity>>(emptyList()) }
+    LaunchedEffect(channel.id) {
+        delay(160) // a channel only passed over reads nothing
+        val now = System.currentTimeMillis()
+        coming = runCatching { loadSchedule(channel) }.getOrDefault(emptyList()).filter { it.startMs > now }.sortedBy { it.startMs }.take(3)
+    }
+    val p = programme?.first
+    val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
+        if (p == null) {
+            Text(ProviderTags.displayName(channel.name), style = stageText(28, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        } else {
+            Text(p.title, style = stageText(28, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val left = ((p.stopMs - System.currentTimeMillis()) / 60_000L).toInt().coerceAtLeast(0)
+            Text(
+                fmt.format(java.util.Date(p.startMs)) + " – " + stringResource(R.string.content_live_time_remaining, fmt.format(java.util.Date(p.stopMs)), left),
+                style = stageText(18, 500), color = StageColors.Muted, maxLines = 1,
+            )
+            val span = (p.stopMs - p.startMs).coerceAtLeast(1L)
+            val f = ((System.currentTimeMillis() - p.startMs).toFloat() / span).coerceIn(0f, 1f)
+            Box(Modifier.padding(vertical = 4.mpx).fillMaxWidth().height(5.mpx).clip(RoundedCornerShape(3.mpx)).background(StageColors.Ink.copy(alpha = 0.12f))) {
+                Box(Modifier.fillMaxWidth(f).height(5.mpx).background(stageAccent.accent))
+            }
+            p.description?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = stageText(17, 400), color = StageColors.Body, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (coming.isNotEmpty()) Row(
+            Modifier.fillMaxWidth().padding(top = 10.mpx),
+            horizontalArrangement = Arrangement.spacedBy(16.mpx),
+        ) {
+            for (k in 0 until 3) {
+                val c = coming.getOrNull(k)
+                Box(Modifier.weight(1f)) { if (c != null) ComingCard(c, channel, fmt) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ComingCard(p: EpgProgrammeEntity, channel: ChannelEntity, fmt: java.text.DateFormat) {
+    val art = tv.own.owntv.ui.components.programmeArtOrTmdb(p)
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .aspectRatio(16f / 9f)
+            .clip(RoundedCornerShape(16.mpx))
+            .background(StageColors.Ink.copy(alpha = 0.08f)),
+    ) {
+        if (art != null) tv.own.owntv.ui.components.ProgrammeArt(art, Modifier.fillMaxSize())
+        else channel.displayLogoUrl?.takeIf { it.isNotBlank() }?.let {
+            ChannelLogoTile(logoUrl = it, modifier = Modifier.align(Alignment.Center).padding(bottom = 30.mpx).width(110.mpx).height(66.mpx), fill = Color.Transparent) { }
+        }
+        Column(
+            Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f))))
+                .padding(start = 14.mpx, end = 14.mpx, top = 28.mpx, bottom = 10.mpx),
+        ) {
+            Text(fmt.format(java.util.Date(p.startMs)), style = stageText(16, 700), color = Color(0xFF9FD0FF), maxLines = 1)
+            Text(p.title, style = stageText(18, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
 
 /**
  * glcn: a column of fixed-height rows with one highlight that glides to the focused row while the list glides
@@ -661,18 +794,6 @@ private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: I
             )
         }
     }
-}
-
-@Composable
-private fun DeckDivider() {
-    val line = StageColors.Ink.copy(alpha = 0.12f)
-    Box(
-        Modifier
-            .fillMaxHeight()
-            .width(1.mpx)
-            .padding(vertical = 26.mpx)
-            .background(line),
-    )
 }
 
 /** glcn: how much of the stage glass the panel draws: the list keeps enough to read; the detail lets more picture through. */

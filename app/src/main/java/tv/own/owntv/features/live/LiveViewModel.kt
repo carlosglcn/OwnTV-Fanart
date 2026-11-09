@@ -849,6 +849,8 @@ class LiveViewModel(
                             ?.let(categoriesById::get)
                             ?.sourceId
                             ?.let(multiSourceNames::get),
+                        // glcn: the playlist's coloured tag in the zap deck's categories.
+                        sourceId = e.categoryId?.let(categoriesById::get)?.sourceId,
                     )
                 }
             }.combine(favoriteGroups.observeNames(c.profileId)) { snap, groups ->
