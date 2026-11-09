@@ -141,6 +141,8 @@ fun ZapDeck(
     var schedCount by remember { mutableIntStateOf(0) }
     // glcn: the first programme of "Up next" (1 when the schedule starts with the one on air, else 0).
     var schedFirst by remember { mutableIntStateOf(1) }
+    // glcn: the programme picked in "Up next" (its picture becomes the card's).
+    var pickedProgramme by remember { mutableStateOf<EpgProgrammeEntity?>(null) }
     var groupIdx by remember { mutableIntStateOf(entries.indexOfFirst { it.item.key == currentKey }.coerceAtLeast(0)) }
     var chipIdx by remember { mutableIntStateOf(chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0)) }
     // The group whose channels are shown: the zap list itself when it is that group's, else the group read whole.
@@ -409,6 +411,13 @@ fun ZapDeck(
             delay(BACKDROP_REST_MS)
             backdropProgramme = runCatching { cachedNow(ch).first }.getOrNull()
         }
+        // glcn: walking "Up next", the picture follows the picked programme (once the cursor rests on it), and goes
+        // back to the one on air when the cursor leaves the list.
+        LaunchedEffect(pickedProgramme?.id, column) {
+            val p = pickedProgramme?.takeIf { column == 2 }
+            if (p != null) { delay(BACKDROP_REST_MS); backdropProgramme = p }
+            else restingChannel?.let { ch -> backdropProgramme = runCatching { cachedNow(ch).first }.getOrNull() }
+        }
         val backdropUrl = tv.own.owntv.ui.components.programmeArtOrTmdb(backdropProgramme)
         DeckBackdrop(
             url = backdropUrl,
@@ -556,6 +565,7 @@ fun ZapDeck(
                         selected = if (column == 2) schedIdx else -1,
                         onRowCount = { schedCount = it },
                         onFirstRow = { schedFirst = it },
+                        onPicked = { pickedProgramme = it },
                     )
                 }
             }
@@ -689,6 +699,7 @@ private fun DeckInfoPanel(
     selected: Int,
     onRowCount: (Int) -> Unit,
     onFirstRow: (Int) -> Unit = {},
+    onPicked: (EpgProgrammeEntity?) -> Unit = {},
 ) {
     var onAir by remember(channel.id) { mutableStateOf(peek(channel)?.first) }
     LaunchedEffect(channel.id) {
@@ -705,6 +716,7 @@ private fun DeckInfoPanel(
     // The schedule's rows are the guide's light ones: the picked one's synopsis is read on its own.
     val guideReader: tv.own.owntv.core.live.GuideReader = org.koin.compose.koinInject()
     val picked = rows.getOrNull(selected)?.takeIf { selected > 0 }
+    LaunchedEffect(picked?.id) { onPicked(picked) }
     var pickedWhole by remember(picked?.id) { mutableStateOf(picked) }
     LaunchedEffect(picked?.id) {
         val p = picked ?: return@LaunchedEffect

@@ -37,3 +37,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎯 Focused rows: a switch or value on the right now reads clearly on the highlighted row, in light and dark themes.
 - ⬆️ Player channel list: ▲ on the first programme of "Up next" closes the list and gives the picture back.
 - 🚀 Launch: the plain icon screen before the launch picture is gone — the app opens straight onto the sunset launch screen.
+- 🖼️ Player channel list: walking "Up next", the card's picture follows the picked programme.
