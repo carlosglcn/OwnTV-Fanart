@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- glcn: the launch screen as a window background (see Theme.OwnTV.Starting and glcn/LaunchCurtain.kt). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/glcn_launch_sky" />
+    <item>
+        <bitmap android:src="@drawable/glcn_launch_window_art" android:gravity="fill" android:filter="true" />
+    </item>
+</layer-list>

@@ -258,6 +258,7 @@ open class MainActivity : ComponentActivity() {
         // glcn: Android's icon splash only until the first frame; from there the launch curtain covers
         // the app (same rules: until the start-up screen is settled, within the same time limits).
         splash.setKeepOnScreenCondition { false }
+        window.setBackgroundDrawableResource(R.drawable.glcn_launch_window)
         pendingDeepLink = LauncherDeepLink.parse(intent.data)
         Log.d(TAG, "onCreate deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}")
         // glcn: what a paired phone asks this TV to play arrives as a link, like a launcher tile's.
@@ -655,7 +656,13 @@ open class MainActivity : ComponentActivity() {
             var curtainTimedOut by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) { kotlinx.coroutines.delay(SPLASH_TIMEOUT_MS); if (!contentReady) curtainTimedOut = true }
             LaunchedEffect(contentReady) { if (contentReady) { kotlinx.coroutines.delay(STARTUP_SETTLE_TIMEOUT_MS); curtainTimedOut = true } }
-            tv.own.owntv.glcn.LaunchCurtain(visible = !curtainTimedOut && !(contentReady && startupSettled))
+            val curtainUp = !curtainTimedOut && !(contentReady && startupSettled)
+            tv.own.owntv.glcn.LaunchCurtain(visible = curtainUp)
+            // glcn: the window wears the launch picture from the very start (the starting window and the frames
+            // before Compose draws); once the curtain has gone it goes back to the plain colour (no big bitmap kept).
+            LaunchedEffect(curtainUp) {
+                if (!curtainUp) { kotlinx.coroutines.delay(LAUNCH_WINDOW_RELEASE_MS); window.setBackgroundDrawableResource(R.color.owntv_window_bg) }
+            }
         } }
     }
 }
@@ -665,3 +672,6 @@ open class MainActivity : ComponentActivity() {
 private fun BackgroundLayer(background: tv.own.owntv.core.theme.BackgroundConfig, blurred: BlurredBackdrop?) {
     tv.own.owntv.ui.components.BackgroundPicture(background, blurred, Modifier.fillMaxSize())
 }
+
+/** glcn: how long after the launch curtain has faded the window lets go of the launch picture. */
+private const val LAUNCH_WINDOW_RELEASE_MS = 600L

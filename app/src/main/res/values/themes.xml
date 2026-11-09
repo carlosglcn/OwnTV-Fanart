@@ -21,6 +21,9 @@
     -->
     <style name="Theme.OwnTV.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/owntv_window_bg</item>
+        <!-- glcn: the starting window is the launch screen itself (glcn/LaunchCurtain.kt draws the same picture),
+             not a colour with the icon: no second screen before it. API < 31 only; Android 12+ draw their own. -->
+        <item name="android:windowBackground">@drawable/glcn_launch_window</item>
         <item name="postSplashScreenTheme">@style/Theme.OwnTV</item>
     </style>
     <style name="Theme.OwnTV.Starting.Petrol">

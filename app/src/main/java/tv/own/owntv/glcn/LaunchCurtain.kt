@@ -45,34 +45,12 @@ fun LaunchCurtain(visible: Boolean) {
         enter = fadeIn(tween(0)),
         exit = fadeOut(tween(380)),
     ) {
+        // glcn: the very picture the starting window shows (glcn_launch_window), so the hand-off is seamless.
         Box(Modifier.fillMaxSize().background(LAUNCH_SKY)) {
             Image(
-                painterResource(R.drawable.glcn_launch_backdrop), contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
+                painterResource(R.drawable.glcn_launch_window_art), contentDescription = null,
+                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds,
             )
-            // Placed as in the artwork's design (1920 × 1080): the mark a little above the middle,
-            // the name over the glow just above the ridges.
-            Image(
-                painterResource(R.drawable.glcn_launch_mark), contentDescription = null,
-                modifier = Modifier.align(Alignment.Center).offset(x = 10.mpx, y = (-90).mpx).size(560.mpx),
-            )
-            Row(Modifier.align(Alignment.TopCenter).padding(top = 690.mpx), horizontalArrangement = Arrangement.Center) {
-                androidx.tv.material3.Text(BRAND_FIRST, style = wordmark(FontWeight.Bold), color = Color(0xFFFAEED6))
-                androidx.tv.material3.Text(BRAND_SECOND, style = wordmark(FontWeight.SemiBold), color = Color(0xFFFFB080))
-            }
         }
     }
 }
-
-private val Poppins = FontFamily(
-    Font(R.font.poppins_semibold, FontWeight.SemiBold),
-    Font(R.font.poppins_bold, FontWeight.Bold),
-)
-
-private fun wordmark(weight: FontWeight) = TextStyle(
-    fontFamily = Poppins, fontWeight = weight, fontSize = 60.mpxSp,
-    shadow = Shadow(Color(0xAA14081E), Offset(0f, 4f), 16f),
-)
-
-private const val BRAND_FIRST = "OwnTV "
-private const val BRAND_SECOND = "Fanart"
