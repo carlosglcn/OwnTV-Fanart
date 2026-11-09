@@ -704,7 +704,7 @@ fun StageSettingRow(
                     )
                 }
             }
-            if (value != null) SettingValueView(value)
+            if (value != null) androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.stage.LocalStageLit provides focused) { SettingValueView(value) }
         }
     }
 }
@@ -714,19 +714,21 @@ private val FocusedDesc: Color @Composable get() = StageColors.FxLine
 @Composable
 private fun SettingValueView(value: SettingValue) {
     val a = stageAccent
+    val lit = tv.own.owntv.ui.stage.LocalStageLit.current
     val valueStyle = stageText(18, 700)
     Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
         when (value) {
             is SettingValue.Switch -> StageSwitch(value.on)
+            // glcn: on the focused (accent) row the value reads in the accent's ink, not in the accent itself.
             is SettingValue.Choice -> {
-                Text(value.text, style = valueStyle, color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                OwnTVIcon(OwnTVIcon.CHEVRON_DOWN, StageColors.Muted, Modifier.size(20.mpx))
+                Text(value.text, style = valueStyle, color = if (lit) a.onAccent else a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                OwnTVIcon(OwnTVIcon.CHEVRON_DOWN, if (lit) a.onAccent.copy(alpha = 0.8f) else StageColors.Muted, Modifier.size(20.mpx))
             }
             is SettingValue.Opens -> {
                 if (!value.text.isNullOrBlank()) {
-                    Text(value.text, style = valueStyle, color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Text(value.text, style = valueStyle, color = if (lit) a.onAccent else a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 }
-                OwnTVIcon(OwnTVIcon.CHEVRON, StageColors.Muted, Modifier.size(20.mpx))
+                OwnTVIcon(OwnTVIcon.CHEVRON, if (lit) a.onAccent.copy(alpha = 0.8f) else StageColors.Muted, Modifier.size(20.mpx))
             }
             is SettingValue.Stepper -> StageStepper(value.text)
             is SettingValue.Segmented -> SegmentedDisplay(value.options, value.selected)

@@ -819,7 +819,7 @@ fun StageSheetItem(
                 }
             }
             if (count != null) Text(count, style = stageText(16, 600), color = on ?: StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            trailing?.invoke(this, focused)
+            androidx.compose.runtime.CompositionLocalProvider(LocalStageLit provides focused) { trailing?.invoke(this, focused) }
         }
     }
 }
@@ -1299,20 +1299,38 @@ fun StageStepper(value: String) {
     }
 }
 
+/** glcn: true inside a focused (accent-filled) row: what sits on it draws in the accent's own ink, not in the accent. */
+val LocalStageLit = androidx.compose.runtime.compositionLocalOf { false }
+
 /** `.sw2`: 56×32 switch, display only like [StageStepper]. */
 @Composable
 fun StageSwitch(on: Boolean) {
     val a = stageAccent
+    // glcn: on a focused row the accent track vanished into the row's own accent fill — there it turns over: a light
+    // track with an accent knob when on, a faint one when off.
+    val lit = LocalStageLit.current
+    val track = when {
+        lit && on -> a.onAccent
+        lit -> a.onAccent.copy(alpha = 0.28f)
+        on -> a.accent
+        else -> StageColors.Ink.copy(alpha = 0.14f)
+    }
+    val knob = when {
+        lit && on -> a.accent
+        lit -> a.onAccent
+        on -> Color.White
+        else -> LocalStagePalette.current.knobOff
+    }
     Box(
         Modifier
             .size(56.mpx, 32.mpx)
-            .background(if (on) a.accent else StageColors.Ink.copy(alpha = 0.14f), RoundedCornerShape(16.mpx)),
+            .background(track, RoundedCornerShape(16.mpx)),
     ) {
         Box(
             Modifier
                 .offset(x = if (on) 28.mpx else 4.mpx, y = 4.mpx)
                 .size(24.mpx)
-                .background(if (on) Color.White else LocalStagePalette.current.knobOff, CircleShape),
+                .background(knob, CircleShape),
         )
     }
 }

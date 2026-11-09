@@ -34,3 +34,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🃏 Player channel list: the picture and a dark card under it form one piece; the programme's picture shows whole at the card's right, genres appear as a tag and the synopsis drops the guide's "(Genre)" and "País:" clutter.
 - ↕️ Fast scrolling: the wheel is gone from Live TV and the player's channel list — holding ▲/▼ steps channel by channel again, gliding on the new smooth scrolling; the panel under the picture waits until you let go.
 - ℹ️ Programme info: a clean synopsis kept to the left half, genres, year, length and rating as tags, the buttons right under the synopsis, the right-hand panels stacked under the picture without gaps, and a simple live dot on the picture.
+- 🎯 Focused rows: a switch or value on the right now reads clearly on the highlighted row, in light and dark themes.
