@@ -534,15 +534,15 @@ fun ZapDeck(
         val panelHold = remember { arrayOfNulls<ChannelEntity>(1) }
         val focusedChannel = if (wheelTurning) panelHold[0] else list.getOrNull(chIdx).also { panelHold[0] = it }
         // glcn: over the programme's picture the text is light, as on a dark page.
-        val onArt = backdropUrl != null && !tv.own.owntv.glcn.LowRam.on
+        val onArt = !tv.own.owntv.glcn.LowRam.on // the dark card is there, picture or not
         if (pictureLocal.width > 0f) androidx.compose.runtime.CompositionLocalProvider(
             tv.own.owntv.ui.theme.LocalStagePalette provides if (onArt) tv.own.owntv.ui.theme.StagePalette.Dark else tv.own.owntv.ui.theme.LocalStagePalette.current,
         ) { with(density) {
             Column(
                 Modifier
-                    .offset { androidx.compose.ui.unit.IntOffset(pictureLocal.left.toInt(), (pictureLocal.bottom + 24.mpx.toPx()).toInt()) }
-                    .width(pictureLocal.width.toDp())
-                    .height((deckBox.height - pictureLocal.bottom - 24.mpx.toPx() - 28.mpx.toPx()).coerceAtLeast(0f).toDp())
+                    .offset { androidx.compose.ui.unit.IntOffset((pictureLocal.left + 28.mpx.toPx()).toInt(), (pictureLocal.bottom + 30.mpx.toPx()).toInt()) }
+                    .width((pictureLocal.width - 56.mpx.toPx()).coerceAtLeast(0f).toDp())
+                    .height((deckBox.height - pictureLocal.bottom - 30.mpx.toPx() - DECK_FOOT.toPx() - 18.mpx.toPx()).coerceAtLeast(0f).toDp())
                     .graphicsLayer { alpha = enter.value }
                     .clipToBounds(),
             ) {
@@ -587,17 +587,17 @@ private fun deckHole(size: androidx.compose.ui.geometry.Size, deckBox: androidx.
 }
 
 /**
- * glcn: what the focused channel is showing, as a picture under the playing one — from halfway down the picture to
- * the foot of the screen, edge to edge on the right; the page stays plain behind the list. It melts into the page at
- * its left and top, and darkens towards the foot, where the programme is told in light text over it.
+ * glcn: a dark card under the playing picture, as wide as it, its foot rounded — the picture and what is on form one
+ * piece. The programme's picture sits whole (16:9) at its right, melting into the card towards the left, where the
+ * programme is told in light text.
  */
 @Composable
 private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.ui.geometry.Rect, hole: (androidx.compose.ui.geometry.Size) -> DeckHole) {
     if (tv.own.owntv.glcn.LowRam.on || picture.width <= 0f) return
     val density = LocalDensity.current
-    val fade = with(density) { 90.mpx.toPx() }
-    val left = (picture.left - fade).coerceAtLeast(0f)
-    val top = picture.bottom - with(density) { 24.mpx.toPx() } // tucked under the picture's rounded foot
+    val radius = with(density) { 18.mpx.toPx() }
+    val top = picture.bottom - radius // tucked under the picture's rounded foot
+    val footGap = with(density) { DECK_FOOT.toPx() }
     Box(
         Modifier
             .fillMaxSize()
@@ -611,35 +611,64 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
     ) {
         Box(
             Modifier.layout { m, c ->
-                // From the picture's left edge (less the fade) and its middle, to the screen's right edge and foot.
-                val w = (c.maxWidth - left.toInt()).coerceAtLeast(1)
-                val h = (c.maxHeight - top.toInt()).coerceAtLeast(1)
+                val w = picture.width.toInt().coerceAtLeast(1)
+                val h = (c.maxHeight - top - footGap).toInt().coerceAtLeast(1)
                 val pl = m.measure(androidx.compose.ui.unit.Constraints.fixed(w, h))
-                layout(c.maxWidth, c.maxHeight) { pl.place(left.toInt(), top.toInt()) }
-            },
+                layout(c.maxWidth, c.maxHeight) { pl.place(picture.left.toInt(), top.toInt()) }
+            }
+                .clip(RoundedCornerShape(bottomStart = 18.mpx, bottomEnd = 18.mpx))
+                .background(DECK_CARD),
         ) {
             androidx.compose.animation.Crossfade(url, animationSpec = tween(600), label = "deckBackdrop") { u ->
-                if (u != null) Box(Modifier.fillMaxSize()) {
-                    coil3.compose.AsyncImage(
-                        model = u,
-                        contentDescription = null,
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        alignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                    Box(
-                        Modifier.fillMaxSize().drawBehind {
-                            // Dark enough for light text, a little more towards the foot.
-                            drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.5f), 1f to Color.Black.copy(alpha = 0.78f)))
-                            // Melts into the page at its left edge.
-                            drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to shade, fade / size.width to shade.copy(alpha = 0f)))
-                        },
-                    )
+                if (u != null) androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val artW = maxHeight * 16f / 9f
+                    Box(Modifier.align(Alignment.CenterEnd).width(artW).fillMaxHeight()) {
+                        coil3.compose.AsyncImage(
+                            model = u,
+                            contentDescription = null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        Box(
+                            Modifier.fillMaxSize().drawBehind {
+                                // Melts into the card on its left; a light veil over the rest, for the list that crosses it.
+                                drawRect(Color.Black.copy(alpha = 0.32f))
+                                drawRect(
+                                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                        0f to DECK_CARD, 0.45f to DECK_CARD.copy(alpha = 0.55f), 1f to DECK_CARD.copy(alpha = 0f),
+                                    ),
+                                )
+                            },
+                        )
+                    }
                 }
             }
         }
     }
 }
+
+/** glcn: the card under the picture, and the room left under it. */
+private val DECK_CARD = Color(0xFF0E1726)
+private val DECK_FOOT = 28.mpx
+
+/**
+ * glcn: a guide's synopsis without what the guide tacks on — "(Genre, Genre)" in front, "País: …", "Año: …" after —
+ * returned apart: the genres (shown as a tag) and the text.
+ */
+internal fun cleanSynopsis(raw: String?): Pair<List<String>, String> {
+    var text = raw?.trim().orEmpty()
+    var genres = emptyList<String>()
+    SYNOPSIS_GENRES.find(text)?.let { m ->
+        genres = m.groupValues[1].split(',', '/').map { it.trim() }.filter { it.isNotEmpty() }
+        text = text.substring(m.range.last + 1).trim()
+    }
+    text = text.replace(SYNOPSIS_FACTS, "").replace(SYNOPSIS_SPACES, " ").trim().trimEnd('·').trim()
+    return genres to text
+}
+
+private val SYNOPSIS_GENRES = Regex("""^\(([^()]{2,60})\)""")
+private val SYNOPSIS_FACTS = Regex("""\s*·?\s*\b(País|Año|Pais)\s*:\s*[^·\n]*""")
+private val SYNOPSIS_SPACES = Regex("""[ \t]{2,}""")
 
 /**
  * glcn: under the playing picture, two columns. On the left the programme — on air, or the one picked on the right
@@ -693,7 +722,14 @@ private fun DeckInfoPanel(
             val time = fmt.format(java.util.Date(p.startMs)) + " – " +
                 if (live) stringResource(R.string.content_live_time_remaining, fmt.format(java.util.Date(p.stopMs)), ((p.stopMs - nowMs) / 60_000L).toInt().coerceAtLeast(0))
                 else fmt.format(java.util.Date(p.stopMs))
-            Text(time, style = stageText(18, 500), color = StageColors.Muted, maxLines = 1)
+            val (genres, synopsis) = remember(p.description) { cleanSynopsis(p.description) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                Text(time, style = stageText(18, 500), color = StageColors.Muted, maxLines = 1)
+                if (genres.isNotEmpty()) Text(
+                    genres.take(2).joinToString(" · "), style = stageText(14, 700), color = StageColors.Text, maxLines = 1,
+                    modifier = Modifier.clip(RoundedCornerShape(8.mpx)).background(Color.White.copy(alpha = 0.14f)).padding(horizontal = 10.mpx, vertical = 3.mpx),
+                )
+            }
             if (live) {
                 val span = (p.stopMs - p.startMs).coerceAtLeast(1L)
                 val f = ((nowMs - p.startMs).toFloat() / span).coerceIn(0f, 1f)
@@ -701,8 +737,8 @@ private fun DeckInfoPanel(
                     Box(Modifier.fillMaxWidth(f).height(5.mpx).background(stageAccent.accent))
                 }
             }
-            p.description?.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = stageText(17, 400), color = StageColors.Body, maxLines = 5, overflow = TextOverflow.Ellipsis)
+            synopsis.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = stageText(17, 400), color = StageColors.Body, maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.mpx))
             }
         }
         // ---- What follows.
@@ -710,7 +746,7 @@ private fun DeckInfoPanel(
         if (coming.isNotEmpty()) Column(Modifier.weight(1f).fillMaxHeight()) {
             Text(
                 stringResource(R.string.content_live_next).uppercase(), style = stageText(16, 800), color = stageAccent.accent,
-                maxLines = 1, modifier = Modifier.padding(start = 12.mpx, bottom = 6.mpx),
+                maxLines = 1, modifier = Modifier.height(37.mpx).wrapContentHeight(Alignment.CenterVertically).padding(start = 12.mpx),
             )
             androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
                 val fit = (maxHeight / 50.mpx).toInt().coerceAtLeast(1)
