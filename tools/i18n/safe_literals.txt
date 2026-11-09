@@ -1387,6 +1387,7 @@
 3	technical	app/src/main/java/tv/own/owntv/glcn/Wallpapers.kt	fugaces
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wallpapers.kt	glcn_gate_wall
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wallpapers.kt	https://raw.githubusercontent.com/carlosglcn/OwnTV-Fanart/wallpapers/
+2	technical	app/src/main/java/tv/own/owntv/glcn/Wallpapers.kt	humo
 2	technical	app/src/main/java/tv/own/owntv/glcn/Wallpapers.kt	mar_beige
 2	technical	app/src/main/java/tv/own/owntv/glcn/Wallpapers.kt	muelle
 4	technical	app/src/main/java/tv/own/owntv/glcn/Wallpapers.kt	nacar
