@@ -298,11 +298,16 @@ fun ProgrammeInfoScreen(
                 .then(slideInRight)
                 .border(1.5.mpx, Ink.copy(alpha = 0.22f), RoundedCornerShape(windowRadius)),
         ) {
-            Text(
-                stringResource(R.string.glcn_pi_on_air).uppercase(), style = stageText(13, 800), color = Color.White,
-                modifier = Modifier.align(Alignment.TopStart).padding(10.mpx)
-                    .background(Color(0xCC0A1012), RoundedCornerShape(6.mpx)).padding(horizontal = 7.mpx, vertical = 3.mpx),
-            )
+            // glcn: "On air" is said once, by the channel's name on the left; the window only wears a live dot.
+            Row(
+                Modifier.align(Alignment.TopStart).padding(10.mpx)
+                    .background(Color(0xCC0A1012), RoundedCornerShape(6.mpx)).padding(horizontal = 8.mpx, vertical = 3.mpx),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.mpx),
+            ) {
+                Box(Modifier.size(8.mpx).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFFFF3B30)))
+                Text(stringResource(R.string.glcn_live_badge), style = stageText(13, 800), color = Color.White, maxLines = 1)
+            }
         }
 
         Column(Modifier.padding(start = 96.mpx, top = 80.mpx, end = 96.mpx).width(1240.mpx).then(slide)) {
@@ -345,13 +350,20 @@ fun ProgrammeInfoScreen(
                 Box(Modifier.then(slideInLeft).padding(top = 14.mpx).width(560.mpx).height(5.mpx).clip(RoundedCornerShape(3.mpx)).background(Ink.copy(alpha = 0.2f))) {
                     Box(Modifier.fillMaxWidth(f).height(5.mpx).background(accent))
                 }
-                val facts = (
-                    (film?.genres?.take(3)?.takeIf { it.isNotEmpty() } ?: cur.details.categoryList.take(3)) + listOfNotNull(
-                        (film?.year ?: cur.year ?: lent?.year)?.toString(),
-                        (film?.rating?.takeIf { it > 0 } ?: lent?.rating)?.let { "★ " + ProgrammeArtResolver.format(it) },
-                    )
-                    ).filter { it.isNotBlank() }.joinToString("  ·  ")
-                Row(Modifier.then(slideInLeft).padding(top = 16.mpx), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+                // glcn: the guide's synopsis without its tacked-on "(Genre, Genre)" and "País: …" (the genres become tags).
+                val (guideGenres, guideSynopsis) = remember(ownSynopsis) { tv.own.owntv.features.shell.components.cleanSynopsis(ownSynopsis) }
+                val genres = (film?.genres?.takeIf { it.isNotEmpty() }
+                    ?: cur.details.categoryList.flatMap { it.split(',') }.map { it.trim() }.filter { it.isNotEmpty() }.takeIf { it.isNotEmpty() }
+                    ?: guideGenres).distinct().take(3)
+                val minutes = ((cur.stopMs - cur.startMs) / 60_000L).toInt()
+                val facts = genres + listOfNotNull(
+                    (film?.year ?: cur.year ?: lent?.year)?.toString(),
+                    minutes.takeIf { it in 1..600 }?.let { m ->
+                        if (m >= 60) stringResource(R.string.content_duration_hours, m / 60, m % 60) else stringResource(R.string.content_duration_minutes, m)
+                    },
+                    (film?.rating?.takeIf { it > 0 } ?: lent?.rating)?.let { "★ " + ProgrammeArtResolver.format(it) },
+                ).filter { it.isNotBlank() }
+                Row(Modifier.then(slideInLeft).padding(top = 16.mpx), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
                     // glcn: the age rating as a badge of its own ("ES 7"), not lost in the line.
                     cur.rating?.takeIf { it.isNotBlank() }?.let { age ->
                         Text(
@@ -359,16 +371,24 @@ fun ProgrammeInfoScreen(
                             modifier = Modifier.border(1.5.mpx, Ink.copy(alpha = 0.6f), RoundedCornerShape(6.mpx)).padding(horizontal = 8.mpx, vertical = 2.mpx),
                         )
                     }
-                    if (facts.isNotEmpty()) Text(facts, style = stageText(20, 600), color = Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    facts.forEach { fact ->
+                        Text(
+                            fact, style = stageText(17, 700), color = Soft, maxLines = 1,
+                            modifier = Modifier.clip(RoundedCornerShape(8.mpx)).background(Ink.copy(alpha = 0.12f)).padding(horizontal = 10.mpx, vertical = 3.mpx),
+                        )
+                    }
                 }
                 // A film: TMDB's synopsis (in your language) before the guide's, which is often a list of credits.
-                ((film?.overview?.takeIf { it.isNotBlank() }) ?: ownSynopsis ?: lent?.overview)?.let {
+                ((film?.overview?.takeIf { it.isNotBlank() }) ?: guideSynopsis.takeIf { it.isNotBlank() } ?: lent?.overview)?.let {
                     // glcn: as wide as the room up to the panels on the right, and a line more, so most synopses read whole
                     // without drifting.
                     // glcn: the cast sits on the right now, so the synopsis has the whole column down to the button.
-                    DriftingSynopsis(it, modifier = Modifier.then(slideInLeft).padding(top = 16.mpx).width(1120.mpx), style = stageText(21, 400), color = Soft, lines = SYNOPSIS_LINES, fade = true)
+                    // glcn: kept to the left half, so the picture's faces stay clear of it.
+                    DriftingSynopsis(it, modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W), style = stageText(21, 400), color = Soft, lines = SYNOPSIS_LINES, fade = true)
                 }
             }
+            // glcn: what can be done with it, right under the synopsis (no longer down at the foot past an empty page).
+            InfoActions(cur, channel, showTech, onToggleTech = { showTech = !showTech }, onStartOver, onRecord, onDismiss, focus, pageFocus)
         }
 
         // Right: when it airs again this week, and under it a film's cast.
@@ -407,53 +427,71 @@ fun ProgrammeInfoScreen(
                 tv.own.owntv.features.shell.components.VodCast(row, CAST_PER_ROW, gap = 12.mpx)
             }
         }
-        }
 
-        // glcn: what follows on the channel, the rest of the evening, under the repeats.
-        if (cur != null && next.isNotEmpty() && !showTech) Column(
-            Modifier.align(Alignment.BottomEnd).padding(end = 96.mpx, bottom = 56.mpx).then(slideInRight).width(420.mpx).then(slide)
+        // glcn: what follows on the channel, in the same stack, right under the rest (no gap in the middle).
+        if (next.isNotEmpty() && !showTech) Column(
+            Modifier.then(slideInRight).fillMaxWidth()
                 .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
             Text(stringResource(R.string.glcn_pi_next), style = stageText(18, 800), color = accent, maxLines = 1)
-            next.forEach { n ->
+            val room = when {
+                again.isNotEmpty() && cast.isNotEmpty() -> 3
+                again.isNotEmpty() || cast.isNotEmpty() -> 4
+                else -> 7
+            }
+            next.take(room).forEach { n ->
                 Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
                     Text(timeFmt.format(java.util.Date(n.startMs)), style = stageText(19, 700), color = Ink, modifier = Modifier.width(84.mpx), maxLines = 1)
                     Text(n.title, style = stageText(18, 500), color = Soft, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
-
-        // The stream's technical data, kept off the player bar: one button here shows or hides them.
-        Row(
-            Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 56.mpx).onPreviewKeyEvent { e ->
-                if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown && e.key == androidx.compose.ui.input.key.Key.DirectionUp) {
-                    runCatching { pageFocus.requestFocus() }; true
-                } else false
-            },
-            horizontalArrangement = Arrangement.spacedBy(12.mpx),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // glcn: what can be done with the programme on air — from its start (catch-up), record.
-            if (cur != null && onStartOver != null && channel.catchup) StageTool(
-                text = stringResource(R.string.glcn_pi_start_over), onClick = { onStartOver(channel, cur) }, icon = OwnTVIcon.REWIND,
-            )
-            if (cur != null && onRecord != null) StageTool(
-                text = stringResource(R.string.recording_record), onClick = { onRecord(channel); onDismiss() }, icon = OwnTVIcon.REC,
-            )
-            StageTool(
-                text = stringResource(if (showTech) R.string.glcn_pi_hide_technical else R.string.glcn_pi_technical),
-                onClick = { showTech = !showTech },
-                icon = OwnTVIcon.INFO,
-                modifier = Modifier.focusRequester(focus),
-            )
         }
+
         if (channels.size > 1) Text(
             "◀ ▶  " + stringResource(R.string.glcn_pi_hint_channels) + "   ·   ▼  " + stringResource(R.string.glcn_pi_hint_options),
             style = stageText(15, 600), color = Dim, maxLines = 1,
             modifier = Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = 20.mpx),
         )
         if (showTech) StreamInfoOverlay(player, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 96.mpx, bottom = 56.mpx))
+    }
+}
+
+/** glcn: the page's buttons — from its start (catch-up), record, technical data — right under the synopsis. */
+@Composable
+private fun InfoActions(
+    cur: EpgProgrammeEntity?,
+    channel: ChannelEntity,
+    showTech: Boolean,
+    onToggleTech: () -> Unit,
+    onStartOver: ((ChannelEntity, EpgProgrammeEntity) -> Unit)?,
+    onRecord: ((ChannelEntity) -> Unit)?,
+    onDismiss: () -> Unit,
+    focus: FocusRequester,
+    pageFocus: FocusRequester,
+) {
+    Row(
+        Modifier.padding(top = 30.mpx).onPreviewKeyEvent { e ->
+            if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown && e.key == androidx.compose.ui.input.key.Key.DirectionUp) {
+                runCatching { pageFocus.requestFocus() }; true
+            } else false
+        },
+        horizontalArrangement = Arrangement.spacedBy(12.mpx),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (cur != null && onStartOver != null && channel.catchup) StageTool(
+            text = stringResource(R.string.glcn_pi_start_over), onClick = { onStartOver(channel, cur) }, icon = OwnTVIcon.REWIND,
+        )
+        if (cur != null && onRecord != null) StageTool(
+            text = stringResource(R.string.recording_record), onClick = { onRecord(channel); onDismiss() }, icon = OwnTVIcon.REC,
+        )
+        StageTool(
+            text = stringResource(if (showTech) R.string.glcn_pi_hide_technical else R.string.glcn_pi_technical),
+            onClick = onToggleTech,
+            icon = OwnTVIcon.INFO,
+            modifier = Modifier.focusRequester(focus),
+        )
     }
 }
 
@@ -466,7 +504,8 @@ private const val QUICK_SWAP_MS = 350L
 private const val PREFETCH_DELAY_MS = 250L
 
 /** glcn: the synopsis' lines, now that the cast is on the right. */
-private const val SYNOPSIS_LINES = 10
+private const val SYNOPSIS_LINES = 9
+private val SYNOPSIS_W = 860.mpx
 /** glcn: the cast panel on the right: four a row, two rows unless the repeats above take more than this many lines. */
 private const val CAST_PER_ROW = 4
 /** glcn: the live window up on the right (the shell places the picture in the same box, see [InfoStage]). */
