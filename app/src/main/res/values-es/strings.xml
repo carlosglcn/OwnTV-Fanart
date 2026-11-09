@@ -28,6 +28,7 @@
     <string name="glcn_wall_downloading">Descargando… %1$d%%</string>
     <string name="glcn_wall_failed">No se pudo descargar. Revisa la conexión y prueba otra vez.</string>
     <string name="glcn_wall_credit">Fondos: fotos de Unsplash (licencia Unsplash)</string>
+    <string name="glcn_wall_humo">Bruma azul</string>
     <string name="glcn_wall_via_lactea">Vía Láctea</string>
     <string name="glcn_wall_aurora_nieve">Aurora sobre la nieve</string>
     <string name="glcn_wall_aurora_pinos">Aurora entre pinos</string>

@@ -74,7 +74,7 @@ object Wallpapers {
     val animated = listOf("aurora", "ondas", "brillos", "nieve", "fugaces", "bokeh", "nacar", "amanecer", "petalos")
     /** The animated ones drawn on a light page — darkened under a dark theme so its white text still reads. */
     val lightAnimated = setOf("nacar", "amanecer", "petalos")
-    val dark = listOf("via_lactea", "aurora_nieve", "aurora_pinos", "puerto", "bosque", "nieve_violeta", "siluetas", "pico_lila")
+    val dark = listOf("humo", "via_lactea", "aurora_nieve", "aurora_pinos", "puerto", "bosque", "nieve_violeta", "siluetas", "pico_lila")
     val light = listOf("nubes_rosa", "duna", "mar_beige", "muelle", "valle")
     /** Offered for the profile screen first: a picture with more presence, nothing laid over it but names. */
     val gateFirst = listOf("nubes_rosa", "cordillera")
@@ -618,6 +618,7 @@ private fun wallLabel(item: WallItem): String = when (item) {
     )
     is WallItem.Photo -> stringResource(
         when (item.name) {
+            "humo" -> R.string.glcn_wall_humo
             "via_lactea" -> R.string.glcn_wall_via_lactea
             "aurora_nieve" -> R.string.glcn_wall_aurora_nieve
             "aurora_pinos" -> R.string.glcn_wall_aurora_pinos
