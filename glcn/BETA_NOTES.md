@@ -42,3 +42,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎯 The focus box travels: jumping from the top bar to a row, or from a menu to its page, the highlight glides over from where it was instead of switching off in one place and on in another.
 - 🌤️ Three new light wallpapers: Bruma perla, Amanecer pastel and Arena (Wallpapers › Light).
 - ✔️ The watched check on posters stays visible with a white accent and on the focused poster.
+- 📂 Player channel list: the categories panel is wider so names read whole, and a ‹ before the group's name shows that ◀ opens them.

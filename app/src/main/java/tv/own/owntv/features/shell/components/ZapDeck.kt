@@ -440,7 +440,8 @@ fun ZapDeck(
             // ---- Groups (and the playlists above them).
             // glcn: as TiviMate does — folded, the groups are not there at all (no column of initials); ◀ opens them
             // over the channels, which dim behind them, with their whole names, counts and playlist tags.
-            val groupsOpen = groupsOpenSet.coerceAtMost(chW + 20.mpx)
+            // glcn: wide enough for the categories' whole names (the panel covers the channels, so it can take their room).
+            val groupsOpen = groupsOpenSet.coerceAtLeast(GROUPS_PANEL_MIN).coerceAtMost(chW + 20.mpx)
             val slideGroupsPx = with(density) { 40.mpx.toPx() }
             Box(Modifier.width(0.mpx).fillMaxHeight().wrapContentWidth(Alignment.Start, unbounded = true).zIndex(1f)) {
             if (fold < 0.999f) Box(Modifier.width(groupsOpen).fillMaxHeight().graphicsLayer { alpha = 1f - fold; translationX = -slideGroupsPx * fold }) {
@@ -504,6 +505,8 @@ fun ZapDeck(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.mpx),
                 ) {
+                    // glcn: a ‹ before the group's name says the categories are there, to the left (◀ opens them).
+                    OwnTVIcon(OwnTVIcon.CHEVRON_LEFT, StageColors.Muted, Modifier.size(22.mpx))
                     Text(groupName, style = stageText(26, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     shownEntry?.item?.sourceId?.let(marks::get)?.let { tv.own.owntv.ui.stage.StagePlaylistMark(it) }
                     Text(
@@ -572,6 +575,9 @@ fun ZapDeck(
         } }
     }
 }
+
+/** glcn: the categories panel at least this wide, so their names read whole. */
+private val GROUPS_PANEL_MIN = 460.mpx
 
 /** glcn: the room kept under the picture for the programme and what follows it. */
 private val UNDER_PICTURE = 330.mpx
