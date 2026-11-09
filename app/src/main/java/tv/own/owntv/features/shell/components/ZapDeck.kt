@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.blur
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -50,6 +48,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -67,6 +66,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import tv.own.owntv.R
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.database.entity.EpgProgrammeEntity
@@ -258,6 +258,53 @@ fun ZapDeck(
     // Room left of the picture for the folded groups and the channels.
     val listRoom = with(density) { (pictureLocal.left - 48.mpx.toPx()).coerceAtLeast(0f).toDp() }
     val pictureRadius = with(LocalDensity.current) { 18.mpx.toPx() }
+    // glcn: a held ▲/▼ on the channels turns the list like a wheel — steps on the screen's frames at an even pace
+    // instead of the key's own repeats, then coasts a few rows and stops — and what is under the picture waits
+    // until it stands still (as Live TV's list does, glcn/ListWheel).
+    val wheelScope = androidx.compose.runtime.rememberCoroutineScope()
+    val wheelList = androidx.compose.runtime.rememberUpdatedState(list)
+    var wheelHeld by remember { mutableStateOf(false) }
+    var wheelTurning by remember { mutableStateOf(false) }
+    var wheelJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    fun turnWheel(dir: Int) {
+        wheelHeld = true
+        if (wheelJob?.isActive == true) return
+        wheelTurning = true
+        wheelJob = wheelScope.launch {
+            try {
+                var acc = 0f
+                var speed = 0f
+                var last = androidx.compose.runtime.withFrameNanos { it }
+                val began = last
+                while (wheelHeld) {
+                    val now = androidx.compose.runtime.withFrameNanos { it }
+                    val dt = ((now - last) / 1e9f).coerceIn(0f, 0.05f)
+                    last = now
+                    val t = (now - began) / 1e9f
+                    speed = WHEEL_CRUISE * wheelEase((t / WHEEL_START_S).coerceIn(0f, 1f)) +
+                        (WHEEL_TOP - WHEEL_CRUISE) * wheelEase(((t - WHEEL_RAMP_DELAY_S) / WHEEL_RAMP_S).coerceIn(0f, 1f))
+                    acc += speed * dt
+                    while (acc >= 1f) {
+                        acc -= 1f
+                        val next = chIdx + dir
+                        if (next !in wheelList.value.indices) { wheelHeld = false; break }
+                        chIdx = next
+                    }
+                }
+                // Let go: it coasts on a few rows, each step a little slower, and stops.
+                val extra = (speed * WHEEL_COAST_S).toInt().coerceIn(0, 4)
+                for (k in 0 until extra) {
+                    delay(70L + 55L * k)
+                    val next = chIdx + dir
+                    if (next !in wheelList.value.indices) break
+                    chIdx = next
+                }
+            } finally {
+                wheelHeld = false
+                wheelTurning = false
+            }
+        }
+    }
     Box(
         modifier
             .fillMaxSize()
@@ -278,11 +325,19 @@ fun ZapDeck(
             .focusRequester(focus)
             .focusable()
             .onPreviewKeyEvent { e ->
+                // glcn: the key comes up — the wheel coasts and stops.
+                if (e.type == KeyEventType.KeyUp && (e.key == Key.DirectionUp || e.key == Key.DirectionDown) && wheelHeld) {
+                    wheelHeld = false; return@onPreviewKeyEvent true
+                }
                 if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 val first = e.nativeKeyEvent.repeatCount == 0
                 when (e.key) {
                     Key.DirectionUp, Key.DirectionDown -> {
                         val up = e.key == Key.DirectionUp
+                        if (column == 1 && !tv.own.owntv.glcn.LowRam.on && list.size > 1) {
+                            if (!first) { turnWheel(if (up) -1 else 1); return@onPreviewKeyEvent true }
+                            if (wheelTurning) { wheelHeld = false; return@onPreviewKeyEvent true }
+                        }
                         when (column) {
                             2 -> schedIdx = (schedIdx + if (up) -1 else 1).coerceIn(0, (schedCount - 1).coerceAtLeast(0))
                             1 -> if (list.size > 1) chIdx = if (up) (if (chIdx == 0) list.lastIndex else chIdx - 1) else (if (chIdx == list.lastIndex) 0 else chIdx + 1)
@@ -346,9 +401,11 @@ fun ZapDeck(
             delay(BACKDROP_REST_MS)
             backdropProgramme = runCatching { cachedNow(ch).first }.getOrNull()
         }
+        val backdropUrl = tv.own.owntv.ui.components.programmeArtOrTmdb(backdropProgramme)
         DeckBackdrop(
-            url = tv.own.owntv.ui.components.programmeArtOrTmdb(backdropProgramme),
+            url = backdropUrl,
             shade = shade,
+            picture = pictureLocal,
             hole = { sz -> deckHole(sz, deckBox, pictureRadius) },
         )
         Row(
@@ -471,8 +528,13 @@ fun ZapDeck(
             }
         }
         // ---- The focused channel, under the picture: its programme, or its schedule.
-        val focusedChannel = list.getOrNull(chIdx)
-        if (pictureLocal.width > 0f) with(density) {
+        val panelHold = remember { arrayOfNulls<ChannelEntity>(1) }
+        val focusedChannel = if (wheelTurning) panelHold[0] else list.getOrNull(chIdx).also { panelHold[0] = it }
+        // glcn: over the programme's picture the text is light, as on a dark page.
+        val onArt = backdropUrl != null && !tv.own.owntv.glcn.LowRam.on
+        if (pictureLocal.width > 0f) androidx.compose.runtime.CompositionLocalProvider(
+            tv.own.owntv.ui.theme.LocalStagePalette provides if (onArt) tv.own.owntv.ui.theme.StagePalette.Dark else tv.own.owntv.ui.theme.LocalStagePalette.current,
+        ) { with(density) {
             Column(
                 Modifier
                     .offset { androidx.compose.ui.unit.IntOffset(pictureLocal.left.toInt(), (pictureLocal.bottom + 22.mpx.toPx()).toInt()) }
@@ -489,7 +551,7 @@ fun ZapDeck(
                         compact = true,
                     )
                 } else {
-                    androidx.compose.animation.Crossfade(focusedChannel, animationSpec = tween(140), label = "deckDetail") { ch ->
+                    androidx.compose.animation.Crossfade(focusedChannel, modifier = Modifier.fillMaxWidth().weight(1f), animationSpec = tween(140), label = "deckDetail") { ch ->
                         if (ch != null) DeckNowPanel(
                             channel = ch, loadNow = cachedNow, loadSchedule = loadSchedule,
                             peek = { nowCache[it.id] },
@@ -497,12 +559,21 @@ fun ZapDeck(
                     }
                 }
             }
-        }
+        } }
     }
 }
 
 /** glcn: the picture's width beside the channel list, as a share of the screen. */
-private const val PICTURE_SHARE = 0.5f
+private const val PICTURE_SHARE = 0.58f
+
+/** glcn: the channel wheel's pace (rows a second): from rest up to cruise, more only after a long hold; its coast. */
+private const val WHEEL_CRUISE = 12f
+private const val WHEEL_TOP = 18f
+private const val WHEEL_START_S = 0.3f
+private const val WHEEL_RAMP_DELAY_S = 1.4f
+private const val WHEEL_RAMP_S = 1.6f
+private const val WHEEL_COAST_S = 0.2f
+private fun wheelEase(x: Float) = x * x * (3f - 2f * x)
 
 /** glcn: how long the cursor rests on a channel before its programme's picture becomes the page's backdrop. */
 private const val BACKDROP_REST_MS = 450L
@@ -520,14 +591,17 @@ private fun deckHole(size: androidx.compose.ui.geometry.Size, deckBox: androidx.
 }
 
 /**
- * glcn: the page's backdrop — the focused programme's picture, read tiny and drawn large (soft without a blur, which
- * the SHIELD's Android cannot draw), under a wash of the page's own colour: almost solid behind the list, thinner
- * towards the right. It stays out of the picture's place.
+ * glcn: what the focused channel is showing, as a picture under the playing one — from halfway down the picture to
+ * the foot of the screen, edge to edge on the right; the page stays plain behind the list. It melts into the page at
+ * its left and top, and darkens towards the foot, where the programme is told in light text over it.
  */
 @Composable
-private fun DeckBackdrop(url: String?, shade: Color, hole: (androidx.compose.ui.geometry.Size) -> DeckHole) {
-    if (tv.own.owntv.glcn.LowRam.on) return
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.ui.geometry.Rect, hole: (androidx.compose.ui.geometry.Size) -> DeckHole) {
+    if (tv.own.owntv.glcn.LowRam.on || picture.width <= 0f) return
+    val density = LocalDensity.current
+    val fade = with(density) { 90.mpx.toPx() }
+    val left = (picture.left - fade).coerceAtLeast(0f)
+    val top = picture.top + picture.height * 0.45f
     Box(
         Modifier
             .fillMaxSize()
@@ -539,22 +613,44 @@ private fun DeckBackdrop(url: String?, shade: Color, hole: (androidx.compose.ui.
                 clipPath(path, androidx.compose.ui.graphics.ClipOp.Difference) { this@drawWithContent.drawContent() }
             },
     ) {
-        androidx.compose.animation.Crossfade(url, animationSpec = tween(600), label = "deckBackdrop") { u ->
-            if (u != null) coil3.compose.AsyncImage(
-                model = remember(u) { coil3.request.ImageRequest.Builder(ctx).data(u).size(coil3.size.Size(160, 90)).build() },
-                contentDescription = null,
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
-                modifier = Modifier.fillMaxSize().blur(24.mpx),
-            )
-        }
         Box(
-            Modifier.fillMaxSize().background(
-                androidx.compose.ui.graphics.Brush.horizontalGradient(
-                    0f to shade.copy(alpha = 0.94f), 0.42f to shade.copy(alpha = 0.86f), 1f to shade.copy(alpha = 0.58f),
-                ),
-            ),
-        )
+            Modifier.layout { m, c ->
+                // From the picture's left edge (less the fade) and its middle, to the screen's right edge and foot.
+                val w = (c.maxWidth - left.toInt()).coerceAtLeast(1)
+                val h = (c.maxHeight - top.toInt()).coerceAtLeast(1)
+                val pl = m.measure(androidx.compose.ui.unit.Constraints.fixed(w, h))
+                layout(c.maxWidth, c.maxHeight) { pl.place(left.toInt(), top.toInt()) }
+            },
+        ) {
+            androidx.compose.animation.Crossfade(url, animationSpec = tween(600), label = "deckBackdrop") { u ->
+                if (u != null) Box(Modifier.fillMaxSize()) {
+                    coil3.compose.AsyncImage(
+                        model = u,
+                        contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        alignment = Alignment.TopCenter,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    Box(
+                        Modifier.fillMaxSize().drawBehind {
+                            // Darker towards the foot, under the text.
+                            val textTop = picture.bottom - top
+                            drawRect(
+                                androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    0f to Color.Black.copy(alpha = 0.15f),
+                                    (textTop / size.height).coerceIn(0f, 1f) to Color.Black.copy(alpha = 0.55f),
+                                    ((textTop + fade) / size.height).coerceIn(0f, 1f) to Color.Black.copy(alpha = 0.78f),
+                                    1f to Color.Black.copy(alpha = 0.86f),
+                                ),
+                            )
+                            // Melts into the page at its left edge and its top.
+                            drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to shade, fade / size.width to shade.copy(alpha = 0f)))
+                            drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to shade, (fade * 1.2f) / size.height to shade.copy(alpha = 0f)))
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -581,7 +677,7 @@ private fun DeckNowPanel(
     }
     val p = programme?.first
     val fmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.mpx)) {
         if (p == null) {
             Text(ProviderTags.displayName(channel.name), style = stageText(28, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         } else {
@@ -601,12 +697,12 @@ private fun DeckNowPanel(
             }
         }
         if (coming.isNotEmpty()) Row(
-            Modifier.fillMaxWidth().padding(top = 10.mpx),
+            Modifier.fillMaxWidth().weight(1f).padding(top = 10.mpx),
             horizontalArrangement = Arrangement.spacedBy(16.mpx),
         ) {
             for (k in 0 until 3) {
                 val c = coming.getOrNull(k)
-                Box(Modifier.weight(1f)) { if (c != null) ComingCard(c, channel, fmt) }
+                Box(Modifier.weight(1f).fillMaxHeight()) { if (c != null) ComingCard(c, channel, fmt) }
             }
         }
     }
@@ -617,8 +713,7 @@ private fun ComingCard(p: EpgProgrammeEntity, channel: ChannelEntity, fmt: java.
     val art = tv.own.owntv.ui.components.programmeArtOrTmdb(p)
     Box(
         Modifier
-            .fillMaxWidth()
-            .aspectRatio(16f / 9f)
+            .fillMaxSize()
             .clip(RoundedCornerShape(16.mpx))
             .background(StageColors.Ink.copy(alpha = 0.08f)),
     ) {

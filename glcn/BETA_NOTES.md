@@ -27,3 +27,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌊 Smoother scrolling everywhere: lists, rows and grids now glide on a spring that keeps its speed — they set off gently, flow under a held key and slow down softly instead of stopping dead.
 - 🎡 Live TV fast scroll (hold ▲/▼): starts from rest, keeps an even pace, and on release coasts a few channels before settling; the rows hold their programme info while turning so it no longer stutters.
 - 🔄 Merged OwnTV 5.2.2 (thanks ahXN00 and contributors): Settings lock with its own PIN and protected profiles, local auto-sync between paired devices, title art and 4K badge in the player, series page title art, "Record every showing" can be stopped from Recordings, "Show likely channels" in Sports and better competition matching.
+- 🖼️ Player channel list: a bigger picture, and what the focused channel is showing appears as a picture under it, with the programme in light text over it; the page behind the list stays plain.
+- 🎡 Player channel list: hold ▲/▼ to turn the list like a wheel — even pace, a soft coast when you let go, and the panel under the picture waits until it stops.
