@@ -470,6 +470,8 @@ internal fun ZapSchedulePanel(
     selected: Int = -1,
     /** glcn: told how many programmes the schedule holds, so the picker stays inside it. */
     onRowCount: (Int) -> Unit = {},
+    /** glcn: little height (under the zap deck's picture): the programme card without its picture, a shorter synopsis. */
+    compact: Boolean = false,
 ) {
     var rows by remember { mutableStateOf<List<EpgProgrammeEntity>>(emptyList()) }
     LaunchedEffect(channel?.id) {
@@ -506,14 +508,15 @@ internal fun ZapSchedulePanel(
     Column(
         modifier
             .fillMaxHeight()
-            .width(560.mpx)
+            .then(if (compact) Modifier else Modifier.width(560.mpx))
             .then(
-                if (joined) Modifier.drawBehind {
+                if (compact) Modifier
+                else if (joined) Modifier.drawBehind {
                     val inset = 26.mpx.toPx()
                     drawLine(line, androidx.compose.ui.geometry.Offset(0f, inset), androidx.compose.ui.geometry.Offset(0f, size.height - inset), strokeWidth = 1.mpx.toPx())
                 } else Modifier.stageGlass(StageRadii.Sheet, overContent = true, share = tv.own.owntv.glcn.PlayerGlass.share(tv.own.owntv.features.live.PLAYER_SHEET_GLASS)),
             )
-            .padding(horizontal = 22.mpx, vertical = 20.mpx),
+            .padding(horizontal = if (compact) 0.mpx else 22.mpx, vertical = if (compact) 4.mpx else 20.mpx),
         verticalArrangement = Arrangement.spacedBy(5.mpx),
     ) {
         Text(
@@ -527,9 +530,10 @@ internal fun ZapSchedulePanel(
             ZapPreviewPanel(
                 channel = channel, loadNow = loadNow, modifier = Modifier.fillMaxWidth().padding(bottom = 14.mpx), framed = false, peek = peek,
                 bareAspect = 16f / 9f,
-                bareLines = 5,
+                bareLines = if (compact) 2 else 5,
                 showing = pick?.let { (full[it.startMs] ?: it) to rows.getOrNull(selected + 1) },
                 showNext = false,
+                picture = !compact,
             )
         }
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(bottom = if (joined) 40.mpx else 0.mpx)) {

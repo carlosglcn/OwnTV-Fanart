@@ -472,7 +472,8 @@ fun ZapDeck(
                     .graphicsLayer { alpha = enter.value }
                     .clipToBounds(),
             ) {
-                focusedChannel?.let { ch ->
+                // The schedule names its channel in its own heading; the programme card gets the channel's line.
+                if (detail != 1) focusedChannel?.let { ch ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.mpx),
@@ -484,9 +485,10 @@ fun ZapDeck(
                 }
                 if (detail == 1) {
                     ZapSchedulePanel(
-                        channel = focusedChannel, loadSchedule = loadSchedule, modifier = Modifier.fillMaxWidth(), loadNow = cachedNow, joined = true, peek = { nowCache[it.id] },
+                        channel = focusedChannel, loadSchedule = loadSchedule, modifier = Modifier.fillMaxWidth().weight(1f), loadNow = cachedNow, joined = true, peek = { nowCache[it.id] },
                         selected = if (column == 2) schedIdx else -1,
                         onRowCount = { schedCount = it },
+                        compact = true,
                     )
                 } else {
                     androidx.compose.animation.Crossfade(focusedChannel, animationSpec = tween(140), label = "deckDetail") { ch ->
