@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -644,6 +645,8 @@ fun StageSettingRow(
     marked: Boolean = false,
     /** Keep the panel on this row while focus is in its actions (list pages). */
     keepPanel: Boolean = false,
+    /** glcn: small pills after the title — text, and whether it is filled (NEW) or only outlined (FANART). */
+    badges: List<Pair<String, Boolean>> = emptyList(),
 ) {
     val a = stageAccent
     val panel = LocalSettingsPanel.current
@@ -694,6 +697,7 @@ fun StageSettingRow(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                     Text(title, style = stageText(21, 700), color = if (enabled) StageColors.Text else StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (pinned) Box(Modifier.size(7.mpx).background(a.accent, CircleShape))
+                    badges.forEach { (text, filled) -> StageRowBadge(text, filled, focused) }
                 }
                 if (!desc.isNullOrBlank()) {
                     Text(
@@ -710,6 +714,28 @@ fun StageSettingRow(
 }
 
 private val FocusedDesc: Color @Composable get() = StageColors.FxLine
+
+/** glcn: a NEW / FANART pill. On the focused (accent) row it reads in the accent's ink. */
+@Composable
+internal fun StageRowBadge(text: String, filled: Boolean, lit: Boolean = false) {
+    val a = stageAccent
+    val ink = if (lit) a.onAccent else a.accent
+    val shape = RoundedCornerShape(8.mpx)
+    Box(
+        Modifier
+            .then(
+                if (filled) Modifier.background(if (lit) a.onAccent else a.accent, shape)
+                else Modifier.border(androidx.compose.foundation.BorderStroke(1.5.mpx, ink.copy(alpha = 0.7f)), shape),
+            )
+            .padding(horizontal = 8.mpx, vertical = 2.mpx),
+    ) {
+        Text(
+            text.uppercase(), style = stageText(12, 800, 0.08.em),
+            color = if (filled) (if (lit) a.accent else a.onAccent) else ink,
+            maxLines = 1,
+        )
+    }
+}
 
 @Composable
 private fun SettingValueView(value: SettingValue) {

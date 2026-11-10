@@ -50,3 +50,8 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏸️ Playlists can be turned off without deleting them: kept, but hidden everywhere and not updated until turned back on.
 - 🎨 Each playlist's tag and colour can be chosen (Colour and tag); they show wherever rows are marked by playlist.
 - ⏰ A one-time notice a week before an Xtream subscription expires, with its date.
+- 🧭 Settings: each group shows the everyday settings first; the rest wait behind "Show advanced settings" (it says how many and which), and each group remembers whether you left it open.
+- 🖼️ Settings: Fanart settings also appear in the group they belong to (Appearance, Layout, Player…) with a FANART tag; the Fanart group still lists them all.
+- 🆕 Settings: a NEW badge marks settings added or changed in this version, on the row and on its group's card; it goes away once you open it.
+- 🏠 Settings: Home background is one row now — picture, your own image and dimming in a single popup.
+- 🔤 Spanish: "Categories" and "Channels ocultos" in Customize now read "Categorías" and "Canales ocultos".

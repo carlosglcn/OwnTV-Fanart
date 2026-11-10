@@ -549,6 +549,13 @@ internal fun VideoPlayerGroupRows(
     focusRowKey: String? = null,
     /** False when other rows come first on the page (App), so the first heading keeps its 18 px gap. */
     firstHeading: Boolean = true,
+    /** glcn: the parts that sit behind "Show advanced settings", and whether that is open. */
+    advancedParts: Set<Int> = emptySet(),
+    showAdvanced: Boolean = true,
+    /** glcn: drawn after the everyday parts (the group's Fanart rows and the advanced toggle)… */
+    between: (@Composable () -> Unit)? = null,
+    /** …and after the advanced parts, only while they show. */
+    after: (@Composable () -> Unit)? = null,
 ) {
     val vm: SettingsViewModel = koinViewModel()
     val hw by vm.hwDecoding.collectAsStateWithLifecycle()
@@ -744,7 +751,11 @@ internal fun VideoPlayerGroupRows(
             focusRequester = rowReturnFocus,
         ),
     ) {
+        var betweenDone = false
         group.parts.forEachIndexed { partIndex, (headingRes, sections) ->
+            val advancedPart = partIndex in advancedParts
+            if (advancedPart && !betweenDone) { betweenDone = true; between?.invoke() }
+            if (advancedPart && !showAdvanced) return@forEachIndexed
             StageSettingsHeading(stringResource(headingRes), sections.sumOf { counts[it] }, first = firstHeading && partIndex == 0)
             sections.forEach { section ->
                 when (section) {
@@ -1384,6 +1395,8 @@ internal fun VideoPlayerGroupRows(
                 }
             }
         }
+        if (!betweenDone) between?.invoke()
+        if (showAdvanced) after?.invoke()
     }
 
     menuKey?.let { key ->

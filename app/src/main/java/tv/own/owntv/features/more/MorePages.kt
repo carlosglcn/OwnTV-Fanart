@@ -237,6 +237,7 @@ private var lastOpenedCard: Int? = null
 internal fun SettingsPage(entry: FocusRequester, pinned: Int, onOpenGroup: (Int) -> Unit, onSearch: () -> Unit) {
     val back = lastOpenedCard
     val profiles = tv.own.owntv.features.settings.profileCount()
+    val newContext = androidx.compose.ui.platform.LocalContext.current
     Column(Modifier.fillMaxSize().focusGroup()) {
         PageHead(stringResource(R.string.common_nav_settings)) {
             Spacer(Modifier.weight(1f))
@@ -274,6 +275,11 @@ internal fun SettingsPage(entry: FocusRequester, pinned: Int, onOpenGroup: (Int)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     OwnTVIcon(card.icon, if (focused) StageColors.Text else StageColors.Muted, Modifier.size(28.mpx))
                                     Spacer(Modifier.weight(1f))
+                                    // glcn: a group holding a setting that is new in this release.
+                                    if (tv.own.owntv.glcn.SettingsTiers.isNewGroup(newContext, tv.own.owntv.glcn.SettingsTiers.groupKeys.getOrElse(index) { "" })) {
+                                        tv.own.owntv.features.settings.StageRowBadge(stringResource(R.string.glcn_badge_new), filled = true)
+                                        Spacer(Modifier.width(12.mpx))
+                                    }
                                     Text((if (index == 2) profiles else card.count ?: pinned).toString(), style = stageText(17, 700), color = StageColors.Dim)
                                 }
                                 Text(stringResource(card.nameRes), style = stageText(24, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 14.mpx))
