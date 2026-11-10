@@ -32,7 +32,7 @@ object SettingsTiers {
     )
 
     /** Player groups: the parts (by index in [VideoGroup.parts]) that count as advanced. */
-    val advancedParts: Map<VideoGroup, Set<Int>> = mapOf(
+    internal val advancedParts: Map<VideoGroup, Set<Int>> = mapOf(
         VideoGroup.PLAYER to setOf(1),
         VideoGroup.PICTURE to setOf(1),
         VideoGroup.LIVE to setOf(1),
