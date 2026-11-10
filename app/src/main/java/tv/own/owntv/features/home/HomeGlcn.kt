@@ -133,7 +133,7 @@ internal fun HomeFocusBackdrop(url: String?, modifier: Modifier = Modifier, trai
                         val drift = remember(u) { androidx.compose.animation.core.Animatable(1f) }
                         val driftOn = animate && !tv.own.owntv.ui.stage.GlcnMotion.subtle && tv.own.owntv.glcn.DeviceClass.richMotion && !holeOpen
                         LaunchedEffect(u, driftOn) {
-                            if (driftOn) drift.animateTo(1.06f, androidx.compose.animation.core.tween(8_000, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                            if (driftOn) drift.animateTo(1.06f, androidx.compose.animation.core.tween(tv.own.owntv.glcn.Pace.slow(8_000), easing = androidx.compose.animation.core.LinearOutSlowInEasing))
                         }
                         AsyncImage(
                             model = u, contentDescription = null, contentScale = ContentScale.Crop,
@@ -555,7 +555,7 @@ internal fun FeaturedBillboard(
                 // glcn (full width): a slow push into each slide's picture.
                 val zoom = remember(url) { androidx.compose.animation.core.Animatable(1f) }
                 LaunchedEffect(url, fullWidth, animate) {
-                    if (fullWidth && animate) zoom.animateTo(1.07f, androidx.compose.animation.core.tween(10_000, easing = androidx.compose.animation.core.LinearEasing))
+                    if (fullWidth && animate) zoom.animateTo(1.07f, androidx.compose.animation.core.tween(tv.own.owntv.glcn.Pace.slow(10_000), easing = androidx.compose.animation.core.LinearEasing))
                 }
                 AsyncImage(
                     model = url, contentDescription = null, contentScale = ContentScale.Crop,
@@ -698,7 +698,7 @@ private fun FullBackdrop(url: String?, modifier: Modifier = Modifier, kenBurns: 
             val side = remember(u) { if ((u.hashCode() and 1) == 0) 1f else -1f }
             LaunchedEffect(u, driftOn, burns) {
                 if (burns) drift.animateTo(1f + KEN_BURNS_ZOOM, androidx.compose.animation.core.tween(KEN_BURNS_MS, easing = androidx.compose.animation.core.LinearEasing))
-                else if (driftOn) drift.animateTo(1.05f, androidx.compose.animation.core.tween(12_000, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                else if (driftOn) drift.animateTo(1.05f, androidx.compose.animation.core.tween(tv.own.owntv.glcn.Pace.slow(12_000), easing = androidx.compose.animation.core.LinearOutSlowInEasing))
             }
             AsyncImage(
                 model = u, contentDescription = null, contentScale = ContentScale.Crop,
@@ -1069,7 +1069,8 @@ private fun cinemaJsonList(json: String?): List<String> {
 }
 
 private const val KEN_BURNS_ZOOM = 0.12f
-private const val KEN_BURNS_MS = 24_000
+// glcn: ambient — keeps its calm under the app's brisk pace (Pace).
+private val KEN_BURNS_MS: Int get() = tv.own.owntv.glcn.Pace.slow(24_000)
 private const val CINEMA_AMBIENT = 0.16f
 private const val CINEMA_TRAILER_MS = 1_200L // glcn: it starts unseen almost at once and shows once YouTube's own overlays have gone (~3 s later)
 private const val TRAILER_WARM_MS = 900L // glcn: just after the page has opened (the player is made after its entrance, not during it)

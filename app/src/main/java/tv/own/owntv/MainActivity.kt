@@ -343,7 +343,9 @@ open class MainActivity : ComponentActivity() {
         }
         // glcn: how the screen keeps up, to suggest light mode once if it stutters again and again.
         tv.own.owntv.glcn.JankWatch.install(this)
-        setContent { Box(Modifier.fillMaxSize()) {
+        // glcn: the app's own brisk pace for every animation (Pace).
+        val pacedRecomposer = tv.own.owntv.glcn.Pace.install(this)
+        setContent(parent = pacedRecomposer) { Box(Modifier.fillMaxSize()) {
             // First composition pass — splits "process start → Compose is running" from
             // "Compose is running → the destination's data arrived".
             // Deliberately a Unit-returning remember: the point is the side effect happening DURING

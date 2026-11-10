@@ -640,7 +640,8 @@ private fun wallLabel(item: WallItem): String = when (item) {
     )
 }
 
-private const val WALL_ROUND_MS = 45_000
+// glcn: ambient — keeps its calm under the app's brisk pace (Pace).
+private val WALL_ROUND_MS: Int get() = Pace.slow(45_000)
 private const val PREVIEW_FADE_MS = 260
 private const val TILE_W = 216
 

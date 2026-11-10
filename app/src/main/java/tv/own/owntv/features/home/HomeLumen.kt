@@ -681,7 +681,8 @@ private const val DOCK_REST_MS = 20_000L
 
 /** glcn: the Dock backdrop's slow push-in — how close and over how long. */
 private const val DOCK_DRIFT_TO = 1.06f
-private const val DOCK_DRIFT_MS = 9_000
+// glcn: ambient — keeps its calm under the app's brisk pace (Pace).
+private val DOCK_DRIFT_MS: Int get() = tv.own.owntv.glcn.Pace.slow(9_000)
 
 /** glcn: the Dock's trailer window height. */
 private val DOCK_TRAILER_HEIGHT = 560.mpx

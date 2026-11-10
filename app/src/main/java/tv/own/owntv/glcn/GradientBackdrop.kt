@@ -78,7 +78,8 @@ fun DrawScope.drawLights(lights: List<Color>, page: Color, t: Float) {
 private fun lift(c: Color): Color = androidx.compose.ui.graphics.lerp(c, Color.White, 0.12f)
 private fun shift(c: Color): Color = Color(c.blue, c.red * 0.8f, c.green, 1f)
 
-private const val DRIFT_MS = 40_000
+// glcn: ambient — keeps its calm under the app's brisk pace (Pace).
+private val DRIFT_MS: Int get() = Pace.slow(40_000)
 
 /**
  * glcn: true while something with its own colour fills the screen behind the app — a photo, an animated wallpaper or

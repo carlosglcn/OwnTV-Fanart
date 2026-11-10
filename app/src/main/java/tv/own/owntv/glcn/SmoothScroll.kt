@@ -94,7 +94,8 @@ class GlideScroller(private val state: androidx.compose.foundation.lazy.grid.Laz
             var speed = 0f
             while (kotlin.math.abs(pending) > 0.5f || kotlin.math.abs(speed) > 12f) {
                 val now = androidx.compose.runtime.withFrameNanos { it }
-                val dt = ((now - last) / 1_000_000_000f).coerceIn(0f, 0.05f)
+                // glcn: at the app's pace (Pace), like every Compose animation.
+                val dt = ((now - last) / 1_000_000_000f).coerceIn(0f, 0.05f) / Pace.factor.coerceIn(0.1f, 1f)
                 last = now
                 val (left, v) = FollowSpring.step(pending, speed, dt, GLIDE_OMEGA)
                 val step = pending - left
