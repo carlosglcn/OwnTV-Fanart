@@ -72,6 +72,7 @@ import tv.own.owntv.ui.theme.stageShadow
 import tv.own.owntv.ui.theme.stageText
 import tv.own.owntv.glcn.slideFocusReport
 import tv.own.owntv.glcn.slideRegion
+import tv.own.owntv.glcn.slidePop
 
 /*
  * The Stage component set (the design's `.mine` classes). Idle = nothing, selected = accent text + dot or bar,
