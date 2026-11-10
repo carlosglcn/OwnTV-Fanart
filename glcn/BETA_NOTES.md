@@ -69,3 +69,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🃏 Home: the landscape cards pop as they take focus — they grow a little with a small bounce, the focus box with them, and draw over their neighbours, like a launcher's app tiles. Posters stay as they are.
 - 🪀 TV en directo and the Guide: the channel list moves with a little give when it scrolls (a soft spring instead of a dead stop), without overdoing it.
 - ✅ Home: films you have already watched (their ✓, or marked watched) no longer appear in Recent films or the Featured billboard.
+- 🎯 TV en directo: the channel highlight now slides from row to row with a little give (a soft spring), instead of jumping; in the Guide, ▲/▼ between channels lands the same way.
+- 🔕 The "Rebuilding sports…" note no longer pops up on every screen: the sports rebuild runs on its own in the background (its progress stays in Sports › Settings), and only a failure is said.

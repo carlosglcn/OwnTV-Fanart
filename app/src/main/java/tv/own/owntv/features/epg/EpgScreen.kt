@@ -377,6 +377,8 @@ fun EpgScreen(
         )
     }
     val glide = androidx.compose.animation.core.spring<Float>(dampingRatio = 1f, stiffness = 420f)
+    // glcn: ▲/▼ from channel to channel lands with a little give, as the channel list's highlight does.
+    val rowGlide = androidx.compose.animation.core.spring<Float>(dampingRatio = tv.own.owntv.glcn.CHANNEL_FOCUS_DAMPING, stiffness = 420f)
     LaunchedEffect(gridHasFocus, inCellMode) {
         val rowTo = if (gridHasFocus && !inCellMode) 1f else 0f
         val cellTo = if (gridHasFocus && inCellMode) 1f else 0f
@@ -391,7 +393,7 @@ fun EpgScreen(
             else {
                 val from = (start - rowY(index)).coerceIn(-rowStride * 6, rowStride * 6)
                 cursor.rowOff.snapTo(from)
-                cursor.rowOff.animateTo(0f, glide)
+                cursor.rowOff.animateTo(0f, rowGlide)
             }
         }
     }

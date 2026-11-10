@@ -203,6 +203,10 @@ fun Modifier.slidePop(st: SlideFocusState?, focused: Boolean): Modifier =
         scaleX = p; scaleY = p
     }
 
+/** glcn: the channel lists' highlight (TV en directo): brisk, a touch short of critical damping — a small give. */
+const val CHANNEL_FOCUS_STIFFNESS = 520f
+const val CHANNEL_FOCUS_DAMPING = 0.72f
+
 /** glcn: a launcher-like pop — a small overshoot (about 6 % past the step), settled in a quarter of a second. */
 private const val POP_DAMPING = 0.55f
 private const val POP_STIFFNESS = 420f

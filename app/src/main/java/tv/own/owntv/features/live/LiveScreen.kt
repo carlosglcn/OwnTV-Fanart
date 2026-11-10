@@ -1112,10 +1112,12 @@ fun LiveScreen(
                         androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec,
                         tv.own.owntv.glcn.LocalQuietFocus provides wheel.turning,
                     ) {
+                    // glcn: the channel highlight slides from row to row with a little give, instead of jumping.
+                    tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f), stiffness = tv.own.owntv.glcn.CHANNEL_FOCUS_STIFFNESS, damping = tv.own.owntv.glcn.CHANNEL_FOCUS_DAMPING) {
                     LazyColumn(
                         state = effectiveListState,
                         verticalArrangement = Arrangement.spacedBy(8.mpx),
-                        modifier = Modifier.fillMaxWidth().weight(1f).layout { measurable, constraints ->
+                        modifier = Modifier.fillMaxSize().layout { measurable, constraints ->
                             val extra = glowRoom.roundToPx()
                             val placeable = measurable.measure(
                                 constraints.copy(
@@ -1238,6 +1240,7 @@ fun LiveScreen(
                             }
                         }
                     }
+                    } // glcn: end of the channel list's sliding focus box
                     }
                 }
                 // With the preview off the hints stay under the list, where there is nothing else to hold them.
