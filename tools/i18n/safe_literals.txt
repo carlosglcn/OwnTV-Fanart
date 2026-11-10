@@ -914,6 +914,7 @@
 2	empty	app/src/main/java/tv/own/owntv/features/shell/components/StageRail.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/StageRail.kt	$line ›
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/StageRail.kt	?
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/StageRail.kt	railIconHop
 2	empty	app/src/main/java/tv/own/owntv/features/shell/components/StageStatus.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/StageStatus.kt	EEEdMMM
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/StageStatus.kt	tnum
@@ -2054,6 +2055,7 @@
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	plex
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	posterTitle
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	stageLift
+1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	stillWords
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StageComponents.kt	−
 1	technical	app/src/main/java/tv/own/owntv/ui/stage/StagePopup.kt	$value ›
 1	technical	app/src/main/java/tv/own/owntv/ui/theme/Glass.kt	glassPosition

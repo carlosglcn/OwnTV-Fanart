@@ -72,3 +72,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎯 TV en directo: the channel highlight now slides from row to row with a little give (a soft spring), instead of jumping; in the Guide, ▲/▼ between channels lands the same way.
 - 🔕 The "Rebuilding sports…" note no longer pops up on every screen: the sports rebuild runs on its own in the background (its progress stays in Sports › Settings), and only a failure is said.
 - 🪀 More spring: the channel highlight in TV en directo and the Guide now passes the row by about an eighth and settles back (was a slight give), the channel list scrolls with a clearer give, and Home's landscape cards pop a little more (1.08).
+- 🌤️ Home cards lift: the focused landscape card throws a deeper shadow that grows with its pop, and its title and line come forward (brighter, settling a little lower) while the others stay a step back.
+- 🔍 A title chosen on Home grows into its page (a short zoom and fade) instead of arriving like any other section.
+- 🫧 Side menu: each icon gives a little springy hop as the focus reaches it.

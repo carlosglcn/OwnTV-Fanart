@@ -420,8 +420,15 @@ private fun RailItem(
             active || accentIcon -> a.accent
             else -> StageColors.NavText
         }
+        // glcn: the icon gives a little springy hop as the focus reaches it (as the cards pop).
+        val hop by androidx.compose.animation.core.animateFloatAsState(
+            if (focused && tv.own.owntv.ui.theme.animationsOn) RAIL_ICON_POP else 1f,
+            androidx.compose.animation.core.spring(dampingRatio = RAIL_ICON_DAMPING, stiffness = RAIL_ICON_STIFFNESS),
+            label = "railIconHop",
+        )
+        val iconHop = Modifier.graphicsLayer { scaleX = hop; scaleY = hop }
         if (!open) {
-            OwnTVIcon(icon, iconTint, Modifier.size(27.mpx))
+            OwnTVIcon(icon, iconTint, Modifier.size(27.mpx).then(iconHop))
             if (active && !focused) RailActiveDot(Modifier.align(Alignment.CenterEnd).offset(x = 9.mpx))
             return@StageSurface
         }
@@ -430,7 +437,7 @@ private fun RailItem(
             horizontalArrangement = Arrangement.spacedBy(18.mpx),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            OwnTVIcon(icon, iconTint, Modifier.size(26.mpx))
+            OwnTVIcon(icon, iconTint, Modifier.size(26.mpx).then(iconHop))
             Column(Modifier.weight(1f).graphicsLayer { alpha = namesAlpha() }) {
                 Text(
                     label,
@@ -455,6 +462,10 @@ private fun RailItem(
         }
     }
 }
+
+private const val RAIL_ICON_POP = 1.16f
+private const val RAIL_ICON_DAMPING = 0.45f
+private const val RAIL_ICON_STIFFNESS = 520f
 
 /** `.it.on::after`: 6 px, 9 px outside the capsule's item, glowing 10 px. */
 @Composable

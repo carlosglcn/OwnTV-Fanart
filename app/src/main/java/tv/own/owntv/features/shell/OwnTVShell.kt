@@ -1241,6 +1241,8 @@ fun OwnTVShell(
         val overridden by movieVm.overriddenMovies.collectAsStateWithLifecycle()
         val favs by movieVm.favoriteIds.collectAsStateWithLifecycle()
         androidx.compose.runtime.key(film.id) {
+            val zoom = tv.own.owntv.glcn.rememberTitleZoom()
+            Box(Modifier.fillMaxSize().graphicsLayer { val k = zoom.value; alpha = k; val z = tv.own.owntv.glcn.TitleZoom.FROM + (1f - tv.own.owntv.glcn.TitleZoom.FROM) * k; scaleX = z; scaleY = z }) {
             tv.own.owntv.features.movies.MovieTitlePage(
                 movie = film,
                 meta = meta,
@@ -1261,6 +1263,7 @@ fun OwnTVShell(
                 loadRelated = { movieVm.relatedMoviesOf(film) },
                 onOpenRelated = { r -> homeFilm = r },
             )
+            }
         }
     }
 
@@ -1591,7 +1594,10 @@ fun OwnTVShell(
                 // old one goes at once: never two sections built side by side). Instant with animations off or light mode.
                 val sectionIn = remember { androidx.compose.animation.core.Animatable(1f) }
                 val sectionAnim = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
+                // glcn: a title opened from Home grows into its page instead of rising in (TitleZoom).
+                var sectionZoom by remember { mutableStateOf(false) }
                 LaunchedEffect(selectedSection) {
+                    sectionZoom = tv.own.owntv.glcn.TitleZoom.take()
                     if (!sectionAnim) return@LaunchedEffect
                     sectionIn.snapTo(0f)
                     sectionIn.animateTo(1f, androidx.compose.animation.core.tween(SECTION_IN_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing))
@@ -1602,7 +1608,12 @@ fun OwnTVShell(
                         .graphicsLayer {
                             val k = sectionIn.value
                             alpha = 0.25f + 0.75f * k
-                            translationY = (1f - k) * sectionRise
+                            if (sectionZoom) {
+                                val z = tv.own.owntv.glcn.TitleZoom.FROM + (1f - tv.own.owntv.glcn.TitleZoom.FROM) * k
+                                scaleX = z; scaleY = z
+                            } else {
+                                translationY = (1f - k) * sectionRise
+                            }
                         }
                         .then(
                             // The floating rail sits over the content, so the content starts at the screen
@@ -1744,6 +1755,7 @@ fun OwnTVShell(
                                 }
                             },
                             onOpenMovie = { movie ->
+                                tv.own.owntv.glcn.TitleZoom.arm()
                                 // glcn: with "Page before watching" on, a film chosen on Home opens its page right here.
                                 if (tv.own.owntv.glcn.DockPrefs.titlePage) homeFilm = movie
                                 else {
@@ -1753,6 +1765,7 @@ fun OwnTVShell(
                                 }
                             },
                             onOpenSeries = { series ->
+                                tv.own.owntv.glcn.TitleZoom.arm()
                                 seriesVm.openSeries(series)
                                 restoreFocus = true
                                 seriesFromHome = true

@@ -953,7 +953,12 @@ fun StagePoster(
                 .then(if (slide != null) Modifier.slideRegion(region) else Modifier)
                 .then(
                     if (focused && slide != null) {
-                        Modifier
+                        // glcn: the popped card lifts off the page — a deeper shadow that grows with the pop.
+                        val shadow = stageShadow(0.75f)
+                        Modifier.drawBehind {
+                            val lift = ((slide.pop.value - 1f) / (STILL_POP - 1f)).coerceIn(0f, 1.2f)
+                            drawBoxShadow(shadow, (26 + 22 * lift).mpx.toPx(), r.toPx(), dy = (10 + 14 * lift).mpx.toPx())
+                        }
                     } else if (focused) {
                         Modifier.stageFocusDecor(StageFocus.POSTER, r, accent, LocalStagePalette.current)
                     } else {
@@ -1111,13 +1116,28 @@ fun StageStill(
             }
         }
         Spacer(Modifier.height(12.mpx))
-        Text(title, style = stageText(titleSize, 700), color = stageTone(Color(0xFFE6EEEA), StageColors.Text), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (line != null) {
-            Spacer(Modifier.height((if (lineSize >= 16) 4 else 3).mpx))
-            Text(line, style = stageText(lineSize, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // glcn: with the sliding box, the focused card's words come forward as it pops — they settle a little lower
+        // and brighten, the rest stay a step back (as a launcher names the tile in focus).
+        val words = if (slide != null) {
+            val k by androidx.compose.animation.core.animateFloatAsState(
+                if (focused) 1f else 0f, androidx.compose.animation.core.tween(STILL_WORDS_MS), label = "stillWords",
+            )
+            val drop = STILL_WORDS_DROP.mpx
+            Modifier.graphicsLayer { alpha = STILL_WORDS_REST + (1f - STILL_WORDS_REST) * k; translationY = (k * drop.toPx()) - drop.toPx() / 2f }
+        } else Modifier
+        Column(words) {
+            Text(title, style = stageText(titleSize, 700), color = stageTone(Color(0xFFE6EEEA), StageColors.Text), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (line != null) {
+                Spacer(Modifier.height((if (lineSize >= 16) 4 else 3).mpx))
+                Text(line, style = stageText(lineSize, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }
+
+private const val STILL_WORDS_MS = 220
+private const val STILL_WORDS_REST = 0.7f
+private const val STILL_WORDS_DROP = 6
 
 /** `.ep.w`: a watched episode's still at saturate(.55) brightness(.72). */
 private val WatchedFilter = ColorFilter.colorMatrix(
