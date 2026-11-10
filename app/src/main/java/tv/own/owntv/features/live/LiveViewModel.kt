@@ -1432,6 +1432,12 @@ class LiveViewModel(
         viewModelScope.launch { sealedCategoryIds.collect { peek.dropCategories(it) } }
     }
 
+    // glcn: the box critically short of memory with a preview that shows nothing — let it go (see
+    // LivePreviewEngine.letGoUnderPressure); the next focus move tunes again.
+    init {
+        viewModelScope.launch { previewEngine.letGoUnderPressure.collect { if (_previewChannel.value != null) stopPreview() } }
+    }
+
     /** ◀ from the in-player channel list: categories beside the list CH± zaps in, on its category. */
     fun openChannelBrowser() {
         peek.start(zapList.channels.value, zapList.key.value ?: playingChannel?.categoryId?.let { LiveKey.Folder(it) })
