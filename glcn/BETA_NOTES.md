@@ -60,3 +60,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌘 Sleep timer: the last minute dims the picture and says so; any button gives 15 more minutes.
 - ⬛ Sleep timer: when it stops playback, a black screen stays until a button is pressed, and the screen is no longer kept awake, so the TV's own sleep takes over even where "turn off the screen" isn't available.
 - 🏷️ **Opening a channel shows its own name at once:** the card over the video no longer keeps the previous channel's name, logo and quality marks until the new picture arrives
+- 🔔 White or light accents: the reminder bell on Home cards, the watched check on wide cards and the chosen mark in popups no longer vanish (a dark disc or the accent's ink instead of white on white).

@@ -975,10 +975,9 @@ fun StagePoster(
             if (watched) {
                 // glcn: a solid accent disc with a white check and rim — the old dark disc vanished on dark posters. With a
                 // white (or very light) accent the disc would be white on white: then it is dark.
-                val pale = accent.accent.luminance() > WATCHED_PALE
                 Box(
                     Modifier.align(Alignment.TopEnd).padding(8.mpx).size(if (compact) 26.mpx else 30.mpx)
-                        .background(if (pale) Color(0xF0111820) else accent.accent, CircleShape)
+                        .background(stageBadgeDisc(accent.accent), CircleShape)
                         .border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) { StageIcon(OwnTVIcon.CHECK, Color.White, if (compact) 15.mpx else 17.mpx) }
@@ -1188,7 +1187,7 @@ fun StageEpisode(
             )
             if (watched) {
                 Box(
-                    Modifier.align(Alignment.TopEnd).padding(10.mpx).size(30.mpx).background(accent.accent, CircleShape).border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
+                    Modifier.align(Alignment.TopEnd).padding(10.mpx).size(30.mpx).background(stageBadgeDisc(accent.accent), CircleShape).border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) { StageIcon(OwnTVIcon.CHECK, Color.White, 17.mpx) }
             }
@@ -1367,3 +1366,11 @@ private val POSTER_TITLE_DROP = 5.mpx
 
 /** glcn: an accent lighter than this cannot carry the watched disc's white check. */
 private const val WATCHED_PALE = 0.7f
+
+/**
+ * glcn: the fill of a small round badge drawn on artwork with a white glyph (watched check, reminder bell):
+ * the accent, or a dark disc when the accent is white or very light — else it is white on white.
+ */
+fun stageBadgeDisc(accent: Color): Color = if (accent.luminance() > WATCHED_PALE) BADGE_DARK else accent
+
+private val BADGE_DARK = Color(0xF0111820)

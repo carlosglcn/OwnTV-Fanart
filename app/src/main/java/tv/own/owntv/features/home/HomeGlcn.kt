@@ -4,6 +4,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.offset
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.ui.unit.dp
@@ -327,7 +328,8 @@ internal fun ArtLiveCard(
                     ) { tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.STAR, a.accent, Modifier.size(18.mpx), filled = true) }
                     if (bell) {
                         Box(
-                            Modifier.size(34.mpx).clip(RoundedCornerShape(17.mpx)).background(a.accent),
+                            Modifier.size(34.mpx).clip(RoundedCornerShape(17.mpx)).background(tv.own.owntv.ui.stage.stageBadgeDisc(a.accent))
+                                .border(2.mpx, Color.White.copy(alpha = 0.9f), RoundedCornerShape(17.mpx)),
                             contentAlignment = Alignment.Center,
                         ) { tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.BELL, Color.White, Modifier.size(20.mpx)) }
                     }
