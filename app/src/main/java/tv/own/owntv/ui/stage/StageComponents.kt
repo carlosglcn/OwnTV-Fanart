@@ -1374,7 +1374,7 @@ private val POSTER_TITLE_DROP = 5.mpx
 private const val WATCHED_PALE = 0.7f
 
 /** glcn: how far a landscape card grows when it takes focus (Home rows, with the sliding box). */
-private const val STILL_POP = 1.06f
+private const val STILL_POP = 1.08f
 
 /**
  * glcn: the fill of a small round badge drawn on artwork with a white glyph (watched check, reminder bell):

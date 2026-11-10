@@ -36,7 +36,7 @@ object SmoothScroll {
 
     /**
      * glcn: the channel lists (TV en directo, the Guide) — a spring a touch short of critical damping, so a step
-     * lands with a small give (about 3 %) instead of stopping dead; springs carry their speed, so a held ▲/▼ still
+     * lands with a clear give (about 8 %) instead of stopping dead; springs carry their speed, so a held ▲/▼ still
      * flows. Instant in light mode.
      */
     val elasticAnimation: AnimationSpec<Float>
@@ -128,7 +128,7 @@ val NoBringIntoViewSpec = object : BringIntoViewSpec {
 private const val GLIDE_OMEGA = 13f
 private const val HOME_OMEGA = 10f
 private const val LIST_OMEGA = 18f
-private const val ELASTIC_DAMPING = 0.75f
+private const val ELASTIC_DAMPING = 0.62f
 private const val ELASTIC_STIFFNESS = 220f
 /** glcn: the settings highlight's slide, in step with [SmoothScroll.listAnimation]. */
 const val SETTINGS_FOCUS_STIFFNESS = 900f

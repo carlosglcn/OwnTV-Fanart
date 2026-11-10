@@ -71,3 +71,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ✅ Home: films you have already watched (their ✓, or marked watched) no longer appear in Recent films or the Featured billboard.
 - 🎯 TV en directo: the channel highlight now slides from row to row with a little give (a soft spring), instead of jumping; in the Guide, ▲/▼ between channels lands the same way.
 - 🔕 The "Rebuilding sports…" note no longer pops up on every screen: the sports rebuild runs on its own in the background (its progress stays in Sports › Settings), and only a failure is said.
+- 🪀 More spring: the channel highlight in TV en directo and the Guide now passes the row by about an eighth and settles back (was a slight give), the channel list scrolls with a clearer give, and Home's landscape cards pop a little more (1.08).
