@@ -66,3 +66,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏩ Live: when a server answers a channel with an empty stream (an overloaded or rate-limiting restreamer), the player moves on to mpv after 2.5 s instead of waiting the full 12 s.
 - 🚀 Smoother right after an update: the rules that ask Android to compile the app's own screens ahead were written wrongly and matched nothing; fixed, and they now cover the player and core too.
 - 🧯 Guide and list previews: when the SHIELD is critically short of memory and the preview shows nothing (or drops more frames than it shows), it is let go instead of insisting — what froze the Guide once. Moving the focus tunes again.
+- 🃏 Home: the landscape cards pop as they take focus — they grow a little with a small bounce, the focus box with them, and draw over their neighbours, like a launcher's app tiles. Posters stay as they are.
+- 🪀 TV en directo and the Guide: the channel list moves with a little give when it scrolls (a soft spring instead of a dead stop), without overdoing it.
+- ✅ Home: films you have already watched (their ✓, or marked watched) no longer appear in Recent films or the Featured billboard.

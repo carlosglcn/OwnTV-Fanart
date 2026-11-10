@@ -567,7 +567,8 @@ private const val LATER_CARD_RATIO = 2.1f
 /** Scroll only as far as the focused item, plus one row of room, needs (the TV default pins it a third down). */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 internal val edgeScrollSpec = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
-    override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float> get() = tv.own.owntv.glcn.SmoothScroll.animation
+    // glcn: the channel lists move with a little give (SmoothScroll.elasticAnimation).
+    override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float> get() = tv.own.owntv.glcn.SmoothScroll.elasticAnimation
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
         // glcn: a held ▲/▼ turns the list itself (ListWheel); focus only follows, so it must not scroll too.
         if (tv.own.owntv.glcn.ListWheel.active) return 0f

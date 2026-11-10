@@ -34,6 +34,14 @@ object SmoothScroll {
     val listAnimation: AnimationSpec<Float>
         get() = if (LowRam.on) snap<Float>() else FollowSpring(LIST_OMEGA)
 
+    /**
+     * glcn: the channel lists (TV en directo, the Guide) — a spring a touch short of critical damping, so a step
+     * lands with a small give (about 3 %) instead of stopping dead; springs carry their speed, so a held ▲/▼ still
+     * flows. Instant in light mode.
+     */
+    val elasticAnimation: AnimationSpec<Float>
+        get() = if (LowRam.on) snap<Float>() else androidx.compose.animation.core.spring(dampingRatio = ELASTIC_DAMPING, stiffness = ELASTIC_STIFFNESS)
+
     /** The app-wide default: scroll only as far as the focused item needs, eased. */
     val spec = object : BringIntoViewSpec {
         override val scrollAnimationSpec: AnimationSpec<Float> get() = animation
@@ -120,6 +128,8 @@ val NoBringIntoViewSpec = object : BringIntoViewSpec {
 private const val GLIDE_OMEGA = 13f
 private const val HOME_OMEGA = 10f
 private const val LIST_OMEGA = 18f
+private const val ELASTIC_DAMPING = 0.75f
+private const val ELASTIC_STIFFNESS = 220f
 /** glcn: the settings highlight's slide, in step with [SmoothScroll.listAnimation]. */
 const val SETTINGS_FOCUS_STIFFNESS = 900f
 

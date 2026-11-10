@@ -1,5 +1,6 @@
 package tv.own.owntv.ui.stage
 
+import androidx.compose.ui.zIndex
 import tv.own.owntv.ui.theme.stageTone
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -1069,15 +1070,19 @@ fun StageStill(
         modifier
             .width(width)
             .then(
-                if (slide != null) Modifier.slideFocusReport(slide, StageFocus.POSTER, r, accent, region)
+                if (slide != null) Modifier.slideFocusReport(slide, StageFocus.POSTER, r, accent, region, pop = STILL_POP)
                 else if (lift) Modifier.stageLift(focused, StageFocus.POSTER).stageTilt(focused) else Modifier,
             )
+            // glcn: the popped card draws over its neighbours.
+            .zIndex(if (focused) 1f else 0f)
             .stageClickable(interaction, true, onClick, onLongClick),
     ) {
         Box(
             Modifier
                 .size(width, height)
                 .then(if (slide != null) Modifier.slideRegion(region) else Modifier)
+                // glcn: Home's landscape cards pop with the sliding box, as a launcher's tiles do.
+                .then(if (slide != null) Modifier.slidePop(slide, focused) else Modifier)
                 .then(
                     if (focused && slide != null) {
                         Modifier
@@ -1366,6 +1371,9 @@ private val POSTER_TITLE_DROP = 5.mpx
 
 /** glcn: an accent lighter than this cannot carry the watched disc's white check. */
 private const val WATCHED_PALE = 0.7f
+
+/** glcn: how far a landscape card grows when it takes focus (Home rows, with the sliding box). */
+private const val STILL_POP = 1.06f
 
 /**
  * glcn: the fill of a small round badge drawn on artwork with a white glyph (watched check, reminder bell):

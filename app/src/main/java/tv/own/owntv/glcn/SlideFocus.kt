@@ -1,5 +1,6 @@
 package tv.own.owntv.glcn
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -61,6 +62,11 @@ class SlideFocusState {
     var stretch = false
     /** glcn: the box came over from another host: it shows at once (no fade in) while it glides in. */
     var arrived = false
+    /**
+     * glcn: the focused card's "pop" — it grows a little past its rest size with a small bounce, the box with it
+     * (Home's landscape cards, as on a launcher's app tiles). 1 = no pop. Read by the card ([slidePop]).
+     */
+    val pop = Animatable(1f)
 }
 
 val LocalSlideFocus = compositionLocalOf<SlideFocusState?> { null }
@@ -115,6 +121,8 @@ fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, stret
                 val bottom = live.bottom + st.gap.bottom * (if (down) lead else trail)
                 l = left - st.origin.x; t = top - st.origin.y; w = rightEdge - left; h = bottom - top
             }
+            val p = st.pop.value
+            if (p != 1f) { l -= w * (p - 1f) / 2f; t -= h * (p - 1f) / 2f; w *= p; h *= p }
             st.drawn = Rect(l + st.origin.x, t + st.origin.y, l + st.origin.x + w, t + st.origin.y + h)
             if (a > 0.5f && st.current != null) { SlideFocusTrail.rect = st.drawn; SlideFocusTrail.at = android.os.SystemClock.uptimeMillis() }
             inset(l, t, size.width - l - w, size.height - t - h) {
@@ -142,7 +150,7 @@ fun Modifier.slideRegion(region: SlideRegion): Modifier = onGloballyPositioned {
 
 /** An item's side of it: reports focus and position to the host. */
 @Composable
-fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp, accent: StageAccent, region: SlideRegion? = null): Modifier {
+fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp, accent: StageAccent, region: SlideRegion? = null, pop: Float = 1f): Modifier {
     val id = remember { Any() }
     var rect by remember { mutableStateOf(Rect.Zero) }
     val anim = tv.own.owntv.ui.theme.animationsOn
@@ -173,6 +181,11 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
                     st.glide.snapTo(1f)
                     st.glide.animateTo(0f, spring(dampingRatio = st.damping, stiffness = st.stiffness))
                 }
+                // glcn: the card's pop — from rest, a little past [pop] and back (none with animations off).
+                scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                    st.pop.snapTo(1f)
+                    if (pop != 1f && anim) st.pop.animateTo(pop, spring(dampingRatio = POP_DAMPING, stiffness = POP_STIFFNESS))
+                }
             } else if (st.current === id) st.current = null
         }
         .then(
@@ -182,6 +195,17 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
             },
         )
 }
+
+/** glcn: the focused card grows with the box ([SlideFocusState.pop]); put on the part the box wraps. */
+fun Modifier.slidePop(st: SlideFocusState?, focused: Boolean): Modifier =
+    if (st == null) this else graphicsLayer {
+        val p = if (focused) st.pop.value else 1f
+        scaleX = p; scaleY = p
+    }
+
+/** glcn: a launcher-like pop — a small overshoot (about 6 % past the step), settled in a quarter of a second. */
+private const val POP_DAMPING = 0.55f
+private const val POP_STIFFNESS = 420f
 
 /** glcn: room round the sliding box for its glow — at 80 px a wide glow (an FX row's) was cut off in a hard line. */
 private const val SLIDE_GLOW_ROOM = 180f
