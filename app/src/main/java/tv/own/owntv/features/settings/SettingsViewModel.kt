@@ -211,6 +211,8 @@ class SettingsViewModel(
     private suspend fun fetchExpiry(s: SourceEntity): String? = runCatching {
         when (s.type) {
             tv.own.owntv.core.model.SourceType.XTREAM -> xtreamClient.accountExpiryMs(s)?.let {
+                // glcn: kept, for the days-left warning on the row and the one before it ends.
+                tv.own.owntv.core.repository.SourceGlcnPrefs.setExpiry(s.id, it)
                 java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(it))
             }
             tv.own.owntv.core.model.SourceType.STALKER ->

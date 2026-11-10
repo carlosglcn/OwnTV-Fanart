@@ -45,3 +45,8 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📂 Player channel list: the categories panel is wider so names read whole, and a ‹ before the group's name shows that ◀ opens them.
 - 🔒 **A channel that won't open says why:** a locked category or a channel not allowed on the profile shows a message instead of OK doing nothing, and the reason goes into the playback report; a channel left on a category a sync replaced opens from its current one
 - 🔍 **Player bar at any interface size:** when the buttons don't fit (a larger interface size), each group scrolls as you move instead of buttons being cut off; EXO/MPV stays on one line, and subtitles rise above the bar while the controls are up
+- 🩺 Playlists: each row shows its health at a glance — a green, amber or red dot, "Updated 2 hours ago", the days left before it expires (amber under 15) and, after a failed update, the reason in plain words with Try again.
+- 🧰 Playlists: fewer buttons — Edit, Update, More options and Delete; Status and connection, Turn off, Colour and tag and Clean names live under More options.
+- ⏸️ Playlists can be turned off without deleting them: kept, but hidden everywhere and not updated until turned back on.
+- 🎨 Each playlist's tag and colour can be chosen (Colour and tag); they show wherever rows are marked by playlist.
+- ⏰ A one-time notice a week before an Xtream subscription expires, with its date.

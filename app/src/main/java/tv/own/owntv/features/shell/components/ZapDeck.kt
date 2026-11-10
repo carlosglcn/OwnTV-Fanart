@@ -131,7 +131,7 @@ fun ZapDeck(
     val activeChip = playlists?.activeId?.takeIf { it > 0L } ?: -1L
     // glcn: each playlist's coloured tag (its place in the profile picks the colour), for the categories and the heading.
     val marks = remember(playlists?.playlists) {
-        playlists?.playlists?.withIndex()?.associate { (i, s) -> s.id to tv.own.owntv.ui.stage.PlaylistMark.of(s.name, i) }.orEmpty()
+        playlists?.playlists?.withIndex()?.associate { (i, s) -> s.id to tv.own.owntv.ui.stage.PlaylistMark.forSource(s.id, s.name, i) }.orEmpty()
     }
 
     // 0 = groups, 1 = channels, -1 = the playlist chips, 2 = the focused channel's coming programmes.

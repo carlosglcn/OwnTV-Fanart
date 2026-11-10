@@ -433,6 +433,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/settings/LocalSyncScreen.kt	…
 1	empty	app/src/main/java/tv/own/owntv/features/settings/LocalSyncViewModel.kt	\0
 5	empty	app/src/main/java/tv/own/owntv/features/settings/ManageSourcesScreen.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/features/settings/ManageSourcesScreen.kt	$it · ${health.second}
 1	technical	app/src/main/java/tv/own/owntv/features/settings/ManageSourcesScreen.kt	▶
 10	technical	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	\0
 2	locale	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	ar
@@ -776,6 +777,8 @@
 8	technical	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	\0
 1	log	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	OwnTVHome
 1	log	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	activeProfileChanged profile=$pid androidTvHomeEnabled=${settings.androidTvHomeEnabled.first()}
+2	technical	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	expiryCheckDay
+1	technical	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	glcn_sources
 1	technical	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	manual_resync
 1	log	app/src/main/java/tv/own/owntv/features/shell/ShellViewModel.kt	resync enqueue sourceId=${source.id} from=playlist_menu
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/AutoStartSettingsRows.kt	auto_start_boot

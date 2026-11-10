@@ -836,7 +836,7 @@ fun PlaylistSyncList(sources: List<tv.own.owntv.core.database.entity.SourceEntit
     Column(Modifier.padding(top = 18.mpx), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
         sources.forEachIndexed { i, src ->
             Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
-                tv.own.owntv.ui.stage.StagePlaylistMark(tv.own.owntv.ui.stage.PlaylistMark.of(src.name, i))
+                tv.own.owntv.ui.stage.StagePlaylistMark(tv.own.owntv.ui.stage.PlaylistMark.forSource(src.id, src.name, i))
                 Text(src.name, style = stageText(18, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 src.lastSyncAt?.let {
                     Text(
