@@ -1743,6 +1743,49 @@ fun SettingsScreen(
     }
 }
 
+/**
+ * glcn: what a few Settings cards say under their name — the current values ("Dark · Blue · 100 %")
+ * rather than a fixed description. Keyed by the card's index (the group's ordinal); the rest keep theirs.
+ */
+@Composable
+internal fun settingsCardSummaries(): Map<Int, String> {
+    val vm: SettingsViewModel = koinViewModel()
+    val sources by vm.sources.collectAsStateWithLifecycle()
+    val guideDays by vm.guideDaysToKeep.collectAsStateWithLifecycle()
+    val themeMode by vm.themeMode.collectAsStateWithLifecycle()
+    val glcnStyle by vm.glcnStyle.collectAsStateWithLifecycle()
+    val accent by vm.accent.collectAsStateWithLifecycle()
+    val customAccent by vm.customAccent.collectAsStateWithLifecycle()
+    val zoom by vm.uiZoomPercent.collectAsStateWithLifecycle()
+    val liveLayout by vm.liveLayout.collectAsStateWithLifecycle()
+    val liveEngine by vm.liveEnginePreference.collectAsStateWithLifecycle()
+    val vodEngine by vm.vodEnginePreference.collectAsStateWithLifecycle()
+    val afr by vm.autoFrameRateFilms.collectAsStateWithLifecycle()
+    val audioLang by vm.preferredAudioLang.collectAsStateWithLifecycle()
+    val subLang by vm.preferredSubLang.collectAsStateWithLifecycle()
+    val preview by vm.livePreviewEnabled.collectAsStateWithLifecycle()
+    val sep = stringResource(R.string.glcn_sum_sep)
+    val on = stringResource(R.string.common_on)
+    val off = stringResource(R.string.common_off)
+    val theme = glcnStyle?.let { stringResource(R.string.glcn_theme_fixed, it.label()) } ?: themeLabel(themeMode)
+    val accentName = if (customAccent.isNotBlank()) customAccent.uppercase() else stringResource(accent.labelRes)
+    val languages = listOf(audioLang, subLang).filter { it.isNotBlank() }.map { code ->
+        java.util.Locale.forLanguageTag(code).getDisplayLanguage(java.util.Locale.getDefault())
+            .replaceFirstChar { it.titlecase(java.util.Locale.getDefault()) }
+            .ifBlank { code }
+    }.distinct()
+    return buildMap {
+        put(SettingsGroup.SOURCES.ordinal, pluralStringResource(R.plurals.glcn_sum_playlists, sources.size, sources.size) + sep +
+            pluralStringResource(R.plurals.settings_epg_guide_days_value, guideDays, guideDays))
+        put(SettingsGroup.APPEARANCE.ordinal, listOf(theme, accentName, stringResource(R.string.glcn_sum_zoom, zoom)).joinToString(sep))
+        put(SettingsGroup.LAYOUT.ordinal, stringResource(R.string.glcn_sum_live_layout, stringResource(liveLayoutLabelRes(liveLayout))))
+        put(SettingsGroup.PLAYER.ordinal, stringResource(R.string.glcn_sum_engines, tv.own.owntv.features.settings.engineLabel(liveEngine), tv.own.owntv.features.settings.engineLabel(vodEngine)))
+        put(SettingsGroup.PICTURE.ordinal, stringResource(R.string.glcn_sum_afr, if (afr) on else off))
+        if (languages.isNotEmpty()) put(SettingsGroup.SOUND.ordinal, languages.joinToString(sep))
+        put(SettingsGroup.LIVE.ordinal, stringResource(R.string.glcn_sum_preview, if (preview) on else off))
+    }
+}
+
 @Composable
 private fun themeLabel(mode: ThemeMode): String = stringResource(
     when (mode) {

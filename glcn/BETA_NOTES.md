@@ -55,3 +55,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🆕 Settings: a NEW badge marks settings added or changed in this version, on the row and on its group's card; it goes away once you open it.
 - 🏠 Settings: Home background is one row now — picture, your own image and dimming in a single popup.
 - 🔤 Spanish: "Categories" and "Channels ocultos" in Customize now read "Categorías" and "Canales ocultos".
+- 📋 Settings: the cards under More › Settings show your current values (playlists and guide days, theme · accent · size, players, auto frame rate, languages, live preview) instead of a fixed description.
