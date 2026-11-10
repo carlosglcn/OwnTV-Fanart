@@ -862,8 +862,13 @@ fun OwnTVShell(
         liveVm.stopPreview()
     }
     DisposableEffect(sleepTimer) {
-        sleepTimer.stopPlayback = { stopForSleep() }
+        // glcn: then the black "stopped" screen, until a key.
+        sleepTimer.stopPlayback = { stopForSleep(); tv.own.owntv.glcn.SleepWatch.ended.value = true }
         onDispose { sleepTimer.stopPlayback = null }
+    }
+    // glcn: what plays outside the player keeps the sleep timer alive.
+    LaunchedEffect(previewChannel?.id, multiview) {
+        tv.own.owntv.glcn.SleepWatch.elsewhere.value = previewChannel != null || multiview != null
     }
     DisposableEffect(shellVm) {
         shellVm.leavePlayback = { stopForSleep() }

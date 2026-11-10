@@ -231,6 +231,8 @@ open class MainActivity : ComponentActivity() {
         tv.own.owntv.player.KeyLog.onKey(event) // glcn: the last presses, for the playback report
         if (event.action == android.view.KeyEvent.ACTION_DOWN) tv.own.owntv.features.home.CinemaTrailer.lastKeyAt = android.os.SystemClock.uptimeMillis() // glcn: trailers wait for a calm moment
         tv.own.owntv.ui.stage.FocusMotion.onKey(event) // glcn: which way the focus went, for the card's lean
+        // glcn: the sleep timer's last minute (any key = more time) and its black screen (any key = back).
+        if (tv.own.owntv.glcn.SleepWatch.onKey(event)) return true
         if (tv.own.owntv.glcn.BackHold.onKey(event)) return true
         return super.dispatchKeyEvent(event)
     }
@@ -658,6 +660,7 @@ open class MainActivity : ComponentActivity() {
             LaunchedEffect(contentReady) { if (contentReady) { kotlinx.coroutines.delay(STARTUP_SETTLE_TIMEOUT_MS); curtainTimedOut = true } }
             val curtainUp = !curtainTimedOut && !(contentReady && startupSettled)
             tv.own.owntv.glcn.LaunchCurtain(visible = curtainUp)
+            tv.own.owntv.glcn.SleepWatch.Overlay(org.koin.compose.koinInject())
             // glcn: the window wears the launch picture from the very start (the starting window and the frames
             // before Compose draws); once the curtain has gone it goes back to the plain colour (no big bitmap kept).
             LaunchedEffect(curtainUp) {

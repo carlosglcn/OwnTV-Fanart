@@ -56,3 +56,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏠 Settings: Home background is one row now — picture, your own image and dimming in a single popup.
 - 🔤 Spanish: "Categories" and "Channels ocultos" in Customize now read "Categorías" and "Canales ocultos".
 - 📋 Settings: the cards under More › Settings show your current values (playlists and guide days, theme · accent · size, players, auto frame rate, languages, live preview) instead of a fixed description.
+- 😴 Sleep timer: it keeps counting when you leave the player and the channel carries on in the preview pane or in Multiview — before, it cancelled itself three seconds later.
+- 🌘 Sleep timer: the last minute dims the picture and says so; any button gives 15 more minutes.
+- ⬛ Sleep timer: when it stops playback, a black screen stays until a button is pressed, and the screen is no longer kept awake, so the TV's own sleep takes over even where "turn off the screen" isn't available.

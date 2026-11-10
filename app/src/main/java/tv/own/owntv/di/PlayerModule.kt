@@ -49,7 +49,11 @@ val playerModule = module {
     single { tv.own.owntv.player.PlaybackSession(androidContext()) }
     // Ends itself when the session detaches; what "stop" means is assigned by the shell.
     single { tv.own.owntv.player.ScreenOff(androidContext()) }
-    single { tv.own.owntv.player.SleepTimer(active = get<tv.own.owntv.player.PlaybackSession>().active, screenOff = get(), itemEnd = get<OwnTVPlayer>()) }
+    // glcn: the preview pane and Multiview play too — without them, closing the player to the list cancelled the timer.
+    single {
+        val playing = kotlinx.coroutines.flow.combine(get<tv.own.owntv.player.PlaybackSession>().active, tv.own.owntv.glcn.SleepWatch.elsewhere) { player, elsewhere -> player || elsewhere }
+        tv.own.owntv.player.SleepTimer(active = playing, screenOff = get(), itemEnd = get<OwnTVPlayer>()).also { tv.own.owntv.glcn.SleepWatch.timer = it }
+    }
     // Bridges the playing item to the OpenSubtitles search. Bound here rather than with the rest of
     // the subtitle stack because it takes the player; it follows the engine to :player-core.
     single { tv.own.owntv.core.subtitles.SubtitleController(get(), get(), get(), get()) }
