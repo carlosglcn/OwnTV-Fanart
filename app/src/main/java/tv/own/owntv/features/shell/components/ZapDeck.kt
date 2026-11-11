@@ -154,6 +154,8 @@ fun ZapDeck(
     var loadedFor by remember { mutableStateOf<Pair<LiveKey?, Long>?>(null) }
     val list = if (usesZap(shownKey)) channels else loaded
     var chIdx by remember { mutableIntStateOf(if (listIsGroup) channels.indexOfFirst { it.id == currentId }.coerceAtLeast(0) else 0) }
+    // glcn: a channel number typed on the remote — the cursor jumps to it as the digits come, and the number shows a moment.
+    var typed by remember { mutableStateOf("") }
     var listVersion by remember { mutableIntStateOf(0) }
     var nowMap by remember { mutableStateOf<Map<Long, EpgProgrammeEntity>>(emptyMap()) }
 
@@ -351,7 +353,17 @@ fun ZapDeck(
                             // glcn: ▲ on the first of "Up next" gives the picture back, full screen (a fresh press, not a held run).
                             2 -> if (up && schedIdx <= schedFirst) { if (first) onDismiss() }
                                 else schedIdx = (schedIdx + if (up) -1 else 1).coerceIn(schedFirst, (schedCount - 1).coerceAtLeast(schedFirst))
-                            1 -> if (list.size > 1) chIdx = if (up) (if (chIdx == 0) list.lastIndex else chIdx - 1) else (if (chIdx == list.lastIndex) 0 else chIdx + 1)
+                            1 -> if (list.size > 1) {
+                                // glcn: held, the cursor speeds up — one row at a time for the first moment, then 3, then 6.
+                                val held = e.nativeKeyEvent.eventTime - e.nativeKeyEvent.downTime
+                                val step = when {
+                                    first || held < ZAP_ACCEL_1_MS -> 1
+                                    held < ZAP_ACCEL_2_MS -> ZAP_ACCEL_1_STEP
+                                    else -> ZAP_ACCEL_2_STEP
+                                }
+                                chIdx = if (step == 1) (if (up) (if (chIdx == 0) list.lastIndex else chIdx - 1) else (if (chIdx == list.lastIndex) 0 else chIdx + 1))
+                                    else (chIdx + if (up) -step else step).coerceIn(0, list.lastIndex)
+                            }
                             0 -> when {
                                 up && groupIdx == 0 && chips.isNotEmpty() -> { column = -1; chipIdx = chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0) }
                                 up -> groupIdx = (groupIdx - 1).coerceAtLeast(0)
@@ -367,6 +379,18 @@ fun ZapDeck(
                             1 -> chIdx = (chIdx + if (up) -page else page).coerceIn(0, list.lastIndex.coerceAtLeast(0))
                             0 -> groupIdx = (groupIdx + if (up) -page else page).coerceIn(0, entries.lastIndex.coerceAtLeast(0))
                         }
+                        true
+                    }
+                    // glcn: a number on the remote finds the channel with it (or the first after it) in this list.
+                    Key.Zero, Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six, Key.Seven, Key.Eight, Key.Nine,
+                    Key.NumPad0, Key.NumPad1, Key.NumPad2, Key.NumPad3, Key.NumPad4, Key.NumPad5, Key.NumPad6, Key.NumPad7, Key.NumPad8, Key.NumPad9 -> {
+                        val d = e.nativeKeyEvent.number.takeIf { it.isDigit() } ?: return@onPreviewKeyEvent false
+                        if (!first || list.isEmpty()) return@onPreviewKeyEvent true
+                        typed = (typed + d).takeLast(ZAP_DIGITS_MAX)
+                        val target = typed.toIntOrNull() ?: return@onPreviewKeyEvent true
+                        val exact = list.indexOfFirst { it.number == target }
+                        val at = if (exact >= 0) exact else list.indexOfFirst { (it.number ?: -1) >= target }.takeIf { it >= 0 } ?: list.lastIndex
+                        column = 1; chIdx = at
                         true
                     }
                     Key.DirectionLeft -> {
@@ -573,8 +597,26 @@ fun ZapDeck(
                 }
             }
         } }
+        // glcn: the number being typed, a moment; it clears itself.
+        LaunchedEffect(typed) { if (typed.isNotEmpty()) { delay(ZAP_DIGIT_HOLD_MS); typed = "" } }
+        if (typed.isNotEmpty()) {
+            Box(
+                Modifier.align(Alignment.TopCenter).padding(top = 40.mpx)
+                    .background(Color(0xEE0E1726), RoundedCornerShape(18.mpx))
+                    .padding(horizontal = 28.mpx, vertical = 10.mpx),
+            ) {
+                Text(typed, style = stageText(40, 800), color = Color.White, maxLines = 1)
+            }
+        }
     }
 }
+
+private const val ZAP_ACCEL_1_MS = 900L
+private const val ZAP_ACCEL_2_MS = 2_200L
+private const val ZAP_ACCEL_1_STEP = 3
+private const val ZAP_ACCEL_2_STEP = 6
+private const val ZAP_DIGITS_MAX = 4
+private const val ZAP_DIGIT_HOLD_MS = 1_500L
 
 /** glcn: the categories panel at least this wide, so their names read whole. */
 private val GROUPS_PANEL_MIN = 460.mpx

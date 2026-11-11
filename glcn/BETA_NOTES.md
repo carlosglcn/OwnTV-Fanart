@@ -77,3 +77,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🫧 Side menu: each icon gives a little springy hop as the focus reaches it.
 - 🔈 **Audio tracks your device can't play are marked** "not supported on this device" and are never forced on: picking one used to break the channel, and every later visit too. If a picked track still fails, the player goes back to the default one and forgets the pick
 - 🧩 **A decoder that refuses a channel mid-stream gives up after two tries** instead of eight, and the playback report names the refused format
+- ⏩ Channel list over the picture: holding ▲/▼ speeds up (one row, then 3, then 6 at a time) and stops where you let go; typing a channel number on the remote jumps to it (or the next one after it), with the number shown a moment.
