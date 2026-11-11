@@ -201,6 +201,10 @@ internal fun LiveCinematicPane(
                 )
             } else {
                 val cardsGate = tv.own.owntv.glcn.rememberStaggerGate()
+                // glcn: ▶ on the last channel goes round to the first (◀ on the first still reaches the menu).
+                val wrapFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+                var wrapTo by remember { mutableStateOf(-1) }
+                val wrapScope = androidx.compose.runtime.rememberCoroutineScope()
                 CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
                     LazyRow(
                         state = listState,
@@ -226,6 +230,19 @@ internal fun LiveCinematicPane(
                                         onClick = { onClick(channel) },
                                         onLongClick = { onLongClick(channel) },
                                         modifier = Modifier
+                                            .then(if (index == wrapTo) Modifier.focusRequester(wrapFocus) else Modifier)
+                                            .onPreviewKeyEvent { e ->
+                                                if (e.key != androidx.compose.ui.input.key.Key.DirectionRight || index != channels.itemCount - 1 || channels.itemCount < 2) return@onPreviewKeyEvent false
+                                                if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) {
+                                                    wrapScope.launch {
+                                                        wrapTo = 0
+                                                        runCatching { listState.scrollToItem(0) }
+                                                        androidx.compose.runtime.withFrameNanos { }
+                                                        runCatching { wrapFocus.requestFocus() }
+                                                    }
+                                                }
+                                                true
+                                            }
                                             .onDownToSimilar(similar.isNotEmpty(), enterSimilar)
                                             .then(if (channel.id == previewChannel?.id) Modifier.focusRequester(returnTo) else Modifier)
                                             .then(cardModifier(index, channel))
