@@ -359,7 +359,8 @@ fun HomeScreen(
     // glcn: a row brought down from above stops below the top bar, not under it — going ▲ left the focused card
     // half behind the menu, with the sliding focus box drawn over the bar.
     // (Not under Cinema, whose rows start well below the bar anyway.)
-    val topRoomPx = if (cinemaEarly == 1) 0f else with(androidx.compose.ui.platform.LocalDensity.current) { (NoHeroTop + 12.mpx).toPx() }
+    // glcn: and with room for the row's own heading above the card ("Canales recientes" hid behind the bar).
+    val topRoomPx = if (cinemaEarly == 1) 0f else with(androidx.compose.ui.platform.LocalDensity.current) { (NoHeroTop + 12.mpx + HOME_ROW_HEADING_ROOM).toPx() }
     val homeBringIntoViewSpec = remember(bottomRoomPx, topRoomPx) {
         object : BringIntoViewSpec {
             // glcn: the page glides from row to row — a longer, eased slide instead of the quick snap the
@@ -528,6 +529,8 @@ fun HomeScreen(
                     // glcn: rows fade out as they pass under the clock and the buttons at the top, instead of
                     // sliding beneath them in full colour. Not under Cinema, whose rows start lower anyway.
                     .then(if (backdropStyle == 1) Modifier.topFadeWhenScrolled(90.mpx) { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } else Modifier.topFade(NoHeroTop))
+                    // glcn: the row peeking in at the foot of the screen dissolves into the page instead of being cut off.
+                    .bottomFade(HOME_BOTTOM_FADE)
                     .onFocusChanged { if (it.hasFocus) onChildFocused() }
                     // glcn (Cinema): the rows step back while the lights are down for the trailer.
                     .then(if (backdropStyle == 1) Modifier.graphicsLayer { alpha = 1f - 0.65f * cinemaLights.value } else Modifier)
@@ -1986,6 +1989,23 @@ private fun Modifier.topFadeWhenScrolled(height: androidx.compose.ui.unit.Dp, sc
             blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
         )
     }
+
+/** glcn: the content dissolves into the page over the bottom [height] — the next row only hints that it is there. */
+private fun Modifier.bottomFade(height: androidx.compose.ui.unit.Dp): Modifier = this
+    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val h = height.toPx()
+        drawRect(
+            Brush.verticalGradient(0f to Color.Black, 1f to Color.Transparent, startY = size.height - h, endY = size.height),
+            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+        )
+    }
+
+private val HOME_BOTTOM_FADE = 150.mpx
+
+/** glcn: the height of a row's heading over its cards, kept clear of the top bar when a row is brought down. */
+private val HOME_ROW_HEADING_ROOM = 56.mpx
 
 /** glcn: the content dissolves into the page over the top [height] (alpha mask, one offscreen layer). */
 private fun Modifier.topFade(height: androidx.compose.ui.unit.Dp): Modifier = this
