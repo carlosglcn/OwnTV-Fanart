@@ -75,3 +75,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌤️ Home cards lift: the focused landscape card throws a deeper shadow that grows with its pop, and its title and line come forward (brighter, settling a little lower) while the others stay a step back.
 - 🔍 A title chosen on Home grows into its page (a short zoom and fade) instead of arriving like any other section.
 - 🫧 Side menu: each icon gives a little springy hop as the focus reaches it.
+- 🔈 **Audio tracks your device can't play are marked** "not supported on this device" and are never forced on: picking one used to break the channel, and every later visit too. If a picked track still fails, the player goes back to the default one and forgets the pick
+- 🧩 **A decoder that refuses a channel mid-stream gives up after two tries** instead of eight, and the playback report names the refused format

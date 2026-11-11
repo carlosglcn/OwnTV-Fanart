@@ -31,7 +31,9 @@ fun TrackOption.displayLabel(): String {
     }
     // External subs already carry their source in the raw label's `OS_`/`LOCAL_` prefix (see
     // SubtitleTrackLabel), so appending a source word here would state it twice on every row.
-    return raw ?: language ?: fallback
+    val name = raw ?: language ?: fallback
+    // glcn: a track this device cannot decode stays listed, marked, so its absence isn't a mystery.
+    return if (playable) name else stringResource(R.string.glcn_track_unplayable_label, name, stringResource(R.string.glcn_track_unplayable))
 }
 
 private fun TrackOption.displayNumber(): Int = (typeIndex.takeIf { it >= 0 } ?: mpvId) + 1
