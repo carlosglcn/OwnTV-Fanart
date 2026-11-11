@@ -1,6 +1,7 @@
 package tv.own.owntv.features.epg
 
 import androidx.compose.foundation.background
+import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.ui.stage.backdropLeftWash
 import tv.own.owntv.ui.theme.dissolveEdges
 import androidx.activity.compose.BackHandler
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -599,7 +601,7 @@ fun EpgScreen(
             // glcn: the channel's logo, large, grey and faint, behind the programme's words on the right (Ghosts).
             tv.own.owntv.glcn.GhostLogo(
                 topChannel?.displayLogoUrl,
-                Modifier.align(Alignment.CenterEnd).padding(end = 24.mpx, top = 20.mpx).size(GUIDE_GHOST_W, GUIDE_GHOST_H),
+                Modifier.align(Alignment.CenterEnd).padding(end = 24.mpx, top = 20.mpx).size(width = GUIDE_GHOST_W, height = GUIDE_GHOST_H),
                 alpha = tv.own.owntv.glcn.Ghosts.ALPHA,
             )
             if (topChannel != null) {
