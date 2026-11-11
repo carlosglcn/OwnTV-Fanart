@@ -969,6 +969,7 @@ class MovieViewModel(
             progressDao.save(
                 PlaybackProgressEntity(profileId = pid, mediaType = MediaType.MOVIE, itemId = movie.id, positionMs = 1L, durationMs = 1L),
             )
+            tv.own.owntv.core.trakt.TraktSync.watchedMovie(pid, movie) // glcn
         }
     }
 
@@ -1007,9 +1008,11 @@ class MovieViewModel(
                 if (pid != ref.profileId) return@launch
                 Log.d(TAG, "saveProgressNow movieId=${m.id} profile=$pid positionMs=$pos durationMs=$dur")
                 runCatching {
-                    progressDao.save(
-                        PlaybackProgressEntity(profileId = pid, mediaType = MediaType.MOVIE, itemId = m.id, positionMs = pos, durationMs = dur),
-                    )
+                    // glcn: crossing into "watched" (≥95 %) tells Trakt once, not on every later save.
+                    val before = runCatching { progressDao.get(pid, MediaType.MOVIE, m.id) }.getOrNull()
+                    val done = PlaybackProgressEntity(profileId = pid, mediaType = MediaType.MOVIE, itemId = m.id, positionMs = pos, durationMs = dur)
+                    progressDao.save(done)
+                    if (isMovieCompleted(done) && (before == null || !isMovieCompleted(before))) tv.own.owntv.core.trakt.TraktSync.watchedMovie(pid, m)
                 }.onFailure { t ->
                     Log.w(TAG, "saveProgressNow progress save failed movieId=${m.id} profile=$pid", t)
                 }

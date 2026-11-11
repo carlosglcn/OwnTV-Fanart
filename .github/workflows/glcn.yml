@@ -59,6 +59,9 @@ jobs:
           KEYSTORE_PASSWORD: owntvglcn
           KEY_ALIAS: glcn
           KEY_PASSWORD: owntvglcn
+          # glcn: the app's Trakt keys (repository secrets; blank = no Trakt in the build).
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
         run: |
           chmod +x ./gradlew
           set -o pipefail

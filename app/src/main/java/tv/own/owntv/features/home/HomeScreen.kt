@@ -899,6 +899,22 @@ fun HomeScreen(
                                 modifier = rowModifier,
                             )
 
+                            // glcn: the Trakt watchlist films found in the playlists.
+                            HomeRow.TRAKT_WATCHLIST -> FavoritePosterRow(
+                                title = row.displayTitle(),
+                                items = state.traktWatchlist,
+                                key = { it.id },
+                                name = { it.name },
+                                poster = { it.posterUrl },
+                                backdrop = { it.backdropUrl },
+                                start = contentStart,
+                                onItemClick = onOpenMovie,
+                                onFocus = onNonHeroFocused,
+                                firstItemFocusRequester = firstItemFocusRequester,
+                                track = track,
+                                modifier = rowModifier,
+                            )
+
                             HomeRow.RECENT_MOVIES -> FavoritePosterRow(
                                 title = row.displayTitle(),
                                 items = state.recentMovies,
@@ -1011,6 +1027,7 @@ private fun rowHasData(row: HomeRow, state: HomeUiState, sportsCards: Int): Bool
     HomeRow.CONTINUE_SERIES -> state.continueSeries.isNotEmpty()
     HomeRow.SPORTS_NOW -> state.sportsGuide.hasContent
     HomeRow.RECENT_MOVIES -> state.recentMovies.isNotEmpty()
+    HomeRow.TRAKT_WATCHLIST -> state.traktWatchlist.isNotEmpty()
     HomeRow.RECENT_SERIES -> state.recentSeries.isNotEmpty()
     HomeRow.FEATURED -> state.featured.isNotEmpty()
     HomeRow.TONIGHT -> state.tonight.isNotEmpty()

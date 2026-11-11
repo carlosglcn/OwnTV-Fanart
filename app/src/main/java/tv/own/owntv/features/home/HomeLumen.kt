@@ -202,6 +202,7 @@ fun LumenHome(
             )
             if (state.favoriteMovies.isNotEmpty() && HomeRow.FAVORITE_MOVIES in order) add(LumenTab(HomeRow.FAVORITE_MOVIES, state.favoriteMovies.map(::movieItem)))
             if (state.favoriteSeries.isNotEmpty() && HomeRow.FAVORITE_SERIES in order) add(LumenTab(HomeRow.FAVORITE_SERIES, state.favoriteSeries.map(::seriesItem)))
+            if (state.traktWatchlist.isNotEmpty() && HomeRow.TRAKT_WATCHLIST in order) add(LumenTab(HomeRow.TRAKT_WATCHLIST, state.traktWatchlist.map(::movieItem)))
             if (state.recentMovies.isNotEmpty() && HomeRow.RECENT_MOVIES in order) add(LumenTab(HomeRow.RECENT_MOVIES, state.recentMovies.map(::movieItem)))
             if (state.recentSeries.isNotEmpty() && HomeRow.RECENT_SERIES in order) add(LumenTab(HomeRow.RECENT_SERIES, state.recentSeries.map(::seriesItem)))
         }.filter { !tvOnly || it.row in TV_PROFILE_ROWS }

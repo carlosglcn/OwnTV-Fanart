@@ -70,6 +70,7 @@ object SettingsTiers {
         "tab_SOURCES" to "group_sources",
         "tab_GLASS_EFFECT" to "group_appearance",
         "glcn_home_bg" to "group_layout",
+        "glcn_trakt" to "group_sources",
     )
 
     /** Bumped on every change, so rows and cards reading it recompose. */

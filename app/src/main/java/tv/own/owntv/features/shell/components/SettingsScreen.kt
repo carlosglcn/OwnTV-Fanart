@@ -201,6 +201,8 @@ fun SettingsScreen(
     var showBgImageChooser by remember { mutableStateOf(false) }
     var showHomePicker by remember { mutableStateOf(false) }
     var showHomeBg by remember { mutableStateOf(false) }
+    var showTrakt by remember { mutableStateOf(false) }
+    val traktProfileId by org.koin.compose.koinInject<tv.own.owntv.core.settings.SettingsRepository>().activeProfileId.collectAsStateWithLifecycle(-1L)
     var showBgPicker by remember { mutableStateOf(false) }
     var showBgRemote by remember { mutableStateOf(false) }
     var showAmbientGlow by remember { mutableStateOf(false) }
@@ -735,6 +737,8 @@ fun SettingsScreen(
             onClick = { saveScroll(); dialogReturn = epgOffsetRowFocus; showEpgOffset = true },
         ),
         *stageGuideRows(settingsVm, stageSettings) { saveScroll(); dialogReturn = it }.toTypedArray(),
+        // glcn: Trakt — only in a build that carries the app's Trakt keys.
+        if (tv.own.owntv.core.trakt.Trakt.available) glcnTraktRow(traktProfileId) { showTrakt = true } else null,
         // How far ahead the guide is stored. Global rather than per-source: it is one horizon that
         // every feed is trimmed to, so it sits beside the other guide-wide setting, not inside a feed.
         RootRow(
@@ -1673,6 +1677,7 @@ fun SettingsScreen(
             onDismiss = { showBgRemote = false; showBgImageChooser = true }, // back one level
         )
     }
+    if (showTrakt && traktProfileId >= 0) tv.own.owntv.glcn.TraktDialog(traktProfileId) { showTrakt = false }
     if (showHomeBg) {
         tv.own.owntv.ui.stage.StagePopup(
             onDismiss = { showHomeBg = false },
@@ -3328,6 +3333,22 @@ private fun glcnTvHomeRow(ctx: android.content.Context): RootRow {
         chip = stringResource(if (dock) R.string.glcn_home_backdrop_dock else R.string.glcn_tv_home_full),
         chipTone = TileTone.PRIMARY,
         onClick = { id?.let { tv.own.owntv.glcn.TvProfiles.setDock(ctx, it, !dock) } },
+    )
+}
+
+@Composable
+private fun glcnTraktRow(profileId: Long, onClick: () -> Unit): RootRow {
+    val version by tv.own.owntv.core.trakt.Trakt.version.collectAsStateWithLifecycle()
+    version
+    val user = tv.own.owntv.core.trakt.Trakt.userName(profileId)?.takeIf { tv.own.owntv.core.trakt.Trakt.connected(profileId) }
+    return RootRow(
+        "glcn_trakt", TileTone.SECONDARY, OwnTVIcon.CHECK,
+        title = stringResource(R.string.glcn_trakt_title),
+        desc = stringResource(R.string.glcn_trakt_row_desc),
+        chip = user ?: stringResource(R.string.glcn_trakt_not_connected),
+        chipTone = if (user != null) TileTone.PRIMARY else TileTone.SECONDARY,
+        value = SettingValue.Opens(user ?: stringResource(R.string.glcn_trakt_not_connected)),
+        onClick = onClick,
     )
 }
 

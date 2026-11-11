@@ -530,9 +530,11 @@ class SeriesViewModel(
                 if (pid != ref.profileId) return@launch
                 Log.d(TAG, "saveEpisodeProgressNow episodeId=${ep.id} profile=$pid positionMs=$pos durationMs=$dur")
                 runCatching {
-                    progressDao.save(
-                        PlaybackProgressEntity(profileId = pid, mediaType = MediaType.EPISODE, itemId = ep.id, positionMs = pos, durationMs = dur),
-                    )
+                    // glcn: crossing into "watched" tells Trakt once (TraktSync).
+                    val before = runCatching { progressDao.get(pid, MediaType.EPISODE, ep.id) }.getOrNull()
+                    val now = PlaybackProgressEntity(profileId = pid, mediaType = MediaType.EPISODE, itemId = ep.id, positionMs = pos, durationMs = dur)
+                    progressDao.save(now)
+                    if (isEpisodeCompleted(now) && (before == null || !isEpisodeCompleted(before))) traktEpisode(pid, ep)
                 }.onFailure { t ->
                     Log.w(TAG, "saveEpisodeProgressNow progress save failed episodeId=${ep.id} profile=$pid", t)
                 }
@@ -718,7 +720,16 @@ class SeriesViewModel(
             progressDao.save(
                 PlaybackProgressEntity(profileId = pid, mediaType = MediaType.EPISODE, itemId = episode.id, positionMs = 1L, durationMs = 1L),
             )
+            traktEpisode(pid, episode) // glcn
         }
+    }
+
+    /** glcn: an episode watched → the profile's Trakt history (its series looked up for the TMDB id). */
+    private suspend fun traktEpisode(profileId: Long, episode: EpisodeEntity) {
+        if (!tv.own.owntv.core.trakt.Trakt.available || !tv.own.owntv.core.trakt.Trakt.connected(profileId)) return
+        val series = _selectedSeries.value?.takeIf { it.id == episode.seriesId }
+            ?: runCatching { seriesDao.getSeriesById(episode.seriesId) }.getOrNull() ?: return
+        tv.own.owntv.core.trakt.TraktSync.watchedEpisode(profileId, series, episode)
     }
 
     /** Mark an episode as unwatched — clears its resume position (removes the ✓ and any progress bar). */

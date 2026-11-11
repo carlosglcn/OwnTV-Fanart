@@ -106,6 +106,8 @@ data class HomeUiState(
     /** glcn rows. */
     val sportsGuide: GuideSliceState = GuideSliceState(),
     val recentMovies: List<MovieEntity> = emptyList(),
+    /** glcn: the Trakt watchlist films found in the playlists. */
+    val traktWatchlist: List<MovieEntity> = emptyList(),
     val recentSeries: List<SeriesEntity> = emptyList(),
     val featured: List<tv.own.owntv.core.home.FeaturedItem> = emptyList(),
     val tonight: List<tv.own.owntv.core.home.TonightItem> = emptyList(),
@@ -539,6 +541,7 @@ class HomeViewModel(
             favoriteGuide = data.favoriteGuide,
             sportsGuide = data.sportsGuide,
             recentMovies = data.recentMovies,
+            traktWatchlist = data.traktWatchlist,
             recentSeries = data.recentSeries,
             featured = data.featured,
             tonight = data.tonight,
