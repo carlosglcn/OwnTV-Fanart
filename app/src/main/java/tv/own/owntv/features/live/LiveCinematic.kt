@@ -201,7 +201,10 @@ internal fun LiveCinematicPane(
                 )
             } else {
                 val cardsGate = tv.own.owntv.glcn.rememberStaggerGate()
-                // glcn: ▶ on the last channel goes round to the first (◀ on the first still reaches the menu).
+                // glcn: ▶ on the last channel goes round to the first. ◀ on the first goes round to the last only with the
+                // menu on top — with the side menu, ◀ there opens the menu, as in every list.
+                val wrapCtx = androidx.compose.ui.platform.LocalContext.current
+                val menuOnTop = remember { tv.own.owntv.glcn.NavStyleCache.read(wrapCtx) == tv.own.owntv.core.settings.SettingsRepository.NavStyle.TOP }
                 val wrapFocus = remember { androidx.compose.ui.focus.FocusRequester() }
                 var wrapTo by remember { mutableStateOf(-1) }
                 val wrapScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -232,11 +235,17 @@ internal fun LiveCinematicPane(
                                         modifier = Modifier
                                             .then(if (index == wrapTo) Modifier.focusRequester(wrapFocus) else Modifier)
                                             .onPreviewKeyEvent { e ->
-                                                if (e.key != androidx.compose.ui.input.key.Key.DirectionRight || index != channels.itemCount - 1 || channels.itemCount < 2) return@onPreviewKeyEvent false
+                                                val last = channels.itemCount - 1
+                                                val target = when {
+                                                    last < 1 -> return@onPreviewKeyEvent false
+                                                    e.key == androidx.compose.ui.input.key.Key.DirectionRight && index == last -> 0
+                                                    e.key == androidx.compose.ui.input.key.Key.DirectionLeft && index == 0 && menuOnTop -> last
+                                                    else -> return@onPreviewKeyEvent false
+                                                }
                                                 if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) {
                                                     wrapScope.launch {
-                                                        wrapTo = 0
-                                                        runCatching { listState.scrollToItem(0) }
+                                                        wrapTo = target
+                                                        runCatching { listState.scrollToItem(target) }
                                                         androidx.compose.runtime.withFrameNanos { }
                                                         runCatching { wrapFocus.requestFocus() }
                                                     }
