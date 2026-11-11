@@ -343,6 +343,19 @@ internal fun ArtLiveCard(
                 }
             }
             // The words under the picture, never over it, where the picture's own lettering would fight them.
+            Box(Modifier.fillMaxWidth().height(CAPTION_HEIGHT)) {
+            // glcn: the channel's logo, large, grey and faint, half off the card's right edge behind the words — a hint
+            // of whose card it is that the text reads straight over.
+            channel.displayLogoUrl?.takeIf { it.isNotBlank() }?.let { logo ->
+                AsyncImage(
+                    model = logo,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    colorFilter = CAPTION_LOGO_GREY,
+                    alpha = if (focused) CAPTION_LOGO_ALPHA_FOCUSED else CAPTION_LOGO_ALPHA,
+                    modifier = Modifier.align(Alignment.CenterEnd).offset(x = CAPTION_LOGO_W * 0.3f).size(CAPTION_LOGO_W, CAPTION_HEIGHT * 1.1f),
+                )
+            }
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.mpx, vertical = 10.mpx)) {
                 // glcn: a focused card whose words do not fit lets them drift past, smoothly, then start over.
                 val drift = if (focused) Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = tv.own.owntv.glcn.DriftPace.START_MS, repeatDelayMillis = 1_500, velocity = tv.own.owntv.glcn.DriftPace.velocity()) else Modifier
@@ -361,9 +374,16 @@ internal fun ArtLiveCard(
                     Text(it, style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, overflow = if (focused) TextOverflow.Clip else TextOverflow.Ellipsis, modifier = drift)
                 }
             }
+            }
         }
     }
 }
+
+/** glcn: the faint channel logo behind a live card's words — greyscale, see [ArtLiveCard]. */
+private val CAPTION_LOGO_GREY = androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) })
+private const val CAPTION_LOGO_ALPHA = 0.08f
+private const val CAPTION_LOGO_ALPHA_FOCUSED = 0.14f
+private val CAPTION_LOGO_W = 170.mpx
 
 /** A live rail drawn as picture cards ("On now" mode of Recent, Favourite channels and Sports now). */
 @Composable
