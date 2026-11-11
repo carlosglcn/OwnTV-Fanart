@@ -101,7 +101,8 @@ android {
         // repo: env var (CI injects the GitHub secrets) > Gradle property.
         // Blank in forks and fresh clones, and then the app shows no Trakt row.
         fun quoted(v: String) = "\"${v.replace("\\", "\\\\").replace("\"", "\\\"")}\""
-        buildConfigField("String", "TRAKT_CLIENT_ID", quoted(System.getenv("TRAKT_CLIENT_ID") ?: providers.gradleProperty("owntv.traktId").orNull ?: ""))
+        // The id of OwnTV Fanart's Trakt app. Public by design: a PKCE app's client id cannot be turned into tokens.
+        buildConfigField("String", "TRAKT_CLIENT_ID", quoted(System.getenv("TRAKT_CLIENT_ID")?.takeIf { it.isNotBlank() } ?: providers.gradleProperty("owntv.traktId").orNull ?: "POSTwqU_UpPdO8wbVhAehdaxL8lTmOBY1J_HhgbM9Sc"))
         buildConfigField("String", "TRAKT_CLIENT_SECRET", quoted(System.getenv("TRAKT_CLIENT_SECRET") ?: providers.gradleProperty("owntv.traktSecret").orNull ?: ""))
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
