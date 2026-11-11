@@ -374,7 +374,7 @@ OwnTV is a media **player** only. It ships with no channels, playlists, subscrip
 does not endorse or facilitate access to unauthorized streams. Users are solely responsible for the
 sources they add and for complying with the laws and rights that apply to them.
 
-OwnTV Fanart uses the [Trakt](https://trakt.tv) API but is **not endorsed or certified by Trakt**. Privacy: see [PRIVACY.md](PRIVACY.md).
+**OwnTV Fanart uses [Trakt](https://trakt.tv) but is not endorsed or certified by Trakt.** Privacy: see [PRIVACY.md](PRIVACY.md).
 
 ## 📄 License
 

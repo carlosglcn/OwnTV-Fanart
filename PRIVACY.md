@@ -26,7 +26,7 @@ If the app crashes it can build a report on the device. It is only sent if you c
 
 ## Trakt notice
 
-OwnTV Fanart uses the Trakt API but is **not endorsed or certified by Trakt**.
+**OwnTV Fanart uses Trakt but is not endorsed or certified by Trakt.**
 
 ## Contact
 
