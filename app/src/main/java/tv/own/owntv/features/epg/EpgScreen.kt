@@ -596,6 +596,12 @@ fun EpgScreen(
         )
         // … and the programme under the cursor, with what it can do.
         Box(Modifier.weight(1f).fillMaxHeight()) {
+            // glcn: the channel's logo, large, grey and faint, behind the programme's words on the right (Ghosts).
+            tv.own.owntv.glcn.GhostLogo(
+                topChannel?.displayLogoUrl,
+                Modifier.align(Alignment.CenterEnd).padding(end = 24.mpx, top = 20.mpx).size(GUIDE_GHOST_W, GUIDE_GHOST_H),
+                alpha = tv.own.owntv.glcn.Ghosts.ALPHA,
+            )
             if (topChannel != null) {
                 val chName = ProviderTags.displayName(topChannel.name)
                 GuideProgrammeBlock(
@@ -1190,3 +1196,7 @@ private inline fun androidx.compose.ui.graphics.drawscope.DrawScope.withLayerAlp
     block()
     drawContext.canvas.restore()
 }
+
+/** glcn: the faint logo behind the guide's programme panel. */
+private val GUIDE_GHOST_W = 440.mpx
+private val GUIDE_GHOST_H = 260.mpx

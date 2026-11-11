@@ -1306,6 +1306,7 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	glcn-frames
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	start
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	·
+1	technical	app/src/main/java/tv/own/owntv/glcn/Ghosts.kt	ghostLogo
 1	technical	app/src/main/java/tv/own/owntv/glcn/GitHubStar.kt	\0
 2	technical	app/src/main/java/tv/own/owntv/glcn/GitHubStar.kt	done
 2	technical	app/src/main/java/tv/own/owntv/glcn/GitHubStar.kt	first

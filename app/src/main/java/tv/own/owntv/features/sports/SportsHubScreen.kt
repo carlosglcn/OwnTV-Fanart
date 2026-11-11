@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -502,6 +504,18 @@ internal fun MatchCard(
             .background(StageColors.Ink.copy(alpha = 0.045f), RoundedCornerShape(r))
             .drawBehind { drawInnerRing(Color.White.copy(alpha = 0.05f), 1.mpx.toPx(), r.toPx()) },
     ) { _ ->
+        // glcn: the two crests, large, grey and faint, half off the card's two edges — a ghost of who plays.
+        if (!m.sport.isRace && m.competitors.size >= 2) {
+            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(r))) {
+                listOfNotNull(m.home?.team, m.away?.team).forEachIndexed { i, t ->
+                    if (!t.isAthlete) tv.own.owntv.glcn.GhostLogo(
+                        t.logoUrl,
+                        Modifier.align(if (i == 0) Alignment.CenterStart else Alignment.CenterEnd).size(MATCH_GHOST.mpx)
+                            .graphicsLayer { translationX = (if (i == 0) -0.38f else 0.38f) * MATCH_GHOST.mpx.toPx() },
+                    )
+                }
+            }
+        }
         Column(Modifier.fillMaxSize().padding(horizontal = 20.mpx, vertical = 16.mpx)) {
             // League line · minute (red while live) or kick-off.
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -653,3 +667,6 @@ private fun FollowRemindMenu(
 /** A side's name on a card: the short name, unless ESPN gives only a code ("GHA" in cricket), then the full name. */
 internal fun teamLabel(t: tv.own.owntv.core.sports.model.Team): String =
     if (t.shortName.length <= 4 && t.shortName == t.shortName.uppercase() && t.name.length > t.shortName.length) t.name else t.shortName
+
+/** glcn: a match card's crest ghosts, each half off its edge. */
+private const val MATCH_GHOST = 190
