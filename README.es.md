@@ -70,6 +70,10 @@ Los problemas de **esta versión** van al grupo de Fanart; el otro es para la ap
 - **Un reproductor a la altura de Kodi** — subtítulos con estilo ASS/SSA, capítulos con imagen, carpetas de Blu-ray/DVD, saltar intro y siguiente episodio en los créditos, vista previa al avanzar, HDR→SDR y control de Dolby Vision.
 - **Estilos y fondos** — estilos degradados, fondos animados y de fotos, y avatares de perfil en 3D.
 
+## ⚖️ Aviso legal
+
+OwnTV Fanart usa la API de [Trakt](https://trakt.tv), pero **no está respaldada ni certificada por Trakt**. Privacidad: consulta [PRIVACY.md](PRIVACY.md).
+
 ## 📄 Licencia y créditos
 
 GPLv3, como OwnTV. Todo el mérito de la app en sí es de **ahXN00** y los colaboradores de OwnTV; el
