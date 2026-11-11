@@ -546,7 +546,11 @@ fun HomeScreen(
                     // glcn: whichever row is first — the billboard, Keep watching or any other — reaching it
                     // brings the top of the page (the greeting) back, not just the row itself.
                     Box(
-                        Modifier.staggerAt(rowIndex, homeGate, step = 110, cap = 6).onFocusChanged { if (it.hasFocus) focusedRow = row }.then(if (row == renderRows.firstOrNull() && !fullBleed) Modifier.onFocusChanged {
+                        Modifier.staggerAt(rowIndex, homeGate, step = 110, cap = 6)
+                            // glcn: a row only partly on screen (cut by the foot of the page or the top bar) fades as a
+                            // whole instead of showing half cards; it comes back as it slides fully in.
+                            .rowFitFade(listState, row.name, if (backdropStyle == 1 || fullBleed || posterItem != null) 0.dp else NoHeroTop)
+                            .onFocusChanged { if (it.hasFocus) focusedRow = row }.then(if (row == renderRows.firstOrNull() && !fullBleed) Modifier.onFocusChanged {
                             if (it.hasFocus) homeScope.launch { scrollHomeToTop(listState) }
                         } else Modifier).then(
                             // glcn: ▲ always reaches the row above. The row above can be off screen and
@@ -2003,6 +2007,27 @@ private fun Modifier.bottomFade(height: androidx.compose.ui.unit.Dp): Modifier =
     }
 
 private val HOME_BOTTOM_FADE = 150.mpx
+
+/**
+ * glcn: the row's alpha by how much of it is cut — by the bottom edge, or by [topEdge] (the bar's foot) at the
+ * top. Fully in: 1. Cut by [ROW_CUT_GONE] of its height or more: [ROW_CUT_MIN]. Read in the draw phase, so a
+ * scroll only redraws.
+ */
+private fun Modifier.rowFitFade(state: androidx.compose.foundation.lazy.LazyListState, key: Any, topEdge: androidx.compose.ui.unit.Dp): Modifier =
+    graphicsLayer {
+        val info = state.layoutInfo
+        val item = info.visibleItemsInfo.firstOrNull { it.key == key } ?: return@graphicsLayer
+        if (item.size <= 0) return@graphicsLayer
+        val top = info.viewportStartOffset + topEdge.toPx()
+        val cutBelow = (item.offset + item.size - info.viewportEndOffset).coerceAtLeast(0)
+        val cutAbove = (top - item.offset).coerceAtLeast(0f)
+        val cut = (cutBelow + cutAbove) / item.size
+        val t = (cut / ROW_CUT_GONE).coerceIn(0f, 1f)
+        alpha = 1f - (1f - ROW_CUT_MIN) * t * t * (3f - 2f * t)
+    }
+
+private const val ROW_CUT_GONE = 0.35f
+private const val ROW_CUT_MIN = 0.12f
 
 /** glcn: the height of a row's heading over its cards, kept clear of the top bar when a row is brought down. */
 private val HOME_ROW_HEADING_ROOM = 56.mpx
