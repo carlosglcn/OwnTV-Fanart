@@ -97,7 +97,8 @@ android {
             ?: ""
         buildConfigField("String", "TMDB_EDGE_KEY", "\"${edgeKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
 
-        // glcn: the app's Trakt keys — NEVER in the repo: env var (CI injects the GitHub secrets) > Gradle property.
+        // glcn: the app's Trakt id (and secret, only for older Trakt apps; new ones use PKCE and have none) — NEVER in the
+        // repo: env var (CI injects the GitHub secrets) > Gradle property.
         // Blank in forks and fresh clones, and then the app shows no Trakt row.
         fun quoted(v: String) = "\"${v.replace("\\", "\\\\").replace("\"", "\\\"")}\""
         buildConfigField("String", "TRAKT_CLIENT_ID", quoted(System.getenv("TRAKT_CLIENT_ID") ?: providers.gradleProperty("owntv.traktId").orNull ?: ""))
