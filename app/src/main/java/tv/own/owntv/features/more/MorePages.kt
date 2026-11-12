@@ -363,7 +363,7 @@ internal fun FavouritesPage(
                 modifier = Modifier.focusRequester(segFocus),
             )
             Spacer(Modifier.weight(1f))
-            if (counts.total > 0) StageTool(stringResource(R.string.glcn_clear_favorites), onClick = { showClearFav = true }, icon = OwnTVIcon.TRASH, danger = true)
+            if (counts.total > 0) StageTool(stringResource(R.string.glcn_clear_favorites), onClick = { showClearFav = true }, boxed = true, icon = OwnTVIcon.TRASH, danger = true)
         }
         if (showClearFav) {
             ClearHistoryDialog(
@@ -582,7 +582,7 @@ internal fun HistoryPage(
                 modifier = Modifier.focusRequester(segFocus),
             )
             Spacer(Modifier.weight(1f))
-            if (counts.total > 0) StageTool(stringResource(R.string.settings_clear_history), onClick = { showClear = true }, icon = OwnTVIcon.TRASH, danger = true, modifier = Modifier.focusRequester(clearFocus))
+            if (counts.total > 0) StageTool(stringResource(R.string.settings_clear_history), onClick = { showClear = true }, boxed = true, icon = OwnTVIcon.TRASH, danger = true, modifier = Modifier.focusRequester(clearFocus))
         }
         androidx.compose.runtime.SideEffect { setEntry { runCatching { (rows.firstOrNull()?.let { r -> focusOf(r.id) } ?: segFocus).requestFocus() }.getOrDefault(false) } }
         if (rows.isEmpty()) {
@@ -696,7 +696,7 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
             })
             // glcn: Share puts the report on the phone: a TV box rarely has an app to share with (the system sheet did
             // nothing on a SHIELD), so the TV serves it on the home Wi-Fi — scan the QR, type the PIN, read or save it.
-            StageTool(stringResource(R.string.glcn_share_log), icon = OwnTVIcon.SHARE, onClick = {
+            StageTool(stringResource(R.string.glcn_share_log), boxed = true, icon = OwnTVIcon.SHARE, onClick = {
                 scope.launch {
                     // glcn: the phone reads the report from the app's own cache — the exported copy sits in the public
                     // Download folder, which the app could not always read back, and the phone got an empty page.
@@ -712,7 +712,7 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
                     }
                 }
             })
-            if (!entries.isNullOrEmpty()) StageTool(stringResource(R.string.settings_clear_log), icon = OwnTVIcon.TRASH, danger = true, onClick = {
+            if (!entries.isNullOrEmpty()) StageTool(stringResource(R.string.settings_clear_log), boxed = true, icon = OwnTVIcon.TRASH, danger = true, onClick = {
                 PlaybackErrorLog.clear(context)
                 exportPath = null
                 exportFailed = false

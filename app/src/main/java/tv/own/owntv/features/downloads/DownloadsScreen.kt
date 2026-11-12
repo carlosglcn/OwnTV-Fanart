@@ -288,14 +288,14 @@ fun DownloadsScreen(
             }
             Spacer(Modifier.weight(1f))
             // What playing does to a download on a one-stream playlist; OK steps through the three answers.
-            StageTool(
+            StageTool(boxed = true, 
                 text = stringResource(R.string.content_download_watch_setting) + stringResource(R.string.content_epg_bits_separator) +
                     stringResource(watchChoiceLabel(watchChoice)),
                 icon = OwnTVIcon.PLAY,
                 onClick = { vm.setDownloadWatchChoice(nextWatchChoice(watchChoice)) },
                 modifier = Modifier.padding(bottom = 4.mpx),
             )
-            StageTool(
+            StageTool(boxed = true, 
                 text = stringResource(R.string.settings_download_folder), icon = OwnTVIcon.FOLDER,
                 onClick = { showFolderPicker = true },
                 modifier = Modifier.padding(bottom = 4.mpx).focusRequester(folderFocus),

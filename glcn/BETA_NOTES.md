@@ -31,3 +31,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ Trakt: the app now signs in through its production Trakt app, so anyone can connect (the old one was limited to invited testers). Accounts connected before need to sign in again once.
 - ‹ The quick channel list over the player has the same ‹ tab on its left edge (◀ opens the categories), and the categories a › tab on their right edge while their channels sit beside them (▶ goes there).
 - ✨ Films and Series: a poster still on its way shows its shape, softly shimmering, instead of a gap; in the Guide a row whose programmes are still loading shows two shimmering cells.
+- 🖼️ Programme info (ⓘ): what follows on the channel shows as picture cards under the buttons (the next one wider, its picture from the guide or TMDB); the right-hand list keeps only those after them, and the synopsis takes fewer lines to leave room.
+- 🔘 Favourites, History, the playback report and Downloads: their actions (clear, export, share, watch setting, folder) are glass buttons instead of loose text with an icon.
+- 🪟 Popups float a little higher than the page, with a soft shadow.

@@ -25,6 +25,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
@@ -104,6 +105,8 @@ fun StagePopup(
                     .padding(top = if (ime.visible) edge else 0.mpx)
                     .width(width.coerceAtMost(maxWidth - edge * 2))
                     .heightIn(max = room.coerceAtLeast(120.mpx))
+                    // glcn: a popup floats at the raised height (soft shadow), over the page at card height.
+                    .shadow(tv.own.owntv.ui.theme.StageElevation.RAISED, androidx.compose.foundation.shape.RoundedCornerShape(30.mpx), ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.3f), spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.3f))
                     .stageGlass(30.mpx, overContent = true)
                     .then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
                     .padding(30.mpx),
