@@ -967,11 +967,16 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckGroupText
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckRowSub
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckRowText
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckTab
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckVeil
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	eq
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	eqPhase
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	–
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▲
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▶
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▶ /
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▼
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	◀
 3	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapPosters.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapPosters.kt	▼

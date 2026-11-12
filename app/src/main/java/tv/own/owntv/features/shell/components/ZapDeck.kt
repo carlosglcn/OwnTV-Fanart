@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -539,13 +540,20 @@ fun ZapDeck(
                         style = stageText(17, 500), color = StageColors.Muted, maxLines = 1,
                     )
                 }
+                val playingIdx = remember(list, currentId) { list.indexOfFirst { it.id == currentId } }
+                val playingName = list.getOrNull(playingIdx)?.let { ProviderTags.displayName(it.name) }.orEmpty()
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                // glcn: a tab on the list's left edge says the categories are there; it nudges left as the list opens.
+                DeckCategoriesTab(visible = column == 1, modifier = Modifier.align(Alignment.CenterStart))
                 GlideColumn(
                     count = list.size,
                     index = chIdx,
                     rowHeight = 84.mpx,
                     active = column == 1,
                     resetKey = listVersion,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize().padding(start = DECK_TAB_ROOM),
+                    pinIndex = playingIdx,
+                    pinned = { above -> DeckWatchingPill(playingName, above) },
                 ) { i, focused ->
                     val ch = list.getOrNull(i) ?: return@GlideColumn
                     DeckChannelRow(
@@ -555,6 +563,7 @@ fun ZapDeck(
                         lit = focused && column == 1,
                         showNumber = showNumbers,
                     )
+                }
                 }
                 StageKeyHints(
                     listOfNotNull(
@@ -877,6 +886,9 @@ private fun GlideColumn(
     active: Boolean,
     resetKey: Any,
     modifier: Modifier = Modifier,
+    /** A row to keep in sight: when it is scrolled out, [pinned] is shown at the edge it went past (true = above). */
+    pinIndex: Int = -1,
+    pinned: (@Composable (Boolean) -> Unit)? = null,
     row: @Composable (Int, Boolean) -> Unit,
 ) {
     val density = LocalDensity.current
@@ -941,8 +953,80 @@ private fun GlideColumn(
             // Room below the last row, so the list can always be placed on the row the glide is in.
             item { Spacer(Modifier.fillMaxWidth().height(rowHeight)) }
         }
+        // glcn: the pinned row, when out of sight: a pill at the edge it went past. Only its side is read in composition.
+        if (pinned != null && pinIndex in 0 until count) {
+            val side by remember(resetKey, pinIndex) {
+                derivedStateOf {
+                    val mid = (pinIndex + 0.5f) * h - scroll.value
+                    when { mid < 0f -> 1; mid > viewH -> 2; else -> 0 }
+                }
+            }
+            val shownSide = remember { mutableIntStateOf(0) }
+            if (side != 0) shownSide.intValue = side
+            androidx.compose.animation.AnimatedVisibility(
+                visible = side == 1,
+                enter = androidx.compose.animation.fadeIn(tween(160)) + androidx.compose.animation.slideInVertically(tween(200)) { -it / 2 },
+                exit = androidx.compose.animation.fadeOut(tween(140)),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 6.mpx),
+            ) { pinned(true) }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = side == 2,
+                enter = androidx.compose.animation.fadeIn(tween(160)) + androidx.compose.animation.slideInVertically(tween(200)) { it / 2 },
+                exit = androidx.compose.animation.fadeOut(tween(140)),
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.mpx),
+            ) { pinned(false) }
+        }
     }
 }
+
+/** glcn: the "watching now" pill of the zap deck's channel list — where the playing channel went, with its name. */
+@Composable
+private fun DeckWatchingPill(name: String, above: Boolean) {
+    val accent = stageAccent.accent
+    Row(
+        Modifier
+            .shadow(8.mpx, RoundedCornerShape(50))
+            .clip(RoundedCornerShape(50))
+            .background(accent)
+            .padding(horizontal = 16.mpx, vertical = 7.mpx),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.mpx),
+    ) {
+        Text(if (above) "▲" else "▼", style = stageText(14, 800), color = stageAccent.onAccent)
+        EqualizerBars(stageAccent.onAccent, Modifier.size(16.mpx))
+        Text(
+            stringResource(R.string.glcn_deck_watching, name), style = stageText(16, 700), color = stageAccent.onAccent,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** glcn: three bars rising and falling, out of step — "this one is playing". */
+@Composable
+private fun EqualizerBars(color: Color, modifier: Modifier) {
+    val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "eq")
+    val phase by t.animateFloat(
+        0f, 1f,
+        androidx.compose.animation.core.infiniteRepeatable(tween(EQ_CYCLE_MS, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "eqPhase",
+    )
+    androidx.compose.foundation.Canvas(modifier) {
+        val gap = size.width * 0.14f
+        val w = (size.width - gap * 2f) / 3f
+        for (b in 0 until 3) {
+            val x = Math.sin((phase + b * 0.31f) * 2.0 * Math.PI).toFloat()
+            val f = 0.35f + 0.65f * (0.5f + 0.5f * x)
+            val bh = size.height * f
+            drawRoundRect(
+                color, Offset(b * (w + gap), size.height - bh), androidx.compose.ui.geometry.Size(w, bh),
+                androidx.compose.ui.geometry.CornerRadius(w / 2f),
+            )
+        }
+    }
+}
+
+private const val EQ_CYCLE_MS = 1_100
+private const val PLAYING_WASH = 0.16f
 
 @Composable
 private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, playing: Boolean, lit: Boolean, showNumber: Boolean) {
@@ -954,9 +1038,9 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
             .fillMaxSize()
             .padding(horizontal = 12.mpx)
             .then(
+                // glcn: the playing channel — a soft accent wash over the whole row (the focus is the solid one).
                 if (playing && !lit) Modifier.drawBehind {
-                    val w = 4.mpx.toPx()
-                    drawRect(accent, Offset(0f, size.height * 0.24f), androidx.compose.ui.geometry.Size(w, size.height * 0.52f))
+                    drawRoundRect(accent.copy(alpha = PLAYING_WASH), cornerRadius = androidx.compose.ui.geometry.CornerRadius(14.mpx.toPx()))
                 } else Modifier,
             ),
         verticalAlignment = Alignment.CenterVertically,
@@ -967,7 +1051,10 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
         }
         ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.width(72.mpx).height(48.mpx), fill = Color.Transparent) { }
         Column(Modifier.weight(1f)) {
-            Text(ProviderTags.displayName(channel.name), style = stageText(20, if (playing) 800 else 700), color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
+                if (playing) EqualizerBars(if (lit) stageAccent.onAccent else accent, Modifier.size(18.mpx))
+                Text(ProviderTags.displayName(channel.name), style = stageText(20, if (playing) 800 else 700), color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             if (now != null) {
                 Text(now.title, style = stageText(16, 400), color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val span = (now.stopMs - now.startMs).coerceAtLeast(1L)
@@ -1034,3 +1121,37 @@ private fun deckAccentInk(): Color {
     val l = a.luminance()
     return if ((light && l > 0.5f) || (!light && l < 0.06f)) StageColors.Text else a
 }
+
+/** glcn: room on the channel list's left for the categories tab. */
+private val DECK_TAB_ROOM = 16.mpx
+
+/**
+ * glcn: a slim tab on the channel list's left edge with a ‹ — the categories are behind it (◀). Each time the list
+ * takes the cursor it nudges left twice, so the eye goes there; then it stays still.
+ */
+@Composable
+private fun DeckCategoriesTab(visible: Boolean, modifier: Modifier) {
+    val nudge = remember { Animatable(0f) }
+    LaunchedEffect(visible) {
+        if (!visible) return@LaunchedEffect
+        delay(TAB_NUDGE_DELAY_MS)
+        repeat(2) {
+            nudge.animateTo(-1f, tween(180, easing = FastOutSlowInEasing))
+            nudge.animateTo(0f, spring(dampingRatio = 0.5f, stiffness = 500f))
+        }
+    }
+    val a by androidx.compose.animation.core.animateFloatAsState(if (visible) 1f else 0f, tween(160), label = "deckTab")
+    Box(
+        modifier
+            .graphicsLayer { alpha = a; translationX = nudge.value * 6.mpx.toPx() }
+            .width(DECK_TAB_ROOM - 2.mpx)
+            .height(110.mpx)
+            .clip(RoundedCornerShape(topEnd = 10.mpx, bottomEnd = 10.mpx))
+            .background(stageAccent.accent.copy(alpha = 0.22f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        OwnTVIcon(OwnTVIcon.CHEVRON_LEFT, StageColors.Text, Modifier.size(14.mpx))
+    }
+}
+
+private const val TAB_NUDGE_DELAY_MS = 600L
