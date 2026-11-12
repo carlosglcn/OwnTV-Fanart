@@ -162,7 +162,8 @@ internal fun LiveStageRow(
     StageRow(
         onClick = onClick,
         onLongClick = onLongClick,
-        height = 82.mpx,
+        // glcn: the row grows with a larger text size (Settings › Fonts), so its three lines still fit.
+        height = 82.mpx * tv.own.owntv.ui.theme.LocalUiFontScaleFactor.current.coerceAtLeast(1f),
         modifier = modifier.fillMaxWidth().onFocusChanged { if (it.hasFocus) onFocus() },
     ) { focused ->
         if (showNumber) {
