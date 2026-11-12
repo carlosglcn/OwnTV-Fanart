@@ -1,3 +1,13 @@
+## Fix — Trakt open to everyone
+
+- 🎞️ **Trakt now works for everyone:** the app signs in through its production Trakt app — before, Trakt answered "this app is still in development" to anyone not invited as a tester.
+- 🔁 If you had already connected Trakt, connect it again once in Settings › Sources › Trakt.
+- ℹ️ OwnTV Fanart uses Trakt but is not endorsed or certified by Trakt.
+
+🙏 Thank you to everyone who tried Trakt right away and reported it.
+
+---
+
 ## What's new — Trakt, a smoother app and a new player channel list
 
 ### 🎞️ Trakt
