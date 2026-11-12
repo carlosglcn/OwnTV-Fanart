@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import tv.own.owntv.ui.theme.mpxSp
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import tv.own.owntv.R
@@ -132,8 +133,19 @@ private fun facts(epg: EpgNowNext): Facts? {
         .take(6)
         .map { formatTime(it.startMs) to it.title }
     val ring = stringResource(R.string.content_live_time_range, formatTime(now.startMs), formatTime(now.stopMs))
-    return Facts(now.title, meta, progress, now.description?.takeIf { it.isNotBlank() }, nextLine, formatTime(now.startMs), formatTime(now.stopMs), ring, upcoming)
+    return Facts(now.title, meta, progress, now.description?.takeIf { it.isNotBlank() && !isFactsOnly(it) }, nextLine, formatTime(now.startMs), formatTime(now.stopMs), ring, upcoming)
 }
+
+/**
+ * glcn: a guide "synopsis" that is only facts — "Deportes,Fútbol | 2026 | TP | *5.6/10" — says nothing the line above
+ * does not; such a one is not shown as a synopsis.
+ */
+internal fun isFactsOnly(text: String): Boolean {
+    val parts = text.split('|').map { it.trim() }.filter { it.isNotEmpty() }
+    return parts.size >= 2 && parts.all { it.length <= FACT_MAX_CHARS }
+}
+
+private const val FACT_MAX_CHARS = 28
 
 /** A coming programme as a small glass chip: its time in the accent, then its title. */
 @Composable
@@ -221,8 +233,15 @@ fun LiveBannerCine(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier
             }
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.content_live_now).uppercase(), style = stageText(15, 500).copy(letterSpacing = 1.4.sp), color = accentInk, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text(f.title, style = tv.own.owntv.ui.theme.stageDisplay(56), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(f.meta, style = stageText(19, 500), color = ink.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // glcn: a long title takes two lines and shrinks to fit (down to 34) rather than end in "…" after a word.
+                androidx.compose.foundation.text.BasicText(
+                    f.title,
+                    style = tv.own.owntv.ui.theme.stageDisplay(56).copy(color = ink),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 34.mpxSp, maxFontSize = 56.mpxSp, stepSize = 2.mpxSp),
+                )
+                Text(f.meta, style = stageText(19, 500), color = ink.copy(alpha = 0.8f), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 f.synopsis?.let {
                     tv.own.owntv.features.shell.components.DriftingSynopsis(
                         it, modifier = Modifier.padding(top = 8.dp).fillMaxWidth(0.8f),
@@ -232,7 +251,7 @@ fun LiveBannerCine(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier
             }
             f.upcoming.firstOrNull()?.let { (t, title) ->
                 Spacer(Modifier.width(32.dp))
-                Column(Modifier.width(280.dp), horizontalAlignment = Alignment.End) {
+                Column(Modifier.width(CINE_NEXT_W), horizontalAlignment = Alignment.End) {
                     Text(stringResource(R.string.content_live_next).uppercase(), style = stageText(14, 500).copy(letterSpacing = 1.2.sp), color = ink.copy(alpha = 0.6f), fontWeight = FontWeight.Bold, maxLines = 1)
                     Text(t + "  " + title, style = stageText(18, 600), color = ink, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.End)
                 }
@@ -284,3 +303,6 @@ fun LiveBannerLateral(epg: EpgNowNext?, art: String?, modifier: Modifier = Modif
         }
     }
 }
+
+/** glcn: the Cine banner's "Up next" column, narrow enough to leave the title its room. */
+private val CINE_NEXT_W = 230.dp
