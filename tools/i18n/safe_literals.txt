@@ -1576,6 +1576,8 @@
 1	protocol	app/src/main/java/tv/own/owntv/player/MediaSpecDisplayText.kt	mpv
 1	empty	app/src/main/java/tv/own/owntv/player/MiniPlayer.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/MiniPlayer.kt	miniControls
+1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	$deg°
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	EEEdMMM
 10	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	$k: $v

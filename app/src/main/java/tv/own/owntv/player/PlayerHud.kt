@@ -892,11 +892,13 @@ fun PlayerHud(
             // the inner edge. A pure gradient faded out exactly where the chips and the Now/Next text sit,
             // so those washed out on bright scenes; a hard-edged band would instead draw a visible seam
             // across the picture. The colour stops give the panel first, then the feather.
-            Box(Modifier.align(Alignment.TopStart).fillMaxWidth().height(210.dp)
+            // glcn: on live TV the top only carries the slim pill, which has its own shade — a short, light wash is
+            // enough there, so the picture is not veiled (in the light theme it looked like fog over the match).
+            Box(Modifier.align(Alignment.TopStart).fillMaxWidth().height(if (isLive) 120.dp else 210.dp)
                 .gradientWash(
                     vertical = true,
-                    0.0f to hudShade(0.8f),
-                    0.5f to hudShade(0.72f),
+                    0.0f to hudShade(if (isLive) 0.45f else 0.8f),
+                    0.5f to hudShade(if (isLive) 0.25f else 0.72f),
                     1.0f to Color.Transparent,
                 ))
             // glcn: live TV's bar has no panel of its own any more — this shade carries its text, a little deeper.
@@ -907,7 +909,8 @@ fun PlayerHud(
                 .gradientWash(
                     vertical = true,
                     0.0f to Color.Transparent,
-                    0.4f to hudShade(if (isLive) 0.74f else 0.68f),
+                    // glcn: the feather starts lower, so the shade covers the bar and its words, not the picture above.
+                    0.55f to hudShade(if (isLive) 0.74f else 0.68f),
                     1.0f to hudShade(if (isLive) 0.88f else 0.78f),
                 ))
             }
@@ -921,8 +924,10 @@ fun PlayerHud(
             if (isLive && error == null) {
                 // Side by side, card then clock, on one line along the top: stacked, the card reached down
                 // to the middle of the screen, where the play/pause controls sit.
+                // glcn: the status pill in the top centre — the corners are where channels put their logo (right)
+                // and their scoreboard (left).
                 Row(
-                    Modifier.align(Alignment.TopEnd).padding(top = 20.dp, end = 28.dp),
+                    Modifier.align(Alignment.TopCenter).padding(top = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
