@@ -76,8 +76,13 @@ fun ChannelLogoTile(
     // glcn: 0 classic (upstream), 1 none.
     val needsPlate = LogoPlate.mode == 0 && ink != LOGO_INK_NONE &&
         contrastRatio(Color(ink).luminance(), surfaceLuminance) < MIN_CONTRAST
+    // glcn: a white one-colour logo (Telecinco) on a light surface is drawn in the theme's text colour instead —
+    // its own shape, no plate. Logos with colour, and every logo on a dark surface, are left as they are.
+    val inkOnLight = ink != LOGO_INK_NONE && surfaceLuminance >= 0.5f && isPaleMono(ink)
+    val logoFilter = if (inkOnLight) androidx.compose.ui.graphics.ColorFilter.tint(tv.own.owntv.ui.theme.StageColors.Text, androidx.compose.ui.graphics.BlendMode.SrcIn) else null
     val background = when {
         !showLogo -> fill
+        inkOnLight -> Color.Transparent
         needsPlate -> if (surfaceLuminance < 0.5f) LightPlate else DarkPlate
         else -> Color.Transparent
     }
@@ -95,6 +100,7 @@ fun ChannelLogoTile(
                 model = request,
                 contentDescription = null,
                 contentScale = contentScale,
+                colorFilter = logoFilter,
                 modifier = imageModifier,
                 onState = { state ->
                     when (state) {
@@ -177,6 +183,16 @@ private fun Bitmap.measureInk(): Int {
         (b / alphaSum).toInt().coerceIn(0, 255),
     )
 }
+
+/** glcn: a logo whose ink is near white and has (almost) no colour — a white one-colour logo. */
+private fun isPaleMono(ink: Int): Boolean {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(ink, hsv)
+    return hsv[1] < PALE_MONO_MAX_SAT && hsv[2] > PALE_MONO_MIN_VALUE
+}
+
+private const val PALE_MONO_MAX_SAT = 0.18f
+private const val PALE_MONO_MIN_VALUE = 0.82f
 
 /** WCAG contrast ratio between two relative luminances, 1.0 (identical) to 21.0 (black on white). */
 private fun contrastRatio(a: Float, b: Float): Float {

@@ -675,10 +675,13 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
     // glcn: the card follows the theme — light with the light theme; with the dark one, a deep tone taken from the
     // programme's own picture (navy when it has no colour). The veil over the picture is as strong as its brightness
     // needs for every word over it to read, and no stronger.
-    val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    val palette = tv.own.owntv.ui.theme.LocalStagePalette.current
+    val light = palette.isLight
+    // glcn: with the light theme the card is the channel list's own glass colour, so both read as one sheet.
+    val lightCard = palette.glassTint.copy(alpha = 1f)
     val tone by tv.own.owntv.glcn.ArtTone.of(url)
     val card by animateColorAsState(
-        if (light) DECK_CARD_LIGHT else tone?.darkCard() ?: DECK_CARD,
+        if (light) lightCard else tone?.darkCard() ?: DECK_CARD,
         tween(600), label = "deckCard",
     )
     Box(
@@ -734,7 +737,6 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
 
 /** glcn: the card under the picture, and the room left under it. */
 private val DECK_CARD = Color(0xFF0E1726)
-private val DECK_CARD_LIGHT = Color(0xFFF2F5F8)
 /** The veil until the picture has been read: strong, so text never shows unreadable for a moment. */
 private const val VEIL_UNREAD = 0.7f
 private val DECK_FOOT = 28.mpx
