@@ -1,5 +1,6 @@
 package tv.own.owntv.ui.stage
 
+import androidx.compose.ui.zIndex
 import tv.own.owntv.ui.theme.stageTone
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -46,6 +47,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.TransformOrigin
@@ -70,6 +72,7 @@ import tv.own.owntv.ui.theme.stageShadow
 import tv.own.owntv.ui.theme.stageText
 import tv.own.owntv.glcn.slideFocusReport
 import tv.own.owntv.glcn.slideRegion
+import tv.own.owntv.glcn.slidePop
 
 /*
  * The Stage component set (the design's `.mine` classes). Idle = nothing, selected = accent text + dot or bar,
@@ -233,7 +236,8 @@ fun StageSurface(
     content: @Composable BoxScope.(focused: Boolean) -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val real = interaction.collectIsFocusedAsState().value
+    // glcn: while a list turns like a wheel, its highlight stands in for the row that keeps focus (ListWheel).
+    val real = interaction.collectIsFocusedAsState().value && !tv.own.owntv.glcn.LocalQuietFocus.current
     val focused = real || highlighted
     val palette = LocalStagePalette.current
     // glcn: inside a list or menu with a sliding focus box, the item leaves the focus drawing to it.
@@ -818,7 +822,7 @@ fun StageSheetItem(
                 }
             }
             if (count != null) Text(count, style = stageText(16, 600), color = on ?: StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            trailing?.invoke(this, focused)
+            androidx.compose.runtime.CompositionLocalProvider(LocalStageLit provides focused) { trailing?.invoke(this, focused) }
         }
     }
 }
@@ -949,7 +953,12 @@ fun StagePoster(
                 .then(if (slide != null) Modifier.slideRegion(region) else Modifier)
                 .then(
                     if (focused && slide != null) {
-                        Modifier
+                        // glcn: the popped card lifts off the page — a deeper shadow that grows with the pop.
+                        val shadow = stageShadow(0.75f)
+                        Modifier.drawBehind {
+                            val lift = ((slide.pop.value - 1f) / (STILL_POP - 1f)).coerceIn(0f, 1.2f)
+                            drawBoxShadow(shadow, (26 + 22 * lift).mpx.toPx(), r.toPx(), dy = (10 + 14 * lift).mpx.toPx())
+                        }
                     } else if (focused) {
                         Modifier.stageFocusDecor(StageFocus.POSTER, r, accent, LocalStagePalette.current)
                     } else {
@@ -971,10 +980,12 @@ fun StagePoster(
                 Modifier.align(Alignment.BottomStart).padding(start = 8.mpx, bottom = if (progress != null && progress > 0f) 14.mpx else 8.mpx),
             )
             if (watched) {
+                // glcn: a solid accent disc with a white check and rim — the old dark disc vanished on dark posters. With a
+                // white (or very light) accent the disc would be white on white: then it is dark.
                 Box(
-                    // glcn: a solid accent disc with a white check and rim — the old dark disc vanished on dark posters.
                     Modifier.align(Alignment.TopEnd).padding(8.mpx).size(if (compact) 26.mpx else 30.mpx)
-                        .background(accent.accent, CircleShape).border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
+                        .background(stageBadgeDisc(accent.accent), CircleShape)
+                        .border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) { StageIcon(OwnTVIcon.CHECK, Color.White, if (compact) 15.mpx else 17.mpx) }
             } else if (fresh && (progress == null || progress <= 0f)) {
@@ -1065,15 +1076,19 @@ fun StageStill(
         modifier
             .width(width)
             .then(
-                if (slide != null) Modifier.slideFocusReport(slide, StageFocus.POSTER, r, accent, region)
+                if (slide != null) Modifier.slideFocusReport(slide, StageFocus.POSTER, r, accent, region, pop = STILL_POP)
                 else if (lift) Modifier.stageLift(focused, StageFocus.POSTER).stageTilt(focused) else Modifier,
             )
+            // glcn: the popped card draws over its neighbours.
+            .zIndex(if (focused) 1f else 0f)
             .stageClickable(interaction, true, onClick, onLongClick),
     ) {
         Box(
             Modifier
                 .size(width, height)
                 .then(if (slide != null) Modifier.slideRegion(region) else Modifier)
+                // glcn: Home's landscape cards pop with the sliding box, as a launcher's tiles do.
+                .then(if (slide != null) Modifier.slidePop(slide, focused) else Modifier)
                 .then(
                     if (focused && slide != null) {
                         Modifier
@@ -1101,13 +1116,28 @@ fun StageStill(
             }
         }
         Spacer(Modifier.height(12.mpx))
-        Text(title, style = stageText(titleSize, 700), color = stageTone(Color(0xFFE6EEEA), StageColors.Text), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (line != null) {
-            Spacer(Modifier.height((if (lineSize >= 16) 4 else 3).mpx))
-            Text(line, style = stageText(lineSize, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // glcn: with the sliding box, the focused card's words come forward as it pops — they settle a little lower
+        // and brighten, the rest stay a step back (as a launcher names the tile in focus).
+        val words = if (slide != null) {
+            val k by androidx.compose.animation.core.animateFloatAsState(
+                if (focused) 1f else 0f, androidx.compose.animation.core.tween(STILL_WORDS_MS), label = "stillWords",
+            )
+            val drop = STILL_WORDS_DROP.mpx
+            Modifier.graphicsLayer { alpha = STILL_WORDS_REST + (1f - STILL_WORDS_REST) * k; translationY = (k * drop.toPx()) - drop.toPx() / 2f }
+        } else Modifier
+        Column(words) {
+            Text(title, style = stageText(titleSize, 700), color = stageTone(Color(0xFFE6EEEA), StageColors.Text), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (line != null) {
+                Spacer(Modifier.height((if (lineSize >= 16) 4 else 3).mpx))
+                Text(line, style = stageText(lineSize, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }
+
+private const val STILL_WORDS_MS = 220
+private const val STILL_WORDS_REST = 0.7f
+private const val STILL_WORDS_DROP = 6
 
 /** `.ep.w`: a watched episode's still at saturate(.55) brightness(.72). */
 private val WatchedFilter = ColorFilter.colorMatrix(
@@ -1183,7 +1213,7 @@ fun StageEpisode(
             )
             if (watched) {
                 Box(
-                    Modifier.align(Alignment.TopEnd).padding(10.mpx).size(30.mpx).background(accent.accent, CircleShape).border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
+                    Modifier.align(Alignment.TopEnd).padding(10.mpx).size(30.mpx).background(stageBadgeDisc(accent.accent), CircleShape).border(2.mpx, Color.White.copy(alpha = 0.9f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) { StageIcon(OwnTVIcon.CHECK, Color.White, 17.mpx) }
             }
@@ -1298,20 +1328,38 @@ fun StageStepper(value: String) {
     }
 }
 
+/** glcn: true inside a focused (accent-filled) row: what sits on it draws in the accent's own ink, not in the accent. */
+val LocalStageLit = androidx.compose.runtime.compositionLocalOf { false }
+
 /** `.sw2`: 56×32 switch, display only like [StageStepper]. */
 @Composable
 fun StageSwitch(on: Boolean) {
     val a = stageAccent
+    // glcn: on a focused row the accent track vanished into the row's own accent fill — there it turns over: a light
+    // track with an accent knob when on, a faint one when off.
+    val lit = LocalStageLit.current
+    val track = when {
+        lit && on -> a.onAccent
+        lit -> a.onAccent.copy(alpha = 0.28f)
+        on -> a.accent
+        else -> StageColors.Ink.copy(alpha = 0.14f)
+    }
+    val knob = when {
+        lit && on -> a.accent
+        lit -> a.onAccent
+        on -> Color.White
+        else -> LocalStagePalette.current.knobOff
+    }
     Box(
         Modifier
             .size(56.mpx, 32.mpx)
-            .background(if (on) a.accent else StageColors.Ink.copy(alpha = 0.14f), RoundedCornerShape(16.mpx)),
+            .background(track, RoundedCornerShape(16.mpx)),
     ) {
         Box(
             Modifier
                 .offset(x = if (on) 28.mpx else 4.mpx, y = 4.mpx)
                 .size(24.mpx)
-                .background(if (on) Color.White else LocalStagePalette.current.knobOff, CircleShape),
+                .background(knob, CircleShape),
         )
     }
 }
@@ -1341,3 +1389,17 @@ private const val POSTER_WAIT_BOTTOM = 0.13f
 
 /** glcn: how much lower an unfocused poster's name rests. */
 private val POSTER_TITLE_DROP = 5.mpx
+
+/** glcn: an accent lighter than this cannot carry the watched disc's white check. */
+private const val WATCHED_PALE = 0.7f
+
+/** glcn: how far a landscape card grows when it takes focus (Home rows, with the sliding box). */
+private const val STILL_POP = 1.08f
+
+/**
+ * glcn: the fill of a small round badge drawn on artwork with a white glyph (watched check, reminder bell):
+ * the accent, or a dark disc when the accent is white or very light — else it is white on white.
+ */
+fun stageBadgeDisc(accent: Color): Color = if (accent.luminance() > WATCHED_PALE) BADGE_DARK else accent
+
+private val BADGE_DARK = Color(0xF0111820)

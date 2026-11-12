@@ -1595,17 +1595,17 @@ private fun EpisodeView(
         Column(Modifier.padding(start = fx(84), top = 104.mpx).width(fx(980))) {
             // At most 170 high, the room the films' hero gives its title, so two lines shrink rather than
             // push the episodes down.
-            // glcn: the title art, as on the series' first page (the name in text only when there is none).
+            // The show's title art where it has one, as on the browse hero; the name when it has none or it fails.
             var logoFailed by remember(info.logoUrl) { mutableStateOf(false) }
-            if (!info.logoUrl.isNullOrBlank() && !logoFailed) {
-                Box(Modifier.fillMaxWidth().height(150.mpx), contentAlignment = Alignment.BottomStart) {
-                    tv.own.owntv.ui.stage.StageTitleArt(
-                        url = info.logoUrl,
-                        contentDescription = null,
-                        onFailed = { logoFailed = true },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
+            val logo = info.logoUrl?.takeIf { it.isNotBlank() && !logoFailed }
+            if (logo != null) {
+                tv.own.owntv.ui.stage.StageTitleArt(
+                    url = logo,
+                    contentDescription = series.name,
+                    onFailed = { logoFailed = true },
+                    alignment = Alignment.BottomStart,
+                    modifier = Modifier.fillMaxWidth(0.6f).height(150.mpx),
+                )
             } else {
                 tv.own.owntv.features.shell.components.VodHeroTitle(series.name, Modifier.heightIn(max = 170.mpx))
             }
@@ -1741,6 +1741,15 @@ private fun EpisodeView(
                 },
             )
         val openMenu: (EpisodeEntity) -> Unit = { ep -> contextEpisode = ep; contextEpisodeId = ep.id }
+        // glcn: the season's number, huge and in outline only, faint behind the episodes on the right (Ghosts).
+        if (seasons.size > 1 || activeSeason > 1) {
+            val ghostSize = with(androidx.compose.ui.platform.LocalDensity.current) { SEASON_GHOST_SIZE.toSp() }
+            tv.own.owntv.glcn.GhostOutline(
+                stringResource(R.string.glcn_ghost_season, activeSeason),
+                ghostSize, StageColors.Text,
+                Modifier.fillMaxSize().padding(top = SEASON_GHOST_TOP, start = SEASON_GHOST_START),
+            )
+        }
         when {
             loading && episodes.isEmpty() -> Box(epArea, contentAlignment = Alignment.Center) { OwnTVSpinner(sizeDp = 48) }
             episodes.isEmpty() -> Box(epArea, contentAlignment = Alignment.Center) {
@@ -2180,3 +2189,8 @@ private fun episodeLine(aired: String?, durationSecs: Int?, secondsLeft: Int?, w
     secondsLeft?.let { stringResource(R.string.home_time_left, vodRuntime(it)) },
     if (watched) stringResource(R.string.content_episode_watched) else null,
 ).joinToString(" · ")
+
+/** glcn: the ghost season number behind the episodes. */
+private val SEASON_GHOST_SIZE = 380.mpx
+private val SEASON_GHOST_TOP = 560.mpx
+private val SEASON_GHOST_START = 1260.mpx

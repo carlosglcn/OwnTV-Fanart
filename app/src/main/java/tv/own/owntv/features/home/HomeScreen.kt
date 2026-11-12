@@ -359,7 +359,8 @@ fun HomeScreen(
     // glcn: a row brought down from above stops below the top bar, not under it — going ▲ left the focused card
     // half behind the menu, with the sliding focus box drawn over the bar.
     // (Not under Cinema, whose rows start well below the bar anyway.)
-    val topRoomPx = if (cinemaEarly == 1) 0f else with(androidx.compose.ui.platform.LocalDensity.current) { (NoHeroTop + 12.mpx).toPx() }
+    // glcn: and with room for the row's own heading above the card ("Canales recientes" hid behind the bar).
+    val topRoomPx = if (cinemaEarly == 1) 0f else with(androidx.compose.ui.platform.LocalDensity.current) { (NoHeroTop + 12.mpx + HOME_ROW_HEADING_ROOM).toPx() }
     val homeBringIntoViewSpec = remember(bottomRoomPx, topRoomPx) {
         object : BringIntoViewSpec {
             // glcn: the page glides from row to row — a longer, eased slide instead of the quick snap the
@@ -528,6 +529,8 @@ fun HomeScreen(
                     // glcn: rows fade out as they pass under the clock and the buttons at the top, instead of
                     // sliding beneath them in full colour. Not under Cinema, whose rows start lower anyway.
                     .then(if (backdropStyle == 1) Modifier.topFadeWhenScrolled(90.mpx) { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 } else Modifier.topFade(NoHeroTop))
+                    // glcn: the row peeking in at the foot of the screen dissolves into the page instead of being cut off.
+                    .bottomFade(HOME_BOTTOM_FADE)
                     .onFocusChanged { if (it.hasFocus) onChildFocused() }
                     // glcn (Cinema): the rows step back while the lights are down for the trailer.
                     .then(if (backdropStyle == 1) Modifier.graphicsLayer { alpha = 1f - 0.65f * cinemaLights.value } else Modifier)
@@ -543,7 +546,11 @@ fun HomeScreen(
                     // glcn: whichever row is first — the billboard, Keep watching or any other — reaching it
                     // brings the top of the page (the greeting) back, not just the row itself.
                     Box(
-                        Modifier.staggerAt(rowIndex, homeGate, step = 110, cap = 6).onFocusChanged { if (it.hasFocus) focusedRow = row }.then(if (row == renderRows.firstOrNull() && !fullBleed) Modifier.onFocusChanged {
+                        Modifier.staggerAt(rowIndex, homeGate, step = 110, cap = 6)
+                            // glcn: a row only partly on screen (cut by the foot of the page or the top bar) fades as a
+                            // whole instead of showing half cards; it comes back as it slides fully in.
+                            .rowFitFade(listState, row.name, if (backdropStyle == 1 || fullBleed || posterItem != null) 0.dp else NoHeroTop)
+                            .onFocusChanged { if (it.hasFocus) focusedRow = row }.then(if (row == renderRows.firstOrNull() && !fullBleed) Modifier.onFocusChanged {
                             if (it.hasFocus) homeScope.launch { scrollHomeToTop(listState) }
                         } else Modifier).then(
                             // glcn: ▲ always reaches the row above. The row above can be off screen and
@@ -899,6 +906,22 @@ fun HomeScreen(
                                 modifier = rowModifier,
                             )
 
+                            // glcn: the Trakt watchlist films found in the playlists.
+                            HomeRow.TRAKT_WATCHLIST -> FavoritePosterRow(
+                                title = row.displayTitle(),
+                                items = state.traktWatchlist,
+                                key = { it.id },
+                                name = { it.name },
+                                poster = { it.posterUrl },
+                                backdrop = { it.backdropUrl },
+                                start = contentStart,
+                                onItemClick = onOpenMovie,
+                                onFocus = onNonHeroFocused,
+                                firstItemFocusRequester = firstItemFocusRequester,
+                                track = track,
+                                modifier = rowModifier,
+                            )
+
                             HomeRow.RECENT_MOVIES -> FavoritePosterRow(
                                 title = row.displayTitle(),
                                 items = state.recentMovies,
@@ -1011,6 +1034,7 @@ private fun rowHasData(row: HomeRow, state: HomeUiState, sportsCards: Int): Bool
     HomeRow.CONTINUE_SERIES -> state.continueSeries.isNotEmpty()
     HomeRow.SPORTS_NOW -> state.sportsGuide.hasContent
     HomeRow.RECENT_MOVIES -> state.recentMovies.isNotEmpty()
+    HomeRow.TRAKT_WATCHLIST -> state.traktWatchlist.isNotEmpty()
     HomeRow.RECENT_SERIES -> state.recentSeries.isNotEmpty()
     HomeRow.FEATURED -> state.featured.isNotEmpty()
     HomeRow.TONIGHT -> state.tonight.isNotEmpty()
@@ -1969,6 +1993,44 @@ private fun Modifier.topFadeWhenScrolled(height: androidx.compose.ui.unit.Dp, sc
             blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
         )
     }
+
+/** glcn: the content dissolves into the page over the bottom [height] — the next row only hints that it is there. */
+private fun Modifier.bottomFade(height: androidx.compose.ui.unit.Dp): Modifier = this
+    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val h = height.toPx()
+        drawRect(
+            Brush.verticalGradient(0f to Color.Black, 1f to Color.Transparent, startY = size.height - h, endY = size.height),
+            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+        )
+    }
+
+private val HOME_BOTTOM_FADE = 150.mpx
+
+/**
+ * glcn: the row's alpha by how much of it is cut — by the bottom edge, or by [topEdge] (the bar's foot) at the
+ * top. Fully in: 1. Cut by [ROW_CUT_GONE] of its height or more: [ROW_CUT_MIN]. Read in the draw phase, so a
+ * scroll only redraws.
+ */
+private fun Modifier.rowFitFade(state: androidx.compose.foundation.lazy.LazyListState, key: Any, topEdge: androidx.compose.ui.unit.Dp): Modifier =
+    graphicsLayer {
+        val info = state.layoutInfo
+        val item = info.visibleItemsInfo.firstOrNull { it.key == key } ?: return@graphicsLayer
+        if (item.size <= 0) return@graphicsLayer
+        val top = info.viewportStartOffset + topEdge.toPx()
+        val cutBelow = (item.offset + item.size - info.viewportEndOffset).coerceAtLeast(0)
+        val cutAbove = (top - item.offset).coerceAtLeast(0f)
+        val cut = (cutBelow + cutAbove) / item.size
+        val t = (cut / ROW_CUT_GONE).coerceIn(0f, 1f)
+        alpha = 1f - (1f - ROW_CUT_MIN) * t * t * (3f - 2f * t)
+    }
+
+private const val ROW_CUT_GONE = 0.35f
+private const val ROW_CUT_MIN = 0.12f
+
+/** glcn: the height of a row's heading over its cards, kept clear of the top bar when a row is brought down. */
+private val HOME_ROW_HEADING_ROOM = 56.mpx
 
 /** glcn: the content dissolves into the page over the top [height] (alpha mask, one offscreen layer). */
 private fun Modifier.topFade(height: androidx.compose.ui.unit.Dp): Modifier = this

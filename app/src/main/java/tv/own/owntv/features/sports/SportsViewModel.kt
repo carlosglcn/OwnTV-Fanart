@@ -300,6 +300,7 @@ class SportsViewModel(
                 countries = filter.countries.filter { it.length == 2 }.toSet(),
                 minQuality = filter.minQuality,
                 onlyConfirmed = filter.onlyConfirmed,
+                showLikely = filter.showLikely,
                 strictFilter = filter.strict,
                 sourceIds = filter.sourceIds,
             )

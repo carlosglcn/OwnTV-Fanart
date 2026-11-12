@@ -69,6 +69,12 @@ Los problemas de **esta versión** van al grupo de Fanart; el otro es para la ap
 - **Emby** mediante M3U, Android Auto y un widget en el móvil, y un salvapantallas de fanart en la TV.
 - **Un reproductor a la altura de Kodi** — subtítulos con estilo ASS/SSA, capítulos con imagen, carpetas de Blu-ray/DVD, saltar intro y siguiente episodio en los créditos, vista previa al avanzar, HDR→SDR y control de Dolby Vision.
 - **Estilos y fondos** — estilos degradados, fondos animados y de fotos, y avatares de perfil en 3D.
+- **Trakt** — inicia sesión en la TV con un código; lo que ves pasa a tu historial de Trakt, las películas vistas en Trakt salen con su ✓ y tu lista de pendientes es una fila de Inicio.
+- **Fluida como un launcher** — listas con efecto muelle, un foco que se desliza entre filas y menús, tarjetas que resaltan y listas de canales rápidas (mantén ▲/▼ o teclea el número).
+
+## ⚖️ Aviso legal
+
+OwnTV Fanart usa la API de [Trakt](https://trakt.tv), pero **no está respaldada ni certificada por Trakt**. Privacidad: consulta [PRIVACY.md](PRIVACY.md).
 
 ## 📄 Licencia y créditos
 

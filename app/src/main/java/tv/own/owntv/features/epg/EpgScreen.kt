@@ -1,6 +1,7 @@
 package tv.own.owntv.features.epg
 
 import androidx.compose.foundation.background
+import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.ui.stage.backdropLeftWash
 import tv.own.owntv.ui.theme.dissolveEdges
 import androidx.activity.compose.BackHandler
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -377,6 +379,8 @@ fun EpgScreen(
         )
     }
     val glide = androidx.compose.animation.core.spring<Float>(dampingRatio = 1f, stiffness = 420f)
+    // glcn: ▲/▼ from channel to channel lands with a little give, as the channel list's highlight does.
+    val rowGlide = androidx.compose.animation.core.spring<Float>(dampingRatio = tv.own.owntv.glcn.CHANNEL_FOCUS_DAMPING, stiffness = 420f)
     LaunchedEffect(gridHasFocus, inCellMode) {
         val rowTo = if (gridHasFocus && !inCellMode) 1f else 0f
         val cellTo = if (gridHasFocus && inCellMode) 1f else 0f
@@ -391,7 +395,7 @@ fun EpgScreen(
             else {
                 val from = (start - rowY(index)).coerceIn(-rowStride * 6, rowStride * 6)
                 cursor.rowOff.snapTo(from)
-                cursor.rowOff.animateTo(0f, glide)
+                cursor.rowOff.animateTo(0f, rowGlide)
             }
         }
     }
@@ -594,6 +598,12 @@ fun EpgScreen(
         )
         // … and the programme under the cursor, with what it can do.
         Box(Modifier.weight(1f).fillMaxHeight()) {
+            // glcn: the channel's logo, large, grey and faint, behind the programme's words on the right (Ghosts).
+            tv.own.owntv.glcn.GhostLogo(
+                topChannel?.displayLogoUrl,
+                Modifier.align(Alignment.CenterEnd).padding(end = 24.mpx, top = 20.mpx).size(width = GUIDE_GHOST_W, height = GUIDE_GHOST_H),
+                alpha = tv.own.owntv.glcn.Ghosts.ALPHA,
+            )
             if (topChannel != null) {
                 val chName = ProviderTags.displayName(topChannel.name)
                 GuideProgrammeBlock(
@@ -1188,3 +1198,7 @@ private inline fun androidx.compose.ui.graphics.drawscope.DrawScope.withLayerAlp
     block()
     drawContext.canvas.restore()
 }
+
+/** glcn: the faint logo behind the guide's programme panel. */
+private val GUIDE_GHOST_W = 440.mpx
+private val GUIDE_GHOST_H = 260.mpx

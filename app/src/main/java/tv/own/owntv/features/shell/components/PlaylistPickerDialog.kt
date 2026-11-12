@@ -108,7 +108,7 @@ fun StagePlaylistMenu(
                     val current = source.id in picked
                     tv.own.owntv.ui.stage.StageMenuItem(
                         text = source.name,
-                        leading = { tv.own.owntv.ui.stage.StagePlaylistMark(tv.own.owntv.ui.stage.PlaylistMark.of(source.name, index)) },
+                        leading = { tv.own.owntv.ui.stage.StagePlaylistMark(tv.own.owntv.ui.stage.PlaylistMark.forSource(source.id, source.name, index)) },
                         value = if (current) null else counts[source.id]?.let(numbers::format),
                         checked = current,
                         onClick = {

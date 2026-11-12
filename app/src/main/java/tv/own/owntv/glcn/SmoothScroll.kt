@@ -14,47 +14,33 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalFoundationApi::class)
 object SmoothScroll {
+    /**
+     * glcn: the page's glide, everywhere — a spring that carries its speed ([FollowSpring]). Compose evaluates the
+     * scroll's curve again on every frame from where the page is, handing it the speed it had: a tween ignores that
+     * speed, so each new step restarted the glide (a bump) and a run ended in a sudden stop. The spring keeps it: it
+     * sets off gently, a new step bends its path instead of restarting it, and it lands softly. Instant in light mode.
+     */
     val animation: AnimationSpec<Float>
-        // glcn: elastic, and never behind: a single step glides a little past and settles back (an Apple TV feel);
-        // steps coming quickly (a held key, a fast run) each take a short plain glide, so the row keeps pace with the
-        // focus. A spring here made the focus glide lag behind a held ▼ until the page stopped following it.
-        get() = if (LowRam.on) snap<Float>() else paced(
-            androidx.compose.animation.core.tween<Float>(GLIDE_MS, easing = ELASTIC),
-        )
+        get() = if (LowRam.on) snap<Float>() else FollowSpring(GLIDE_OMEGA)
 
-    /**
-     * glcn: Home's page, row to row — slower and with a soft S-curve: it starts barely moving and settles long, so the
-     * page never sets off with a jolt. Instant in light mode.
-     */
+    /** glcn: Home's page, row to row — a softer spring, so the page never sets off with a jolt. */
     val homeAnimation: AnimationSpec<Float>
-        get() = if (LowRam.on) snap<Float>() else paced(
-            androidx.compose.animation.core.tween<Float>(HOME_GLIDE_MS, easing = ELASTIC_SOFT),
-        )
+        get() = if (LowRam.on) snap<Float>() else FollowSpring(HOME_OMEGA)
 
     /**
-     * glcn: [calm] for a step on its own; a short, plain glide when the previous one started under [QUICK_MS] ago —
-     * read each time a scroll begins, so a held key never leaves the page behind its focus.
-     */
-    private fun paced(calm: AnimationSpec<Float>): AnimationSpec<Float> {
-        val now = android.os.SystemClock.uptimeMillis()
-        val quick = now - lastStart < QUICK_MS
-        lastStart = now
-        return if (quick) androidx.compose.animation.core.tween(QUICK_GLIDE_MS, easing = androidx.compose.animation.core.LinearOutSlowInEasing) else calm
-    }
-    @Volatile private var lastStart = 0L
-    /** Eases out long without going past: the page never wobbles when it lands. */
-    private val ELASTIC = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
-    /** Home's page: softer start, no overshoot. */
-    private val ELASTIC_SOFT = androidx.compose.animation.core.CubicBezierEasing(0.4f, 0.2f, 0.2f, 1f)
-
-    /**
-     * glcn: a menu's list (Settings) — brisk enough that a quick run of ▼ never leaves the highlight off the screen,
-     * still eased so it glides; the highlight slides at the same pace ([SETTINGS_FOCUS_STIFFNESS]).
+     * glcn: a menu's list (Settings) — brisker, so a quick run of ▼ never leaves the highlight off the screen; the
+     * highlight slides at the same pace ([SETTINGS_FOCUS_STIFFNESS]).
      */
     val listAnimation: AnimationSpec<Float>
-        get() = if (LowRam.on) snap<Float>() else androidx.compose.animation.core.tween<Float>(
-            LIST_GLIDE_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f),
-        )
+        get() = if (LowRam.on) snap<Float>() else FollowSpring(LIST_OMEGA)
+
+    /**
+     * glcn: the channel lists (TV en directo, the Guide) — a spring a touch short of critical damping, so a step
+     * lands with a clear give (about 8 %) instead of stopping dead; springs carry their speed, so a held ▲/▼ still
+     * flows. Instant in light mode.
+     */
+    val elasticAnimation: AnimationSpec<Float>
+        get() = if (LowRam.on) snap<Float>() else androidx.compose.animation.core.spring(dampingRatio = ELASTIC_DAMPING, stiffness = ELASTIC_STIFFNESS)
 
     /** The app-wide default: scroll only as far as the focused item needs, eased. */
     val spec = object : BringIntoViewSpec {
@@ -111,15 +97,21 @@ class GlideScroller(private val state: androidx.compose.foundation.lazy.grid.Laz
         if (job?.isActive == true) return
         job = scope.launch {
             var last = androidx.compose.runtime.withFrameNanos { it }
-            while (kotlin.math.abs(pending) > 0.5f) {
+            // glcn: the same spring as the app's lists ([FollowSpring]): the speed carries over from step to step,
+            // so the grid sets off gently, flows under a held key and lands softly — no jump at a press, no hard stop.
+            var speed = 0f
+            while (kotlin.math.abs(pending) > 0.5f || kotlin.math.abs(speed) > 12f) {
                 val now = androidx.compose.runtime.withFrameNanos { it }
-                val dt = ((now - last) / 1_000_000_000f).coerceIn(0f, 0.05f)
+                // glcn: at the app's pace (Pace), like every Compose animation.
+                val dt = ((now - last) / 1_000_000_000f).coerceIn(0f, 0.05f) / Pace.factor.coerceIn(0.1f, 1f)
                 last = now
-                val step = pending * (1f - kotlin.math.exp(-dt / 0.085f))
+                val (left, v) = FollowSpring.step(pending, speed, dt, GLIDE_OMEGA)
+                val step = pending - left
                 val used = state.scrollBy(step)
-                pending -= step
+                pending = left
+                speed = v
                 // The list met its end (or a jump moved it): nothing more to travel.
-                if (kotlin.math.abs(step) > 1f && kotlin.math.abs(used) < kotlin.math.abs(step) * 0.25f) pending = 0f
+                if (kotlin.math.abs(step) > 1f && kotlin.math.abs(used) < kotlin.math.abs(step) * 0.25f) { pending = 0f; speed = 0f }
             }
             if (pending != 0f) { state.scrollBy(pending); pending = 0f }
         }
@@ -132,12 +124,84 @@ val NoBringIntoViewSpec = object : BringIntoViewSpec {
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
 }
 
-/** Long enough to be seen gliding, short enough that a held ▼ never outruns it. */
-private const val GLIDE_MS = 560
-private const val HOME_GLIDE_MS = 700
-private const val LIST_GLIDE_MS = 300
-/** glcn: steps closer together than this count as a run (a held key repeats every ~50–100 ms). */
-private const val QUICK_MS = 260L
-private const val QUICK_GLIDE_MS = 200
+/** glcn: the springs' pace (their angular frequency, 1/s): a single row's step lands in about 4.7 / ω seconds. */
+private const val GLIDE_OMEGA = 13f
+private const val HOME_OMEGA = 10f
+private const val LIST_OMEGA = 18f
+private const val ELASTIC_DAMPING = 0.62f
+private const val ELASTIC_STIFFNESS = 220f
 /** glcn: the settings highlight's slide, in step with [SmoothScroll.listAnimation]. */
 const val SETTINGS_FOCUS_STIFFNESS = 900f
+
+/**
+ * glcn: a critically damped spring that follows its target without wobbling, carrying the speed it is handed. Its pace
+ * quickens with the distance still to go, so a held key's run of steps never leaves the page far behind its focus
+ * (a plain spring fell behind until the focus left the screen), and slows back to [omega] for a soft landing.
+ *
+ * Compose's bring-into-view asks it for one frame at a time from where the page is, with the speed it had; each frame
+ * is solved exactly (the closed form), so the motion stays smooth at any frame rate.
+ */
+class FollowSpring(private val omega: Float) : androidx.compose.animation.core.FiniteAnimationSpec<Float> {
+    override fun <V : androidx.compose.animation.core.AnimationVector> vectorize(
+        converter: androidx.compose.animation.core.TwoWayConverter<Float, V>,
+    ): androidx.compose.animation.core.VectorizedFiniteAnimationSpec<V> = Vectorized(omega)
+
+    override fun equals(other: Any?) = other is FollowSpring && other.omega == omega
+    override fun hashCode() = omega.hashCode()
+
+    private class Vectorized<V : androidx.compose.animation.core.AnimationVector>(private val omega: Float) :
+        androidx.compose.animation.core.VectorizedFiniteAnimationSpec<V> {
+        private fun V.x() = (this as androidx.compose.animation.core.AnimationVector1D).value
+
+        private fun solve(playTimeNanos: Long, initial: V, target: V, velocity: V): Pair<Float, Float> {
+            val (left, v) = step(initial.x() - target.x(), -velocity.x(), playTimeNanos / 1e9f, omega)
+            return (target.x() + left) to -v
+        }
+
+        // Floats only: the converter's vector is always one-dimensional.
+        @Suppress("UNCHECKED_CAST")
+        private fun vec(x: Float): V = androidx.compose.animation.core.AnimationVector1D(x) as V
+
+        override fun getValueFromNanos(playTimeNanos: Long, initialValue: V, targetValue: V, initialVelocity: V): V =
+            vec(solve(playTimeNanos, initialValue, targetValue, initialVelocity).first)
+
+        override fun getVelocityFromNanos(playTimeNanos: Long, initialValue: V, targetValue: V, initialVelocity: V): V =
+            vec(solve(playTimeNanos, initialValue, targetValue, initialVelocity).second)
+
+        override fun getDurationNanos(initialValue: V, targetValue: V, initialVelocity: V): Long {
+            var left = initialValue.x() - targetValue.x()
+            var v = -initialVelocity.x()
+            var t = 0f
+            while (t < 4f && (kotlin.math.abs(left) > 0.5f || kotlin.math.abs(v) > 12f)) {
+                val r = step(left, v, FRAME_S, omega); left = r.first; v = r.second; t += FRAME_S
+            }
+            return (t * 1e9f).toLong()
+        }
+    }
+
+    companion object {
+        private const val FRAME_S = 1f / 60f
+        /** Distance (px) over which the pace doubles. */
+        private const val BOOST_PX = 220f
+
+        /**
+         * One stretch of [dt] seconds: [left] is the distance still to travel (it falls towards 0), [speed] how fast it
+         * falls (px/s). Returns the new distance and speed. Solved in sub-steps of at most a frame, each exactly.
+         */
+        fun step(left: Float, speed: Float, dt: Float, omega: Float): Pair<Float, Float> {
+            var x = left
+            var v = -speed // the rate of change of x
+            var rest = dt
+            while (rest > 0f) {
+                val h = kotlin.math.min(rest, FRAME_S)
+                val w = omega * (1f + kotlin.math.abs(x) / BOOST_PX)
+                val b = v + w * x
+                val e = kotlin.math.exp(-w * h)
+                val nx = (x + b * h) * e
+                val nv = (v - w * b * h) * e
+                x = nx; v = nv; rest -= h
+            }
+            return x to -v
+        }
+    }
+}

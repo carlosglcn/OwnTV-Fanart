@@ -191,6 +191,7 @@ fun SettingsScreen(
     // The three Stage pickers (Live TV opens in, Programme reminders, Reminder time): their state, rows,
     // search entries and dialogs live outside this function, which sits at the JVM's 64 KB method limit.
     val stageSettings = remember { StageSettingsState() }
+    val settingsLock = tv.own.owntv.features.settings.lock.rememberSettingsLockState()
     var showStartup by remember { mutableStateOf(false) }
     var showStartupChannelPicker by remember { mutableStateOf(false) }
     var showAfrWarning by remember { mutableStateOf(false) }
@@ -199,6 +200,9 @@ fun SettingsScreen(
     var showLivePreviewPanelWarning by remember { mutableStateOf(false) }
     var showBgImageChooser by remember { mutableStateOf(false) }
     var showHomePicker by remember { mutableStateOf(false) }
+    var showHomeBg by remember { mutableStateOf(false) }
+    var showTrakt by remember { mutableStateOf(false) }
+    val traktProfileId by org.koin.compose.koinInject<tv.own.owntv.core.settings.SettingsRepository>().activeProfileId.collectAsStateWithLifecycle(-1L)
     var showBgPicker by remember { mutableStateOf(false) }
     var showBgRemote by remember { mutableStateOf(false) }
     var showAmbientGlow by remember { mutableStateOf(false) }
@@ -268,13 +272,13 @@ fun SettingsScreen(
         }
         onStartConsumed()
     }
-    val anyDialogOpen = showZoom || showPopupSize || showTheme || showAccent || showUpdate || showCatchupTime || showCatchupSources || showCatchupSourceValue || showEpgOffset || showGuideDays || showAnimations || showStartup || showStartupChannelPicker || showAfrWarning || showLivePreviewPanelWarning || showBgImageChooser || showBgPicker || showHomePicker || showAmbientGlow || showFocusHighlight || showBgRemote || showVodLayout || showNavigation || showLiveLayout || stageSettings.open != null
+    val anyDialogOpen = showZoom || showPopupSize || showTheme || showAccent || showUpdate || showCatchupTime || showCatchupSources || showCatchupSourceValue || showEpgOffset || showGuideDays || showAnimations || showStartup || showStartupChannelPicker || showAfrWarning || showLivePreviewPanelWarning || showBgImageChooser || showBgPicker || showHomePicker || showHomeBg || showAmbientGlow || showFocusHighlight || showBgRemote || showVodLayout || showNavigation || showLiveLayout || stageSettings.open != null || settingsLock.open
     // When a dialog closes, restore focus to the row that opened it. NOTE: this restore crosses
     // INTO the root focus group from outside (the dialog), but onEnter does NOT fire for programmatic
     // requestsFocus (only for directional entry) — so dialogReturn must be cleared HERE, not in onEnter.
     // If it's left set, the next directional entry (e.g. sidebar→here) would re-route to a stale row.
     var dialogReturn by remember { mutableStateOf<FocusRequester?>(null) }
-    LaunchedEffect(showZoom, showPopupSize, showTheme, showAccent, showUpdate, showCatchupTime, showCatchupSources, showCatchupSourceValue, showEpgOffset, showGuideDays, showAnimations, showStartup, showStartupChannelPicker, showAfrWarning, showLivePreviewPanelWarning, showBgImageChooser, showBgPicker, showHomePicker, showAmbientGlow, showFocusHighlight, showBgRemote, showVodLayout, showNavigation, showLiveLayout, stageSettings.open) {
+    LaunchedEffect(showZoom, showPopupSize, showTheme, showAccent, showUpdate, showCatchupTime, showCatchupSources, showCatchupSourceValue, showEpgOffset, showGuideDays, showAnimations, showStartup, showStartupChannelPicker, showAfrWarning, showLivePreviewPanelWarning, showBgImageChooser, showBgPicker, showHomePicker, showHomeBg, showAmbientGlow, showFocusHighlight, showBgRemote, showVodLayout, showNavigation, showLiveLayout, stageSettings.open, settingsLock.open) {
         // Only after a popup really closed: on first composition there is no opener, and holding a stale
         // offset for the settle frames bounced the page.
         if (!anyDialogOpen && dialogReturn != null) {
@@ -353,6 +357,7 @@ fun SettingsScreen(
     val weatherEnabled by settingsVm.weatherEnabled.collectAsStateWithLifecycle()
     val startupMode by settingsVm.startupMode.collectAsStateWithLifecycle()
     val autoStart = rememberAutoStartSettingsState()
+    val settingsLockVm: tv.own.owntv.features.settings.lock.SettingsPinViewModel = koinViewModel()
     val startupChannel by settingsVm.startupChannel.collectAsStateWithLifecycle()
     val chNavEnabled by settingsVm.chNavEnabled.collectAsStateWithLifecycle()
     val rememberLastLive by settingsVm.rememberLastLive.collectAsStateWithLifecycle()
@@ -542,9 +547,8 @@ fun SettingsScreen(
         glcnCategoryIconsRow(accessibleContext),
         // glcn: a TV profile has a Home of its own — the layouts and backdrops of the other Homes mean nothing there.
         if (tv.own.owntv.glcn.TvProfiles.activeIsTv) glcnTvHomeRow(accessibleContext) else glcnHomeBackdropRow(homeBackdrop) { showHomeLayout = true },
-        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeCoverRow(homeCover) { settingsVm.cycleHomeCover() },
-        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeImageRow(homeImagePath) { showHomePicker = true },
-        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeDimRow(homeCoverDim) { settingsVm.cycleHomeCoverDim() },
+        // glcn: picture, own image and dimming are one row now — "Home background" — with its three choices in a popup.
+        if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeBgRow(homeCover, homeCoverDim) { showHomeBg = true },
         RootRow(
             "glcn_season", TileTone.SECONDARY, OwnTVIcon.THEME,
             title = stringResource(R.string.glcn_season_title),
@@ -733,6 +737,8 @@ fun SettingsScreen(
             onClick = { saveScroll(); dialogReturn = epgOffsetRowFocus; showEpgOffset = true },
         ),
         *stageGuideRows(settingsVm, stageSettings) { saveScroll(); dialogReturn = it }.toTypedArray(),
+        // glcn: Trakt — only in a build that carries the app's Trakt keys.
+        if (tv.own.owntv.core.trakt.Trakt.available) glcnTraktRow(traktProfileId) { showTrakt = true } else null,
         // How far ahead the guide is stored. Global rather than per-source: it is one horizon that
         // every feed is trimmed to, so it sits beside the other guide-wide setting, not inside a feed.
         RootRow(
@@ -989,6 +995,7 @@ fun SettingsScreen(
             onClick = { saveScroll(); dialogReturn = startupRowFocus; showStartup = true },
         ),
         *autoStartRootRows(autoStart).toTypedArray(),
+        *tv.own.owntv.features.settings.lock.settingsLockRootRows(settingsLock, settingsLockVm) { saveScroll(); dialogReturn = settingsLock.rowFocus }.toTypedArray(),
         RootRow(
             "check_updates", TileTone.PRIMARY, OwnTVIcon.REFRESH,
             title = stringResource(R.string.settings_check_updates), desc = stringResource(R.string.settings_check_updates_description),
@@ -1068,11 +1075,17 @@ fun SettingsScreen(
             }
         }
         val byKey = sliced.flatMap { it.second }.associateBy { it.key }
+        // glcn: each Fanart row also sits in the group it belongs to, tagged; Fanart keeps them all.
+        val fanartRows = sliced.firstOrNull { it.first.key == "group_fanart" }?.second.orEmpty()
         sliced.map { (group, rows) ->
             if (group.key == "group_quick") {
                 group to quickPinned.mapNotNull { byKey[it] ?: videoDeepRows[it] }
-            } else {
+            } else if (group.key == "group_fanart") {
                 group to rows
+            } else {
+                val moved = fanartRows.filter { tv.own.owntv.glcn.SettingsTiers.fanartHome[it.key] == group.key }
+                    .map { it.copy(heading = null, fanartTag = true) }
+                group to rows + moved
             }
         }
     }
@@ -1089,6 +1102,14 @@ fun SettingsScreen(
         buildMap { categories.forEachIndexed { g, (_, rows) -> rows.forEach { if (g != 0) put(it.key, g) } } }
     }
     val selectedRows = categories.getOrNull(selectedGroup)?.second.orEmpty()
+    // glcn: what the group shows first, and what waits behind "Show advanced settings".
+    val tierContext = LocalContext.current
+    val tierGroup = categories.getOrNull(selectedGroup)?.first?.key.orEmpty()
+    val advancedOpen = tv.own.owntv.glcn.SettingsTiers.isOpen(tierContext, tierGroup)
+    val tiers = remember(selectedRows, tierGroup) { splitTiers(selectedRows, tv.own.owntv.glcn.SettingsTiers.advanced[tierGroup].orEmpty()) }
+    val advancedToggleFocus = remember { FocusRequester() }
+    // Entering a group takes its NEW badge off the card in Settings.
+    LaunchedEffect(tierGroup) { if (tierGroup.isNotEmpty()) tv.own.owntv.glcn.SettingsTiers.seen(tierContext, tierGroup) }
     // The row whose hold-OK menu is open, or null.
     var menuRow by remember { mutableStateOf<RootRow?>(null) }
     // Closing the menu leaves focus nowhere, so the row it belonged to asks for it back.
@@ -1185,7 +1206,6 @@ fun SettingsScreen(
                 chip = pluralStringResource(R.plurals.settings_epg_guide_days_value, guideDays, guideDays), chipTone = TileTone.PRIMARY) { saveScroll(); dialogReturn = searchFieldFocus; showGuideDays = true },
             SettingsSearchEntry(stringResource(R.string.settings_group_sources), stringResource(R.string.settings_search_guide_logos), stringResource(R.string.settings_search_keywords_logos), OwnTVIcon.EPG, TileTone.SECONDARY) { open(SettingsTab.EPG) },
             SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_customize), stringResource(R.string.settings_search_keywords_customize), OwnTVIcon.SORT, TileTone.PRIMARY) { open(SettingsTab.CUSTOMIZE) },
-            SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_customize_settings_pin), stringResource(R.string.settings_search_keywords_customize), OwnTVIcon.SORT, TileTone.SECONDARY) { open(SettingsTab.CUSTOMIZE) },
             navigationSearchEntry(settingsVm) { saveScroll(); dialogReturn = searchFieldFocus; showNavigation = true },
             menuLabelsSearchEntry(settingsVm) { saveScroll(); dialogReturn = searchFieldFocus; showNavigation = true },
             liveLayoutSearchEntry(settingsVm) { saveScroll(); dialogReturn = searchFieldFocus; showLiveLayout = true },
@@ -1286,6 +1306,7 @@ fun SettingsScreen(
             SettingsSearchEntry(stringResource(R.string.settings_group_app), stringResource(R.string.settings_app_startup), stringResource(R.string.settings_search_keywords_startup), OwnTVIcon.POWER, TileTone.SECONDARY,
                 chip = startupLabel(startupMode)) { saveScroll(); dialogReturn = searchFieldFocus; showStartup = true },
             *autoStartSearchEntries(autoStart).toTypedArray(),
+            *tv.own.owntv.features.settings.lock.settingsLockSearchEntries(settingsLock, settingsLockVm) { saveScroll(); dialogReturn = searchFieldFocus }.toTypedArray(),
             SettingsSearchEntry(stringResource(R.string.settings_group_app), stringResource(R.string.settings_check_updates), stringResource(R.string.settings_search_keywords_updates), OwnTVIcon.REFRESH, TileTone.PRIMARY,
                 chip = "v${tv.own.owntv.BuildConfig.VERSION_NAME}") { saveScroll(); dialogReturn = searchFieldFocus; showUpdate = true },
             SettingsSearchEntry(stringResource(R.string.settings_group_app), stringResource(R.string.settings_update_startup), stringResource(R.string.settings_search_keywords_update_auto), OwnTVIcon.REFRESH, TileTone.SECONDARY,
@@ -1417,10 +1438,33 @@ fun SettingsScreen(
                     StageSearchResultRow(e.icon, e.group, e.title, e.chip, onClick = e.onClick)
                 }
                 group.video != null -> {
+                    val advancedParts = tv.own.owntv.glcn.SettingsTiers.advancedParts[group.video].orEmpty()
+                    val rowStage: @Composable (RootRow) -> Unit = { row ->
+                        RootRowStage(
+                            row,
+                            pinned = row.key in quickPinned,
+                            extra = extras[row.key],
+                            onLongClick = { menuRow = row },
+                            focus = if (row.key == menuReturnKey) menuReturnFocus else null,
+                        )
+                    }
+                    val advNames = group.video.parts.filterIndexed { i, _ -> i in advancedParts }.map { stringResource(it.first) } + tiers.second.map { it.title }
+                    val videoShowing = advancedOpen || (videoRowKey != null && videoRowKey !in basicVideoKeys(group.video, advancedParts))
+                    if (videoShowing && !advancedOpen) LaunchedEffect(Unit) { tv.own.owntv.glcn.SettingsTiers.setOpen(tierContext, tierGroup, true) }
                     VideoPlayerGroupRows(
                         group.video, pageScroll,
                         openMiniPlayer = openMiniPlayer,
                         focusRowKey = videoRowKey,
+                        advancedParts = advancedParts,
+                        // A pin or search result into an advanced part opens it, or its row would not be there.
+                        showAdvanced = videoShowing,
+                        between = {
+                            tiers.first.forEach { rowStage(it) }
+                            if (advancedParts.isNotEmpty() || tiers.second.isNotEmpty()) {
+                                AdvancedToggle(videoShowing, advNames, advancedToggleFocus) { tv.own.owntv.glcn.SettingsTiers.setOpen(tierContext, tierGroup, !videoShowing) }
+                            }
+                        },
+                        after = { tiers.second.forEach { rowStage(it) } },
                     )
                     if (group == SettingsGroup.WATCHING) tv.own.owntv.features.settings.RecordingSettingsRows(pageScroll)
                 }
@@ -1428,22 +1472,37 @@ fun SettingsScreen(
                 // Only Quick can be empty, and only because the user emptied it.
                 selectedRows.isEmpty() -> StageSettingsNote(stringResource(R.string.settings_quick_empty_title), stringResource(R.string.settings_quick_empty_hint))
                 else -> {
-                    selectedRows.forEachIndexed { i, row ->
-                        row.heading?.let { heading ->
-                            val under = selectedRows.drop(i).let { rest -> 1 + rest.drop(1).takeWhile { it.heading == null }.size }
-                            StageSettingsHeading(heading, under, first = i == 0)
+                    val (basic, advanced) = tiers
+                    val stageRows: @Composable (List<RootRow>) -> Unit = { rows ->
+                        rows.forEachIndexed { i, row ->
+                            row.heading?.let { heading ->
+                                val under = rows.drop(i).let { rest -> 1 + rest.drop(1).takeWhile { it.heading == null }.size }
+                                StageSettingsHeading(heading, under, first = i == 0)
+                            }
+                            RootRowStage(
+                                row,
+                                // Inside Quick every row is pinned by definition — the dot would say nothing.
+                                pinned = !inQuick && row.key in quickPinned,
+                                inQuick = inQuick,
+                                extra = extras[row.key],
+                                onLongClick = { menuRow = row },
+                                focus = if (row.key == menuReturnKey) menuReturnFocus else null,
+                            )
                         }
-                        RootRowStage(
-                            row,
-                            // Inside Quick every row is pinned by definition — the dot would say nothing.
-                            pinned = !inQuick && row.key in quickPinned,
-                            inQuick = inQuick,
-                            extra = extras[row.key],
-                            onLongClick = { menuRow = row },
-                            focus = if (row.key == menuReturnKey) menuReturnFocus else null,
-                        )
                     }
-                    if (group == SettingsGroup.APP) VideoPlayerGroupRows(VideoGroup.DIAGNOSTICS, pageScroll, firstHeading = false)
+                    stageRows(basic)
+                    val diagnostics = group == SettingsGroup.APP
+                    if (advanced.isNotEmpty() || diagnostics) {
+                        // A row reached from a pin, a search or a sub-screen's Back opens the part it sits in.
+                        val showing = advancedOpen || advanced.any { it.key == menuReturnKey || (lastTab != null && it.key == tabRowKey(lastTab!!)) }
+                        val names = advanced.map { it.title } + if (diagnostics) listOf(stringResource(R.string.settings_diagnostics)) else emptyList()
+                        if (showing && !advancedOpen) LaunchedEffect(Unit) { tv.own.owntv.glcn.SettingsTiers.setOpen(tierContext, tierGroup, true) }
+                        AdvancedToggle(showing, names, advancedToggleFocus) { tv.own.owntv.glcn.SettingsTiers.setOpen(tierContext, tierGroup, !showing) }
+                        if (showing) {
+                            stageRows(advanced)
+                            if (diagnostics) VideoPlayerGroupRows(VideoGroup.DIAGNOSTICS, pageScroll, firstHeading = false)
+                        }
+                    }
                 }
             }
         }
@@ -1540,6 +1599,7 @@ fun SettingsScreen(
     if (showVodLayout) VodLayoutDialog(settingsVm, vodLayout, onClose = { showVodLayout = false })
     if (showLiveLayout) LiveLayoutDialog(settingsVm, onClose = { showLiveLayout = false })
     StageSettingsDialogHost(settingsVm, stageSettings)
+    tv.own.owntv.features.settings.lock.SettingsLockDialogHost(settingsLock, settingsLockVm)
     if (showFocusHighlight) {
         FocusHighlightDialog(
             highlight = focusHighlight,
@@ -1617,6 +1677,33 @@ fun SettingsScreen(
             onDismiss = { showBgRemote = false; showBgImageChooser = true }, // back one level
         )
     }
+    if (showTrakt && traktProfileId >= 0) tv.own.owntv.glcn.TraktDialog(traktProfileId) { showTrakt = false }
+    if (showHomeBg) {
+        tv.own.owntv.ui.stage.StagePopup(
+            onDismiss = { showHomeBg = false },
+            title = stringResource(R.string.glcn_home_bg_title),
+            body = stringResource(R.string.glcn_home_bg_desc),
+        ) {
+            tv.own.owntv.ui.stage.StagePopupOption(
+                title = stringResource(R.string.glcn_home_cover_title),
+                subtitle = stringResource(R.string.glcn_home_cover_desc),
+                value = stringResource(homeCoverLabel(homeCover)),
+                onClick = { settingsVm.cycleHomeCover() },
+            )
+            tv.own.owntv.ui.stage.StagePopupOption(
+                title = stringResource(R.string.glcn_home_image_title),
+                subtitle = stringResource(R.string.glcn_home_image_desc),
+                value = stringResource(if (homeImagePath.isBlank()) R.string.glcn_home_image_none else R.string.glcn_home_image_change),
+                onClick = { showHomeBg = false; showHomePicker = true },
+            )
+            tv.own.owntv.ui.stage.StagePopupOption(
+                title = stringResource(R.string.glcn_home_dim_title),
+                subtitle = stringResource(R.string.glcn_home_dim_desc),
+                value = stringResource(homeDimLabel(homeCoverDim)),
+                onClick = { settingsVm.cycleHomeCoverDim() },
+            )
+        }
+    }
     if (showHomePicker) {
         val context = LocalContext.current
         StorageBrowser(
@@ -1658,6 +1745,49 @@ fun SettingsScreen(
             onDismiss = { showBgPicker = false; showBgImageChooser = true },
         )
     }
+    }
+}
+
+/**
+ * glcn: what a few Settings cards say under their name — the current values ("Dark · Blue · 100 %")
+ * rather than a fixed description. Keyed by the card's index (the group's ordinal); the rest keep theirs.
+ */
+@Composable
+internal fun settingsCardSummaries(): Map<Int, String> {
+    val vm: SettingsViewModel = koinViewModel()
+    val sources by vm.sources.collectAsStateWithLifecycle()
+    val guideDays by vm.guideDaysToKeep.collectAsStateWithLifecycle()
+    val themeMode by vm.themeMode.collectAsStateWithLifecycle()
+    val glcnStyle by vm.glcnStyle.collectAsStateWithLifecycle()
+    val accent by vm.accent.collectAsStateWithLifecycle()
+    val customAccent by vm.customAccent.collectAsStateWithLifecycle()
+    val zoom by vm.uiZoomPercent.collectAsStateWithLifecycle()
+    val liveLayout by vm.liveLayout.collectAsStateWithLifecycle()
+    val liveEngine by vm.liveEnginePreference.collectAsStateWithLifecycle()
+    val vodEngine by vm.vodEnginePreference.collectAsStateWithLifecycle()
+    val afr by vm.autoFrameRateFilms.collectAsStateWithLifecycle()
+    val audioLang by vm.preferredAudioLang.collectAsStateWithLifecycle()
+    val subLang by vm.preferredSubLang.collectAsStateWithLifecycle()
+    val preview by vm.livePreviewEnabled.collectAsStateWithLifecycle()
+    val sep = stringResource(R.string.glcn_sum_sep)
+    val on = stringResource(R.string.common_on)
+    val off = stringResource(R.string.common_off)
+    val theme = glcnStyle?.let { stringResource(R.string.glcn_theme_fixed, it.label()) } ?: themeLabel(themeMode)
+    val accentName = if (customAccent.isNotBlank()) customAccent.uppercase() else stringResource(accent.labelRes)
+    val languages = listOf(audioLang, subLang).filter { it.isNotBlank() }.map { code ->
+        java.util.Locale.forLanguageTag(code).getDisplayLanguage(java.util.Locale.getDefault())
+            .replaceFirstChar { it.titlecase(java.util.Locale.getDefault()) }
+            .ifBlank { code }
+    }.distinct()
+    return buildMap {
+        put(SettingsGroup.SOURCES.ordinal, pluralStringResource(R.plurals.glcn_sum_playlists, sources.size, sources.size) + sep +
+            pluralStringResource(R.plurals.settings_epg_guide_days_value, guideDays, guideDays))
+        put(SettingsGroup.APPEARANCE.ordinal, listOf(theme, accentName, stringResource(R.string.glcn_sum_zoom, zoom)).joinToString(sep))
+        put(SettingsGroup.LAYOUT.ordinal, stringResource(R.string.glcn_sum_live_layout, stringResource(liveLayoutLabelRes(liveLayout))))
+        put(SettingsGroup.PLAYER.ordinal, stringResource(R.string.glcn_sum_engines, tv.own.owntv.features.settings.engineLabel(liveEngine), tv.own.owntv.features.settings.engineLabel(vodEngine)))
+        put(SettingsGroup.PICTURE.ordinal, stringResource(R.string.glcn_sum_afr, if (afr) on else off))
+        if (languages.isNotEmpty()) put(SettingsGroup.SOUND.ordinal, languages.joinToString(sep))
+        put(SettingsGroup.LIVE.ordinal, stringResource(R.string.glcn_sum_preview, if (preview) on else off))
     }
 }
 
@@ -2660,6 +2790,8 @@ internal data class RootRow(
     val recommended: Int = -1,
     /** ◀ ▶ on a stepper or segmented value. */
     val onStep: ((Int) -> Unit)? = null,
+    /** glcn: a Fanart row shown in its natural group, tagged FANART there. */
+    val fanartTag: Boolean = false,
     val onClick: () -> Unit,
 ) : RootItem {
     /**
@@ -2701,6 +2833,54 @@ private fun subScreenSearchEntries(open: (SettingsTab) -> Unit): List<SettingsSe
 private fun tabRowKey(tab: SettingsTab) = "tab_${tab.name}"
 
 /**
+ * glcn: a group's rows split into what shows first and what waits behind "Show advanced settings".
+ * A sub-heading moves to the first everyday row of its part; advanced rows sit under one heading.
+ */
+private fun splitTiers(rows: List<RootRow>, advancedKeys: Set<String>): Pair<List<RootRow>, List<RootRow>> {
+    if (advancedKeys.isEmpty()) return rows to emptyList()
+    val basic = ArrayList<RootRow>()
+    val advanced = ArrayList<RootRow>()
+    var part: String? = null
+    var partShown = false
+    rows.forEach { row ->
+        if (row.heading != null) { part = row.heading; partShown = false }
+        if (row.key in advancedKeys) {
+            advanced += row.copy(heading = null)
+        } else {
+            basic += row.copy(heading = if (!partShown) part else null)
+            partShown = true
+        }
+    }
+    return basic to advanced
+}
+
+/** glcn: the keys of a player group's rows outside its advanced parts. */
+private fun basicVideoKeys(group: VideoGroup, advancedParts: Set<Int>): Set<String> {
+    val sections = group.parts.filterIndexed { i, _ -> i !in advancedParts }.flatMap { it.second }.toSet()
+    return tv.own.owntv.features.settings.VIDEO_QUICK_ROWS.filter { it.section in sections }.map { it.key }.toSet()
+}
+
+/**
+ * glcn: "Show advanced settings · 4 more: …" closed; open, the AVANZADOS heading over "Hide advanced
+ * settings", with the advanced rows after it. One row in both states, so focus stays put on OK.
+ */
+@Composable
+private fun AdvancedToggle(open: Boolean, names: List<String>, focus: FocusRequester, onToggle: () -> Unit) {
+    if (open) StageSettingsHeading(stringResource(R.string.glcn_adv_heading), names.size)
+    val shown = names.take(ADVANCED_NAMES_SHOWN).joinToString(", ") + if (names.size > ADVANCED_NAMES_SHOWN) "…" else ""
+    StageSettingRow(
+        icon = if (open) OwnTVIcon.CHEVRON_UP else OwnTVIcon.CHEVRON_DOWN,
+        title = stringResource(if (open) R.string.glcn_adv_hide else R.string.glcn_adv_show),
+        desc = if (open) stringResource(R.string.glcn_adv_hide_line) else pluralStringResource(R.plurals.glcn_adv_more, names.size, names.size, shown),
+        value = null,
+        onClick = onToggle,
+        modifier = Modifier.focusRequester(focus),
+    )
+}
+
+private const val ADVANCED_NAMES_SHOWN = 3
+
+/**
  * A Settings row on a Stage group page. The value is the row's own, or read from its chip: On / Off
  * in place is a switch, a row that opens a screen keeps its › (honest chevrons), anything else was
  * picked in a popup (▾).
@@ -2730,15 +2910,23 @@ private fun RootRowStage(
     val words = tv.own.owntv.features.settings.settingWords(item.key, item.title, item.desc).let {
         if (inQuick && item.key.startsWith("vp_")) tv.own.owntv.features.settings.SettingWords(it.title, item.desc) else it
     }
+    val ctx = LocalContext.current
+    val isNew = tv.own.owntv.glcn.SettingsTiers.isNewRow(ctx, item.key)
+    val badges = buildList {
+        if (isNew) add(stringResource(R.string.glcn_badge_new) to true)
+        if (item.fanartTag) add(stringResource(R.string.glcn_badge_fanart) to false)
+    }
+    val click = extra?.onClick ?: item.onClick
     StageSettingRow(
         icon = item.icon,
         title = words.title,
         desc = words.line,
         value = value,
-        onClick = extra?.onClick ?: item.onClick,
+        onClick = { if (isNew) tv.own.owntv.glcn.SettingsTiers.seen(ctx, item.key); click() },
         onLongClick = onLongClick,
         onStep = extra?.onStep ?: item.onStep,
         pinned = pinned,
+        badges = badges,
         help = settingHelp(item.key, words.title, item.desc, value, extra?.choices ?: item.choices, chosen = extra?.chosen ?: -1, recommended = extra?.recommended ?: item.recommended).let { h ->
             val hints = (extra?.hints ?: h.hints).map { if (inQuick && it.second == pin) it.first to unpin else it }
             h.copy(text = extra?.help ?: h.text, hints = hints, extra = extra?.extra)
@@ -3149,40 +3337,43 @@ private fun glcnTvHomeRow(ctx: android.content.Context): RootRow {
 }
 
 @Composable
-private fun glcnHomeCoverRow(homeCover: Int, onClick: () -> Unit): RootRow = RootRow(
-    "glcn_home_cover", TileTone.PRIMARY, OwnTVIcon.IMAGE,
-    title = stringResource(R.string.glcn_home_cover_title),
-    desc = stringResource(R.string.glcn_home_cover_desc),
-    chip = stringResource(when (homeCover) { 1 -> R.string.glcn_home_cover_app; 2 -> R.string.glcn_home_cover_mine; else -> R.string.glcn_home_cover_art }),
+private fun glcnTraktRow(profileId: Long, onClick: () -> Unit): RootRow {
+    val version by tv.own.owntv.core.trakt.Trakt.version.collectAsStateWithLifecycle()
+    version
+    val user = tv.own.owntv.core.trakt.Trakt.userName(profileId)?.takeIf { tv.own.owntv.core.trakt.Trakt.connected(profileId) }
+    return RootRow(
+        "glcn_trakt", TileTone.SECONDARY, OwnTVIcon.CHECK,
+        title = stringResource(R.string.glcn_trakt_title),
+        desc = stringResource(R.string.glcn_trakt_row_desc),
+        chip = user ?: stringResource(R.string.glcn_trakt_not_connected),
+        chipTone = if (user != null) TileTone.PRIMARY else TileTone.SECONDARY,
+        value = SettingValue.Opens(user ?: stringResource(R.string.glcn_trakt_not_connected)),
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun glcnHomeBgRow(homeCover: Int, homeCoverDim: Int, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_home_bg", TileTone.PRIMARY, OwnTVIcon.IMAGE,
+    title = stringResource(R.string.glcn_home_bg_title),
+    desc = stringResource(R.string.glcn_home_bg_desc),
+    chip = stringResource(homeCoverLabel(homeCover)) + if (homeCoverDim != 0) " · " + stringResource(homeDimLabel(homeCoverDim)) else "",
     chipTone = TileTone.PRIMARY,
+    value = SettingValue.Opens(stringResource(homeCoverLabel(homeCover))),
     onClick = onClick,
 )
 
-@Composable
-private fun glcnHomeImageRow(homeImagePath: String, onClick: () -> Unit): RootRow = RootRow(
-    "glcn_home_image", TileTone.PRIMARY, OwnTVIcon.IMAGE,
-    title = stringResource(R.string.glcn_home_image_title),
-    desc = stringResource(R.string.glcn_home_image_desc),
-    chip = stringResource(if (homeImagePath.isBlank()) R.string.glcn_home_image_none else R.string.glcn_home_image_change),
-    chipTone = TileTone.PRIMARY,
-    onClick = onClick,
-)
+private fun homeCoverLabel(homeCover: Int): Int = when (homeCover) {
+    1 -> R.string.glcn_home_cover_app
+    2 -> R.string.glcn_home_cover_mine
+    else -> R.string.glcn_home_cover_art
+}
 
-@Composable
-private fun glcnHomeDimRow(homeCoverDim: Int, onClick: () -> Unit): RootRow = RootRow(
-    "glcn_home_dim", TileTone.SECONDARY, OwnTVIcon.GLOW,
-    title = stringResource(R.string.glcn_home_dim_title),
-    desc = stringResource(R.string.glcn_home_dim_desc),
-    chip = stringResource(
-        when (homeCoverDim) {
-            1 -> R.string.glcn_home_dim_soft
-            2 -> R.string.glcn_home_dim_softer
-            else -> R.string.glcn_home_dim_normal
-        },
-    ),
-    chipTone = TileTone.SECONDARY,
-    onClick = onClick,
-)
+private fun homeDimLabel(homeCoverDim: Int): Int = when (homeCoverDim) {
+    1 -> R.string.glcn_home_dim_soft
+    2 -> R.string.glcn_home_dim_softer
+    else -> R.string.glcn_home_dim_normal
+}
 
 /** glcn: a page opens sliding in a little from the right as it fades up, the way iOS and Apple TV go one level down. */
 @Composable

@@ -1,5 +1,6 @@
 package tv.own.owntv.glcn
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -59,9 +60,29 @@ class SlideFocusState {
     var damping = 1f
     /** glcn: the box stretches as it goes — its leading edge gets there first, the trailing one follows (menu bars). */
     var stretch = false
+    /** glcn: the box came over from another host: it shows at once (no fade in) while it glides in. */
+    var arrived = false
+    /**
+     * glcn: the focused card's "pop" — it grows a little past its rest size with a small bounce, the box with it
+     * (Home's landscape cards, as on a launcher's app tiles). 1 = no pop. Read by the card ([slidePop]).
+     */
+    val pop = Animatable(1f)
 }
 
 val LocalSlideFocus = compositionLocalOf<SlideFocusState?> { null }
+
+/**
+ * glcn: where the last sliding box on screen was drawn, and when — across all hosts. When focus jumps from one list
+ * or menu to another (the top bar to a row, a menu to its page) the new host's box sets off from there, so one box
+ * seems to travel between them instead of one going out and another coming on.
+ */
+object SlideFocusTrail {
+    var rect: Rect = Rect.Zero
+    var at: Long = 0L
+    /** A jump older than this starts in place, as before (a screen just opened, a dialog closed…). */
+    const val FRESH_MS = 350L
+    fun fresh(): Rect? = rect.takeIf { it != Rect.Zero && android.os.SystemClock.uptimeMillis() - at < FRESH_MS }
+}
 
 /** Wraps a list or a menu: draws the sliding box behind [content] and tells its items to leave focus drawing to it. */
 @Composable
@@ -74,7 +95,9 @@ fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, stret
     val palette = LocalStagePalette.current
     val on = st.current != null
     val fade = ownTvTween<Float>(140)
-    LaunchedEffect(on) { st.alpha.animateTo(if (on) 1f else 0f, fade) }
+    LaunchedEffect(on) {
+        if (on && st.arrived) { st.arrived = false; st.alpha.snapTo(1f) } else st.alpha.animateTo(if (on) 1f else 0f, fade)
+    }
     Box(modifier) {
         Canvas(Modifier.matchParentSize().onGloballyPositioned { st.origin = it.positionInWindow() }) {
             val a = st.alpha.value
@@ -98,7 +121,10 @@ fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, stret
                 val bottom = live.bottom + st.gap.bottom * (if (down) lead else trail)
                 l = left - st.origin.x; t = top - st.origin.y; w = rightEdge - left; h = bottom - top
             }
+            val p = st.pop.value
+            if (p != 1f) { l -= w * (p - 1f) / 2f; t -= h * (p - 1f) / 2f; w *= p; h *= p }
             st.drawn = Rect(l + st.origin.x, t + st.origin.y, l + st.origin.x + w, t + st.origin.y + h)
+            if (a > 0.5f && st.current != null) { SlideFocusTrail.rect = st.drawn; SlideFocusTrail.at = android.os.SystemClock.uptimeMillis() }
             inset(l, t, size.width - l - w, size.height - t - h) {
                 drawAtAlpha(a, Rect(-SLIDE_GLOW_ROOM, -SLIDE_GLOW_ROOM, size.width + SLIDE_GLOW_ROOM, size.height + SLIDE_GLOW_ROOM)) {
                     drawStageFocus(st.style, st.radius, accent, palette)
@@ -124,9 +150,10 @@ fun Modifier.slideRegion(region: SlideRegion): Modifier = onGloballyPositioned {
 
 /** An item's side of it: reports focus and position to the host. */
 @Composable
-fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp, accent: StageAccent, region: SlideRegion? = null): Modifier {
+fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp, accent: StageAccent, region: SlideRegion? = null, pop: Float = 1f): Modifier {
     val id = remember { Any() }
     var rect by remember { mutableStateOf(Rect.Zero) }
+    val anim = tv.own.owntv.ui.theme.animationsOn
     val scope = rememberCoroutineScope()
     if (region != null) {
         androidx.compose.runtime.SideEffect {
@@ -139,8 +166,12 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
             if (it.isFocused) {
                 // The gap from where the box was drawn to this item, so it starts where it is and glides in.
                 val visible = st.current != null || st.alpha.value > 0.05f
-                val from = st.drawn
-                st.gap = if (visible && from != Rect.Zero && rect != Rect.Zero)
+                // glcn: coming from another host's box (just drawn somewhere else on screen): set off from there.
+                val crossing = if (!visible && !LowRam.on && anim) SlideFocusTrail.fresh() else null
+                if (crossing != null) st.arrived = true
+                val from = crossing ?: st.drawn
+                val visible2 = visible || crossing != null
+                st.gap = if (visible2 && from != Rect.Zero && rect != Rect.Zero)
                     Rect(from.left - rect.left, from.top - rect.top, from.left - rect.left + (from.width - rect.width), from.top - rect.top + (from.height - rect.height))
                 else Rect.Zero
                 st.style = style; st.radius = radius; st.accent = accent
@@ -149,6 +180,11 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
                 scope.launch(start = CoroutineStart.UNDISPATCHED) {
                     st.glide.snapTo(1f)
                     st.glide.animateTo(0f, spring(dampingRatio = st.damping, stiffness = st.stiffness))
+                }
+                // glcn: the card's pop — from rest, a little past [pop] and back (none with animations off).
+                scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                    st.pop.snapTo(1f)
+                    if (pop != 1f && anim) st.pop.animateTo(pop, spring(dampingRatio = POP_DAMPING, stiffness = POP_STIFFNESS))
                 }
             } else if (st.current === id) st.current = null
         }
@@ -159,6 +195,21 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
             },
         )
 }
+
+/** glcn: the focused card grows with the box ([SlideFocusState.pop]); put on the part the box wraps. */
+fun Modifier.slidePop(st: SlideFocusState?, focused: Boolean): Modifier =
+    if (st == null) this else graphicsLayer {
+        val p = if (focused) st.pop.value else 1f
+        scaleX = p; scaleY = p
+    }
+
+/** glcn: the channel lists' highlight (TV en directo): brisk, clearly springy — it passes the row by about an eighth and settles back, like a launcher's tiles. */
+const val CHANNEL_FOCUS_STIFFNESS = 480f
+const val CHANNEL_FOCUS_DAMPING = 0.55f
+
+/** glcn: a launcher-like pop — a small overshoot (about 6 % past the step), settled in a quarter of a second. */
+private const val POP_DAMPING = 0.55f
+private const val POP_STIFFNESS = 420f
 
 /** glcn: room round the sliding box for its glow — at 80 px a wide glow (an FX row's) was cut off in a hard line. */
 private const val SLIDE_GLOW_ROOM = 180f

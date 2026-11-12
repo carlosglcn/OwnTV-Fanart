@@ -427,7 +427,8 @@ private const val TV_CARD_WIDTH = 340
 private const val PREVIEW_SETTLE_MS = 900L
 private const val ART_SETTLE_MS = 450L
 private const val CLOCK_TICK_MS = 15_000L
-private const val DRIFT_MS = 14_000
+// glcn: ambient — keeps its calm under the app's brisk pace (Pace).
+private val DRIFT_MS: Int get() = tv.own.owntv.glcn.Pace.slow(14_000)
 
 /** glcn: the picked apps as their TV banners (one size, framed) — OK opens one, hold OK takes it off; a small card adds more. */
 @Composable

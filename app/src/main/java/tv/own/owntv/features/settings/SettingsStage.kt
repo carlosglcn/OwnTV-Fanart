@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -644,6 +645,8 @@ fun StageSettingRow(
     marked: Boolean = false,
     /** Keep the panel on this row while focus is in its actions (list pages). */
     keepPanel: Boolean = false,
+    /** glcn: small pills after the title — text, and whether it is filled (NEW) or only outlined (FANART). */
+    badges: List<Pair<String, Boolean>> = emptyList(),
 ) {
     val a = stageAccent
     val panel = LocalSettingsPanel.current
@@ -694,6 +697,7 @@ fun StageSettingRow(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                     Text(title, style = stageText(21, 700), color = if (enabled) StageColors.Text else StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (pinned) Box(Modifier.size(7.mpx).background(a.accent, CircleShape))
+                    badges.forEach { (text, filled) -> StageRowBadge(text, filled, focused) }
                 }
                 if (!desc.isNullOrBlank()) {
                     Text(
@@ -704,29 +708,53 @@ fun StageSettingRow(
                     )
                 }
             }
-            if (value != null) SettingValueView(value)
+            if (value != null) androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.stage.LocalStageLit provides focused) { SettingValueView(value) }
         }
     }
 }
 
 private val FocusedDesc: Color @Composable get() = StageColors.FxLine
 
+/** glcn: a NEW / FANART pill. On the focused (accent) row it reads in the accent's ink. */
+@Composable
+internal fun StageRowBadge(text: String, filled: Boolean, lit: Boolean = false) {
+    val a = stageAccent
+    val ink = if (lit) a.onAccent else a.accent
+    val shape = RoundedCornerShape(8.mpx)
+    Box(
+        Modifier
+            .then(
+                if (filled) Modifier.background(if (lit) a.onAccent else a.accent, shape)
+                else Modifier.border(androidx.compose.foundation.BorderStroke(1.5.mpx, ink.copy(alpha = 0.7f)), shape),
+            )
+            .padding(horizontal = 8.mpx, vertical = 2.mpx),
+    ) {
+        Text(
+            text.uppercase(), style = stageText(12, 800, 0.08.em),
+            color = if (filled) (if (lit) a.accent else a.onAccent) else ink,
+            maxLines = 1,
+        )
+    }
+}
+
 @Composable
 private fun SettingValueView(value: SettingValue) {
     val a = stageAccent
+    val lit = tv.own.owntv.ui.stage.LocalStageLit.current
     val valueStyle = stageText(18, 700)
     Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
         when (value) {
             is SettingValue.Switch -> StageSwitch(value.on)
+            // glcn: on the focused (accent) row the value reads in the accent's ink, not in the accent itself.
             is SettingValue.Choice -> {
-                Text(value.text, style = valueStyle, color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                OwnTVIcon(OwnTVIcon.CHEVRON_DOWN, StageColors.Muted, Modifier.size(20.mpx))
+                Text(value.text, style = valueStyle, color = if (lit) a.onAccent else a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                OwnTVIcon(OwnTVIcon.CHEVRON_DOWN, if (lit) a.onAccent.copy(alpha = 0.8f) else StageColors.Muted, Modifier.size(20.mpx))
             }
             is SettingValue.Opens -> {
                 if (!value.text.isNullOrBlank()) {
-                    Text(value.text, style = valueStyle, color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Text(value.text, style = valueStyle, color = if (lit) a.onAccent else a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 }
-                OwnTVIcon(OwnTVIcon.CHEVRON, StageColors.Muted, Modifier.size(20.mpx))
+                OwnTVIcon(OwnTVIcon.CHEVRON, if (lit) a.onAccent.copy(alpha = 0.8f) else StageColors.Muted, Modifier.size(20.mpx))
             }
             is SettingValue.Stepper -> StageStepper(value.text)
             is SettingValue.Segmented -> SegmentedDisplay(value.options, value.selected)
@@ -834,7 +862,7 @@ fun PlaylistSyncList(sources: List<tv.own.owntv.core.database.entity.SourceEntit
     Column(Modifier.padding(top = 18.mpx), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
         sources.forEachIndexed { i, src ->
             Row(horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
-                tv.own.owntv.ui.stage.StagePlaylistMark(tv.own.owntv.ui.stage.PlaylistMark.of(src.name, i))
+                tv.own.owntv.ui.stage.StagePlaylistMark(tv.own.owntv.ui.stage.PlaylistMark.forSource(src.id, src.name, i))
                 Text(src.name, style = stageText(18, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 src.lastSyncAt?.let {
                     Text(

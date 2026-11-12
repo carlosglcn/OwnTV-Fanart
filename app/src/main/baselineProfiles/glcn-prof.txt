@@ -1,9 +1,15 @@
 # glcn: OwnTV Fanart's own screens are not in the recorded profile (it was recorded on the original app), so they ran
 # unoptimised until Android compiled them on its own, days later — first scrolls stuttered. These rules ask for all of
 # the app's screen code to be compiled ahead (profileinstaller hands them to Android on the box).
-HSPLtv/own/owntv/glcn/**->**(**)**
-HSPLtv/own/owntv/features/**->**(**)**
-HSPLtv/own/owntv/ui/**->**(**)**
+# The method rules need the ";" after the class pattern ("Lpkg/**;->**(**)**"); without it they matched nothing, so the
+# app's own screens were still left to the JIT after every update.
+HSPLtv/own/owntv/glcn/**;->**(**)**
+HSPLtv/own/owntv/features/**;->**(**)**
+HSPLtv/own/owntv/ui/**;->**(**)**
+HSPLtv/own/owntv/player/**;->**(**)**
+HSPLtv/own/owntv/core/**;->**(**)**
 Ltv/own/owntv/glcn/**;
 Ltv/own/owntv/features/**;
 Ltv/own/owntv/ui/**;
+Ltv/own/owntv/player/**;
+Ltv/own/owntv/core/**;

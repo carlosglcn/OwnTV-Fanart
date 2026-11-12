@@ -520,7 +520,7 @@ class MovieViewModel(
     val playlistMarks: StateFlow<Map<Long, tv.own.owntv.ui.stage.PlaylistMark>> = activeProfileSources(settings, sourceDao)
         .map { aps ->
             if (aps.movieSourceIds.size < 2) emptyMap()
-            else aps.sources.withIndex().associate { (i, s) -> s.id to tv.own.owntv.ui.stage.PlaylistMark.of(s.name, i) }
+            else aps.sources.withIndex().associate { (i, s) -> s.id to tv.own.owntv.ui.stage.PlaylistMark.forSource(s.id, s.name, i) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
@@ -809,11 +809,12 @@ class MovieViewModel(
             )
             _playingMovie.value = movie
             playingRef = pid?.let { PlayingRef(movie, it, pinKey) }
-            // Enable the player's OpenSubtitles search for this movie. tmdbId is
-            // resolved from the metadata cache when available for a stronger match.
+            // The film's TMDB details, looked up after playback has started: its title art for the
+            // player bar, and its tmdbId as a stronger match for the OpenSubtitles search.
+            val details = runCatching { metadata.resolveMovie(movie) }.getOrNull()
+            player.setTitleLogo(pinKey, tv.own.owntv.core.metadata.MetadataImages.logo(details?.logoPath))
             if (pid != null) {
-                val tmdbId = runCatching { metadata.resolveMovie(movie)?.tmdbId?.toLong() }.getOrNull()
-                subtitleController.setMovie(pid, movie, tmdbId)
+                subtitleController.setMovie(pid, movie, details?.tmdbId?.toLong())
             }
             if (pid != null) {
                 runCatching {
@@ -968,6 +969,7 @@ class MovieViewModel(
             progressDao.save(
                 PlaybackProgressEntity(profileId = pid, mediaType = MediaType.MOVIE, itemId = movie.id, positionMs = 1L, durationMs = 1L),
             )
+            tv.own.owntv.core.trakt.TraktSync.watchedMovie(pid, movie) // glcn
         }
     }
 
@@ -1006,9 +1008,11 @@ class MovieViewModel(
                 if (pid != ref.profileId) return@launch
                 Log.d(TAG, "saveProgressNow movieId=${m.id} profile=$pid positionMs=$pos durationMs=$dur")
                 runCatching {
-                    progressDao.save(
-                        PlaybackProgressEntity(profileId = pid, mediaType = MediaType.MOVIE, itemId = m.id, positionMs = pos, durationMs = dur),
-                    )
+                    // glcn: crossing into "watched" (≥95 %) tells Trakt once, not on every later save.
+                    val before = runCatching { progressDao.get(pid, MediaType.MOVIE, m.id) }.getOrNull()
+                    val done = PlaybackProgressEntity(profileId = pid, mediaType = MediaType.MOVIE, itemId = m.id, positionMs = pos, durationMs = dur)
+                    progressDao.save(done)
+                    if (isMovieCompleted(done) && (before == null || !isMovieCompleted(before))) tv.own.owntv.core.trakt.TraktSync.watchedMovie(pid, m)
                 }.onFailure { t ->
                     Log.w(TAG, "saveProgressNow progress save failed movieId=${m.id} profile=$pid", t)
                 }

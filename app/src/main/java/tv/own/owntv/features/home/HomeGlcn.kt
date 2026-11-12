@@ -4,6 +4,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.offset
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.ui.unit.dp
@@ -132,7 +133,7 @@ internal fun HomeFocusBackdrop(url: String?, modifier: Modifier = Modifier, trai
                         val drift = remember(u) { androidx.compose.animation.core.Animatable(1f) }
                         val driftOn = animate && !tv.own.owntv.ui.stage.GlcnMotion.subtle && tv.own.owntv.glcn.DeviceClass.richMotion && !holeOpen
                         LaunchedEffect(u, driftOn) {
-                            if (driftOn) drift.animateTo(1.06f, androidx.compose.animation.core.tween(8_000, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                            if (driftOn) drift.animateTo(1.06f, androidx.compose.animation.core.tween(tv.own.owntv.glcn.Pace.slow(8_000), easing = androidx.compose.animation.core.LinearOutSlowInEasing))
                         }
                         AsyncImage(
                             model = u, contentDescription = null, contentScale = ContentScale.Crop,
@@ -327,7 +328,8 @@ internal fun ArtLiveCard(
                     ) { tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.STAR, a.accent, Modifier.size(18.mpx), filled = true) }
                     if (bell) {
                         Box(
-                            Modifier.size(34.mpx).clip(RoundedCornerShape(17.mpx)).background(a.accent),
+                            Modifier.size(34.mpx).clip(RoundedCornerShape(17.mpx)).background(tv.own.owntv.ui.stage.stageBadgeDisc(a.accent))
+                                .border(2.mpx, Color.White.copy(alpha = 0.9f), RoundedCornerShape(17.mpx)),
                             contentAlignment = Alignment.Center,
                         ) { tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.BELL, Color.White, Modifier.size(20.mpx)) }
                     }
@@ -341,6 +343,19 @@ internal fun ArtLiveCard(
                 }
             }
             // The words under the picture, never over it, where the picture's own lettering would fight them.
+            Box(Modifier.fillMaxWidth().height(CAPTION_HEIGHT)) {
+            // glcn: the channel's logo, large, grey and faint, half off the card's right edge behind the words — a hint
+            // of whose card it is that the text reads straight over.
+            channel.displayLogoUrl?.takeIf { it.isNotBlank() }?.let { logo ->
+                AsyncImage(
+                    model = logo,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    colorFilter = CAPTION_LOGO_GREY,
+                    alpha = if (focused) CAPTION_LOGO_ALPHA_FOCUSED else CAPTION_LOGO_ALPHA,
+                    modifier = Modifier.align(Alignment.CenterEnd).offset(x = CAPTION_LOGO_W * 0.3f).size(CAPTION_LOGO_W, CAPTION_HEIGHT * 1.1f),
+                )
+            }
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.mpx, vertical = 10.mpx)) {
                 // glcn: a focused card whose words do not fit lets them drift past, smoothly, then start over.
                 val drift = if (focused) Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = tv.own.owntv.glcn.DriftPace.START_MS, repeatDelayMillis = 1_500, velocity = tv.own.owntv.glcn.DriftPace.velocity()) else Modifier
@@ -359,9 +374,16 @@ internal fun ArtLiveCard(
                     Text(it, style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, overflow = if (focused) TextOverflow.Clip else TextOverflow.Ellipsis, modifier = drift)
                 }
             }
+            }
         }
     }
 }
+
+/** glcn: the faint channel logo behind a live card's words — greyscale, see [ArtLiveCard]. */
+private val CAPTION_LOGO_GREY = androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) })
+private const val CAPTION_LOGO_ALPHA = 0.08f
+private const val CAPTION_LOGO_ALPHA_FOCUSED = 0.14f
+private val CAPTION_LOGO_W = 170.mpx
 
 /** A live rail drawn as picture cards ("On now" mode of Recent, Favourite channels and Sports now). */
 @Composable
@@ -553,7 +575,7 @@ internal fun FeaturedBillboard(
                 // glcn (full width): a slow push into each slide's picture.
                 val zoom = remember(url) { androidx.compose.animation.core.Animatable(1f) }
                 LaunchedEffect(url, fullWidth, animate) {
-                    if (fullWidth && animate) zoom.animateTo(1.07f, androidx.compose.animation.core.tween(10_000, easing = androidx.compose.animation.core.LinearEasing))
+                    if (fullWidth && animate) zoom.animateTo(1.07f, androidx.compose.animation.core.tween(tv.own.owntv.glcn.Pace.slow(10_000), easing = androidx.compose.animation.core.LinearEasing))
                 }
                 AsyncImage(
                     model = url, contentDescription = null, contentScale = ContentScale.Crop,
@@ -696,7 +718,7 @@ private fun FullBackdrop(url: String?, modifier: Modifier = Modifier, kenBurns: 
             val side = remember(u) { if ((u.hashCode() and 1) == 0) 1f else -1f }
             LaunchedEffect(u, driftOn, burns) {
                 if (burns) drift.animateTo(1f + KEN_BURNS_ZOOM, androidx.compose.animation.core.tween(KEN_BURNS_MS, easing = androidx.compose.animation.core.LinearEasing))
-                else if (driftOn) drift.animateTo(1.05f, androidx.compose.animation.core.tween(12_000, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                else if (driftOn) drift.animateTo(1.05f, androidx.compose.animation.core.tween(tv.own.owntv.glcn.Pace.slow(12_000), easing = androidx.compose.animation.core.LinearOutSlowInEasing))
             }
             AsyncImage(
                 model = u, contentDescription = null, contentScale = ContentScale.Crop,
@@ -1067,7 +1089,8 @@ private fun cinemaJsonList(json: String?): List<String> {
 }
 
 private const val KEN_BURNS_ZOOM = 0.12f
-private const val KEN_BURNS_MS = 24_000
+// glcn: ambient — keeps its calm under the app's brisk pace (Pace).
+private val KEN_BURNS_MS: Int get() = tv.own.owntv.glcn.Pace.slow(24_000)
 private const val CINEMA_AMBIENT = 0.16f
 private const val CINEMA_TRAILER_MS = 1_200L // glcn: it starts unseen almost at once and shows once YouTube's own overlays have gone (~3 s later)
 private const val TRAILER_WARM_MS = 900L // glcn: just after the page has opened (the player is made after its entrance, not during it)

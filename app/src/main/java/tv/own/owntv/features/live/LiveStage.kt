@@ -175,7 +175,14 @@ internal fun LiveStageRow(
         }
         // glcn: every logo on the same rounded glass tile, one size — "1" and "2" no longer tower over the others.
         LivePlate(channel.displayLogoUrl, 80.mpx, 56.mpx, radius = 14.mpx)
-        Column(Modifier.weight(1f)) {
+        Box(Modifier.weight(1f)) {
+        // glcn: on the focused row, the channel's logo peeks in faint and grey on the right, behind the words (Ghosts).
+        if (focused) tv.own.owntv.glcn.GhostLogo(
+            channel.displayLogoUrl,
+            Modifier.align(Alignment.CenterEnd).offset(x = LIVE_GHOST_W * 0.25f).size(LIVE_GHOST_W, 76.mpx),
+            alpha = tv.own.owntv.glcn.Ghosts.ALPHA_STRONG,
+        )
+        Column(Modifier.fillMaxWidth()) {
             Text(name.name, style = stageText(20, 700), color = if (focused) StageColors.FxText else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val title = now?.title ?: nowTitle
             if (title != null) {
@@ -198,6 +205,7 @@ internal fun LiveStageRow(
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
         }
         if (trailing != null) trailing()
         else Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
@@ -567,8 +575,11 @@ private const val LATER_CARD_RATIO = 2.1f
 /** Scroll only as far as the focused item, plus one row of room, needs (the TV default pins it a third down). */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 internal val edgeScrollSpec = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
-    override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float> get() = tv.own.owntv.glcn.SmoothScroll.animation
+    // glcn: the channel lists move with a little give (SmoothScroll.elasticAnimation).
+    override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float> get() = tv.own.owntv.glcn.SmoothScroll.elasticAnimation
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        // glcn: a held ▲/▼ turns the list itself (ListWheel); focus only follows, so it must not scroll too.
+        if (tv.own.owntv.glcn.ListWheel.active) return 0f
         // One row of room kept ahead of the highlight, so the next row is already laid out: a held
         // ▲/▼ otherwise outran the list at the edge and stopped.
         val room = size.coerceAtMost((containerSize - size).coerceAtLeast(0f) / 2f)
@@ -1079,3 +1090,6 @@ internal const val PLAYER_SHEET_GLASS = 0.78f
 
 /** glcn: how far a group inside Favourites sits in under it. */
 private val NESTED_INDENT = 28.mpx
+
+/** glcn: the faint logo on the focused channel row. */
+private val LIVE_GHOST_W = 150.mpx

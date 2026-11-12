@@ -32,6 +32,7 @@ fun Modifier.fastScrollbar(state: LazyListState, count: Int, endInset: Dp, botto
     val alpha = remember { Animatable(0f) }
     val bubble = remember { Animatable(0f) }
     val accent = stageAccent.accent
+    val onAccent = stageAccent.onAccent
     val palette = LocalStagePalette.current
     val ink = if (palette.isLight) Color.Black else Color.White
     val measurer = rememberTextMeasurer()
@@ -74,7 +75,8 @@ fun Modifier.fastScrollbar(state: LazyListState, count: Int, endInset: Dp, botto
         val b = if (hold) 1f else bubble.value * a
         val text = label()
         if (b > 0.01f && text != null) {
-            val m = measurer.measure(text, style.copy(color = Color.White))
+            // glcn: the accent's own ink — white on a white (or light) accent left an empty pill.
+            val m = measurer.measure(text, style.copy(color = onAccent))
             val bw = m.size.width + 22f * px
             val bh = m.size.height + 10f * px
             val bx = x - 12f * px - bw

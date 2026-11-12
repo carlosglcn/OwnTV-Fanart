@@ -74,6 +74,9 @@ fun PanelWidthSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) 
     val vm: SettingsViewModel = koinViewModel()
 
     var open by remember { mutableStateOf<PanelSection?>(null) }
+    // glcn: the player's channel list has its own row and popup (its widths are a share of the screen).
+    var deckOpen by remember { mutableStateOf(false) }
+    val deckFocus = remember { FocusRequester() }
     val rowFocus = remember { PanelSection.entries.associateWith { FocusRequester() } }
     val scrollState = rememberScrollState()
     var dialogReturn by remember { mutableStateOf<FocusRequester?>(null) }
@@ -82,8 +85,8 @@ fun PanelWidthSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) 
     // Snapshot the offset while the dialog is up and hold it across the restore, so the row is already
     // in view when focus lands — see [restoreAfterDialogClose].
     var savedScroll by remember { mutableIntStateOf(0) }
-    LaunchedEffect(open) {
-        if (open != null) { savedScroll = scrollState.value; return@LaunchedEffect }
+    LaunchedEffect(open, deckOpen) {
+        if (open != null || deckOpen) { savedScroll = scrollState.value; return@LaunchedEffect }
         if (dialogReturn != null) restoreAfterDialogClose(dialogReturn, scrollState, savedScroll)
         dialogReturn = null
     }
@@ -106,7 +109,7 @@ fun PanelWidthSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) 
         StageFullPage(
             parents = listOf(stringResource(R.string.settings_group_layout)),
             title = stringResource(R.string.settings_panel_width),
-            count = pluralStringResource(R.plurals.settings_setting_count, PanelSection.entries.size, PanelSection.entries.size),
+            count = pluralStringResource(R.plurals.settings_setting_count, PanelSection.entries.size + 1, PanelSection.entries.size + 1),
             onBack = onBack,
             modifier = Modifier,
             scroll = scrollState,
@@ -161,11 +164,29 @@ fun PanelWidthSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) 
                     modifier = Modifier.focusRequester(rowFocus.getValue(section)),
                 )
             }
+            // glcn: the channel list over the video (groups · channels · programme).
+            val deck = tv.own.owntv.glcn.DeckWidths.shares
+            val deckTitle = stringResource(R.string.glcn_deck_widths)
+            val deckValue = SettingValue.Opens(stringResource(if (tv.own.owntv.glcn.DeckWidths.custom) R.string.settings_live_latency_custom else R.string.settings_subtitle_default))
+            StageSettingRow(
+                icon = OwnTVIcon.LIST_GRID,
+                title = deckTitle,
+                desc = stringResource(R.string.glcn_deck_widths_summary, deck.groups, deck.channels, deck.programme),
+                value = deckValue,
+                onClick = { dialogReturn = deckFocus; deckOpen = true },
+                help = SettingHelp(
+                    deckTitle, stringResource(R.string.glcn_deck_widths_hint),
+                    hints = settingHints(deckValue, pinnable = false),
+                    extra = { Box(Modifier.padding(top = 18.mpx)) { DeckWidthDiagram(deck) } },
+                ),
+                modifier = Modifier.focusRequester(deckFocus),
+            )
         }
 
         open?.let { section ->
             PanelWidthDialog(section = section, rowWidth = rowWidth, vm = vm, onDismiss = { open = null })
         }
+        if (deckOpen) DeckWidthDialog(onDismiss = { deckOpen = false })
     }
 }
 
@@ -380,6 +401,58 @@ private fun PanelWidthDialog(
             onCancel = { showPreviewDisableConfirmation = false },
             focusCancel = true,
         )
+    }
+}
+
+/**
+ * glcn: the player's channel list — groups, channels and programme as a share of the screen, one step of 1% each.
+ * Each stepper stops where the three would leave too little of the picture, so whatever is shown can be saved.
+ */
+@Composable
+private fun DeckWidthDialog(onDismiss: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val D = tv.own.owntv.glcn.DeckWidths
+    var draft by remember { mutableStateOf(D.shares) }
+    val first = remember { FocusRequester() }
+    LaunchedEffect(Unit) { kotlinx.coroutines.delay(80); runCatching { first.requestFocus() } }
+    tv.own.owntv.ui.stage.StagePopup(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.glcn_deck_widths),
+        width = 820.mpx,
+        buttons = {
+            tv.own.owntv.ui.stage.StageButton(stringResource(R.string.common_reset), onClick = { draft = D.DEFAULT }, height = 56.mpx, textSize = 19)
+            tv.own.owntv.ui.stage.StageButton(stringResource(R.string.common_ok), onClick = { D.set(context, draft); onDismiss() }, height = 56.mpx, textSize = 19, tinted = true)
+        },
+    ) {
+        Box(Modifier.focusRequester(first)) {
+            StepRow(stringResource(R.string.glcn_deck_widths_groups), draft.groups, minimum = D.GROUPS_MIN,
+                maximum = minOf(D.GROUPS_MAX, D.TOTAL_MAX - draft.channels - draft.programme), step = 1) { draft = draft.copy(groups = it) }
+        }
+        StepRow(stringResource(R.string.glcn_deck_widths_channels), draft.channels, minimum = D.CHANNELS_MIN,
+            maximum = minOf(D.CHANNELS_MAX, D.TOTAL_MAX - draft.groups - draft.programme), step = 1) { draft = draft.copy(channels = it) }
+        StepRow(stringResource(R.string.glcn_deck_widths_programme), draft.programme, minimum = D.PROGRAMME_MIN,
+            maximum = minOf(D.PROGRAMME_MAX, D.TOTAL_MAX - draft.groups - draft.channels), step = 1) { draft = draft.copy(programme = it) }
+        Box(Modifier.padding(horizontal = 8.mpx, vertical = 14.mpx)) { DeckWidthDiagram(draft) }
+        Text(
+            stringResource(R.string.glcn_deck_widths_hint), style = tv.own.owntv.ui.theme.stageText(15, 500),
+            color = tv.own.owntv.ui.theme.StageColors.Muted, modifier = Modifier.padding(horizontal = 22.mpx, vertical = 6.mpx),
+        )
+    }
+}
+
+/** glcn: the deck over the picture — its three columns from the left, the rest of the row left clear for the video. */
+@Composable
+private fun DeckWidthDiagram(w: tv.own.owntv.glcn.DeckWidths.Shares) {
+    val ink = tv.own.owntv.ui.theme.StageColors.Ink
+    Row(
+        Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(10.dp))
+            .background(tv.own.owntv.ui.theme.stageAccent.accent.copy(alpha = 0.10f)).padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box(Modifier.weight(w.groups.toFloat()).fillMaxHeight().clip(RoundedCornerShape(6.dp)).background(ink.copy(alpha = 0.16f)))
+        Box(Modifier.weight(w.channels.toFloat()).fillMaxHeight().clip(RoundedCornerShape(6.dp)).background(ink.copy(alpha = 0.12f)))
+        Box(Modifier.weight(w.programme.toFloat()).fillMaxHeight().clip(RoundedCornerShape(6.dp)).background(ink.copy(alpha = 0.08f)))
+        Spacer(Modifier.weight((100 - w.total).coerceAtLeast(1).toFloat()))
     }
 }
 

@@ -67,7 +67,7 @@ internal fun BoxScope.FocusArtFx(focused: Boolean, content: @Composable BoxScope
     val zoomOn = animate && tv.own.owntv.glcn.DeviceClass.richMotion
     val zoom by animateFloatAsState(
         targetValue = if (focused && zoomOn) (if (GlcnMotion.subtle) 1.03f else 1.08f) else 1f,
-        animationSpec = tween(if (focused) 6_000 else 400, easing = LinearOutSlowInEasing),
+        animationSpec = tween(if (focused) tv.own.owntv.glcn.Pace.slow(6_000) else 400, easing = LinearOutSlowInEasing),
         label = "artZoom",
     )
     val shine = remember { Animatable(-1f) }

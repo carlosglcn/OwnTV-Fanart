@@ -1,5 +1,8 @@
 package tv.own.owntv.features.live
 
+import tv.own.owntv.ui.stage.drawStageFocus
+import androidx.compose.ui.graphics.drawscope.inset
+import androidx.compose.ui.draw.drawBehind
 import coil3.request.allowHardware
 import coil3.request.transformations
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -359,6 +362,12 @@ fun LiveScreen(
             stepTarget = null
         }
     }
+    // glcn: a held ▲/▼ turns the list like a wheel (see ListWheel): smooth, on the screen's frames.
+    val channelCount = androidx.compose.runtime.rememberUpdatedState(channels.itemCount)
+    val wheel = remember(effectiveListState) {
+        tv.own.owntv.glcn.ListWheel(effectiveListState, scope, { channelCount.value }) { i -> runCatching { rowFocus(i).requestFocus() } }
+    }
+    androidx.compose.runtime.DisposableEffect(wheel) { onDispose { wheel.stop() } }
     // glcn: the held scroll bar's jump of ten — one smooth glide of the list (no snap to the row), then the focus.
     fun glideTo(i: Int, from: Int) {
         stepTarget = i
@@ -720,14 +729,36 @@ fun LiveScreen(
                 val tint by androidx.compose.animation.animateColorAsState(tone ?: androidx.compose.ui.graphics.Color.Transparent, tv.own.owntv.ui.theme.ownTvTween(400), label = "fichaTint")
                 val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
                 val roomTop = 120.mpx + stageW * tv.own.owntv.glcn.LivePaneLayout.FICHA_VIDEO_W * 9f / 16f
+                // glcn: inside its frame the panel holds the programme's picture too, softly blurred and dimmed — the
+                // frame keeps it apart from the wallpaper, so it reads as the programme, not as a muddy patch.
+                val ctx = androidx.compose.ui.platform.LocalContext.current
+                val soft = androidx.compose.runtime.remember(backdrop) {
+                    backdrop?.let {
+                        coil3.request.ImageRequest.Builder(ctx).data(it).size(160, 90)
+                            .precision(coil3.size.Precision.EXACT)
+                            .memoryCacheKey("$backdrop#soft160b")
+                            .allowHardware(false).transformations(tv.own.owntv.glcn.SoftBlur()).build()
+                    }
+                }
+                val panelShape = androidx.compose.foundation.shape.RoundedCornerShape(26.mpx)
                 Box(
                     Modifier.align(Alignment.BottomEnd).padding(end = (margin - 14.mpx).coerceAtLeast(0.dp), bottom = 14.mpx)
                         .width(stageW + 14.mpx).height((maxHeight - roomTop - 4.mpx).coerceAtLeast(1.dp))
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(26.mpx))
-                        .background(if (light) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.62f) else androidx.compose.ui.graphics.Color(0xFF070A12).copy(alpha = 0.58f))
-                        .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(tint.copy(alpha = if (light) 0.16f else 0.32f), androidx.compose.ui.graphics.Color.Transparent)))
-                        .then(Modifier.border(1.mpx, (if (light) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White).copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(26.mpx))),
-                )
+                        .clip(panelShape),
+                ) {
+                    if (soft != null) coil3.compose.AsyncImage(
+                        model = soft, contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    Box(
+                        Modifier.fillMaxSize()
+                            .background(if (light) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.62f) else androidx.compose.ui.graphics.Color(0xFF070A12).copy(alpha = 0.58f))
+                            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(tint.copy(alpha = if (light) 0.16f else 0.32f), androidx.compose.ui.graphics.Color.Transparent)))
+                            .border(1.mpx, (if (light) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White).copy(alpha = 0.08f), panelShape),
+                    )
+                }
             } else if (backdrop != null && tv.own.owntv.glcn.LivePaneLayout.FICHA) {
                 // glcn: Ficha — the programme's picture only behind the text under the video, softly blurred (a small
                 // copy scaled up) and dimmed into the page at its edges, so the words over it read at a glance.
@@ -1070,11 +1101,23 @@ fun LiveScreen(
                     // and then slid the whole list back under it — a double step.
                     // glcn: the first rows of a category arrive one after another; later ones are just there.
                     val rowsGate = tv.own.owntv.glcn.rememberStaggerGate(selectedKey)
-                    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
+                    // glcn: while the wheel turns, the rows keep the programmes they had: what is on for the rows coming into
+                    // view arrives in batches, and each batch recomposed every row on screen mid-turn (the stutter). They
+                    // fill in once the list stands still.
+                    val rowNow = androidx.compose.runtime.remember(wheel.turning) { if (wheel.turning) nowProgrammes else null } ?: nowProgrammes
+                    val rowNowTitle = androidx.compose.runtime.remember(wheel.turning) { if (wheel.turning) nowPlaying else null } ?: nowPlaying
+                    val lensAccent = tv.own.owntv.ui.theme.stageAccent
+                    val lensPalette = tv.own.owntv.ui.theme.LocalStagePalette.current
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec,
+                        tv.own.owntv.glcn.LocalQuietFocus provides wheel.turning,
+                    ) {
+                    // glcn: the channel highlight slides from row to row with a little give, instead of jumping.
+                    tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f), stiffness = tv.own.owntv.glcn.CHANNEL_FOCUS_STIFFNESS, damping = tv.own.owntv.glcn.CHANNEL_FOCUS_DAMPING) {
                     LazyColumn(
                         state = effectiveListState,
                         verticalArrangement = Arrangement.spacedBy(8.mpx),
-                        modifier = Modifier.fillMaxWidth().weight(1f).layout { measurable, constraints ->
+                        modifier = Modifier.fillMaxSize().layout { measurable, constraints ->
                             val extra = glowRoom.roundToPx()
                             val placeable = measurable.measure(
                                 constraints.copy(
@@ -1082,12 +1125,20 @@ fun LiveScreen(
                                 ),
                             )
                             layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(-extra, 0) }
+                        }.drawBehind {
+                            // glcn: the wheel's highlight, still while the rows slide through it (ListWheel).
+                            if (wheel.turning && wheel.lensHeight > 0f) {
+                                val side = glowRoom.toPx()
+                                inset(side, wheel.lensTop, side, size.height - wheel.lensTop - wheel.lensHeight) {
+                                    drawStageFocus(tv.own.owntv.ui.stage.StageFocus.FX, tv.own.owntv.ui.theme.StageRadii.Row, lensAccent, lensPalette)
+                                }
+                            }
                         }.fastScrollbar(
                             effectiveListState, channels.itemCount, endInset = glowRoom, bottomInset = 48.mpx,
                             resting = { if (channelPaneFocused) 0.45f else 0f },
                             held = { barHeld && channelPaneFocused },
                             // glcn: the bubble names the focused channel by its number (or its place in the list).
-                            label = { (stepTarget ?: focusedRow).let { i -> channels.peek(i)?.number?.toString() ?: (i + 1).toString() } },
+                            label = { (wheel.row ?: stepTarget ?: focusedRow).let { i -> channels.peek(i)?.number?.toString() ?: (i + 1).toString() } },
                         ),
                         // glcn: room at the foot so the last row never sits on the edge of the TV (overscan).
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(start = glowRoom, end = glowRoom, bottom = 48.mpx),
@@ -1111,8 +1162,8 @@ fun LiveScreen(
                                     name = parsed,
                                     // The channel under the cursor answers from the preview itself, so the row
                                     // and the stage beside it can never disagree.
-                                    now = if (isPreviewed && nowNextFor == channel.id) nowNext?.now ?: nowProgrammes[channel.id] else nowProgrammes[channel.id],
-                                    nowTitle = nowPlaying[channel.id],
+                                    now = if (isPreviewed && nowNextFor == channel.id) nowNext?.now ?: rowNow[channel.id] else rowNow[channel.id],
+                                    nowTitle = rowNowTitle[channel.id],
                                     isFavorite = favoriteIds.contains(channel.id),
                                     showNumber = showChannelNumbers,
                                     // glcn: no playlist mark when every channel here comes from the same playlist.
@@ -1124,7 +1175,13 @@ fun LiveScreen(
                                         selectedId = if (isTarget) channel.id else null, selectedFocus = selFocus,
                                         firstItemFocus = firstItemFocus,
                                     ).focusRequester(rowFocus(index)).onPreviewKeyEvent { e ->
+                                        val upDown = e.key == androidx.compose.ui.input.key.Key.DirectionDown || e.key == androidx.compose.ui.input.key.Key.DirectionUp
+                                        // glcn: letting go of a held ▲/▼ lets the wheel roll on to its row and stop.
+                                        if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyUp && upDown && wheel.turning) { wheel.release(); return@onPreviewKeyEvent true }
                                         if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                        // glcn: the wheel (ListWheel) is off — a held ▲/▼ steps row by row again, the list gliding on the
+                                        // app's speed-keeping spring (SmoothScroll), which proved the smoother of the two on the TV.
+                                        if (upDown && !barHeld && wheel.turning) { wheel.release(); return@onPreviewKeyEvent true }
                                         when (e.key) {
                                             // The remote's Menu key opens the same menu as holding OK.
                                             androidx.compose.ui.input.key.Key.Info -> { synopsisChannel = channel; true }
@@ -1183,6 +1240,7 @@ fun LiveScreen(
                             }
                         }
                     }
+                    } // glcn: end of the channel list's sliding focus box
                     }
                 }
                 // With the preview off the hints stay under the list, where there is nothing else to hold them.

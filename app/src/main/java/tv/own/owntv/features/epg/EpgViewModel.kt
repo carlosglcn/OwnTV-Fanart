@@ -381,7 +381,8 @@ class EpgViewModel(
         val channels = _state.value.channels
         val from = channels.indexOfFirst { it.id == channel.id }
         if (from < 0) return
-        val next = channels.subList((from + 1).coerceAtMost(channels.size), (from + 1 + PREFETCH_AHEAD).coerceAtMost(channels.size))
+        val start = (from + 1).coerceIn(0, channels.size)
+        val next = channels.subList(start, (from + 1 + PREFETCH_AHEAD).coerceIn(start, channels.size))
         if (next.isEmpty()) return
         prefetchJob?.cancel()
         prefetchJob = viewModelScope.launch {

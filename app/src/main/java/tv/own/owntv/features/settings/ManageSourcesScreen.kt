@@ -9,6 +9,9 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -57,6 +60,7 @@ import tv.own.owntv.core.setup.headline
 import tv.own.owntv.core.settings.PlaylistAutoRefresh
 import tv.own.owntv.core.settings.PlaylistRefresh
 import tv.own.owntv.features.setup.playlistAutoRefreshLabel
+import tv.own.owntv.core.setup.displayText
 import tv.own.owntv.features.setup.AddSourceChooserScreen
 import tv.own.owntv.features.setup.AddSourceScreen
 import tv.own.owntv.features.setup.RemoteSetupScreen
@@ -90,6 +94,12 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     var nameCleanup by remember { mutableStateOf<SourceEntity?>(null) }
     // Set while the "this will stop playback and take a while" confirmation is on screen.
     var confirmRetest by remember { mutableStateOf<SourceEntity?>(null) }
+    // glcn: the playlist whose "More options", "Colour and tag" or tag editor is open.
+    var moreFor by remember { mutableStateOf<SourceEntity?>(null) }
+    var markFor by remember { mutableStateOf<SourceEntity?>(null) }
+    var tagFor by remember { mutableStateOf<SourceEntity?>(null) }
+    val glcnVersion by tv.own.owntv.core.repository.SourceGlcnPrefs.version.collectAsStateWithLifecycle()
+    val disabledIds by tv.own.owntv.core.repository.SourceGlcnPrefs.disabled.collectAsStateWithLifecycle()
     val addFocus = remember { FocusRequester() }
     val errorFocus = remember { FocusRequester() }
 
@@ -324,6 +334,10 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     }
                     SourceRow(
                         source = source,
+                        index = index,
+                        glcnVersion = glcnVersion,
+                        disabled = source.id in disabledIds,
+                        onMore = { contextId = source.id; contextIndex = index; moreFor = source },
                         autoRefresh = playlistAutoRefresh[source.id] ?: PlaylistRefresh.OFF,
                         isDefault = isDefault,
                         expiry = sourceExpiry[source.id],
@@ -343,6 +357,78 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     )
                 }
             }
+        }
+
+        moreFor?.let { src ->
+            val off = src.id in disabledIds
+            tv.own.owntv.ui.stage.StagePopup(onDismiss = { moreFor = null }, title = src.name, width = 760.mpx) {
+                tv.own.owntv.ui.stage.StagePopupOption(
+                    stringResource(R.string.glcn_src_status), onClick = { moreFor = null; vm.testSource(src) },
+                    leading = { tv.own.owntv.ui.stage.StagePopupIcon(OwnTVIcon.INFO) },
+                )
+                tv.own.owntv.ui.stage.StagePopupOption(
+                    stringResource(if (off) R.string.glcn_src_turn_on else R.string.glcn_src_turn_off),
+                    subtitle = if (off) null else stringResource(R.string.glcn_src_turn_off_line),
+                    onClick = { moreFor = null; tv.own.owntv.core.repository.SourceGlcnPrefs.setDisabled(src.id, !off) },
+                    leading = { tv.own.owntv.ui.stage.StagePopupIcon(OwnTVIcon.EYE_OFF) },
+                )
+                tv.own.owntv.ui.stage.StagePopupOption(
+                    stringResource(R.string.glcn_src_mark), subtitle = stringResource(R.string.glcn_src_mark_line),
+                    onClick = { moreFor = null; markFor = src },
+                    leading = { tv.own.owntv.ui.stage.StagePopupIcon(OwnTVIcon.PALETTE) },
+                )
+                tv.own.owntv.ui.stage.StagePopupOption(
+                    stringResource(R.string.settings_sources_clean_names), onClick = { moreFor = null; nameCleanup = src },
+                    leading = { tv.own.owntv.ui.stage.StagePopupIcon(OwnTVIcon.SPARKLE) },
+                )
+            }
+        }
+
+        markFor?.let { src ->
+            val idx = sources.indexOfFirst { it.id == src.id }.coerceAtLeast(0)
+            val mark = remember(glcnVersion, src.id) { tv.own.owntv.core.ui.stage.PlaylistMark.forSource(src.id, src.name, idx) }
+            val chosenColour = tv.own.owntv.core.repository.SourceGlcnPrefs.markColour(src.id)
+            val ownText = tv.own.owntv.core.repository.SourceGlcnPrefs.markText(src.id)
+            tv.own.owntv.ui.stage.StagePopup(onDismiss = { markFor = null }, title = stringResource(R.string.glcn_src_mark), eyebrow = src.name, width = 760.mpx) {
+                tv.own.owntv.ui.stage.StagePopupOption(
+                    stringResource(R.string.glcn_src_mark_tag), value = mark.text,
+                    onClick = { tagFor = src },
+                    leading = { tv.own.owntv.ui.stage.StagePlaylistMark(mark) },
+                )
+                tv.own.owntv.ui.stage.StagePopupDivider()
+                tv.own.owntv.ui.stage.StagePopupOption(
+                    stringResource(R.string.glcn_src_mark_auto), chosen = chosenColour == null,
+                    onClick = { tv.own.owntv.core.repository.SourceGlcnPrefs.setMark(src.id, null, ownText) },
+                    leading = { tv.own.owntv.ui.stage.StagePopupRadio(chosenColour == null, it) },
+                )
+                tv.own.owntv.core.ui.stage.PlaylistMark.colours.forEachIndexed { i, argb ->
+                    tv.own.owntv.ui.stage.StagePopupOption(
+                        stringResource(R.string.glcn_src_mark_colour, i + 1), chosen = chosenColour == i,
+                        onClick = { tv.own.owntv.core.repository.SourceGlcnPrefs.setMark(src.id, i, ownText) },
+                        leading = { focused ->
+                            tv.own.owntv.ui.stage.StagePopupRadio(chosenColour == i, focused)
+                            Box(Modifier.padding(start = 10.mpx).size(26.mpx).background(androidx.compose.ui.graphics.Color(argb), androidx.compose.foundation.shape.CircleShape))
+                        },
+                    )
+                }
+            }
+        }
+
+        tagFor?.let { src ->
+            tv.own.owntv.ui.components.TextInputDialog(
+                title = stringResource(R.string.glcn_src_mark_tag),
+                initial = tv.own.owntv.core.repository.SourceGlcnPrefs.markText(src.id).orEmpty(),
+                hint = stringResource(R.string.glcn_src_mark_tag_hint),
+                label = stringResource(R.string.glcn_src_mark_tag),
+                onConfirm = { text ->
+                    tv.own.owntv.core.repository.SourceGlcnPrefs.setMark(
+                        src.id, tv.own.owntv.core.repository.SourceGlcnPrefs.markColour(src.id),
+                        text.take(tv.own.owntv.core.ui.stage.PlaylistMark.MAX_TEXT),
+                    )
+                    tagFor = null
+                },
+                onDismiss = { tagFor = null },
+            )
         }
 
         nameCleanup?.let { src -> ChannelNameCleanupHost(src, onNeedsResync = { vm.resync(it) }, onDismiss = { nameCleanup = null }) }
@@ -395,6 +481,10 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun SourceRow(
     source: SourceEntity,
+    index: Int,
+    glcnVersion: Int,
+    disabled: Boolean,
+    onMore: () -> Unit,
     autoRefresh: PlaylistRefresh,
     isDefault: Boolean,
     expiry: String?,
@@ -426,43 +516,86 @@ private fun SourceRow(
     val visibleCounts = if (activeSync == null) counts?.breakdownText() else activeCounts?.displayText()
     val sep = stringResource(R.string.settings_sources_details_separator)
     // The row's line: counts, refresh and expiry; the URL itself goes to the panel.
-    val line = buildList {
-        if (!visibleCounts.isNullOrBlank()) add(visibleCounts)
-        else if (activeSync != null) add(stringResource(R.string.settings_sources_preparing_detail))
-        if (autoRefresh.mode != PlaylistAutoRefresh.OFF) add(stringResource(R.string.settings_sources_auto_refresh, playlistAutoRefreshLabel(autoRefresh)))
-        if (!expiry.isNullOrBlank()) add(stringResource(R.string.settings_sources_expiry, expiry))
-    }.joinToString(sep)
+    // glcn: the playlist's health at a glance — the last failure in plain words, how long since it was updated,
+    // and the days left before it ends.
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val failure = remember(source.id, glcnVersion, syncState.isActive) { tv.own.owntv.core.repository.SourceGlcnPrefs.lastFailure(source.id) }
+        ?.takeIf { (_, at) -> source.lastSyncAt == null || at > source.lastSyncAt!! }
+    val failureText = failure?.let { (raw, _) ->
+        tv.own.owntv.core.util.classifySyncFailure(raw, online = true).displayText(ctx.resources)
+    }
+    val expiryMs = remember(source.id, glcnVersion, expiry) { tv.own.owntv.core.repository.SourceGlcnPrefs.expiry(source.id) }
+    val daysLeft = expiryMs?.let { kotlin.math.floor((it - System.currentTimeMillis()) / 86_400_000.0).toInt() }
+    val expiryText = when {
+        daysLeft == null -> expiry?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.settings_sources_expiry, it) }
+        daysLeft < 0 -> stringResource(R.string.glcn_src_expired)
+        daysLeft == 0 -> stringResource(R.string.glcn_src_expires_today)
+        daysLeft <= EXPIRY_SOON_DAYS -> androidx.compose.ui.res.pluralStringResource(R.plurals.glcn_src_expires_days, daysLeft, daysLeft)
+        else -> expiry?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.settings_sources_expiry, it) }
+    }
+    val syncedText = source.lastSyncAt?.let {
+        stringResource(R.string.glcn_src_synced_ago, android.text.format.DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString().replaceFirstChar { c -> c.lowercase() })
+    } ?: stringResource(R.string.glcn_src_never_synced)
+    val stale = source.lastSyncAt?.let { System.currentTimeMillis() - it > STALE_MS } ?: true
+    val line = when {
+        disabled -> stringResource(R.string.glcn_src_off_line)
+        failureText != null && activeSync == null -> failureText
+        else -> buildList {
+            if (!visibleCounts.isNullOrBlank()) add(visibleCounts)
+            else if (activeSync != null) add(stringResource(R.string.settings_sources_preparing_detail))
+            if (activeSync == null) add(syncedText)
+            if (autoRefresh.mode != PlaylistAutoRefresh.OFF) add(stringResource(R.string.settings_sources_auto_refresh, playlistAutoRefreshLabel(autoRefresh)))
+            expiryText?.let(::add)
+        }.joinToString(sep)
+    }
+    // The dot: red a failure, amber ending soon or not updated for days, green all well; none while it updates.
+    val health = when {
+        disabled -> null to stringResource(R.string.glcn_src_state_off)
+        failureText != null -> HEALTH_RED to stringResource(R.string.glcn_src_state_error)
+        daysLeft != null && daysLeft <= EXPIRY_SOON_DAYS -> HEALTH_AMBER to stringResource(R.string.glcn_src_state_expiring)
+        stale -> HEALTH_AMBER to stringResource(R.string.glcn_src_state_stale)
+        else -> HEALTH_GREEN to stringResource(R.string.glcn_src_state_ok)
+    }
     val status = when {
         isDeleting -> stringResource(R.string.settings_sources_deleting)
         activeSync != null -> resyncProgressPercent(activeSync.baseItemCount, activeSync.totalProcessed)
             ?.let { stringResource(R.string.sync_progress_percent, it) } ?: stringResource(R.string.sync_progress_syncing)
-        isDefault -> stringResource(R.string.settings_sources_default)
         else -> null
     }
+    val defaultText = if (isDefault) stringResource(R.string.settings_sources_default) else null
+    val mark = remember(glcnVersion, source.id, index) { tv.own.owntv.core.ui.stage.PlaylistMark.forSource(source.id, source.name, index) }
     val back = rowFocus ?: remember { FocusRequester() }
+    // glcn: four at hand — edit, update (try again after a failure), more options, delete; the rest (status and
+    // connection, turn off, colour and tag, clean names) under More options.
     val actions = if (isDeleting) emptyList() else listOf(
         StageAction(OwnTVIcon.PENCIL, stringResource(R.string.settings_sources_edit), onEdit),
-        // "Info", not "Test": the expensive measurement lives behind Re-test inside the popup.
-        StageAction(OwnTVIcon.INFO, stringResource(R.string.settings_sources_info), onTest),
         StageAction(
             OwnTVIcon.REFRESH,
-            stringResource(if (syncState.isActive) R.string.settings_sources_cancel else R.string.settings_sources_resync),
+            stringResource(
+                when {
+                    syncState.isActive -> R.string.settings_sources_cancel
+                    failureText != null -> R.string.glcn_src_retry
+                    else -> R.string.glcn_src_update
+                },
+            ),
             if (syncState.isActive) onCancelSync else onResync,
         ),
-        StageAction(OwnTVIcon.SPARKLE, stringResource(R.string.settings_sources_clean_names), onCleanNames),
+        StageAction(OwnTVIcon.MORE, stringResource(R.string.glcn_src_more), onMore),
         StageAction(OwnTVIcon.TRASH, stringResource(R.string.settings_sources_delete), onDelete, danger = true),
     )
     StageSettingRow(
         icon = OwnTVIcon.PLAYLIST,
         title = source.name,
         desc = line.ifBlank { typeName },
-        value = status?.let { SettingValue.Action(it) },
+        value = status?.let { SettingValue.Action(it) } ?: SettingValue.Custom {
+            SourceHealth(mark = mark, dot = health.first, text = defaultText?.let { "$it · ${health.second}" } ?: health.second)
+        },
         onClick = { runCatching { actionsFocus.requestFocus() } },
         keepPanel = keepPanel,
         help = SettingHelp(
             title = source.name,
             // The address on one line, the counts on the next.
-            text = listOfNotNull(typeName, visibleCounts).joinToString("\n"),
+            text = listOfNotNull(typeName, visibleCounts, failureText, syncedText, expiryText).joinToString("\n"),
             hints = listOf(
                 "▶" to stringResource(R.string.settings_key_actions),
                 stringResource(R.string.common_back) to stringResource(R.string.common_nav_settings),
@@ -485,6 +618,31 @@ private fun SourceRow(
             .onFocusChanged { if (it.isFocused) onFocused() },
     )
 }
+
+/** glcn: the row's right side — the playlist's tag, a coloured dot for its health and a word for it. */
+@Composable
+private fun SourceHealth(mark: tv.own.owntv.ui.stage.PlaylistMark, dot: Long?, text: String) {
+    val lit = tv.own.owntv.ui.stage.LocalStageLit.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
+        tv.own.owntv.ui.stage.StagePlaylistMark(mark, onLight = lit)
+        if (dot != null) Box(
+            Modifier.size(12.mpx).background(androidx.compose.ui.graphics.Color(dot), androidx.compose.foundation.shape.CircleShape)
+                .border(1.5.mpx, androidx.compose.ui.graphics.Color.White.copy(alpha = if (lit) 0.9f else 0f), androidx.compose.foundation.shape.CircleShape),
+        )
+        Text(
+            text, style = tv.own.owntv.ui.theme.stageText(18, 600),
+            color = if (lit) tv.own.owntv.ui.theme.stageAccent.onAccent else tv.own.owntv.ui.theme.StageColors.Muted, maxLines = 1,
+        )
+    }
+}
+
+private const val HEALTH_GREEN = 0xFF4CC38AL
+private const val HEALTH_AMBER = 0xFFE8B64AL
+private const val HEALTH_RED = 0xFFFF6B6BL
+/** glcn: within this many days an ending subscription is said in amber. */
+private const val EXPIRY_SOON_DAYS = 15
+/** glcn: a playlist not updated for this long is "old". */
+private const val STALE_MS = 3L * 86_400_000L
 
 private fun CatalogSyncState.Syncing.countsLabel(sourceType: SourceType, stored: SyncCounts?): tv.own.owntv.core.sync.SyncProgressCounts? {
     fun visibleCount(active: Boolean, processed: Int, storedCount: Int): Int =

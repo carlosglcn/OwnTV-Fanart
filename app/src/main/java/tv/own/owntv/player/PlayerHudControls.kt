@@ -381,7 +381,7 @@ internal fun SpeedButton(label: String, active: Boolean, toolLabel: String, onCl
         // word "Speed" joins it so the rate is not the only thing naming the button.
         val tint = if (active) hudAccent else if (focused) hudInk else hudInk.copy(alpha = 0.78f)
         Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = tv.own.owntv.ui.theme.stageText(25, 600), color = tint, fontWeight = FontWeight.SemiBold)
+            Text(label, style = tv.own.owntv.ui.theme.stageText(25, 600), color = tint, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
         }
     }
 }
@@ -416,7 +416,7 @@ internal fun EngineToggle(label: String, active: Boolean, toolLabel: String, onC
             OwnTVIcon(OwnTVIcon.SWAP, tint = tint, filled = true, modifier = Modifier.size(16.dp))
             // The engine name stays the value; focus adds the word for the thing it switches, so the
             // pill reads "EXO Player" rather than leaving MPV/EXO to be guessed at.
-            Text(label, style = tv.own.owntv.ui.theme.stageText(25, 600), color = tint, fontWeight = FontWeight.SemiBold)
+            Text(label, style = tv.own.owntv.ui.theme.stageText(25, 600), color = tint, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
         }
     }
 }

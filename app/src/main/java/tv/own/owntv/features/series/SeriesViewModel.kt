@@ -530,9 +530,11 @@ class SeriesViewModel(
                 if (pid != ref.profileId) return@launch
                 Log.d(TAG, "saveEpisodeProgressNow episodeId=${ep.id} profile=$pid positionMs=$pos durationMs=$dur")
                 runCatching {
-                    progressDao.save(
-                        PlaybackProgressEntity(profileId = pid, mediaType = MediaType.EPISODE, itemId = ep.id, positionMs = pos, durationMs = dur),
-                    )
+                    // glcn: crossing into "watched" tells Trakt once (TraktSync).
+                    val before = runCatching { progressDao.get(pid, MediaType.EPISODE, ep.id) }.getOrNull()
+                    val now = PlaybackProgressEntity(profileId = pid, mediaType = MediaType.EPISODE, itemId = ep.id, positionMs = pos, durationMs = dur)
+                    progressDao.save(now)
+                    if (isEpisodeCompleted(now) && (before == null || !isEpisodeCompleted(before))) traktEpisode(pid, ep)
                 }.onFailure { t ->
                     Log.w(TAG, "saveEpisodeProgressNow progress save failed episodeId=${ep.id} profile=$pid", t)
                 }
@@ -626,7 +628,7 @@ class SeriesViewModel(
     val playlistMarks: StateFlow<Map<Long, tv.own.owntv.ui.stage.PlaylistMark>> = activeProfileSources(settings, sourceDao)
         .map { aps ->
             if (aps.seriesSourceIds.size < 2) emptyMap()
-            else aps.sources.withIndex().associate { (i, s) -> s.id to tv.own.owntv.ui.stage.PlaylistMark.of(s.name, i) }
+            else aps.sources.withIndex().associate { (i, s) -> s.id to tv.own.owntv.ui.stage.PlaylistMark.forSource(s.id, s.name, i) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
@@ -718,7 +720,16 @@ class SeriesViewModel(
             progressDao.save(
                 PlaybackProgressEntity(profileId = pid, mediaType = MediaType.EPISODE, itemId = episode.id, positionMs = 1L, durationMs = 1L),
             )
+            traktEpisode(pid, episode) // glcn
         }
+    }
+
+    /** glcn: an episode watched → the profile's Trakt history (its series looked up for the TMDB id). */
+    private suspend fun traktEpisode(profileId: Long, episode: EpisodeEntity) {
+        if (!tv.own.owntv.core.trakt.Trakt.available || !tv.own.owntv.core.trakt.Trakt.connected(profileId)) return
+        val series = _selectedSeries.value?.takeIf { it.id == episode.seriesId }
+            ?: runCatching { seriesDao.getSeriesById(episode.seriesId) }.getOrNull() ?: return
+        tv.own.owntv.core.trakt.TraktSync.watchedEpisode(profileId, series, episode)
     }
 
     /** Mark an episode as unwatched — clears its resume position (removes the ✓ and any progress bar). */
@@ -1123,6 +1134,7 @@ class SeriesViewModel(
                     episode, it, tv.own.owntv.core.player.enginePinKey(show.sourceId, "EPISODE", episode.remoteId),
                 )
             }
+            val showKey = tv.own.owntv.core.player.enginePinKey(show.sourceId, "SERIES", show.remoteId)
             player.playEpisodes(
                 items = queue.map { ep ->
                     PlaylistItem(
@@ -1136,7 +1148,7 @@ class SeriesViewModel(
                             // stored URL is the shared season cmd and the played URL is minted per item.
                             contentKey = tv.own.owntv.core.player.enginePinKey(show.sourceId, "EPISODE", ep.remoteId),
                             // v44 — audio/subtitle choices are remembered per series.
-                            trackKey = tv.own.owntv.core.player.enginePinKey(show.sourceId, "SERIES", show.remoteId),
+                            trackKey = showKey,
                             // glcn: the engine this file suits; the show carries the quality marks.
                             enginePick = tv.own.owntv.core.player.EngineHint.of(
                                 ep.name, ep.streamUrl, show.qualityRank, show.advertisedCapabilities, ep.containerExt,
@@ -1156,10 +1168,13 @@ class SeriesViewModel(
                 userAgent = sourceUa,
                 vodEngineOverride = tv.own.owntv.core.settings.SourceOverrides.vodEngineOf(source),
             )
-            // Enable the player's OpenSubtitles search for this episode. The parent
-            // series' TMDB id gives the strongest episode match when metadata is available.
+            // The show's TMDB details, looked up after playback has started: its title art for the
+            // player bar (keyed on the show, so it stays for the whole queue), and its TMDB id, which
+            // gives the OpenSubtitles search its strongest episode match.
+            val showDetails = runCatching { metadata.resolveSeries(show) }.getOrNull()
+            player.setTitleLogo(showKey, tv.own.owntv.core.metadata.MetadataImages.logo(showDetails?.logoPath))
             if (pid != null) {
-                val parentTmdbId = runCatching { metadata.resolveSeries(show)?.tmdbId?.toLong() }.getOrNull()
+                val parentTmdbId = showDetails?.tmdbId?.toLong()
                 subtitleController.setEpisode(pid, show, episode, parentTmdbId)
                 // Remember the queue so player-driven advances re-point the context.
                 playingQueue = PlayingQueue(show, queue, pid, parentTmdbId)

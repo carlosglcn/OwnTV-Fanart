@@ -261,6 +261,7 @@ fun MoreScreen(
     if (pinItem != null && pin != null) {
         PinPrompt(
             pin = pin,
+            door = tv.own.owntv.core.categorylock.PinDoor.SETTINGS,
             onUnlock = { pinPagesUnlocked = true; askPinFor = null; chosen = pinItem; pageEntry = null },
             onDismiss = { askPinFor = null },
         )

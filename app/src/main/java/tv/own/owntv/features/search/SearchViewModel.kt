@@ -131,7 +131,7 @@ class SearchViewModel(
 
     /** Which playlist a row comes from, as on the browse screens; empty with one playlist. */
     val playlistMarks: StateFlow<Map<Long, PlaylistMark>> = ctx
-        .map { aps -> if (aps.sources.size < 2) emptyMap() else aps.sources.withIndex().associate { (i, s) -> s.id to PlaylistMark.of(s.name, i) } }
+        .map { aps -> if (aps.sources.size < 2) emptyMap() else aps.sources.withIndex().associate { (i, s) -> s.id to PlaylistMark.forSource(s.id, s.name, i) } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     /** Category names for the movie and series rows ("2005 · ★ 6.2 · Disney+ Movies"). */

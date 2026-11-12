@@ -258,7 +258,7 @@ fun StagePopupOption(
             if (value != null) {
                 Text("$value ›", style = stageText(18, 700), color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            trailing?.invoke(this, focused)
+            androidx.compose.runtime.CompositionLocalProvider(LocalStageLit provides focused) { trailing?.invoke(this, focused) }
         }
     }
 }
@@ -271,7 +271,7 @@ fun StagePopupRadio(on: Boolean, focused: Boolean) {
     Box(
         Modifier.size(24.mpx).drawBehind {
             val r = size.minDimension / 2f
-            if (on) drawInnerRing(if (focused) Color.White else a.accent, 7.mpx.toPx(), r)
+            if (on) drawInnerRing(if (focused) a.onAccent else a.accent, 7.mpx.toPx(), r)
             else drawInnerRing(dim, 2.mpx.toPx(), r)
         },
     )
@@ -281,7 +281,8 @@ fun StagePopupRadio(on: Boolean, focused: Boolean) {
 @Composable
 fun StagePopupCheck(on: Boolean, focused: Boolean) {
     val a = stageAccent
-    val fill = if (focused) Color.White else a.accent
+    // glcn: on the focused row the mark takes the accent's ink — white on a white accent vanished.
+    val fill = if (focused) a.onAccent else a.accent
     val dim = StageColors.Dim
     Box(
         Modifier.size(24.mpx).drawBehind {

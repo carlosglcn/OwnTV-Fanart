@@ -59,6 +59,9 @@ class ShellViewModel(
 
     companion object {
         private const val TAG = "OwnTVHome"
+        private const val EXPIRY_CHECK_DELAY_MS = 90_000L
+        private const val EXPIRY_WARN_DAYS = 7L
+        private const val DAY_MS = 86_400_000L
     }
 
     /** Which player presentation is on screen, and which section armed it. Held here rather than in
@@ -220,7 +223,40 @@ class ShellViewModel(
     /** The active profile's playlists, for the top-bar quick switcher (empty when the profile has none). */
     val playlists: StateFlow<List<tv.own.owntv.core.database.entity.SourceEntity>> = settings.activeProfileId
         .flatMapLatest { pid -> if (pid < 0) flowOf(emptyList()) else sourceRepository.observeSources(pid) }
+        // glcn: a playlist switched off in Playlists is not offered.
+        .combine(tv.own.owntv.core.repository.SourceGlcnPrefs.disabled) { all, off -> all.filterNot { it.id in off } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    init {
+        // glcn: a while after start, each Xtream playlist's end date is read (once a day at most); one ending within a
+        // week is told once, with its date — the Playlists row shows the days left from then on.
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(EXPIRY_CHECK_DELAY_MS)
+            runCatching {
+                val pid = settings.activeProfileId.first()
+                if (pid < 0) return@runCatching
+                val ctx = org.koin.core.context.GlobalContext.get().get<android.content.Context>()
+                val day = ctx.getSharedPreferences("glcn_sources", android.content.Context.MODE_PRIVATE)
+                val today = System.currentTimeMillis() / DAY_MS
+                if (day.getLong("expiryCheckDay", -1L) == today) return@runCatching
+                day.edit().putLong("expiryCheckDay", today).apply()
+                val xtream = org.koin.core.context.GlobalContext.get().get<tv.own.owntv.core.parser.XtreamClient>()
+                sourceRepository.observeSources(pid).first()
+                    .filter { it.type == tv.own.owntv.core.model.SourceType.XTREAM && !tv.own.owntv.core.repository.SourceGlcnPrefs.isDisabled(it.id) }
+                    .forEach { s ->
+                        val ms = runCatching { xtream.accountExpiryMs(s) }.getOrNull() ?: return@forEach
+                        tv.own.owntv.core.repository.SourceGlcnPrefs.setExpiry(s.id, ms)
+                        val left = (ms - System.currentTimeMillis()) / DAY_MS
+                        if (left in 0..EXPIRY_WARN_DAYS && tv.own.owntv.core.repository.SourceGlcnPrefs.takeExpiryWarning(s.id, ms)) {
+                            val date = java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG).format(java.util.Date(ms))
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                android.widget.Toast.makeText(ctx, ctx.getString(tv.own.owntv.R.string.glcn_src_expiry_toast, s.name, date), android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+            }
+        }
+    }
 
     /** The chosen active-playlist filter: -1 = All playlists (merged view), else a single playlist id. */
     val activePlaylistId: StateFlow<Long> = settings.defaultSourceId

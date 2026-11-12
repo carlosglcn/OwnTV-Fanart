@@ -38,7 +38,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -89,11 +91,19 @@ internal fun TopBar(
         ?: meta.episodeNumber?.let { stringResource(R.string.player_episode_number, it) }
         ?: ""
     val localizedSubtitle = meta.localizedSubtitle()
+    // Films and series: the title art in place of the name, once it has arrived and loaded.
+    val titleArt = meta.titleLogoUrl.takeUnless { isLive }
+    var titleArtFailed by remember(titleArt) { mutableStateOf(false) }
+    val showTitleArt = titleArt != null && !titleArtFailed
+    // An episode carries its show's name as the subtitle; a film's name is the title.
+    val episode = meta.seasonNumber != null || meta.episodeNumber != null
+    val res by player.videoRes.collectAsStateWithLifecycle()
+    val ultraHdBadge = !isLive && isUltraHd(res)
     val vodSubtitle = if (isLive) {
         meta.subtitle
     } else {
         buildList {
-            localizedSubtitle?.takeIf { it.isNotBlank() }?.let(::add)
+            localizedSubtitle?.takeIf { it.isNotBlank() && !(showTitleArt && episode) }?.let(::add)
             meta.seasonNumber?.let { add(stringResource(R.string.player_season_number, it)) }
         }.joinToString(stringResource(R.string.content_metadata_separator)).ifBlank { null }
     }
@@ -112,11 +122,13 @@ internal fun TopBar(
         Column(Modifier.weight(1f)) {
             val chipRow: @Composable () -> Unit = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (ultraHdBadge) res?.let { UltraHdBadge(it) }
                     val durMin = (duration / 60000)
                     val parts = buildList {
                         meta.year?.takeIf { it.isNotBlank() }?.let { add(it) }
                         if (!isLive && durMin > 0) add(stringResource(R.string.player_duration_minutes, durMin))
-                        addAll(chips) // aspect · resolution · fps · audio
+                        // aspect · resolution · fps · audio — 4K already stands in its badge
+                        addAll(if (ultraHdBadge) chips.filterNot { it == res } else chips)
                     }
                     parts.forEachIndexed { i, label ->
                         if (i > 0) Box(Modifier.size(3.dp).clip(CircleShape).background(hudInk.copy(alpha = 0.3f)))
@@ -149,10 +161,21 @@ internal fun TopBar(
                 }
                 below?.invoke()
             } else {
+                if (showTitleArt && titleArt != null) {
+                    tv.own.owntv.ui.stage.StageTitleArt(
+                        url = titleArt,
+                        contentDescription = if (episode) meta.subtitle else displayTitle,
+                        onFailed = { titleArtFailed = true },
+                        modifier = Modifier.padding(bottom = 4.dp).widthIn(max = 420.dp).fillMaxWidth().height(72.dp),
+                    )
+                }
                 vodSubtitle?.let {
                     Text(it, style = tv.own.owntv.ui.theme.stageText(22, 700), color = hudInk.copy(alpha = 0.45f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Text(displayTitle, style = tv.own.owntv.ui.theme.stageText(32, 600), color = hudInk, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // A film's art is its name; an episode keeps its own name under the show's art.
+                if (!showTitleArt || episode) {
+                    Text(displayTitle, style = tv.own.owntv.ui.theme.stageText(32, 600), color = hudInk, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 Spacer(Modifier.height(2.dp))
                 chipRow()
             }
@@ -201,28 +224,64 @@ internal fun LiveChannelHeader(player: PlaybackEngine, chips: List<String>, onBa
                 }
                 Text(name, style = tv.own.owntv.ui.theme.stageText(28, 800), color = hudInk, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            val shown = chips.filterNot { it.contains(':') || it == "MPV" || it == "EXO" }
-            if (shown.isNotEmpty()) {
-                // glcn: one low line of small chips (they used to wrap to a second line and lift the whole bar).
-                Row(
-                    Modifier.padding(top = 5.dp).horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    shown.forEach { label ->
-                        Text(
-                            label,
-                            style = tv.own.owntv.ui.theme.stageText(15, 700),
-                            color = hudInk.copy(alpha = 0.85f),
-                            fontWeight = FontWeight.SemiBold,
-                            // One line each: squeezed, a chip clips instead of stacking its letters.
-                            maxLines = 1, softWrap = false,
-                            modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(hudInk.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 2.dp),
-                        )
-                    }
-                }
-            }
+            StreamChipRow(chips, hudInk, Modifier.padding(top = 5.dp))
         }
     }
+}
+
+/**
+ * The stream's facts (4K · 50 Hz · HDR…) as one low line of small chips — shared by the classic header and the
+ * Cine / Ficha banners, so every banner style tells what is playing. The engine and key:value lines stay out.
+ */
+@Composable
+internal fun StreamChipRow(chips: List<String>, ink: Color, modifier: Modifier = Modifier, size: Int = 15) {
+    val shown = chips.filterNot { it.contains(':') || it == "MPV" || it == "EXO" }
+    if (shown.isEmpty()) return
+    // glcn: one low line of small chips (they used to wrap to a second line and lift the whole bar). Only whole
+    // chips: those that do not fit are left out, from the end, instead of being cut through the middle.
+    androidx.compose.ui.layout.Layout(
+        content = {
+            shown.forEach { label ->
+                Text(
+                    label,
+                    style = tv.own.owntv.ui.theme.stageText(size, 700),
+                    color = ink.copy(alpha = 0.85f),
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, softWrap = false,
+                    modifier = Modifier.clip(RoundedCornerShape(7.dp)).background(ink.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 2.dp),
+                )
+            }
+        },
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val gap = 6.dp.roundToPx()
+        val loose = constraints.copy(minWidth = 0, maxWidth = androidx.compose.ui.unit.Constraints.Infinity)
+        val placeables = measurables.map { it.measure(loose) }
+        val room = if (constraints.hasBoundedWidth) constraints.maxWidth else Int.MAX_VALUE
+        var used = 0
+        val kept = ArrayList<androidx.compose.ui.layout.Placeable>()
+        for (pl in placeables) {
+            val need = (if (kept.isEmpty()) 0 else gap) + pl.width
+            if (used + need > room) break
+            kept += pl; used += need
+        }
+        val height = kept.maxOfOrNull { it.height } ?: 0
+        layout(used, height) {
+            var x = 0
+            kept.forEach { pl -> pl.place(x, (height - pl.height) / 2); x += pl.width + gap }
+        }
+    }
+}
+
+/** The 4K badge of a film or episode: the engine's own resolution label, on gold. */
+@Composable
+private fun UltraHdBadge(label: String) {
+    Text(
+        label,
+        style = tv.own.owntv.ui.theme.stageText(18, 800),
+        color = Color(0xFF1A1300),
+        modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(Color(0xFFE2B23C)).padding(horizontal = 8.dp, vertical = 1.dp),
+    )
 }
 
 /** The channel logo tile, falling back to the first letters of the channel name. */
@@ -450,7 +509,8 @@ internal fun BottomBar(
         // glcn: the tool's name above the row; on the Ficha banner under it (above, it left an empty band at the top).
         if (!toolsUp) ToolLabelLine(toolFocus)
         androidx.compose.runtime.CompositionLocalProvider(LocalToolFocus provides toolFocus) {
-        Box(Modifier.fillMaxWidth().onGloballyPositioned { toolFocus.origin = it.positionInWindow() }) {
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().onGloballyPositioned { toolFocus.origin = it.positionInWindow() }) {
+        val toolsMaxWidth = maxWidth * 0.62f
         ToolFocusBox(toolFocus, Modifier.matchParentSize())
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -469,7 +529,13 @@ internal fun BottomBar(
                 true
             },
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            // glcn: the media cluster takes the room the tools leave and scrolls within it, so at a large
+            // interface size no button is cut off or squeezed (the focused one is brought into view).
+            Row(
+                Modifier.weight(1f).horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 // The ORDER comes from core's canonical list, not from the order these lines
                 // happen to be written in. Each control keeps its own composable and its own
                 // condition; only the sequence is shared, which is what makes this bar and the
@@ -542,12 +608,17 @@ internal fun BottomBar(
                     CtrlButton(OwnTVIcon.EPG, label = stringResource(R.string.common_nav_guide)) { onGuide() }
                 }
             }
-            Spacer(Modifier.weight(1f))
             if (isLive && side != null && onScrubLive == null) {
+                Spacer(Modifier.width(8.dp))
                 LiveStateBadge(timeshiftOffsetSec)
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            // glcn: the tools keep their own width up to most of the bar, and scroll past it.
+            Row(
+                Modifier.widthIn(max = toolsMaxWidth).horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 // The ORDER is core's, exactly as in the media cluster above. Each control
                 // keeps its own composable and condition; only the sequence is shared.
                 PlayerControl.clusterFor(tv = true, cluster = ControlCluster.TOOLS).forEach { control ->
@@ -658,10 +729,15 @@ internal fun BottomBar(
             // glcn: live TV — the channel on the left, the programme on air with its picture on the right,
             // then every control in one full-width row below.
             if (side != null) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { header() }
-                    Spacer(Modifier.width(18.dp))
-                    Box(Modifier.widthIn(max = 540.dp)) { side() }
+                // glcn: the programme beside never takes more than about half the row, so the channel's name and its
+                // facts keep room (on a narrower screen or a bigger zoom they were cut through).
+                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val sideMax = minOf(540.dp, maxWidth * 0.46f)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { header() }
+                        Spacer(Modifier.width(18.dp))
+                        Box(Modifier.widthIn(max = sideMax)) { side() }
+                    }
                 }
             } else header()
             // glcn: on a channel with an archive the timeline below takes this line's place — no extra row.

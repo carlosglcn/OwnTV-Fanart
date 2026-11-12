@@ -1,5 +1,8 @@
 package tv.own.owntv.features.shell
 
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -859,8 +862,13 @@ fun OwnTVShell(
         liveVm.stopPreview()
     }
     DisposableEffect(sleepTimer) {
-        sleepTimer.stopPlayback = { stopForSleep() }
+        // glcn: then the black "stopped" screen, until a key.
+        sleepTimer.stopPlayback = { stopForSleep(); tv.own.owntv.glcn.SleepWatch.ended.value = true }
         onDispose { sleepTimer.stopPlayback = null }
+    }
+    // glcn: what plays outside the player keeps the sleep timer alive.
+    LaunchedEffect(previewChannel?.id, multiview) {
+        tv.own.owntv.glcn.SleepWatch.elsewhere.value = previewChannel != null || multiview != null
     }
     DisposableEffect(shellVm) {
         shellVm.leavePlayback = { stopForSleep() }
@@ -1069,6 +1077,7 @@ fun OwnTVShell(
             RemoteShortcutAction.OPEN_AUDIO_CONTROLS,
             RemoteShortcutAction.OPEN_ASPECT_CONTROLS,
             RemoteShortcutAction.TOGGLE_PLAYBACK_INFO,
+            RemoteShortcutAction.OPEN_PROGRAMME_INFO,
             -> if (playerMode == PlayerMode.MINI || playerMode == PlayerMode.AUDIO) expandPlayer()
             RemoteShortcutAction.PAGE_TOWARD_FIRST,
             RemoteShortcutAction.PAGE_TOWARD_LAST,
@@ -1084,7 +1093,7 @@ fun OwnTVShell(
             RemoteShortcutAction.SLEEP_TIMER, RemoteShortcutAction.TOGGLE_ENGINE, RemoteShortcutAction.NEXT_AUDIO_TRACK,
             RemoteShortcutAction.TOGGLE_SUBTITLES, RemoteShortcutAction.OPEN_SUBTITLE_CONTROLS,
             RemoteShortcutAction.OPEN_AUDIO_CONTROLS, RemoteShortcutAction.OPEN_ASPECT_CONTROLS,
-            RemoteShortcutAction.TOGGLE_PLAYBACK_INFO, RemoteShortcutAction.TOGGLE_FAVORITE,
+            RemoteShortcutAction.TOGGLE_PLAYBACK_INFO, RemoteShortcutAction.OPEN_PROGRAMME_INFO, RemoteShortcutAction.TOGGLE_FAVORITE,
             RemoteShortcutAction.RETURN_TO_LIVE, RemoteShortcutAction.PREVIOUS_CHANNEL, RemoteShortcutAction.PLAY_PAUSE,
         )
     }
@@ -1232,6 +1241,8 @@ fun OwnTVShell(
         val overridden by movieVm.overriddenMovies.collectAsStateWithLifecycle()
         val favs by movieVm.favoriteIds.collectAsStateWithLifecycle()
         androidx.compose.runtime.key(film.id) {
+            val zoom = tv.own.owntv.glcn.rememberTitleZoom()
+            Box(Modifier.fillMaxSize().graphicsLayer { val k = zoom.value; alpha = k; val z = tv.own.owntv.glcn.TitleZoom.FROM + (1f - tv.own.owntv.glcn.TitleZoom.FROM) * k; scaleX = z; scaleY = z }) {
             tv.own.owntv.features.movies.MovieTitlePage(
                 movie = film,
                 meta = meta,
@@ -1252,6 +1263,7 @@ fun OwnTVShell(
                 loadRelated = { movieVm.relatedMoviesOf(film) },
                 onOpenRelated = { r -> homeFilm = r },
             )
+            }
         }
     }
 
@@ -1578,8 +1590,31 @@ fun OwnTVShell(
                     onSelectSection(MainSection.SERIES)
                 }
                 // glcn: sections change with a clean cut — the small sideways slide read as a judder.
+                // glcn: a new section comes in with a short fade and a slight rise, instead of appearing all at once (the
+                // old one goes at once: never two sections built side by side). Instant with animations off or light mode.
+                val sectionIn = remember { androidx.compose.animation.core.Animatable(1f) }
+                val sectionAnim = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
+                // glcn: a title opened from Home grows into its page instead of rising in (TitleZoom).
+                var sectionZoom by remember { mutableStateOf(false) }
+                LaunchedEffect(selectedSection) {
+                    sectionZoom = tv.own.owntv.glcn.TitleZoom.take()
+                    if (!sectionAnim) return@LaunchedEffect
+                    sectionIn.snapTo(0f)
+                    sectionIn.animateTo(1f, androidx.compose.animation.core.tween(SECTION_IN_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                }
+                val sectionRise = with(androidx.compose.ui.platform.LocalDensity.current) { SECTION_RISE.toPx() }
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth()
+                        .graphicsLayer {
+                            val k = sectionIn.value
+                            alpha = 0.25f + 0.75f * k
+                            if (sectionZoom) {
+                                val z = tv.own.owntv.glcn.TitleZoom.FROM + (1f - tv.own.owntv.glcn.TitleZoom.FROM) * k
+                                scaleX = z; scaleY = z
+                            } else {
+                                translationY = (1f - k) * sectionRise
+                            }
+                        }
                         .then(
                             // The floating rail sits over the content, so the content starts at the screen
                             // edge (or beside a docked rail).
@@ -1720,6 +1755,7 @@ fun OwnTVShell(
                                 }
                             },
                             onOpenMovie = { movie ->
+                                tv.own.owntv.glcn.TitleZoom.arm()
                                 // glcn: with "Page before watching" on, a film chosen on Home opens its page right here.
                                 if (tv.own.owntv.glcn.DockPrefs.titlePage) homeFilm = movie
                                 else {
@@ -1729,6 +1765,7 @@ fun OwnTVShell(
                                 }
                             },
                             onOpenSeries = { series ->
+                                tv.own.owntv.glcn.TitleZoom.arm()
                                 seriesVm.openSeries(series)
                                 restoreFocus = true
                                 seriesFromHome = true
@@ -2175,14 +2212,14 @@ fun OwnTVShell(
             if (liveOnExo) {
                 // glcn: the programme info screen shows the channel in a small window up on the right.
                 val infoShift by androidx.compose.animation.core.animateFloatAsState(
-                    if (isFull && !inPip && tv.own.owntv.glcn.InfoStage.liveWindow) 1f else 0f,
+                    if (isFull && !inPip && (tv.own.owntv.glcn.InfoStage.liveWindow || tv.own.owntv.glcn.ZapStage.liveWindow)) 1f else 0f,
                     androidx.compose.animation.core.tween(
                         if (tv.own.owntv.glcn.DeviceClass.richMotion) INFO_SHIFT_MS else 0,
                         easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f), // glcn: the cinema panel's curve
                     ),
                     label = "infoShift",
                 )
-                androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.InfoStage.progress = infoShift }
+                androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.InfoStage.progress = infoShift; tv.own.owntv.glcn.ZapStage.progress = infoShift }
                 tv.own.owntv.player.ExoPreviewSurface(
                     engine = liveVm.previewEngine, modifier = Modifier.fillMaxSize().infoWindow(infoShift),
                     keepAwake = true, autoFrameRate = isFull && !inPip && autoFrameRateLive, holdLastFrame = isFull && !inPip,
@@ -2195,14 +2232,14 @@ fun OwnTVShell(
                     label = "cinemaShift",
                 )
                 val infoShiftMpv by androidx.compose.animation.core.animateFloatAsState(
-                    if (isFull && !inPip && tv.own.owntv.glcn.InfoStage.liveWindow) 1f else 0f,
+                    if (isFull && !inPip && (tv.own.owntv.glcn.InfoStage.liveWindow || tv.own.owntv.glcn.ZapStage.liveWindow)) 1f else 0f,
                     androidx.compose.animation.core.tween(
                         if (tv.own.owntv.glcn.DeviceClass.richMotion) INFO_SHIFT_MS else 0,
                         easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f), // glcn: the cinema panel's curve
                     ),
                     label = "infoShiftMpv",
                 )
-                androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.InfoStage.progress = infoShiftMpv }
+                androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.InfoStage.progress = infoShiftMpv; tv.own.owntv.glcn.ZapStage.progress = infoShiftMpv }
                 MpvVideoSurface(
                     player = player, modifier = Modifier.fillMaxSize().cinemaInset(cinemaShift).infoWindow(infoShiftMpv),
                     autoFrameRateFilms = isFull && !inPip && autoFrameRateFilms,
@@ -2842,6 +2879,8 @@ fun OwnTVShell(
         }
       }
 
+    // The Settings PIN before a long-press change, when the Settings lock asks for it.
+    tv.own.owntv.features.settings.lock.MenuChangeGateHost()
     if (showExit) {
         ExitDialog(onConfirm = onExitApp, onDismiss = { showExit = false })
     }
@@ -3019,6 +3058,9 @@ private fun cinemaJsonList(json: String?): List<String> {
     }.getOrDefault(emptyList())
 }
 
+/** glcn: the video box's top-left corner on screen while it moves into the info window (see infoWindow). */
+private var infoSurfaceOrigin = androidx.compose.ui.geometry.Offset.Zero
+
 /** glcn: how long the film takes to slide aside for the cinema panel. */
 private const val CINEMA_SHIFT_MS = 380
 /** glcn: the picture folding into the programme info's window — long enough to be seen, eased to land softly. */
@@ -3030,10 +3072,13 @@ private const val INFO_SHIFT_MS = 420
  * follows its layout box but not a drawing transform.
  */
 /** glcn: the picture moved into the programme info screen's live window ([tv.own.owntv.glcn.InfoStage]) as [p] goes 0 → 1. */
-private fun Modifier.infoWindow(p: Float): Modifier = if (p <= 0f) this else this.layout { measurable, constraints ->
+private fun Modifier.infoWindow(p: Float): Modifier = if (p <= 0f) this else this
+    // glcn: where this box sits on screen, so the measured frame of the info screen lands in its own terms.
+    .onGloballyPositioned { infoSurfaceOrigin = it.positionInWindow() }
+    .layout { measurable, constraints ->
     val fullW = constraints.maxWidth
     val fullH = constraints.maxHeight
-    val r = tv.own.owntv.glcn.InfoStage.windowRect(fullW.toFloat(), fullH.toFloat())
+    val r = tv.own.owntv.glcn.InfoStage.windowRect(fullW.toFloat(), fullH.toFloat(), infoSurfaceOrigin)
     val w = (fullW + (r.width - fullW) * p).toInt()
     val h = (fullH + (r.height - fullH) * p).toInt()
     val x = (r.left * p).toInt()
@@ -3055,3 +3100,7 @@ private fun Modifier.cinemaInset(p: Float): Modifier = if (p <= 0f) this else th
     val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w.coerceAtLeast(1), h.coerceAtLeast(1)))
     layout(fullW, fullH) { placeable.place(x, y) }
 }
+
+/** glcn: a section's way in — how long, and from how far below. */
+private const val SECTION_IN_MS = 260
+private val SECTION_RISE = 18.mpx

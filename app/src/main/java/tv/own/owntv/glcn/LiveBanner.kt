@@ -195,6 +195,8 @@ fun LiveBannerFicha(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifie
  * white over it), a very large title, its times and kind, a 2-line synopsis, what follows on the right, and the
  * programme's line with its start and end at the two ends, like a film's timeline.
  */
+private val CINE_ART_W = 300.dp
+
 @Composable
 fun LiveBannerCine(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier) {
     val f = epg?.let { facts(it) } ?: return
@@ -206,6 +208,14 @@ fun LiveBannerCine(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier
             .padding(start = 56.dp, end = 56.dp, top = 64.dp, bottom = 10.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+            // glcn: the programme's picture beside the title, so Cine no longer looks empty without it.
+            if (!art.isNullOrBlank()) {
+                tv.own.owntv.ui.components.ProgrammeArt(
+                    url = art,
+                    modifier = Modifier.width(CINE_ART_W).aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)),
+                )
+                Spacer(Modifier.width(28.dp))
+            }
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.content_live_now).uppercase(), style = stageText(15, 500).copy(letterSpacing = 1.4.sp), color = accent, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(f.title, style = stageText(52, 800), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -91,7 +91,7 @@ fun SyncStatusPill(modifier: Modifier = Modifier) {
     var currentTrendingCompleted by remember { mutableStateOf<TrendingActivityTracker.CompletedBuild?>(null) }
 
     val anyActive = activeCatalog.isNotEmpty() || activeEpg.isNotEmpty() || activeTrending.isNotEmpty() ||
-        activeDownload != null || activeRecordings.isNotEmpty() || sportsRebuild is tv.own.owntv.core.sports.RebuildState.Running
+        activeDownload != null || activeRecordings.isNotEmpty()
 
     LaunchedEffect(lastCompleted) {
         val completed = lastCompleted ?: return@LaunchedEffect
@@ -147,7 +147,8 @@ fun SyncStatusPill(modifier: Modifier = Modifier) {
             add(SyncLine.TrendingDetail(it))
         }
         activeEpg.values.sortedBy { it.sourceId }.forEach { add(SyncLine.Epg(it)) }
-        if (sportsRebuild is tv.own.owntv.core.sports.RebuildState.Running) add(SyncLine.Sports)
+        // glcn: the sports rebuild runs on its own in the background and is no news on every screen; its progress
+        // shows in Sports › Settings, and only a failure is said here.
     }
     val shown = rows.take(MAX_ROWS)
     val hidden = rows.size - shown.size

@@ -92,6 +92,8 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
     override fun onCreate() {
         // glcn: the crash report runs in a process of its own and needs none of the app's start-up.
         if (tv.own.owntv.glcn.CrashScreen.isCrashProcess(this)) { super.onCreate(); return }
+        // glcn: the app's Trakt keys (from the build; blank in a build without them, and then no Trakt row shows).
+        tv.own.owntv.core.trakt.Trakt.configure(this, BuildConfig.TRAKT_CLIENT_ID, BuildConfig.TRAKT_CLIENT_SECRET)
         // glcn: the app went down last time — open the report first, in that separate process, so it shows
         // even when what broke is the start-up below.
         if (tv.own.owntv.glcn.CrashScreen.pending(this)) runCatching {
@@ -142,6 +144,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         tv.own.owntv.glcn.MemoryWatch.start(this) // glcn: memory diary, stall watch and memory brake (one sleeping thread)
         tv.own.owntv.glcn.LiveBanner.ensure(this) // glcn: the live banner's style
         tv.own.owntv.glcn.PlayerGlass.ensure(this) // glcn: see-through level of the panels over the video
+        tv.own.owntv.glcn.DeckWidths.ensure(this) // glcn: widths of the player's channel list
         tv.own.owntv.glcn.Labs.ensure(this) // glcn: test features (switched on with a key sequence in Settings)
         tv.own.owntv.glcn.AppShortcuts.ensure(this)
         tv.own.owntv.glcn.EmbyGroupsPref.load(this) // glcn: how Emby / Jellyfin libraries are split into categories
@@ -196,6 +199,9 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             kotlinx.coroutines.delay(SPORTS_START_DELAY_MS)
             runCatching { GlobalContext.get().get<tv.own.owntv.core.sports.SportsRepository>().appStarted() }
         }
+        // Local auto-sync: the paired-only listener and the moments a pass is tried (OwnTV to the
+        // front or the back, the network back). Core owns what that means; no hourly check on a TV.
+        runCatching { GlobalContext.get().get<tv.own.owntv.core.sync.work.LocalAutoSyncStarter>().start(periodic = false) }
         // NOTE: cold start does ZERO heavy DB work. Index + ANALYZE maintenance is piggy-backed onto the
         // operation that actually changes the data — ImportFinalizer.finalize() for normal re-syncs, the
         // deferred content-index worker after a fresh import, the EpgRepository refresh after every EPG
@@ -234,7 +240,10 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))
             .build()
         return ImageLoader.Builder(context)
-            .components { add(OkHttpNetworkFetcherFactory(callFactory = { imageHttpClient })) }
+            .components {
+                add(OkHttpNetworkFetcherFactory(callFactory = { imageHttpClient }))
+                add(tv.own.owntv.glcn.LogoMatteInterceptor()) // glcn: channel logos lose a plain white backdrop
+            }
             // glcn: the picture cache grows with the box — a 3 GB box (the SHIELD) keeps twice the fanart and backdrops in
             // memory, so going back to a row or a title shows its pictures at once instead of decoding them again.
             .memoryCache {

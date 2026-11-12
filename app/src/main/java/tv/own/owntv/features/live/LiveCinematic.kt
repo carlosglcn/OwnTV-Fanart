@@ -201,6 +201,13 @@ internal fun LiveCinematicPane(
                 )
             } else {
                 val cardsGate = tv.own.owntv.glcn.rememberStaggerGate()
+                // glcn: ▶ on the last channel goes round to the first. ◀ on the first goes round to the last only with the
+                // menu on top — with the side menu, ◀ there opens the menu, as in every list.
+                val wrapCtx = androidx.compose.ui.platform.LocalContext.current
+                val menuOnTop = remember { tv.own.owntv.glcn.NavStyleCache.read(wrapCtx) == tv.own.owntv.core.settings.SettingsRepository.NavStyle.TOP }
+                val wrapFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+                var wrapTo by remember { mutableStateOf(-1) }
+                val wrapScope = androidx.compose.runtime.rememberCoroutineScope()
                 CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
                     LazyRow(
                         state = listState,
@@ -226,6 +233,25 @@ internal fun LiveCinematicPane(
                                         onClick = { onClick(channel) },
                                         onLongClick = { onLongClick(channel) },
                                         modifier = Modifier
+                                            .then(if (index == wrapTo) Modifier.focusRequester(wrapFocus) else Modifier)
+                                            .onPreviewKeyEvent { e ->
+                                                val last = channels.itemCount - 1
+                                                val target = when {
+                                                    last < 1 -> return@onPreviewKeyEvent false
+                                                    e.key == androidx.compose.ui.input.key.Key.DirectionRight && index == last -> 0
+                                                    e.key == androidx.compose.ui.input.key.Key.DirectionLeft && index == 0 && menuOnTop -> last
+                                                    else -> return@onPreviewKeyEvent false
+                                                }
+                                                if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) {
+                                                    wrapScope.launch {
+                                                        wrapTo = target
+                                                        runCatching { listState.scrollToItem(target) }
+                                                        androidx.compose.runtime.withFrameNanos { }
+                                                        runCatching { wrapFocus.requestFocus() }
+                                                    }
+                                                }
+                                                true
+                                            }
                                             .onDownToSimilar(similar.isNotEmpty(), enterSimilar)
                                             .then(if (channel.id == previewChannel?.id) Modifier.focusRequester(returnTo) else Modifier)
                                             .then(cardModifier(index, channel))

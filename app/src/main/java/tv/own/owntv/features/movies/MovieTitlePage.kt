@@ -59,6 +59,7 @@ import tv.own.owntv.ui.components.trapAllFocusExit
 import tv.own.owntv.ui.stage.StageButton
 import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.mpx
+import tv.own.owntv.ui.theme.mpxSp
 import tv.own.owntv.ui.theme.stageAccent
 import tv.own.owntv.ui.theme.stageText
 
@@ -191,6 +192,14 @@ internal fun MovieTitlePage(
                     .background(Brush.verticalGradient(0.4f to Color.Transparent, 0.75f to page.copy(alpha = 0.8f), 1f to page.copy(alpha = 0.95f))),
             )
             Box(Modifier.fillMaxSize().graphicsLayer { alpha = lowerAt }.background(page.copy(alpha = 0.86f)))
+            // glcn: the year, huge and in outline, behind the words on the right — a ghost, not a label.
+            shownInfo.year?.let { y ->
+                tv.own.owntv.glcn.GhostOutline(
+                    y.toString(), YEAR_GHOST_SIZE.mpxSp, Color.White,
+                    Modifier.align(Alignment.BottomEnd).padding(end = 72.mpx, bottom = 40.mpx).size(YEAR_GHOST_W.mpx, YEAR_GHOST_H.mpx)
+                        .graphicsLayer { alpha = enter.value * (1f - lowerAt) },
+                )
+            }
             // First part: the title, its facts and the buttons.
             androidx.compose.runtime.DisposableEffect(Unit) { onDispose { tv.own.owntv.glcn.TitleRoom.textTop = 0f } }
             Column(
@@ -229,7 +238,7 @@ internal fun MovieTitlePage(
                         modifier = Modifier.onFocusChanged { if (it.isFocused) focusedLabel = label },
                     )
                     if (resume) roundButton(stringResource(R.string.glcn_title_start_over), OwnTVIcon.REWIND) { playChosen(0L) }
-                    meta?.trailerKey?.let { stored -> roundButton(stringResource(R.string.glcn_dock_trailer), OwnTVIcon.VIDEO) { fullTrailer = trailerKeysFirst(stored) } }
+                    meta?.trailerKey?.let { stored -> roundButton(stringResource(R.string.glcn_dock_trailer), OwnTVIcon.VIDEO) { fullTrailer = stored } }
                     // glcn: the trailer's sound, for remotes whose volume never reaches the box (a TV's own, by HDMI).
                     if (meta?.trailerKey != null) roundButton(
                         stringResource(if (tv.own.owntv.features.home.CinemaTrailer.sound) R.string.glcn_trailer_sound_off else R.string.glcn_trailer_sound_on),
@@ -418,3 +427,8 @@ private const val RESUME_MIN_MS = 60_000L
 internal fun versionBadges(m: MovieEntity): List<String> =
     tv.own.owntv.core.catalog.ProviderCatalogMetadataParser.badges(m.name)
         .ifEmpty { tv.own.owntv.features.shell.components.cinematicQualityBadges(m.qualityRank, m.advertisedCapabilities) }
+
+/** glcn: the year's ghost behind the title page's words. */
+private const val YEAR_GHOST_SIZE = 300
+private const val YEAR_GHOST_W = 900
+private const val YEAR_GHOST_H = 380

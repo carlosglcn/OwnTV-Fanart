@@ -74,8 +74,8 @@ object Wallpapers {
     val animated = listOf("aurora", "ondas", "brillos", "nieve", "fugaces", "bokeh", "nacar", "amanecer", "petalos")
     /** The animated ones drawn on a light page — darkened under a dark theme so its white text still reads. */
     val lightAnimated = setOf("nacar", "amanecer", "petalos")
-    val dark = listOf("via_lactea", "aurora_nieve", "aurora_pinos", "puerto", "bosque", "nieve_violeta", "siluetas", "pico_lila")
-    val light = listOf("nubes_rosa", "duna", "mar_beige", "muelle", "valle")
+    val dark = listOf("humo", "via_lactea", "aurora_nieve", "aurora_pinos", "puerto", "bosque", "nieve_violeta", "siluetas", "pico_lila")
+    val light = listOf("bruma_perla", "amanecer_pastel", "arena", "nubes_rosa", "duna", "mar_beige", "muelle", "valle")
     /** Offered for the profile screen first: a picture with more presence, nothing laid over it but names. */
     val gateFirst = listOf("nubes_rosa", "cordillera")
 
@@ -618,6 +618,7 @@ private fun wallLabel(item: WallItem): String = when (item) {
     )
     is WallItem.Photo -> stringResource(
         when (item.name) {
+            "humo" -> R.string.glcn_wall_humo
             "via_lactea" -> R.string.glcn_wall_via_lactea
             "aurora_nieve" -> R.string.glcn_wall_aurora_nieve
             "aurora_pinos" -> R.string.glcn_wall_aurora_pinos
@@ -626,6 +627,9 @@ private fun wallLabel(item: WallItem): String = when (item) {
             "nieve_violeta" -> R.string.glcn_wall_nieve_violeta
             "siluetas" -> R.string.glcn_wall_siluetas
             "pico_lila" -> R.string.glcn_wall_pico_lila
+            "bruma_perla" -> R.string.glcn_wall_bruma_perla
+            "amanecer_pastel" -> R.string.glcn_wall_amanecer_pastel
+            "arena" -> R.string.glcn_wall_arena
             "nubes_rosa" -> R.string.glcn_wall_nubes_rosa
             "duna" -> R.string.glcn_wall_duna
             "mar_beige" -> R.string.glcn_wall_mar_beige
@@ -636,7 +640,8 @@ private fun wallLabel(item: WallItem): String = when (item) {
     )
 }
 
-private const val WALL_ROUND_MS = 45_000
+// glcn: ambient — keeps its calm under the app's brisk pace (Pace).
+private val WALL_ROUND_MS: Int get() = Pace.slow(45_000)
 private const val PREVIEW_FADE_MS = 260
 private const val TILE_W = 216
 

@@ -7,7 +7,7 @@
 > Issue numbers that are part of a title are fine; explanatory parentheticals are not. The detail —
 > what, why, files and verification — belongs in the commit message, never here.
 
-## Unreleased
+## v5.2.2 — 2026-11-09
 
 ### ✨ New features
 - **⚡ Search: the poster backdrop is blurred once, and blurred on Android 11 and older too** (community PR #268 by @sarmadsoomro)
@@ -21,8 +21,13 @@
 - **🚀 Start on the last channel in the TV Guide or Live TV** (community PR #294 by @Kevsosmooth)
 - **🏷️ Menu labels: off, when focused or always** (community PR #280 by @Kevsosmooth)
 - **🎤 Voice search on the Search screen** (community PR #281 by @Kevsosmooth)
-- **🔒 Lock a category with the Customize PIN** (community PR #273 by @Kevsosmooth)
-- **🔐 Ask for the PIN to open Settings** (community PR #286 by @Kevsosmooth)
+- **🔒 Lock a category with its own category lock PIN** (community PR #273 by @Kevsosmooth)
+- **🔐 Settings › App › Settings lock: a PIN of its own per profile, optionally for long-press changes too** (community PR #286 by @Kevsosmooth)
+- **🛡️ Protected profiles: new profiles, backups, restores and profile edits respect profile and Settings locks**
+- **🔀 Restore: a profile with the same name asks Merge, Replace or Keep both**
+- **👤 Local sync syncs the profile in use with the one in use on the other device**
+- **🔁 Local auto-sync: paired devices keep each other in step by themselves, with what each one allows** (community PR #306 by @igebara)
+- **👂 Keep auto-sync listening, as a switch (off by default)**
 - **🪟 Picture-in-picture when leaving the app** (community PR #278 by @Kevsosmooth)
 - **📺 Live TV: the preview keeps playing while you browse the categories** (community PR #270 by @Kevsosmooth)
 - **🔑 Stalker portals: an optional username and password**
@@ -51,8 +56,14 @@
 - **👆 OK previews first, then full screen: a switch for Live TV and one for the TV Guide (#344)**
 - **📄 Program details: the channel's whole day as a page, with what each programme can do (#345)**
 - **📺 Full-screen channel browser: ◀◀ shows the categories beside their channels (#323)**
+- **🔎 Sports: Find channels knows every name a competition goes by — F1, EPL, La Liga, Formel 1 and more**
+- **🎚️ Sports: "Show likely channels" in Filter channels**
+- **🎬 Player: a film's or show's title art in place of its name, and a 4K badge**
+- **⏺️ Downloads › Recordings: every "Record every showing" listed, with Stop**
 
 ### 🐛 Fixes
+- **📐 Fit: wide films stored in a 16:9 frame are no longer stretched (#347)**
+- **🖼️ A series page shows the show's title art instead of its name**
 - **🗑️ Deleting a download or recording asks first**
 - **📺 Expanding the mini player returns to the channel playing, not the one browsed (#307)**
 - **🔢 Browsing categories in the player no longer changes what CH+/CH− step through; the channel you pick does**
@@ -99,6 +110,9 @@
 - **📺 Live comes back by itself at the live edge when the TV is switched off and on (#343)**
 - **⏯️ Play after a pause of over a minute on a live channel goes to the live edge**
 - **🔗 Panels that serve some channels as HLS behind a .ts address open faster and no longer fail after an offline channel** (community PRs ahXN00/OwnTV_Core#76 and #77 by @SirKitboard)
+- **🏁 Sports: Formula 1 no longer lists Formula E channels, nor the Premier League the Indian Premier League's**
+- **📺 Sports: a broadcaster's unrelated channels are no longer "likely"**
+- **📥 Adding an Xtream playlist no longer fails with "Expected a string but was BOOLEAN" (#349)**
 
 ## v5.2.1 — 2026-10-21
 
