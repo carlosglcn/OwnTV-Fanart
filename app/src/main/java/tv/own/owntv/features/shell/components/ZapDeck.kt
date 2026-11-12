@@ -53,6 +53,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -573,7 +574,8 @@ fun ZapDeck(
         val panelHold = remember { arrayOfNulls<ChannelEntity>(1) }
         val focusedChannel = if (wheelTurning) panelHold[0] else list.getOrNull(chIdx).also { panelHold[0] = it }
         // glcn: over the programme's picture the text is light, as on a dark page.
-        val onArt = !tv.own.owntv.glcn.LowRam.on // the dark card is there, picture or not
+        // With the light theme the card is light too, so the text keeps the theme's own (dark) ink.
+        val onArt = !tv.own.owntv.glcn.LowRam.on && !tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
         if (pictureLocal.width > 0f) androidx.compose.runtime.CompositionLocalProvider(
             tv.own.owntv.ui.theme.LocalStagePalette provides if (onArt) tv.own.owntv.ui.theme.StagePalette.Dark else tv.own.owntv.ui.theme.LocalStagePalette.current,
         ) { with(density) {
@@ -660,6 +662,15 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
     val radius = with(density) { 18.mpx.toPx() }
     val top = picture.bottom - radius // tucked under the picture's rounded foot
     val footGap = with(density) { DECK_FOOT.toPx() }
+    // glcn: the card follows the theme — light with the light theme; with the dark one, a deep tone taken from the
+    // programme's own picture (navy when it has no colour). The veil over the picture is as strong as its brightness
+    // needs for every word over it to read, and no stronger.
+    val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    val tone by tv.own.owntv.glcn.ArtTone.of(url)
+    val card by animateColorAsState(
+        if (light) DECK_CARD_LIGHT else tone?.darkCard() ?: DECK_CARD,
+        tween(600), label = "deckCard",
+    )
     Box(
         Modifier
             .fillMaxSize()
@@ -679,11 +690,13 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
                 layout(c.maxWidth, c.maxHeight) { pl.place(picture.left.toInt(), top.toInt()) }
             }
                 .clip(RoundedCornerShape(bottomStart = 18.mpx, bottomEnd = 18.mpx))
-                .background(DECK_CARD),
+                .drawBehind { drawRect(card) },
         ) {
             androidx.compose.animation.Crossfade(url, animationSpec = tween(600), label = "deckBackdrop") { u ->
                 if (u != null) androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
                     val artW = maxHeight * 16f / 9f
+                    val artTone by tv.own.owntv.glcn.ArtTone.of(u)
+                    val veil by androidx.compose.animation.core.animateFloatAsState(artTone?.veil(light) ?: VEIL_UNREAD, tween(300), label = "deckVeil")
                     Box(Modifier.align(Alignment.CenterEnd).width(artW).fillMaxHeight()) {
                         coil3.compose.AsyncImage(
                             model = u,
@@ -694,10 +707,10 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
                         Box(
                             Modifier.fillMaxSize().drawBehind {
                                 // Melts into the card on its left; a light veil over the rest, for the list that crosses it.
-                                drawRect(Color.Black.copy(alpha = 0.32f))
+                                drawRect(card.copy(alpha = veil))
                                 drawRect(
                                     androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                        0f to DECK_CARD, 0.45f to DECK_CARD.copy(alpha = 0.55f), 1f to DECK_CARD.copy(alpha = 0f),
+                                        0f to card, 0.45f to card.copy(alpha = 0.55f), 1f to card.copy(alpha = 0f),
                                     ),
                                 )
                             },
@@ -711,6 +724,9 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
 
 /** glcn: the card under the picture, and the room left under it. */
 private val DECK_CARD = Color(0xFF0E1726)
+private val DECK_CARD_LIGHT = Color(0xFFF2F5F8)
+/** The veil until the picture has been read: strong, so text never shows unreadable for a moment. */
+private const val VEIL_UNREAD = 0.7f
 private val DECK_FOOT = 28.mpx
 
 /**
@@ -794,7 +810,7 @@ private fun DeckInfoPanel(
                 Text(time, style = stageText(18, 500), color = StageColors.Muted, maxLines = 1)
                 if (genres.isNotEmpty()) Text(
                     genres.take(2).joinToString(" · "), style = stageText(14, 700), color = StageColors.Text, maxLines = 1,
-                    modifier = Modifier.clip(RoundedCornerShape(8.mpx)).background(Color.White.copy(alpha = 0.14f)).padding(horizontal = 10.mpx, vertical = 3.mpx),
+                    modifier = Modifier.clip(RoundedCornerShape(8.mpx)).background(StageColors.Ink.copy(alpha = 0.12f)).padding(horizontal = 10.mpx, vertical = 3.mpx),
                 )
             }
             if (live) {
@@ -812,7 +828,7 @@ private fun DeckInfoPanel(
         val coming = rows.withIndex().filter { (i, r) -> i > 0 || r.startMs > nowMs }
         if (coming.isNotEmpty()) Column(Modifier.weight(1f).fillMaxHeight()) {
             Text(
-                stringResource(R.string.content_live_next).uppercase(), style = stageText(16, 800), color = stageAccent.accent,
+                stringResource(R.string.content_live_next).uppercase(), style = stageText(16, 800), color = deckAccentInk(),
                 maxLines = 1, modifier = Modifier.height(37.mpx).wrapContentHeight(Alignment.CenterVertically).padding(start = 12.mpx),
             )
             androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
@@ -834,7 +850,7 @@ private fun DeckInfoPanel(
                         ) {
                             Text(
                                 fmt.format(java.util.Date(r.startMs)), style = stageText(19, 700),
-                                color = if (lit) stageAccent.onAccent else stageAccent.accent, maxLines = 1, modifier = Modifier.width(70.mpx),
+                                color = if (lit) stageAccent.onAccent else deckAccentInk(), maxLines = 1, modifier = Modifier.width(70.mpx),
                             )
                             Text(
                                 r.title, style = stageText(19, if (lit) 800 else 600), color = if (lit) stageAccent.onAccent else StageColors.Text,
@@ -1009,3 +1025,12 @@ private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: I
 private const val DECK_LIST_GLASS = 0.74f
 // glcn: as solid as the list — at 0.5 the schedule mixed with the subtitles of the picture behind it.
 private const val DECK_DETAIL_GLASS = 0.74f
+
+/** glcn: the accent as text on the deck's card — the theme's ink instead when the accent would vanish on it (a white accent on the light card, a near-black one on the dark). */
+@Composable
+private fun deckAccentInk(): Color {
+    val a = stageAccent.accent
+    val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    val l = a.luminance()
+    return if ((light && l > 0.5f) || (!light && l < 0.06f)) StageColors.Text else a
+}
