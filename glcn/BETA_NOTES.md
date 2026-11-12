@@ -25,3 +25,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ✂️ TV en directo: the focused row's "what's next" line is left out when it does not fit (a larger app font or interface size) instead of being drawn half off the row; the lines that fit are centred.
 - 🎬 Cine banner: a long title takes two lines and shrinks to fit instead of ending in "…" after one word; the time line may wrap; "Up next" is narrower so the title has its room; a guide "synopsis" that is only facts ("Deportes,Fútbol | 2026 | TP | *5.6/10") is no longer shown as one (in every banner style).
 - 🔠 TV en directo: with a larger text size (Settings › Fonts, e.g. 125%), the channel rows grow with it, so the focused row's three lines still fit.
+- 🖼️ Cine banner: the programme's picture is smaller (about a quarter less wide), leaving the title more room.

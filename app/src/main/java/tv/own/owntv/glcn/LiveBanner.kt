@@ -209,7 +209,7 @@ fun LiveBannerFicha(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifie
  * white over it), a very large title, its times and kind, a 2-line synopsis, what follows on the right, and the
  * programme's line with its start and end at the two ends, like a film's timeline.
  */
-private val CINE_ART_W = 300.dp
+private val CINE_ART_W = 220.dp
 
 @Composable
 fun LiveBannerCine(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier) {
