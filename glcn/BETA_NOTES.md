@@ -22,3 +22,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 👻 Ghost logos (behind live cards, in the Guide, on TV en directo's focused row): a white one-colour logo on the light theme (or a black one on the dark) no longer vanishes — it is drawn as its shape in the theme's text colour, still faint; other logos stay grey.
 - 🎵 The quick channel lists over the player (the zapping list, Recent) mark the channel you are watching as the big list does: a soft accent wash with small moving bars instead of the thin line, and a "▲ La 1 UHD · watching now" pill when it is scrolled out of sight.
 - 🏷️ The quick channel lists over the player draw the logos bare, like the big channel list — no glass tile behind each one; TV en directo's page keeps its tiles.
+- ✂️ TV en directo: the focused row's "what's next" line is left out when it does not fit (a larger app font or interface size) instead of being drawn half off the row; the lines that fit are centred.

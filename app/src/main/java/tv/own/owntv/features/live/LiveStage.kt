@@ -184,7 +184,9 @@ internal fun LiveStageRow(
             Modifier.align(Alignment.CenterEnd).offset(x = LIVE_GHOST_W * 0.25f).size(LIVE_GHOST_W, 76.mpx),
             alpha = tv.own.owntv.glcn.Ghosts.ALPHA_STRONG,
         )
-        Column(Modifier.fillMaxWidth()) {
+        // glcn: the lines that fit the row, centred; a line that would be cut (a large font or a bigger interface
+        // size) is left out — "what's next" first — instead of drawn half off the row.
+        FitLines(Modifier.fillMaxWidth().align(Alignment.CenterStart)) {
             Text(name.name, style = stageText(20, 700), color = if (focused) StageColors.FxText else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val title = now?.title ?: nowTitle
             if (title != null) {
@@ -217,6 +219,26 @@ internal fun LiveStageRow(
             mark?.let { StagePlaylistMark(it) }
             // glcn: how much is left as a small ring with the minutes in it, instead of a cut-off "quedan …" and a thin line.
             if (now != null) TimeLeftRing(progressOf(now), minutesLeft(now), focused)
+        }
+    }
+}
+
+/**
+ * glcn: a column that keeps only the children that fit its height whole, in order (a later one that would be cut is
+ * dropped with all after it), and centres those it keeps.
+ */
+@Composable
+private fun FitLines(modifier: Modifier, content: @Composable () -> Unit) {
+    androidx.compose.ui.layout.Layout(content, modifier) { measurables, c ->
+        val loose = c.copy(minHeight = 0, maxHeight = androidx.compose.ui.unit.Constraints.Infinity)
+        val placeables = measurables.map { it.measure(loose) }
+        var used = 0
+        val kept = placeables.takeWhile { p -> (used + p.height <= c.maxHeight).also { if (it) used += p.height } }
+        val w = c.maxWidth.takeIf { it != androidx.compose.ui.unit.Constraints.Infinity } ?: (kept.maxOfOrNull { it.width } ?: 0)
+        val h = used.coerceIn(c.minHeight, c.maxHeight)
+        layout(w, h) {
+            var y = (h - used) / 2
+            kept.forEach { it.placeRelative(0, y); y += it.height }
         }
     }
 }
