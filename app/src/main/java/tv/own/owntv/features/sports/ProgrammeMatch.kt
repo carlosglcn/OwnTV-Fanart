@@ -21,6 +21,7 @@ import tv.own.owntv.core.sports.TeamNames
 import tv.own.owntv.core.sports.WatchMatcher
 import tv.own.owntv.core.sports.model.Match
 import tv.own.owntv.core.sports.model.MatchState
+import tv.own.owntv.core.sports.model.isRace
 import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.stageText
