@@ -1983,7 +1983,7 @@ class LiveViewModel(
     private suspend fun tuneRefused(channel: ChannelEntity, why: String, message: Int?) {
         tv.own.owntv.player.LiveDiagnosticsLog.event("tune refused '${channel.name}': $why")
         if (message != null) withContext(Dispatchers.Main) {
-            tv.own.owntv.ui.components.AppToast.show(message, long = true)
+            tv.own.owntv.ui.components.AppToast.show(appContext, message, long = true)
         }
     }
 

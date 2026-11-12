@@ -614,6 +614,7 @@ fun MoviesScreen(
     val favIds by vm.favoriteIds.collectAsStateWithLifecycle()
     val titlePage: @Composable (MovieEntity, Boolean) -> Unit = { m, inPlace ->
         val metaHere = selectedMovieMeta?.takeIf { it.movieId == m.id }?.cache
+        androidx.compose.runtime.key(m.id) { tv.own.owntv.glcn.TitleZoomBox(Modifier.fillMaxSize()) {
         MovieTitlePage(
             movie = m,
             meta = metaHere,
@@ -629,6 +630,7 @@ fun MoviesScreen(
             onOpenRelated = { r -> titleMovie = r },
             inPlace = inPlace,
         )
+        } }
     }
     val inPlaceTitle = cinematic && titleMovie != null && titleMovie?.id == selectedMovie?.id
     // Back from the page drawn here: the focus goes back to the film it was opened from. glcn: while the page is open

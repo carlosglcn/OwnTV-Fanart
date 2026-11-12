@@ -10,3 +10,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 💬 Messages raised outside a screen (a playlist about to expire, a category hidden, a channel that won't open, the sleep timer that can't turn the screen off, Labs) show in the app's own glass pill instead of Android's grey toast.
 - 🗓️ Guide: CH+ / CH− turn the guide a day forward / back, at the same time of day.
 - 🎨 White or very pale accents (and near-black ones in the dark theme): titles, headings, times and marks drawn in the accent switch to the theme's text colour where the accent would vanish on the page — across Settings, the Guide, Sports, Home, Live TV, popups and the info screens.
+- 🔍 A film's page opened from Películas (or the Runway) and a series opened from Series grow into place, as a title opened from Home already did.

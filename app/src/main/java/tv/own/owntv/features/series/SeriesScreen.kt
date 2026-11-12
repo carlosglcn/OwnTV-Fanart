@@ -194,7 +194,7 @@ fun SeriesScreen(
     // first page on the way back, so a show further down is found only after scrolling there again.
     var returnToIndex by remember { mutableIntStateOf(-1) }
 
-    if (openedSeries != null) {
+    if (openedSeries != null) androidx.compose.runtime.key(openedSeries!!.id) { tv.own.owntv.glcn.TitleZoomBox(modifier) {
         EpisodeView(
             series = openedSeries!!,
             vm = vm,
@@ -202,9 +202,9 @@ fun SeriesScreen(
             onChildFocused = onChildFocused,
             restoreFocus = restoreFocus,
             onRestored = onRestored,
-            modifier = modifier,
+            modifier = Modifier.fillMaxSize(),
         )
-    } else {
+    } } else {
         // Not in a show → nothing episode-specific to restore; clear the flag so it doesn't linger.
         if (restoreFocus) onRestored()
         SeriesGrid(
