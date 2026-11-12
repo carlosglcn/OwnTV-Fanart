@@ -981,6 +981,8 @@
 3	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapPosters.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapPosters.kt	▼
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapPosters.kt	★
+1	technical	app/src/main/java/tv/own/owntv/features/sports/ProgrammeMatch.kt	${scoreText(m.sport, home.score)} – ${scoreText(m.sport, away.score)}
+1	technical	app/src/main/java/tv/own/owntv/features/sports/ProgrammeMatch.kt	– : –
 3	empty	app/src/main/java/tv/own/owntv/features/sports/SportsHubScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsHubScreen.kt	${scoreText(m.sport, home.score)} – ${scoreText(m.sport, away.score)}
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsHubScreen.kt	${sportEmoji(s)} ${sportLabel(s)}
@@ -1374,6 +1376,7 @@
 2	empty	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	EEE d
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	infoArt
+1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	infoVeil
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	w1280
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	·
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	· ▼

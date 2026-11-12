@@ -54,7 +54,7 @@ import tv.own.owntv.player.PlaybackEngine
 import tv.own.owntv.ui.components.ChannelLogoTile
 import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.components.ProgrammeArt
-import tv.own.owntv.ui.stage.StageTool
+import tv.own.owntv.ui.stage.StageButton
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.stageAccent
 import tv.own.owntv.ui.theme.stageText
@@ -286,7 +286,18 @@ fun ProgrammeInfoScreen(
             // The picture stays behind, never under the words: dark from the left and from the foot.
             // A deeper shade on the left, where the synopsis now runs long, so it reads over bright pictures too.
             val pg = Page
-            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to pg.copy(alpha = 0.96f), 0.62f to pg.copy(alpha = 0.82f), 1f to pg.copy(alpha = 0.3f))))
+            // glcn: as much shade as this picture needs for the words over it to read, and no more — a pale picture
+            // under the light theme (or a dark one under the dark theme) stays seen instead of washed out.
+            val tone by ArtTone.of(art)
+            val need by androidx.compose.animation.core.animateFloatAsState(tone?.veil(light) ?: VEIL_UNREAD, androidx.compose.animation.core.tween(400), label = "infoVeil")
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.horizontalGradient(
+                        0f to pg.copy(alpha = (need + 0.12f).coerceAtMost(0.96f)), 0.55f to pg.copy(alpha = need),
+                        0.75f to pg.copy(alpha = need * 0.55f), 1f to pg.copy(alpha = need * 0.3f),
+                    ),
+                ),
+            )
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to pg.copy(alpha = 0.9f))))
         }
         // A fine frame round the window, and the word "Live" on it.
@@ -350,6 +361,10 @@ fun ProgrammeInfoScreen(
                 Box(Modifier.then(slideInLeft).padding(top = 14.mpx).width(560.mpx).height(5.mpx).clip(RoundedCornerShape(3.mpx)).background(Ink.copy(alpha = 0.2f))) {
                     Box(Modifier.fillMaxWidth(f).height(5.mpx).background(accent))
                 }
+                // glcn: a match the sports board knows: both crests, the score and the minute.
+                tv.own.owntv.features.sports.rememberProgrammeMatch(cur.title, cur.startMs, cur.stopMs)?.let { m ->
+                    tv.own.owntv.features.sports.ProgrammeMatchStrip(m, Modifier.then(slideInLeft).padding(top = 22.mpx))
+                }
                 // glcn: the guide's synopsis without its tacked-on "(Genre, Genre)" and "País: …" (the genres become tags).
                 val (guideGenres, guideSynopsis) = remember(ownSynopsis) { tv.own.owntv.features.shell.components.cleanSynopsis(ownSynopsis) }
                 val genres = (film?.genres?.takeIf { it.isNotEmpty() }
@@ -388,7 +403,10 @@ fun ProgrammeInfoScreen(
                 }
             }
             // glcn: what can be done with it, right under the synopsis (no longer down at the foot past an empty page).
-            InfoActions(cur, channel, showTech, onToggleTech = { showTech = !showTech }, onStartOver, onRecord, onDismiss, focus, pageFocus)
+            InfoActions(
+                cur, channel, showTech, onToggleTech = { showTech = !showTech }, onStartOver, onRecord, onDismiss, focus, pageFocus,
+                onWatch = if (channel.id != startChannel.id && onTune != null) ({ onTune(channel) }) else null,
+            )
         }
 
         // Right: when it airs again this week, and under it a film's cast.
@@ -470,6 +488,8 @@ private fun InfoActions(
     onDismiss: () -> Unit,
     focus: FocusRequester,
     pageFocus: FocusRequester,
+    /** Another channel's page: watch it. */
+    onWatch: (() -> Unit)? = null,
 ) {
     Row(
         Modifier.padding(top = 30.mpx).onPreviewKeyEvent { e ->
@@ -480,17 +500,27 @@ private fun InfoActions(
         horizontalArrangement = Arrangement.spacedBy(12.mpx),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (cur != null && onStartOver != null && channel.catchup) StageTool(
+        // glcn: real buttons (glass, the first one tinted), and ▼ lands on the first of them.
+        var first = true
+        fun lead(): Modifier = if (first) { first = false; Modifier.focusRequester(focus) } else Modifier
+        if (onWatch != null) StageButton(
+            text = stringResource(R.string.content_key_watch), onClick = onWatch, icon = OwnTVIcon.PLAY, iconFilled = true,
+            tinted = true, height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
+        )
+        if (cur != null && onStartOver != null && channel.catchup) StageButton(
             text = stringResource(R.string.glcn_pi_start_over), onClick = { onStartOver(channel, cur) }, icon = OwnTVIcon.REWIND,
+            tinted = onWatch == null, height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
         )
-        if (cur != null && onRecord != null) StageTool(
+        if (cur != null && onRecord != null) StageButton(
             text = stringResource(R.string.recording_record), onClick = { onRecord(channel); onDismiss() }, icon = OwnTVIcon.REC,
+            height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
         )
-        StageTool(
+        StageButton(
             text = stringResource(if (showTech) R.string.glcn_pi_hide_technical else R.string.glcn_pi_technical),
             onClick = onToggleTech,
             icon = OwnTVIcon.INFO,
-            modifier = Modifier.focusRequester(focus),
+            height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT,
+            modifier = lead(),
         )
     }
 }
@@ -514,6 +544,12 @@ private val WINDOW_W = 420.mpx
 private val WINDOW_H = 236.mpx
 /** glcn: repeats listed under the window, so the column never reaches "Up next". */
 private const val REPEATS_SHOWN = 3
+
+/** glcn: the page's buttons, as the guide's. */
+private val INFO_BUTTON_H = 56.mpx
+private const val INFO_BUTTON_TEXT = 19
+/** glcn: the shade until the picture has been read — the old fixed one. */
+private const val VEIL_UNREAD = 0.82f
 
 /** glcn: how many programmes "Up next" lists. */
 private const val NEXT_MAX = 6
