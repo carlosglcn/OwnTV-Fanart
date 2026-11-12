@@ -81,6 +81,15 @@ internal fun PlayerClock(watchingMs: Long?, modifier: Modifier = Modifier) {
     val reminders by remember(profileId) {
         if (profileId >= 0) reminderManager.observe(profileId) else kotlinx.coroutines.flow.flowOf(emptyList())
     }.collectAsState(emptyList())
+    // glcn: a team you follow playing now (Sports › your teams): its score and minute.
+    val sportsRepo: tv.own.owntv.core.sports.SportsRepository = org.koin.compose.koinInject()
+    val board by sportsRepo.board.collectAsState()
+    val sportsConfig by settings.activeSportsConfig.collectAsState(null)
+    val teamMatch = remember(board, sportsConfig) {
+        val keys = sportsConfig?.teams?.mapTo(HashSet()) { it.id }.orEmpty()
+        if (keys.isEmpty() || sportsConfig?.spoilerFree == true) null
+        else board.today.values.flatten().firstOrNull { m -> m.isLive && m.competitors.any { it.team.id in keys } }
+    }
     val soon = reminders.filter { it.startMs > nowMs && it.startMs - nowMs <= REMINDER_AHEAD_MS }.minByOrNull { it.startMs }
 
     Row(
@@ -122,6 +131,18 @@ internal fun PlayerClock(watchingMs: Long?, modifier: Modifier = Modifier) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(Modifier.size(10.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFFFF3B30)))
                 Text(stringResource(R.string.glcn_pill_recording), style = tv.own.owntv.ui.theme.stageText(17, 600), color = ink, maxLines = 1)
+            }
+        }
+        teamMatch?.let { m ->
+            val h = m.home; val a = m.away
+            if (h != null && a != null) {
+                Dot(dim)
+                fun side(t: tv.own.owntv.core.sports.model.Team) = t.abbreviation.ifBlank { t.shortName }
+                val score = listOfNotNull(h.score?.text?.takeIf { it.isNotBlank() }, a.score?.text?.takeIf { it.isNotBlank() }).takeIf { it.size == 2 }?.joinToString("-") ?: "–"
+                Text(
+                    "${side(h.team)} $score ${side(a.team)}" + m.clock?.display?.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty(),
+                    style = tv.own.owntv.ui.theme.stageText(17, 700), color = ink, maxLines = 1,
+                )
             }
         }
         soon?.let { r ->

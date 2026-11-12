@@ -34,3 +34,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Programme info (ⓘ): what follows on the channel shows as picture cards under the buttons (the next one wider, its picture from the guide or TMDB); the right-hand list keeps only those after them, and the synopsis takes fewer lines to leave room.
 - 🔘 Favourites, History, the playback report and Downloads: their actions (clear, export, share, watch setting, folder) are glass buttons instead of loose text with an icon.
 - 🪟 Popups float a little higher than the page, with a soft shadow.
+- ⚽ Player pill: while a team you follow (Sports › your teams) is playing, its score and minute show in the pill ("CZE 0-1 ESP · 67'"); not with spoiler-free on.

@@ -1580,7 +1580,11 @@
 1	technical	app/src/main/java/tv/own/owntv/player/MiniPlayer.kt	miniControls
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	$deg°
+1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	${side(h.team)} $score ${side(a.team)}
+1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	-
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	EEEdMMM
+1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	· $it
+1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	–
 10	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	$k: $v
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	/ $it
