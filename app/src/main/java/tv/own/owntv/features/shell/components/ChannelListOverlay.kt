@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import tv.own.owntv.glcn.playingMark
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -243,11 +244,11 @@ fun ChannelListOverlay(
                 )
             }
             androidx.compose.runtime.DisposableEffect(Unit) { tv.own.owntv.glcn.GlassFocus.overVideo++; onDispose { tv.own.owntv.glcn.GlassFocus.overVideo-- } }
+            Box(Modifier.fillMaxWidth().weight(1f)) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
+                    .fillMaxSize()
                     .onFocusChanged { listFocused = it.hasFocus }
                     // glcn: wrap around, ▲ on the first channel goes to the last and ▼ on the last to the first.
                     .onPreviewKeyEvent { e ->
@@ -306,10 +307,26 @@ fun ChannelListOverlay(
                             }
                         },
                         modifier = Modifier
-                            .then(if (isPlaying) Modifier.stageSelectedBar(accent, 22.mpx) else Modifier)
+                            .playingMark(isPlaying)
                             .then(if (index == targetIndex) Modifier.focusRequester(focusTarget) else Modifier),
                     )
                 }
+            }
+            // glcn: the watched channel scrolled out of sight: a pill at the edge it went past.
+            val watchSide by remember(listState, playingIndex) {
+                androidx.compose.runtime.derivedStateOf {
+                    val vis = listState.layoutInfo.visibleItemsInfo
+                    when {
+                        playingIndex < 0 || vis.isEmpty() -> 0
+                        playingIndex < vis.first().index -> 1
+                        playingIndex > vis.last().index -> 2
+                        else -> 0
+                    }
+                }
+            }
+            val watchName = channels.getOrNull(playingIndex)?.let { ProviderTags.parse(it.name).name }.orEmpty()
+            androidx.compose.animation.AnimatedVisibility(watchSide == 1, Modifier.align(Alignment.TopCenter).padding(top = 6.mpx), enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) { tv.own.owntv.glcn.WatchingPill(watchName, true) }
+            androidx.compose.animation.AnimatedVisibility(watchSide == 2, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.mpx), enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) { tv.own.owntv.glcn.WatchingPill(watchName, false) }
             }
             StageKeyHints(
                 listOfNotNull(
@@ -751,11 +768,11 @@ internal fun ChannelListPanel(
                 modifier = Modifier.padding(start = 14.mpx, end = 14.mpx, top = 4.mpx, bottom = 12.mpx),
             )
         }
+        Box(Modifier.fillMaxWidth().weight(1f)) {
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
+                .fillMaxSize()
                 .onFocusChanged { listFocused = it.hasFocus }
                 .chNavPaging(
                     enabled = chNavEnabled,
@@ -800,10 +817,26 @@ internal fun ChannelListPanel(
                         }
                     },
                     modifier = Modifier
-                        .then(if (isPlaying) Modifier.stageSelectedBar(accent, 22.mpx) else Modifier)
+                        .playingMark(isPlaying)
                         .then(if (index == targetIndex) Modifier.focusRequester(focusTarget) else Modifier),
                 )
             }
+        }
+        // glcn: the watched channel scrolled out of sight: a pill at the edge it went past.
+        val watchSide by remember(listState, playingIndex) {
+            androidx.compose.runtime.derivedStateOf {
+                val vis = listState.layoutInfo.visibleItemsInfo
+                when {
+                    playingIndex < 0 || vis.isEmpty() -> 0
+                    playingIndex < vis.first().index -> 1
+                    playingIndex > vis.last().index -> 2
+                    else -> 0
+                }
+            }
+        }
+        val watchName = channels.getOrNull(playingIndex)?.let { ProviderTags.parse(it.name).name }.orEmpty()
+        androidx.compose.animation.AnimatedVisibility(watchSide == 1, Modifier.align(Alignment.TopCenter).padding(top = 6.mpx), enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) { tv.own.owntv.glcn.WatchingPill(watchName, true) }
+        androidx.compose.animation.AnimatedVisibility(watchSide == 2, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.mpx), enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) { tv.own.owntv.glcn.WatchingPill(watchName, false) }
         }
         StageKeyHints(
             listOfNotNull(

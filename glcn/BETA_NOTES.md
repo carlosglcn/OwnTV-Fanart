@@ -20,3 +20,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎨 Player channel list: the playlist chips at the top (Todas · Movistar · Emby) wear each playlist's own colour when picked, as its tag does; "All" keeps the accent.
 - › Player channel list: the categories panel has a slim tab with a › on its right edge, nudging as it opens — ▶ goes back to the channels.
 - 👻 Ghost logos (behind live cards, in the Guide, on TV en directo's focused row): a white one-colour logo on the light theme (or a black one on the dark) no longer vanishes — it is drawn as its shape in the theme's text colour, still faint; other logos stay grey.
+- 🎵 The quick channel lists over the player (the zapping list, Recent) mark the channel you are watching as the big list does: a soft accent wash with small moving bars instead of the thin line, and a "▲ La 1 UHD · watching now" pill when it is scrolled out of sight.

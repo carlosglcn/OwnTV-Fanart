@@ -557,7 +557,7 @@ fun ZapDeck(
                     resetKey = listVersion,
                     modifier = Modifier.fillMaxSize().padding(start = DECK_TAB_ROOM),
                     pinIndex = playingIdx,
-                    pinned = { above -> DeckWatchingPill(playingName, above) },
+                    pinned = { above -> tv.own.owntv.glcn.WatchingPill(playingName, above) },
                 ) { i, focused ->
                     val ch = list.getOrNull(i) ?: return@GlideColumn
                     DeckChannelRow(
@@ -985,53 +985,6 @@ private fun GlideColumn(
     }
 }
 
-/** glcn: the "watching now" pill of the zap deck's channel list — where the playing channel went, with its name. */
-@Composable
-private fun DeckWatchingPill(name: String, above: Boolean) {
-    val accent = stageAccent.accent
-    Row(
-        Modifier
-            .shadow(8.mpx, RoundedCornerShape(50))
-            .clip(RoundedCornerShape(50))
-            .background(accent)
-            .padding(horizontal = 16.mpx, vertical = 7.mpx),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.mpx),
-    ) {
-        Text(if (above) "▲" else "▼", style = stageText(14, 800), color = stageAccent.onAccent)
-        EqualizerBars(stageAccent.onAccent, Modifier.size(16.mpx))
-        Text(
-            stringResource(R.string.glcn_deck_watching, name), style = stageText(16, 700), color = stageAccent.onAccent,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-/** glcn: three bars rising and falling, out of step — "this one is playing". */
-@Composable
-private fun EqualizerBars(color: Color, modifier: Modifier) {
-    val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "eq")
-    val phase by t.animateFloat(
-        0f, 1f,
-        androidx.compose.animation.core.infiniteRepeatable(tween(EQ_CYCLE_MS, easing = androidx.compose.animation.core.LinearEasing)),
-        label = "eqPhase",
-    )
-    androidx.compose.foundation.Canvas(modifier) {
-        val gap = size.width * 0.14f
-        val w = (size.width - gap * 2f) / 3f
-        for (b in 0 until 3) {
-            val x = Math.sin((phase + b * 0.31f) * 2.0 * Math.PI).toFloat()
-            val f = 0.35f + 0.65f * (0.5f + 0.5f * x)
-            val bh = size.height * f
-            drawRoundRect(
-                color, Offset(b * (w + gap), size.height - bh), androidx.compose.ui.geometry.Size(w, bh),
-                androidx.compose.ui.geometry.CornerRadius(w / 2f),
-            )
-        }
-    }
-}
-
-private const val EQ_CYCLE_MS = 1_100
 private const val PLAYING_WASH = 0.16f
 
 @Composable
@@ -1058,7 +1011,7 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
         ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.width(72.mpx).height(48.mpx), fill = Color.Transparent) { }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
-                if (playing) EqualizerBars(if (lit) stageAccent.onAccent else accent, Modifier.size(18.mpx))
+                if (playing) tv.own.owntv.glcn.EqualizerBars(if (lit) stageAccent.onAccent else accent, Modifier.size(18.mpx))
                 Text(ProviderTags.displayName(channel.name), style = stageText(20, if (playing) 800 else 700), color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (now != null) {

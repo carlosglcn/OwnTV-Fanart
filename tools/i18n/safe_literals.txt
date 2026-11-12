@@ -969,14 +969,10 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckRowText
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckTab
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckVeil
-1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	eq
-1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	eqPhase
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	–
-1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▲
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▶
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▶ /
-1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	▼
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	◀
 3	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapPosters.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapPosters.kt	▼
@@ -1373,6 +1369,10 @@
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/PlatformLogoStyle.kt	square
 1	technical	app/src/main/java/tv/own/owntv/glcn/PlayerGlass.kt	glcn_player_glass
 1	technical	app/src/main/java/tv/own/owntv/glcn/PlayerGlass.kt	level
+1	technical	app/src/main/java/tv/own/owntv/glcn/PlayingMark.kt	eq
+1	technical	app/src/main/java/tv/own/owntv/glcn/PlayingMark.kt	eqPhase
+1	technical	app/src/main/java/tv/own/owntv/glcn/PlayingMark.kt	▲
+1	technical	app/src/main/java/tv/own/owntv/glcn/PlayingMark.kt	▼
 2	empty	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	EEE d
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	infoArt
