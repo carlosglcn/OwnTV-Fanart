@@ -174,6 +174,11 @@ fun CategoryBrowserOverlay(
                     onJumpToIndex = { focusRow = it },
                 ),
         )
+        // glcn: a › tab on the categories' right edge while their channels sit beside them (▶ goes there).
+        if (peekChannels != null) tv.own.owntv.glcn.EdgeTab(
+            visible = hasFocus && peeked.isNotEmpty(), toRight = true,
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = (20 + 440 - 16).mpx),
+        )
         if (peekChannels != null && peeked.isNotEmpty()) CategoryChannelsColumn(
             title = entries.getOrNull(focusedIndex)?.label.orEmpty(),
             channels = peeked,

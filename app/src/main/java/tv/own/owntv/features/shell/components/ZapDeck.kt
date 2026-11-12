@@ -475,7 +475,7 @@ fun ZapDeck(
             if (fold < 0.999f) Box(Modifier.width(groupsOpen).fillMaxHeight().graphicsLayer { alpha = 1f - fold; translationX = -slideGroupsPx * fold }) {
             Box(Modifier.matchParentSize().clip(RoundedCornerShape(StageRadii.Sheet)).background(shade))
             // glcn: a tab on the panel's right edge with a › — ▶ goes back to the channels.
-            DeckCategoriesTab(visible = column == 0 || column == -1, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
+            tv.own.owntv.glcn.EdgeTab(visible = column == 0 || column == -1, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
             Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
                 if (chips.isNotEmpty()) {
                     DeckChips(chips, activeChip, if (column == -1) chipIdx else -1, colors = marks.mapValues { it.value.shownColor })
@@ -548,7 +548,7 @@ fun ZapDeck(
                 val playingName = list.getOrNull(playingIdx)?.let { ProviderTags.displayName(it.name) }.orEmpty()
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                 // glcn: a tab on the list's left edge says the categories are there; it nudges left as the list opens.
-                DeckCategoriesTab(visible = column == 1, modifier = Modifier.align(Alignment.CenterStart))
+                tv.own.owntv.glcn.EdgeTab(visible = column == 1, modifier = Modifier.align(Alignment.CenterStart))
                 GlideColumn(
                     count = list.size,
                     index = chIdx,
@@ -1085,35 +1085,5 @@ private fun deckAccentInk(): Color {
 }
 
 /** glcn: room on the channel list's left for the categories tab. */
-private val DECK_TAB_ROOM = 16.mpx
+private val DECK_TAB_ROOM = tv.own.owntv.glcn.EDGE_TAB_ROOM
 
-/**
- * glcn: a slim tab on the channel list's left edge with a ‹ — the categories are behind it (◀). Each time the list
- * takes the cursor it nudges left twice, so the eye goes there; then it stays still.
- */
-@Composable
-private fun DeckCategoriesTab(visible: Boolean, modifier: Modifier, toRight: Boolean = false) {
-    val nudge = remember { Animatable(0f) }
-    LaunchedEffect(visible) {
-        if (!visible) return@LaunchedEffect
-        delay(TAB_NUDGE_DELAY_MS)
-        repeat(2) {
-            nudge.animateTo(if (toRight) 1f else -1f, tween(180, easing = FastOutSlowInEasing))
-            nudge.animateTo(0f, spring(dampingRatio = 0.5f, stiffness = 500f))
-        }
-    }
-    val a by androidx.compose.animation.core.animateFloatAsState(if (visible) 1f else 0f, tween(160), label = "deckTab")
-    Box(
-        modifier
-            .graphicsLayer { alpha = a; translationX = nudge.value * 6.mpx.toPx() }
-            .width(DECK_TAB_ROOM - 2.mpx)
-            .height(110.mpx)
-            .clip(if (toRight) RoundedCornerShape(topStart = 10.mpx, bottomStart = 10.mpx) else RoundedCornerShape(topEnd = 10.mpx, bottomEnd = 10.mpx))
-            .background(stageAccent.accent.copy(alpha = 0.22f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        OwnTVIcon(if (toRight) OwnTVIcon.CHEVRON else OwnTVIcon.CHEVRON_LEFT, StageColors.Text, Modifier.size(14.mpx))
-    }
-}
-
-private const val TAB_NUDGE_DELAY_MS = 600L

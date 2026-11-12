@@ -245,10 +245,14 @@ fun ChannelListOverlay(
             }
             androidx.compose.runtime.DisposableEffect(Unit) { tv.own.owntv.glcn.GlassFocus.overVideo++; onDispose { tv.own.owntv.glcn.GlassFocus.overVideo-- } }
             Box(Modifier.fillMaxWidth().weight(1f)) {
+            // glcn: a ‹ tab on the left edge when ◀ opens the categories.
+            val catTab = onOpenCategories != null && !alignEnd
+            if (catTab) tv.own.owntv.glcn.EdgeTab(visible = listFocused, modifier = Modifier.align(Alignment.CenterStart))
             LazyColumn(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(start = if (catTab) tv.own.owntv.glcn.EDGE_TAB_ROOM else 0.mpx)
                     .onFocusChanged { listFocused = it.hasFocus }
                     // glcn: wrap around, ▲ on the first channel goes to the last and ▼ on the last to the first.
                     .onPreviewKeyEvent { e ->
