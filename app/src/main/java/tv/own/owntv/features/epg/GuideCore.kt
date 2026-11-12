@@ -170,8 +170,8 @@ internal fun ProgrammeStripCanvas(
             if (textW <= 4) return@forEachIndexed
             val lerpC = androidx.compose.ui.graphics.lerp(textColor.copy(alpha = fade), a.onAccent, blend)
             val titleColor = if (cursor == null) (if (focused) a.onAccent else textColor.copy(alpha = fade)) else lerpC
-            val smallColor = if (cursor == null) (if (focused) Color.Black.copy(alpha = 0.6f) else dimColor.copy(alpha = fade))
-                else androidx.compose.ui.graphics.lerp(dimColor.copy(alpha = fade), Color.Black.copy(alpha = 0.6f), blend)
+            val smallColor = if (cursor == null) (if (focused) a.onAccent.copy(alpha = 0.72f) else dimColor.copy(alpha = fade))
+                else androidx.compose.ui.graphics.lerp(dimColor.copy(alpha = fade), a.onAccent.copy(alpha = 0.72f), blend)
             val iconColor = if (cursor == null) (if (focused) a.onAccent else a.accent.copy(alpha = fade))
                 else androidx.compose.ui.graphics.lerp(a.accent.copy(alpha = fade), a.onAccent, blend)
             val title = measurer.measure(p.title, titleStyle.copy(color = titleColor), overflow = TextOverflow.Ellipsis, maxLines = 1, softWrap = false, constraints = Constraints(maxWidth = textW))
