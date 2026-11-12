@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -403,7 +404,7 @@ fun ProgrammeInfoScreen(
                     // without drifting.
                     // glcn: the cast sits on the right now, so the synopsis has the whole column down to the button.
                     // glcn: kept to the left half, so the picture's faces stay clear of it.
-                    DriftingSynopsis(it, modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W), style = stageText(21, 400), color = Soft, lines = SYNOPSIS_LINES, fade = true)
+                    DriftingSynopsis(it, modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W), style = stageText(21, 400), color = Soft, lines = if (next.isNotEmpty()) SYNOPSIS_LINES_WITH_CARDS else SYNOPSIS_LINES, fade = true)
                 }
             }
             // glcn: what can be done with it, right under the synopsis (no longer down at the foot past an empty page).
@@ -411,6 +412,8 @@ fun ProgrammeInfoScreen(
                 cur, channel, showTech, onToggleTech = { showTech = !showTech }, onStartOver, onRecord, onDismiss, focus, pageFocus,
                 onWatch = if (channel.id != startChannel.id && onTune != null) ({ onTune(channel) }) else null,
             )
+            // glcn: what follows on the channel, as picture cards in the room under the buttons (the first one wider).
+            if (next.isNotEmpty() && !showTech) NextCards(next.take(NEXT_CARDS), timeFmt, Modifier.then(slideInLeft).padding(top = 34.mpx))
         }
 
         // Right: when it airs again this week, and under it a film's cast.
@@ -451,7 +454,7 @@ fun ProgrammeInfoScreen(
         }
 
         // glcn: what follows on the channel, in the same stack, right under the rest (no gap in the middle).
-        if (next.isNotEmpty() && !showTech) Column(
+        if (next.size > NEXT_CARDS && !showTech) Column(
             Modifier.then(slideInRight).fillMaxWidth()
                 .shadow(tv.own.owntv.ui.theme.StageElevation.CARD, RoundedCornerShape(20.mpx), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f)).clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
@@ -462,7 +465,7 @@ fun ProgrammeInfoScreen(
                 again.isNotEmpty() || cast.isNotEmpty() -> 4
                 else -> 7
             }
-            next.take(room).forEach { n ->
+            next.drop(NEXT_CARDS).take(room).forEach { n ->
                 Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
                     Text(timeFmt.format(java.util.Date(n.startMs)), style = stageText(19, 700), color = Ink, modifier = Modifier.width(84.mpx), maxLines = 1)
                     Text(n.title, style = stageText(18, 500), color = Soft, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -529,6 +532,35 @@ private fun InfoActions(
     }
 }
 
+/** glcn: the next programmes as picture cards: their picture (the guide's, or TMDB's), the time and the title. */
+@Composable
+private fun NextCards(items: List<EpgProgrammeEntity>, timeFmt: java.text.DateFormat, modifier: Modifier) {
+    Column(modifier) {
+        Text(stringResource(R.string.glcn_pi_next), style = stageText(18, 800), color = stageAccent.ink, maxLines = 1, modifier = Modifier.padding(bottom = 12.mpx))
+        Row(horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
+            items.forEachIndexed { i, p ->
+                val w = if (i == 0) NEXT_CARD_FIRST_W else NEXT_CARD_W
+                Column(Modifier.width(w)) {
+                    Box(
+                        Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                            .shadow(tv.own.owntv.ui.theme.StageElevation.CARD, RoundedCornerShape(14.mpx), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f))
+                            .clip(RoundedCornerShape(14.mpx)).background(PanelFill),
+                    ) {
+                        tv.own.owntv.ui.components.programmeArtOrTmdb(p)?.let { ProgrammeArt(url = it, modifier = Modifier.fillMaxSize()) }
+                    }
+                    Text(timeFmt.format(java.util.Date(p.startMs)), style = stageText(17, 800), color = Ink, maxLines = 1, modifier = Modifier.padding(top = 8.mpx))
+                    Text(p.title, style = stageText(17, 500), color = Soft, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+}
+
+/** glcn: how many of the next programmes show as cards, and their widths. */
+private const val NEXT_CARDS = 4
+private val NEXT_CARD_FIRST_W = 330.mpx
+private val NEXT_CARD_W = 250.mpx
+
 /** glcn: walking the channels — the old page leaving, the new one coming in, how far they slide, a held key's pace. */
 private const val SWAP_OUT_MS = 140
 private const val SWAP_IN_MS = 300
@@ -539,6 +571,8 @@ private const val PREFETCH_DELAY_MS = 250L
 
 /** glcn: the synopsis' lines, now that the cast is on the right. */
 private const val SYNOPSIS_LINES = 9
+/** glcn: fewer, with the next programmes as cards under the buttons (the synopsis drifts to show the rest). */
+private const val SYNOPSIS_LINES_WITH_CARDS = 5
 private val SYNOPSIS_W = 860.mpx
 /** glcn: the cast panel on the right: four a row, two rows unless the repeats above take more than this many lines. */
 private const val CAST_PER_ROW = 4
