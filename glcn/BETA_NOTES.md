@@ -11,3 +11,7 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🗓️ Guide: CH+ / CH− turn the guide a day forward / back, at the same time of day.
 - 🎨 White or very pale accents (and near-black ones in the dark theme): titles, headings, times and marks drawn in the accent switch to the theme's text colour where the accent would vanish on the page — across Settings, the Guide, Sports, Home, Live TV, popups and the info screens.
 - 🔍 A film's page opened from Películas (or the Runway) and a series opened from Series grow into place, as a title opened from Home already did.
+- 🌈 Programme info (ⓘ): the page takes a soft glow in the picture's own tone, as the film and series pages already did.
+- 🔤 Big titles — a film's or series' name without title art, Home's featured title, the Cine banner and Programme info — use a display face (Oswald): taller and narrower, so long names fit and read as headlines. With another app font chosen in Settings, that font is kept.
+- 🪟 Programme info: its panels float a little above the page (a soft shadow), the first of three set heights — page, card, raised.
+- 🌅 Empty pages (no favourites, no history, an empty guide) show a small sunset drawing with the page's icon over their words.

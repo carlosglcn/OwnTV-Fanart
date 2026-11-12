@@ -221,7 +221,7 @@ fun LiveBannerCine(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier
             }
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.content_live_now).uppercase(), style = stageText(15, 500).copy(letterSpacing = 1.4.sp), color = accentInk, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text(f.title, style = stageText(52, 800), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(f.title, style = tv.own.owntv.ui.theme.stageDisplay(56), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(f.meta, style = stageText(19, 500), color = ink.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 f.synopsis?.let {
                     tv.own.owntv.features.shell.components.DriftingSynopsis(

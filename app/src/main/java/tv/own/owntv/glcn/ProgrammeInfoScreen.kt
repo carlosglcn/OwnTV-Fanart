@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -300,6 +301,8 @@ fun ProgrammeInfoScreen(
                 ),
             )
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to pg.copy(alpha = 0.9f))))
+            // glcn: the page takes a soft glow in the picture's own tone, as the film and series pages do.
+            tv.own.owntv.ui.components.ArtTint(art, Modifier.fillMaxSize(), strength = 0.5f, focusX = 0.15f, focusY = 0.85f)
         }
         // A fine frame round the window, and the word "Live" on it.
         Box(
@@ -349,7 +352,7 @@ fun ProgrammeInfoScreen(
                         onFailed = { logoFailed = true }, onDarkScreen = true,
                     )
                 } else {
-                    Text(cur.title, style = stageText(58f, 800), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.then(slideInLeft))
+                    Text(cur.title, style = tv.own.owntv.ui.theme.stageDisplay(62), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.then(slideInLeft))
                 }
                 val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
                 Text(
@@ -418,7 +421,7 @@ fun ProgrammeInfoScreen(
         // glcn: only when it does air again — "no repeats this week" was a panel saying nothing.
         if (again.isNotEmpty()) Column(
             Modifier.then(slideInRight).fillMaxWidth()
-                .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
+                .shadow(tv.own.owntv.ui.theme.StageElevation.CARD, RoundedCornerShape(20.mpx), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f)).clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
             Text(stringResource(R.string.glcn_pi_airs_again), style = stageText(18, 800), color = accentInk, maxLines = 2)
@@ -437,7 +440,7 @@ fun ProgrammeInfoScreen(
         val cast = film?.cast.orEmpty()
         if (cast.isNotEmpty() && !showTech) Column(
             Modifier.then(slideInRight).fillMaxWidth()
-                .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
+                .shadow(tv.own.owntv.ui.theme.StageElevation.CARD, RoundedCornerShape(20.mpx), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f)).clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(12.mpx),
         ) {
             Text(stringResource(R.string.content_media_cast), style = stageText(18, 800), color = accentInk, maxLines = 1)
@@ -450,7 +453,7 @@ fun ProgrammeInfoScreen(
         // glcn: what follows on the channel, in the same stack, right under the rest (no gap in the middle).
         if (next.isNotEmpty() && !showTech) Column(
             Modifier.then(slideInRight).fillMaxWidth()
-                .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
+                .shadow(tv.own.owntv.ui.theme.StageElevation.CARD, RoundedCornerShape(20.mpx), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f)).clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
             Text(stringResource(R.string.glcn_pi_next), style = stageText(18, 800), color = accentInk, maxLines = 1)

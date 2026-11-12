@@ -208,7 +208,7 @@ internal fun TvHome(
                 }
                 Text(
                     now?.title?.let(SportsNow::displayTitle) ?: ch.name,
-                    style = stageText(52, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    style = tv.own.owntv.ui.theme.stageDisplay(56), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
                 now?.let { p ->
                     val total = (p.stopMs - p.startMs).coerceAtLeast(1L)

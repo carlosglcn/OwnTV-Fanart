@@ -435,7 +435,7 @@ internal fun VodHeroTitle(title: String, modifier: Modifier = Modifier) {
     BasicText(
         HeadlineTitle.of(title),
         modifier,
-        style = stageText(92, 800, (-2.5f / 92f).em).copy(lineHeight = 1.02.em, color = StageColors.Text),
+        style = tv.own.owntv.ui.theme.stageDisplay(96).copy(lineHeight = 1.05.em, color = StageColors.Text),
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
         autoSize = TextAutoSize.StepBased(minFontSize = 48.mpxSp, maxFontSize = 92.mpxSp, stepSize = 4.mpxSp),

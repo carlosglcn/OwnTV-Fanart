@@ -1118,6 +1118,7 @@ private fun GuideRow(
 private fun GuideEmpty(title: String, body: String? = null, action: String? = null, actionIcon: OwnTVIcon = OwnTVIcon.ADD, onAction: () -> Unit = {}) {
     Box(Modifier.fillMaxSize().padding(bottom = 80.mpx), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            tv.own.owntv.glcn.EmptyArt(OwnTVIcon.EPG, Modifier.padding(bottom = 20.mpx))
             Text(title, style = stageText(24, 700), color = StageColors.Text, textAlign = TextAlign.Center, modifier = Modifier.widthIn(max = 900.mpx))
             if (body != null) {
                 Text(body, style = stageText(19, 400), color = StageColors.Muted, textAlign = TextAlign.Center, modifier = Modifier.widthIn(max = 900.mpx).padding(top = 8.mpx))

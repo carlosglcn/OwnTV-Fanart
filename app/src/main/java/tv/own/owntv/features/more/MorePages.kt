@@ -193,8 +193,10 @@ internal fun StageActionRow(
 
 /** What a page says when its list is empty. */
 @Composable
-private fun EmptyNote(title: String, body: String? = null) {
+private fun EmptyNote(title: String, body: String? = null, icon: OwnTVIcon? = null) {
     Column(Modifier.padding(top = 34.mpx)) {
+        // glcn: a small sunset over the words, with the page's own icon.
+        if (icon != null) tv.own.owntv.glcn.EmptyArt(icon, Modifier.padding(bottom = 18.mpx))
         Text(title, style = stageText(24, 800), color = StageColors.Text)
         if (body != null) Text(body, style = stageText(18, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
     }
@@ -375,7 +377,7 @@ internal fun FavouritesPage(
         }
         androidx.compose.runtime.SideEffect { setEntry { runCatching { firstTarget.requestFocus() }.getOrDefault(false) } }
         if (counts.total == 0) {
-            EmptyNote(stringResource(R.string.more_fav_empty_title), stringResource(R.string.more_fav_empty_body))
+            EmptyNote(stringResource(R.string.more_fav_empty_title), stringResource(R.string.more_fav_empty_body), OwnTVIcon.FAVORITE)
             return@Column
         }
         if (showLive && lists.live.isNotEmpty()) {
@@ -584,7 +586,7 @@ internal fun HistoryPage(
         }
         androidx.compose.runtime.SideEffect { setEntry { runCatching { (rows.firstOrNull()?.let { r -> focusOf(r.id) } ?: segFocus).requestFocus() }.getOrDefault(false) } }
         if (rows.isEmpty()) {
-            EmptyNote(stringResource(R.string.more_history_empty))
+            EmptyNote(stringResource(R.string.more_history_empty), icon = OwnTVIcon.HISTORY)
             return@Column
         }
         LazyColumn(Modifier.padding(top = 26.mpx).fillMaxSize(), contentPadding = PaddingValues(bottom = 40.mpx)) {

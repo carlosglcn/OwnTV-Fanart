@@ -266,3 +266,27 @@ fun stageText(size: Number, weight: Int, letterSpacing: TextUnit = TextUnit.Unsp
     fontWeight = FontWeight(weight),
     letterSpacing = letterSpacing,
 )
+
+
+/**
+ * glcn: Stage display type — big titles only (a film's or programme's name when it has no title art, Home's
+ * featured title): the display face, tall and narrow, at [size]. With the user's own font choice other than the
+ * default, that font is kept, so a chosen look is never overridden.
+ */
+@Composable
+@ReadOnlyComposable
+fun stageDisplay(size: Number, weight: Int = 700) = TextStyle(
+    fontFamily = if (LocalMainFontFamily.current == DefaultMainFamily) DisplayFamily else LocalMainFontFamily.current,
+    fontSize = size.mpxSp,
+    fontWeight = FontWeight(weight),
+    lineHeight = (size.toFloat() * 1.12f).mpxSp,
+)
+
+/**
+ * glcn: the three heights of the Stage. The page lies flat; a card floats a little above it ([CARD]); what has the
+ * focus, or opens over the rest, floats higher ([RAISED]). Shadows are only used at these two heights.
+ */
+object StageElevation {
+    val CARD = 10.mpx
+    val RAISED = 24.mpx
+}

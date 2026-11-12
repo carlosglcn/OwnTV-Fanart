@@ -383,7 +383,7 @@ fun LumenHome(
                         url = logoUrl, contentDescription = it0?.title,
                         modifier = Modifier.height(150.mpx).widthIn(max = 760.mpx),
                         onFailed = { k?.let { logoFailed.add(it) } },
-                    ) else Text(it0?.title.orEmpty(), style = stageText(64f, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    ) else Text(it0?.title.orEmpty(), style = tv.own.owntv.ui.theme.stageDisplay(68), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     // glcn: a film or series reads its facts as tags — the year, ★ the rating in the accent, its genres.
                     val film = it0?.movie != null || it0?.series != null
                     if (film) {

@@ -608,7 +608,7 @@ internal fun FeaturedBillboard(
                     is FeaturedItem.Movie -> item.movie.name
                     is FeaturedItem.Series -> item.series.name
                 },
-                style = stageText(52, 800), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                style = tv.own.owntv.ui.theme.stageDisplay(56), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             val line = when (item) {
                 is FeaturedItem.Live -> listOfNotNull(

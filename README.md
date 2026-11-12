@@ -348,6 +348,8 @@ in [issue #227](https://github.com/ahXN00/OwnTV/issues/227).
 
 ### 🖼️ Icons
 
+Big titles use the [Oswald](https://github.com/googlefonts/OswaldFont) typeface (SIL Open Font License 1.1).
+
 The category icons in OwnTV Fanart are drawn from Google's [Material Symbols](https://fonts.google.com/icons) (Apache License 2.0).
 
 ### ▶️ Playback engines

@@ -83,6 +83,8 @@ logotipo **owntv** es de [@m3th0d93](https://github.com/m3th0d93). El icono de O
 
 Fotos de los fondos de [Unsplash](https://unsplash.com/) (Licencia Unsplash). Los avatares 3D de perfil son originales de esta versión (generados con IA). Tiempos de intro y créditos de [TheIntroDB](https://theintrodb.org/). Subtítulos con estilo dibujados con [libass](https://github.com/libass/libass) (ISC).
 
+Los títulos grandes usan la tipografía [Oswald](https://github.com/googlefonts/OswaldFont) (licencia SIL Open Font 1.1).
+
 Los iconos de categorías de OwnTV Fanart proceden de [Material Symbols](https://fonts.google.com/icons) de Google (licencia Apache 2.0).
 
 El icono de Jellyfin en las etiquetas de las listas es el del propio proyecto Jellyfin ([jellyfin-ux](https://github.com/jellyfin/jellyfin-ux), CC BY-SA 4.0).
