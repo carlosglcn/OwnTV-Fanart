@@ -109,7 +109,7 @@ internal fun SettingsLivePreview() {
                 }
             }
             Column(Modifier.padding(start = 150.mpx, top = 300.mpx).width(820.mpx)) {
-                Text(stringResource(R.string.home_row_now_trending).uppercase(), style = stageText(15, 800, 0.12.em), color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(stringResource(R.string.home_row_now_trending).uppercase(), style = stageText(15, 800, 0.12.em), color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
                     titleOf(lead) ?: stringResource(R.string.home_row_now_trending),
                     style = stageText(92, 800, (-2.5f / 92f).em), color = StageColors.Text,

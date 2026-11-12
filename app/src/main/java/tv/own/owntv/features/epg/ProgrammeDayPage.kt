@@ -375,7 +375,7 @@ private fun OpenProgramme(
         horizontalArrangement = Arrangement.spacedBy(20.mpx),
     ) {
         Column(Modifier.width(110.mpx)) {
-            Text(formatTime(shown.startMs), style = stageText(18, 700), color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(formatTime(shown.startMs), style = stageText(18, 700), color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(formatTime(shown.stopMs), style = stageText(13, 600), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Column(Modifier.weight(1f)) {

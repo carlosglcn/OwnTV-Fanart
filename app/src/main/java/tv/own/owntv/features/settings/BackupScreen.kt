@@ -206,7 +206,7 @@ fun BackupScreen(
                     )
                 }
             } else {
-                OwnTVIcon(OwnTVIcon.CHECK, stageAccent.accent, Modifier.size(40.mpx))
+                OwnTVIcon(OwnTVIcon.CHECK, stageAccent.ink, Modifier.size(40.mpx))
                 Column {
                     Text(
                         stringResource(R.string.more_pane_last_backup) + sep + android.text.format.DateUtils.getRelativeTimeSpanString(
@@ -279,7 +279,7 @@ fun BackupScreen(
                     horizontalArrangement = Arrangement.spacedBy(9.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    OwnTVIcon(OwnTVIcon.CHECK, stageAccent.accent, Modifier.size(18.mpx))
+                    OwnTVIcon(OwnTVIcon.CHECK, stageAccent.ink, Modifier.size(18.mpx))
                     Text(stringResource(sectionLabelRes(section)), style = stageText(16, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }

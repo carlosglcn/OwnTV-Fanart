@@ -66,7 +66,7 @@ fun SportsLeagueScreen(vm: SportsViewModel, onOpenMatch: (Match) -> Unit, onBack
             Column {
                 Text(league?.name ?: state.leagueKey, style = stageText(48, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Row(horizontalArrangement = Arrangement.spacedBy(0.mpx)) {
-                    Text(stringResource(R.string.sports_title), style = stageText(21, 600), color = stageAccent.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(stringResource(R.string.sports_title), style = stageText(21, 600), color = stageAccent.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     league?.sport?.let { Text(sep + sportLabel(it), style = stageText(21, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
             }

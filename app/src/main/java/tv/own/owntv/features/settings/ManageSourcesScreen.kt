@@ -264,7 +264,7 @@ fun ManageSourcesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                         color = StageColors.Text,
                     )
                     Spacer(Modifier.height(9.mpx))
-                    Text(display?.primaryText() ?: stringResource(R.string.settings_sources_preparing), style = stageText(30, 800), color = stageAccent.accent)
+                    Text(display?.primaryText() ?: stringResource(R.string.settings_sources_preparing), style = stageText(30, 800), color = stageAccent.ink)
                     Spacer(Modifier.height(6.mpx))
                     Text(display?.detailText() ?: stringResource(R.string.settings_sources_preparing), style = stageText(18, 400), color = StageColors.Muted)
                     Spacer(Modifier.height(30.mpx))

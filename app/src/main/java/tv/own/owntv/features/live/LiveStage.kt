@@ -122,7 +122,7 @@ internal fun LiveHeader(category: String, count: Int?, showChevron: Boolean, mod
         ) {
             if (showChevron) OwnTVIcon(OwnTVIcon.CHEVRON_LEFT, StageColors.Muted, Modifier.size(20.mpx))
             Text(
-                category, style = stageText(20, 700), color = stageAccent.accent,
+                category, style = stageText(20, 700), color = stageAccent.ink,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
             )
             if (count != null) Text(
@@ -211,7 +211,7 @@ internal fun LiveStageRow(
         else Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
             name.tags.forEach { StageTag(it) }
             if (channel.catchup) OwnTVIcon(OwnTVIcon.REWIND, StageColors.Dim, Modifier.size(22.mpx))
-            if (isFavorite) OwnTVIcon(OwnTVIcon.FAVORITE, stageAccent.accent, Modifier.size(22.mpx), filled = true)
+            if (isFavorite) OwnTVIcon(OwnTVIcon.FAVORITE, stageAccent.ink, Modifier.size(22.mpx), filled = true)
             mark?.let { StagePlaylistMark(it) }
             // glcn: how much is left as a small ring with the minutes in it, instead of a cut-off "quedan …" and a thin line.
             if (now != null) TimeLeftRing(progressOf(now), minutesLeft(now), focused)
@@ -395,7 +395,7 @@ internal fun LiveStagePane(
                     horizontalArrangement = Arrangement.spacedBy(14.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    channel.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.let { Text(it.toString(), style = stageText(30, 800), color = stageAccent.accent, maxLines = 1) }
+                    channel.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.let { Text(it.toString(), style = stageText(30, 800), color = stageAccent.ink, maxLines = 1) }
                     Text(channelName.orEmpty(), style = stageText(24, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -752,7 +752,7 @@ internal fun LiveCategories(
         val k = entry.item.key.toString()
         if (k in hideable) {
             tv.own.owntv.glcn.HiddenCategories.hide(appCtx, k)
-            android.widget.Toast.makeText(appCtx, R.string.glcn_category_hidden_toast, android.widget.Toast.LENGTH_SHORT).show()
+            tv.own.owntv.ui.components.AppToast.show(appCtx, R.string.glcn_category_hidden_toast)
         } else onLongSelect(index)
     }
     // CH+/− in the categories changes the selection; the highlight follows it there.
@@ -880,7 +880,7 @@ internal fun LiveCategories(
                             selected = id == activePlaylist,
                             onLongClick = if (id > 0L && id != activePlaylist) ({
                                 tv.own.owntv.glcn.HiddenCategories.hide(appCtx, tv.own.owntv.glcn.HiddenCategories.playlistKey(id))
-                                android.widget.Toast.makeText(appCtx, R.string.glcn_category_hidden_toast, android.widget.Toast.LENGTH_SHORT).show()
+                                tv.own.owntv.ui.components.AppToast.show(appCtx, R.string.glcn_category_hidden_toast)
                             }) else null,
                             modifier = if (id == activePlaylist || (activePlaylist <= 0L && id == -1L)) Modifier.focusRequester(first) else Modifier,
                         )

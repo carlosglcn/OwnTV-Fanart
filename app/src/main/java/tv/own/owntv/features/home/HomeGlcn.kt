@@ -598,8 +598,8 @@ internal fun FeaturedBillboard(
                         ChannelPlate(item.channel, Modifier.size(60.mpx, 40.mpx))
                         Text(item.channel.name, style = stageText(18, 700), color = Color.White.copy(alpha = 0.85f), maxLines = 1)
                     }
-                    is FeaturedItem.Movie -> Text(stringResource(R.string.glcn_recent_movies).uppercase(), style = stageText(15, 800), color = a.accent)
-                    is FeaturedItem.Series -> Text(stringResource(R.string.glcn_recent_series).uppercase(), style = stageText(15, 800), color = a.accent)
+                    is FeaturedItem.Movie -> Text(stringResource(R.string.glcn_recent_movies).uppercase(), style = stageText(15, 800), color = a.ink)
+                    is FeaturedItem.Series -> Text(stringResource(R.string.glcn_recent_series).uppercase(), style = stageText(15, 800), color = a.ink)
                 }
             }
             Text(

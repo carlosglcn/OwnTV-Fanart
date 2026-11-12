@@ -359,7 +359,7 @@ fun LumenHome(
         }
         if (tab == null) return@Box
         Column(Modifier.padding(start = contentStart + 24.mpx, top = 120.mpx).width(1240.mpx).graphicsLayer { alpha = chrome }) {
-            Text(tab.row.displayTitle(), style = stageText(19, 700), color = accent.accent, maxLines = 1)
+            Text(tab.row.displayTitle(), style = stageText(19, 700), color = accent.ink, maxLines = 1)
             Spacer(Modifier.height(14.mpx))
             // glcn: the words change with a short cross-fade, not a cut, as the focus moves.
             // glcn: the old words fade out quickly, the new ones fade in while rising a few pixels — one soft handover.

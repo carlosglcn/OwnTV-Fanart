@@ -793,6 +793,12 @@ fun EpgScreen(
                                         if (!effectivePreview || !previewOnOk) liveVm.onChannelFocused(channel)
                                     },
                                     onCursor = { cursorTime = it },
+                                    onDay = { d ->
+                                        val base = if (cursorTime > 0L) cursorTime else timeAt(scrollTarget + timelinePx * 3f / 8f)
+                                        val t = (base + d * GUIDE_DAY_MS).coerceIn(state.windowStart, state.windowEnd - 1)
+                                        cursorTime = t
+                                        showTime(t)
+                                    },
                                     onShow = { p -> selected = channel to p },
                                     onStep = { delta ->
                                         val from = stepTarget ?: index
@@ -1017,6 +1023,7 @@ private fun GuideRow(
     reminderStarts: Set<Long>,
     onFocused: () -> Unit,
     onCursor: (Long) -> Unit,
+    onDay: (Int) -> Unit = {},
     onShow: (EpgProgrammeEntity?) -> Unit,
     onStep: (Int) -> Boolean,
     onOk: (EpgProgrammeEntity?) -> Unit,
@@ -1076,6 +1083,9 @@ private fun GuideRow(
                             else if (down) onCursor(cursorStep(progs, cursorTime, +1, windowStart, windowEnd))
                             true
                         }
+                        // glcn: CH± turns the guide a day forward / back, at the same time of day.
+                        Key.ChannelUp -> { if (down && e.nativeKeyEvent.repeatCount == 0) onDay(+1); true }
+                        Key.ChannelDown -> { if (down && e.nativeKeyEvent.repeatCount == 0) onDay(-1); true }
                         Key.DirectionUp -> if (down) onStep(-1) else true
                         Key.DirectionDown -> if (down) onStep(+1) else true
                         else -> false
@@ -1202,3 +1212,4 @@ private inline fun androidx.compose.ui.graphics.drawscope.DrawScope.withLayerAlp
 /** glcn: the faint logo behind the guide's programme panel. */
 private val GUIDE_GHOST_W = 440.mpx
 private val GUIDE_GHOST_H = 260.mpx
+private const val GUIDE_DAY_MS = 24L * 60 * 60 * 1000

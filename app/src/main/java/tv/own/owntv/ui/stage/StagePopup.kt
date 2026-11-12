@@ -256,7 +256,7 @@ fun StagePopupOption(
                 }
             }
             if (value != null) {
-                Text("$value ›", style = stageText(18, 700), color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("$value ›", style = stageText(18, 700), color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             androidx.compose.runtime.CompositionLocalProvider(LocalStageLit provides focused) { trailing?.invoke(this, focused) }
         }

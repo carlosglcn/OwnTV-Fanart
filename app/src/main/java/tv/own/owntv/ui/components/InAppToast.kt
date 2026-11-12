@@ -77,3 +77,21 @@ fun InAppToast(state: InAppToastState) {
         )
     }
 }
+
+/**
+ * glcn: the app-wide toast, for messages raised outside a screen (a view model, a sync, a dialog's failure): the
+ * same glass pill as [InAppToast], shown over everything by MainActivity — instead of Android's grey system toast.
+ */
+object AppToast {
+    val state = InAppToastState()
+    private val main by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
+
+    /** Safe from any thread. [long] keeps it up for a message that takes longer to read. */
+    fun show(text: String, long: Boolean = false) {
+        main.post { state.show(text, if (long) LONG_MS else InAppToastState.DEFAULT_DURATION_MS) }
+    }
+
+    fun show(context: android.content.Context, res: Int, long: Boolean = false) = show(context.getString(res), long)
+
+    private const val LONG_MS = 4_000L
+}

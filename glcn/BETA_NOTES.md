@@ -7,3 +7,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔘 Programme info (ⓘ): the buttons are real buttons now (glass, the first one tinted) and ▼ lands on the first; on another channel's page a "Watch" button tunes it.
 - ⚽ Programme info on a match the Sports board knows: both crests with their names, the score and the minute, under the title (the score hidden with spoiler-free on).
 - 🖼️ Programme info: the shade over the picture is as strong as that picture needs for the words to read and no stronger — pale pictures under the light theme are no longer washed out.
+- 💬 Messages raised outside a screen (a playlist about to expire, a category hidden, a channel that won't open, the sleep timer that can't turn the screen off, Labs) show in the app's own glass pill instead of Android's grey toast.
+- 🗓️ Guide: CH+ / CH− turn the guide a day forward / back, at the same time of day.
+- 🎨 White or very pale accents (and near-black ones in the dark theme): titles, headings, times and marks drawn in the accent switch to the theme's text colour where the accent would vanish on the page — across Settings, the Guide, Sports, Home, Live TV, popups and the info screens.

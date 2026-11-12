@@ -5,6 +5,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -227,15 +228,31 @@ object StageRadii {
 }
 
 /** The accent triple every Stage treatment is built from. */
-data class StageAccent(val accent: Color, val onAccent: Color, val focus: Color)
+data class StageAccent(
+    val accent: Color,
+    val onAccent: Color,
+    val focus: Color,
+    /**
+     * glcn: the accent as text or an icon on the page — the theme's own text colour instead when the accent would
+     * vanish there (a white or pale accent under the light theme, a near-black one under the dark).
+     */
+    val ink: Color = accent,
+)
 
 val stageAccent: StageAccent
     @Composable
     @ReadOnlyComposable
     // In light the pale focus colour vanishes on white, so every ring is the accent itself.
     get() = OwnTVTheme.colors.let {
-        StageAccent(it.primary, it.onPrimary, if (LocalStagePalette.current.isLight) it.primary else it.focusBorder)
+        val pal = LocalStagePalette.current
+        val l = it.primary.luminance()
+        val ink = if ((pal.isLight && l > INK_LIGHT_MAX) || (!pal.isLight && l < INK_DARK_MIN)) pal.text else it.primary
+        StageAccent(it.primary, it.onPrimary, if (pal.isLight) it.primary else it.focusBorder, ink)
     }
+
+/** glcn: past these the accent no longer reads as text on the light / dark page. */
+private const val INK_LIGHT_MAX = 0.55f
+private const val INK_DARK_MIN = 0.06f
 
 /**
  * Stage type: a design size and weight in the user's main font (Plus Jakarta Sans by default).

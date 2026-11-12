@@ -250,7 +250,7 @@ class ShellViewModel(
                         if (left in 0..EXPIRY_WARN_DAYS && tv.own.owntv.core.repository.SourceGlcnPrefs.takeExpiryWarning(s.id, ms)) {
                             val date = java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG).format(java.util.Date(ms))
                             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                android.widget.Toast.makeText(ctx, ctx.getString(tv.own.owntv.R.string.glcn_src_expiry_toast, s.name, date), android.widget.Toast.LENGTH_LONG).show()
+                                tv.own.owntv.ui.components.AppToast.show(ctx.getString(tv.own.owntv.R.string.glcn_src_expiry_toast, s.name, date), long = true)
                             }
                         }
                     }

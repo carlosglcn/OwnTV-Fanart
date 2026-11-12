@@ -457,7 +457,7 @@ private fun InfoTab(info: CinemaInfo, tech: CinemaTech, actions: CinemaActions) 
             Text(stringResource(R.string.glcn_cine_cast) + ": " + info.cast.take(5).joinToString(", "), style = stageText(16, 500), color = Color.White.copy(alpha = 0.6f), maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.height(6.mpx))
-        Text(stringResource(R.string.glcn_cine_tech), style = stageText(16, 800), color = stageAccent.accent)
+        Text(stringResource(R.string.glcn_cine_tech), style = stageText(16, 800), color = stageAccent.ink)
         TechLine(stringResource(R.string.glcn_cine_tech_player), when (tech.engine) {
             StreamEngine.EXOPLAYER -> stringResource(R.string.player_engine_exo)
             StreamEngine.MPV -> stringResource(R.string.player_engine_mpv)

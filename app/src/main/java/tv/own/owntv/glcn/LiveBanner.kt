@@ -89,6 +89,7 @@ private fun Label(text: String, color: Color) {
 @Composable
 private fun Bar(progress: Float, modifier: Modifier = Modifier) {
     val accent = stageAccent.accent
+    val accentInk = stageAccent.ink
     Box(modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(hudInk.copy(alpha = 0.2f)).drawBehind {
         drawRoundRect(accent, size = Size(size.width * progress, size.height), cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
     })
@@ -98,6 +99,7 @@ private fun Bar(progress: Float, modifier: Modifier = Modifier) {
 @Composable
 private fun LeftRing(progress: Float, modifier: Modifier = Modifier) {
     val accent = stageAccent.accent
+    val accentInk = stageAccent.ink
     val track = hudInk.copy(alpha = 0.25f)
     Box(modifier.size(14.dp).drawBehind {
         val w = 2.dp.toPx()
@@ -202,6 +204,7 @@ fun LiveBannerCine(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier
     val f = epg?.let { facts(it) } ?: return
     val ink = Color.White
     val accent = stageAccent.accent
+    val accentInk = stageAccent.ink
     Column(
         modifier.fillMaxWidth()
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Transparent, 0.45f to Color.Black.copy(alpha = 0.42f), 1f to Color.Black.copy(alpha = 0.62f)))
@@ -217,7 +220,7 @@ fun LiveBannerCine(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier
                 Spacer(Modifier.width(28.dp))
             }
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.content_live_now).uppercase(), style = stageText(15, 500).copy(letterSpacing = 1.4.sp), color = accent, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(stringResource(R.string.content_live_now).uppercase(), style = stageText(15, 500).copy(letterSpacing = 1.4.sp), color = accentInk, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(f.title, style = stageText(52, 800), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(f.meta, style = stageText(19, 500), color = ink.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 f.synopsis?.let {

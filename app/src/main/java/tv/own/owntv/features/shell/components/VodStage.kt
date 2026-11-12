@@ -196,7 +196,7 @@ internal fun VodHeader(section: String, category: String, count: String?, showCh
         ) {
             if (showChevron) OwnTVIcon(OwnTVIcon.CHEVRON_LEFT, StageColors.Muted, Modifier.size(20.mpx))
             Text(
-                category, style = stageText(20, 700), color = stageAccent.accent,
+                category, style = stageText(20, 700), color = stageAccent.ink,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
             )
             if (count != null) Text("· $count", style = stageText(20, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -593,7 +593,7 @@ internal fun VodDetailsCard(info: VodTitleInfo?, hints: List<Pair<String, String
                     VodMeta(listOfNotNull(info.year?.toString(), info.runtimeSecs?.let { vodRuntime(it) }), info.rating, info.tags, 17)
                     if (info.genres.isNotEmpty()) {
                         Text(
-                            info.genres.joinToString(" · "), style = stageText(16, 700), color = stageAccent.accent,
+                            info.genres.joinToString(" · "), style = stageText(16, 700), color = stageAccent.ink,
                             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.mpx),
                         )
                     }

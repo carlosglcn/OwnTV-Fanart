@@ -106,7 +106,7 @@ fun TraktDialog(profileId: Long, onDismiss: () -> Unit) {
         if (state == SignIn.WAITING && c != null) {
             Column(Modifier.fillMaxWidth().padding(vertical = 18.mpx), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(c.url.removePrefix("https://"), style = stageText(22, 600), color = StageColors.Muted, textAlign = TextAlign.Center)
-                Text(c.userCode, style = stageText(56, 800), color = stageAccent.accent, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.mpx))
+                Text(c.userCode, style = stageText(56, 800), color = stageAccent.ink, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.mpx))
             }
         }
         TraktNotice()

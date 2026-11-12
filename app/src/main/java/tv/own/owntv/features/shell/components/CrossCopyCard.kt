@@ -62,7 +62,7 @@ fun CrossCopyCard(channel: String, playlist: String, onAccept: () -> Unit, onDec
                 .focusable(),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
-            Text(stringResource(R.string.glcn_cross_copy_title), style = stageText(15, 700), color = stageAccent.accent, maxLines = 1)
+            Text(stringResource(R.string.glcn_cross_copy_title), style = stageText(15, 700), color = stageAccent.ink, maxLines = 1)
             Text(
                 stringResource(R.string.glcn_cross_copy_body, channel, playlist, left),
                 style = stageText(20, 700), color = StageColors.Text, maxLines = 3, overflow = TextOverflow.Ellipsis,

@@ -643,11 +643,12 @@ internal fun StageDownloadRow(
 @Composable
 private fun RecordingsCard(recordings: List<RecordingEntity>, recorded: Int, onOpenGuide: () -> Unit, modifier: Modifier = Modifier) {
     val accent = stageAccent.accent
+    val accentInk = stageAccent.ink
     val next = remember(recordings) { recordings.filter { it.status == RecordingStatus.SCHEDULED }.minByOrNull { it.programmeStartMs } }
     Column(modifier.stageGlass(30.mpx).padding(30.mpx)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
             tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.REC, accent, Modifier.size(18.mpx), filled = true)
-            Text(stringResource(R.string.recording_title), style = stageText(18, 700), color = accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(stringResource(R.string.recording_title), style = stageText(18, 700), color = accentInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Text(
             if (recorded == 0) stringResource(R.string.recording_card_empty_title) else pluralStringResource(R.plurals.recording_card_count, recorded, recorded),

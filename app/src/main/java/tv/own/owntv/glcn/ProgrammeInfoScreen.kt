@@ -128,6 +128,7 @@ fun ProgrammeInfoScreen(
     val slideInRight = Modifier.graphicsLayer { translationX = (1f - enter.value) * PANEL_SHIFT.toPx(); alpha = enter.value }
     BackHandler { onDismiss() }
     val accent = stageAccent.accent
+    val accentInk = stageAccent.ink
     val resolver: ProgrammeArtResolver = org.koin.compose.koinInject()
     val timeFmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
     val dayFmt = remember { java.text.SimpleDateFormat("EEE d", java.util.Locale.getDefault()) }
@@ -326,7 +327,7 @@ fun ProgrammeInfoScreen(
                 val logo = channel.displayLogoUrl?.takeIf { it.isNotBlank() }
                 if (logo != null) ChannelLogoTile(logoUrl = logo, modifier = Modifier.size(132.mpx, 80.mpx), fill = Color.Transparent, surfaceLuminance = if (light) 0.95f else 0.02f) { }
                 Column {
-                    Text(stringResource(R.string.glcn_pi_on_air).uppercase(), style = stageText(15, 800), color = accent, maxLines = 1)
+                    Text(stringResource(R.string.glcn_pi_on_air).uppercase(), style = stageText(15, 800), color = accentInk, maxLines = 1)
                     Text(
                         tv.own.owntv.core.live.ProviderTags.parse(channel.name).name,
                         style = stageText(22, 700), color = Soft, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -420,7 +421,7 @@ fun ProgrammeInfoScreen(
                 .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
-            Text(stringResource(R.string.glcn_pi_airs_again), style = stageText(18, 800), color = accent, maxLines = 2)
+            Text(stringResource(R.string.glcn_pi_airs_again), style = stageText(18, 800), color = accentInk, maxLines = 2)
             when {
                 else -> again.take(REPEATS_SHOWN).forEach { (a, episode) ->
                     Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
@@ -439,7 +440,7 @@ fun ProgrammeInfoScreen(
                 .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(12.mpx),
         ) {
-            Text(stringResource(R.string.content_media_cast), style = stageText(18, 800), color = accent, maxLines = 1)
+            Text(stringResource(R.string.content_media_cast), style = stageText(18, 800), color = accentInk, maxLines = 1)
             val castRows = if (again.isNotEmpty()) 1 else 2
             cast.take(CAST_PER_ROW * castRows).chunked(CAST_PER_ROW).forEach { row ->
                 tv.own.owntv.features.shell.components.VodCast(row, CAST_PER_ROW, gap = 12.mpx)
@@ -452,7 +453,7 @@ fun ProgrammeInfoScreen(
                 .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
-            Text(stringResource(R.string.glcn_pi_next), style = stageText(18, 800), color = accent, maxLines = 1)
+            Text(stringResource(R.string.glcn_pi_next), style = stageText(18, 800), color = accentInk, maxLines = 1)
             val room = when {
                 again.isNotEmpty() && cast.isNotEmpty() -> 3
                 again.isNotEmpty() || cast.isNotEmpty() -> 4

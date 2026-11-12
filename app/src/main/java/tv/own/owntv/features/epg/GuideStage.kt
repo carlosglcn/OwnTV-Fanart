@@ -202,7 +202,7 @@ internal fun GuideProgrammeBlock(
         if (eyebrow != null) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                 OwnTVIcon(OwnTVIcon.CLOCK, a.accent, Modifier.size(18.mpx))
-                Text(eyebrow, style = stageText(18, 700, 0.02.em), color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(eyebrow, style = stageText(18, 700, 0.02.em), color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         if (title != null) {
@@ -727,7 +727,7 @@ internal fun GuideReviewPopup(
                             stringResource(R.string.content_epg_match_button),
                             matchedCount?.let { pluralStringResource(R.plurals.content_epg_channels_matched, it, it) },
                         ).joinToString(" · "),
-                        style = stageText(18, 700, 0.02.em), color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = stageText(18, 700, 0.02.em), color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Text(
@@ -874,7 +874,7 @@ internal fun ReminderPrompt(
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                     OwnTVIcon(OwnTVIcon.BELL, a.accent, Modifier.size(18.mpx))
-                    Text(eyebrow, style = stageText(18, 700, 0.02.em), color = a.accent, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(eyebrow, style = stageText(18, 700, 0.02.em), color = a.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
                 Text(
                     reminder.title, style = stageText(38, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis,

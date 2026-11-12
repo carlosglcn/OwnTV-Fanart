@@ -1095,6 +1095,7 @@ private fun TrendingBackdrop(item: TrendingHomeItem, folded: Boolean, modifier: 
 @Composable
 private fun TrendingEyebrow(item: TrendingHomeItem, withTag: Boolean) {
     val accent = stageAccent.accent
+    val accentInk = stageAccent.ink
     Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
         OwnTVIcon(OwnTVIcon.TREND, tint = accent, modifier = Modifier.size(18.mpx))
         Text(
@@ -1103,7 +1104,7 @@ private fun TrendingEyebrow(item: TrendingHomeItem, withTag: Boolean) {
                 item.snapshot.trendingRank,
                 stringResource(if (item is TrendingHomeItem.Movie) R.string.common_nav_movies else R.string.common_nav_series),
             ),
-            style = stageText(18, 700, 0.02f.em()), color = accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            style = stageText(18, 700, 0.02f.em()), color = accentInk, maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
         if (withTag) {
             Spacer(Modifier.width(6.mpx))

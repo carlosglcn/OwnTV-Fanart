@@ -721,7 +721,7 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
         }
         androidx.compose.runtime.SideEffect { setEntry { runCatching { (if (entries.isNullOrEmpty()) exportFocus else firstRow).requestFocus() }.getOrDefault(false) } }
         Text(stringResource(R.string.settings_playback_error_description_full), style = stageText(17, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 10.mpx))
-        exportPath?.let { Text(stringResource(R.string.settings_backup_saved_to, it), style = stageText(16, 500), color = stageAccent.accent, modifier = Modifier.padding(top = 8.mpx)) }
+        exportPath?.let { Text(stringResource(R.string.settings_backup_saved_to, it), style = stageText(16, 500), color = stageAccent.ink, modifier = Modifier.padding(top = 8.mpx)) }
         if (exportFailed) Text(stringResource(R.string.settings_backup_export_error), style = stageText(16, 500), color = StageColors.Danger, modifier = Modifier.padding(top = 8.mpx))
         // glcn (beta only): the live player's own diary — the last lines of what it did (tunes, rewinds,
         // "go live", the saved copy) — readable here, so a fault can be shown with a photo of the screen.
@@ -810,6 +810,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
     val sep = stringResource(R.string.content_epg_bits_separator)
     val accent = stageAccent.accent
 
+    val accentInk = stageAccent.ink
     Column(Modifier.fillMaxSize().focusGroup()) {
         Row(horizontalArrangement = Arrangement.spacedBy(40.mpx), verticalAlignment = Alignment.CenterVertically) {
             // The app's own icon (150) and the wordmark (300).
@@ -829,7 +830,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
                         else -> null
                     }
                     tag?.let {
-                        Text(it.uppercase(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]), style = stageText(13, 800, 0.05.em), color = accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        Text(it.uppercase(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]), style = stageText(13, 800, 0.05.em), color = accentInk, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.background(accent.copy(alpha = 0.2f), RoundedCornerShape(6.mpx)).padding(horizontal = 7.mpx, vertical = 3.mpx))
                     }
                 }
@@ -863,7 +864,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
                     )
                     Column {
                         Text(stringResource(R.string.glcn_about_community_fanart), style = stageText(20, 800), color = StageColors.Text)
-                        Text(GLCN_TELEGRAM_LINK, style = stageText(17, 500), color = accent, modifier = Modifier.padding(top = 4.mpx))
+                        Text(GLCN_TELEGRAM_LINK, style = stageText(17, 500), color = accentInk, modifier = Modifier.padding(top = 4.mpx))
                         Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
                     }
                 }
@@ -877,7 +878,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
                     )
                     Column {
                         Text(stringResource(R.string.glcn_about_community), style = stageText(20, 800), color = StageColors.Text)
-                        Text(TELEGRAM_LINK, style = stageText(17, 500), color = accent, modifier = Modifier.padding(top = 4.mpx))
+                        Text(TELEGRAM_LINK, style = stageText(17, 500), color = accentInk, modifier = Modifier.padding(top = 4.mpx))
                         Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
                     }
                 }
