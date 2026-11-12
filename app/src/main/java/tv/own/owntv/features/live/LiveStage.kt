@@ -155,6 +155,8 @@ internal fun LiveStageRow(
     trailing: (@Composable () -> Unit)? = null,
     /** glcn: what follows on this channel — shown under the programme on the focused row only. */
     next: XtEpgEntry? = null,
+    /** glcn: the logo on its glass tile (TV en directo's page); the lists over the video draw it bare. */
+    logoTile: Boolean = true,
 ) {
     val formatTime = rememberSystemTimeFormatter()
     StageRow(
@@ -174,7 +176,7 @@ internal fun LiveStageRow(
             )
         }
         // glcn: every logo on the same rounded glass tile, one size — "1" and "2" no longer tower over the others.
-        LivePlate(channel.displayLogoUrl, 80.mpx, 56.mpx, radius = 14.mpx)
+        LivePlate(channel.displayLogoUrl, 80.mpx, 56.mpx, radius = 14.mpx, tile = logoTile)
         Box(Modifier.weight(1f)) {
         // glcn: on the focused row, the channel's logo peeks in faint and grey on the right, behind the words (Ghosts).
         if (focused) tv.own.owntv.glcn.GhostLogo(
@@ -249,14 +251,17 @@ internal fun LivePlate(
     width: androidx.compose.ui.unit.Dp,
     height: androidx.compose.ui.unit.Dp,
     radius: androidx.compose.ui.unit.Dp = StageRadii.Plate,
+    tile: Boolean = true,
 ) {
     // glcn: a visible glass tile with the logo set inside it (room on every side), so every channel's logo reads the same
     // size — a bare "1" or "2" filled its whole box and towered over the others.
     val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
     Box(
-        Modifier.size(width, height).clip(RoundedCornerShape(radius))
-            .background(if (light) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.07f))
-            .border(1.mpx, if (light) Color.Black.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.08f), RoundedCornerShape(radius)),
+        Modifier.size(width, height).then(
+            if (!tile) Modifier else Modifier.clip(RoundedCornerShape(radius))
+                .background(if (light) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.07f))
+                .border(1.mpx, if (light) Color.Black.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.08f), RoundedCornerShape(radius)),
+        ),
         contentAlignment = Alignment.Center,
     ) {
         ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize().padding(horizontal = width * 0.16f, vertical = height * 0.18f), fill = Color.Transparent, surfaceLuminance = if (light) 0.9f else 0.02f) {

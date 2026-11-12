@@ -294,6 +294,8 @@ fun ChannelListOverlay(
                         onFocus = { focusedIndex = index },
                         onClick = { onSelect(ch) },
                         onLongClick = {},
+                    logoTile = false,
+                        logoTile = false,
                         trailing = watchedAt?.let { times ->
                             {
                                 Text(
@@ -804,6 +806,7 @@ internal fun ChannelListPanel(
                     onFocus = { focusedIndex = index; onFocusChannel(ch) },
                     onClick = { onSelect(ch) },
                     onLongClick = {},
+                    logoTile = false,
                     trailing = watchedAt?.let { times ->
                         {
                             Text(
