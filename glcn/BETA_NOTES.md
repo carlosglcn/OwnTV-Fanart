@@ -17,3 +17,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌅 Empty pages (no favourites, no history, an empty guide) show a small sunset drawing with the page's icon over their words.
 - 🏷️ Light theme: white one-colour channel logos (Telecinco…) are drawn in the theme's text colour instead of vanishing on the light page — their own shape, no plate; logos with colour and the dark theme are unchanged.
 - 🪟 Player channel list, light theme: the card under the picture is the list's own glass colour, so both read as one sheet.
+- 🎨 Player channel list: the playlist chips at the top (Todas · Movistar · Emby) wear each playlist's own colour when picked, as its tag does; "All" keeps the accent.
+- › Player channel list: the categories panel has a slim tab with a › on its right edge, nudging as it opens — ▶ goes back to the channels.

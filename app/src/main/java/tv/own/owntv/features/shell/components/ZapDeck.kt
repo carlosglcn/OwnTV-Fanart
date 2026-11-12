@@ -82,6 +82,7 @@ import tv.own.owntv.ui.components.ChannelLogoTile
 import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.stage.StageKeyHints
 import tv.own.owntv.ui.stage.stageGlass
+import tv.own.owntv.ui.stage.shownColor
 import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.StageRadii
 import tv.own.owntv.ui.theme.gradientWash
@@ -473,9 +474,11 @@ fun ZapDeck(
             Box(Modifier.width(0.mpx).fillMaxHeight().wrapContentWidth(Alignment.Start, unbounded = true).zIndex(1f)) {
             if (fold < 0.999f) Box(Modifier.width(groupsOpen).fillMaxHeight().graphicsLayer { alpha = 1f - fold; translationX = -slideGroupsPx * fold }) {
             Box(Modifier.matchParentSize().clip(RoundedCornerShape(StageRadii.Sheet)).background(shade))
-            Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx)) {
+            // glcn: a tab on the panel's right edge with a › — ▶ goes back to the channels.
+            DeckCategoriesTab(visible = column == 0 || column == -1, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
+            Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
                 if (chips.isNotEmpty()) {
-                    DeckChips(chips, activeChip, if (column == -1) chipIdx else -1)
+                    DeckChips(chips, activeChip, if (column == -1) chipIdx else -1, colors = marks.mapValues { it.value.shownColor })
                     Spacer(Modifier.height(10.mpx))
                 }
                 Text(
@@ -1071,8 +1074,8 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
 }
 
 @Composable
-private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: Int) {
-    val accent = stageAccent.accent
+private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: Int, colors: Map<Long, Color> = emptyMap()) {
+    val appAccent = stageAccent.accent
     // Whole names on one row that slides to the chip under the cursor (or the active one).
     val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
     val target = if (cursor >= 0) cursor else chips.indexOfFirst { it.first == activeId }.coerceAtLeast(0)
@@ -1088,6 +1091,9 @@ private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: I
             val (id, name) = chips.getOrNull(i) ?: return@items
             val focused = i == cursor
             val on = id == activeId
+            // glcn: a playlist's chip wears that playlist's own colour (its tag's); "All" the app's accent.
+            val accent = colors[id] ?: appAccent
+            val onChip = if (accent.luminance() > 0.55f) Color(0xFF111418) else Color.White
             val bg by animateColorAsState(
                 when {
                     focused -> accent
@@ -1099,7 +1105,7 @@ private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: I
             Text(
                 name,
                 style = stageText(16, if (on) 800 else 600),
-                color = if (focused) stageAccent.onAccent else if (on) StageColors.Text else StageColors.Muted,
+                color = if (focused) onChip else if (on) StageColors.Text else StageColors.Muted,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .widthIn(max = 240.mpx)
@@ -1133,13 +1139,13 @@ private val DECK_TAB_ROOM = 16.mpx
  * takes the cursor it nudges left twice, so the eye goes there; then it stays still.
  */
 @Composable
-private fun DeckCategoriesTab(visible: Boolean, modifier: Modifier) {
+private fun DeckCategoriesTab(visible: Boolean, modifier: Modifier, toRight: Boolean = false) {
     val nudge = remember { Animatable(0f) }
     LaunchedEffect(visible) {
         if (!visible) return@LaunchedEffect
         delay(TAB_NUDGE_DELAY_MS)
         repeat(2) {
-            nudge.animateTo(-1f, tween(180, easing = FastOutSlowInEasing))
+            nudge.animateTo(if (toRight) 1f else -1f, tween(180, easing = FastOutSlowInEasing))
             nudge.animateTo(0f, spring(dampingRatio = 0.5f, stiffness = 500f))
         }
     }
@@ -1149,11 +1155,11 @@ private fun DeckCategoriesTab(visible: Boolean, modifier: Modifier) {
             .graphicsLayer { alpha = a; translationX = nudge.value * 6.mpx.toPx() }
             .width(DECK_TAB_ROOM - 2.mpx)
             .height(110.mpx)
-            .clip(RoundedCornerShape(topEnd = 10.mpx, bottomEnd = 10.mpx))
+            .clip(if (toRight) RoundedCornerShape(topStart = 10.mpx, bottomStart = 10.mpx) else RoundedCornerShape(topEnd = 10.mpx, bottomEnd = 10.mpx))
             .background(stageAccent.accent.copy(alpha = 0.22f)),
         contentAlignment = Alignment.Center,
     ) {
-        OwnTVIcon(OwnTVIcon.CHEVRON_LEFT, StageColors.Text, Modifier.size(14.mpx))
+        OwnTVIcon(if (toRight) OwnTVIcon.CHEVRON else OwnTVIcon.CHEVRON_LEFT, StageColors.Text, Modifier.size(14.mpx))
     }
 }
 
