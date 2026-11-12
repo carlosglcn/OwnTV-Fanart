@@ -798,7 +798,8 @@ private fun SeriesGrid(
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
                                     items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
-                                        val show = series[index] ?: return@items
+                                        // glcn: a poster still on its way shows its shape, shimmering, instead of a gap.
+                                        val show = series[index] ?: run { tv.own.owntv.glcn.SkeletonPoster(); return@items }
                                         StagePoster(
                                             title = show.name,
                                             badges = androidx.compose.runtime.remember(show.name, show.qualityRank, show.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(show.name, show.qualityRank, show.advertisedCapabilities) },
@@ -967,7 +968,8 @@ private fun SeriesGrid(
                                 modifier = Modifier.fillMaxSize(),
                             ) {
                                 items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
-                                    val show = series[index] ?: return@items
+                                    // glcn: a poster still on its way shows its shape, shimmering, instead of a gap.
+                                    val show = series[index] ?: run { tv.own.owntv.glcn.SkeletonPoster(); return@items }
                                     StagePoster(
                                         title = show.name,
                                         badges = androidx.compose.runtime.remember(show.name, show.qualityRank, show.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(show.name, show.qualityRank, show.advertisedCapabilities) },

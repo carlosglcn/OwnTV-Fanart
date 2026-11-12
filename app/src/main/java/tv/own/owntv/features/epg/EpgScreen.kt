@@ -84,6 +84,9 @@ import tv.own.owntv.features.live.edgeScrollSpec
 import tv.own.owntv.features.live.liveCategoryEntries
 import tv.own.owntv.features.live.liveEpgShiftLabel
 import tv.own.owntv.ui.components.OwnTVIcon
+import tv.own.owntv.glcn.skeleton
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import tv.own.owntv.ui.components.OwnTVSpinner
 import tv.own.owntv.ui.stage.StageButton
 import tv.own.owntv.ui.stage.shownColor
@@ -1108,6 +1111,15 @@ private fun GuideRow(
                     cursor = cursor,
                     rowIndex = rowIndex,
                 )
+            } ?: run {
+                // glcn: the row's programmes still on their way: two cells' shapes, shimmering, instead of an empty row.
+                androidx.compose.foundation.layout.Row(
+                    Modifier.fillMaxSize().padding(vertical = 6.mpx),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.mpx),
+                ) {
+                    Box(Modifier.weight(0.42f).fillMaxHeight().clip(RoundedCornerShape(10.mpx)).skeleton())
+                    Box(Modifier.weight(0.58f).fillMaxHeight().clip(RoundedCornerShape(10.mpx)).skeleton())
+                }
             }
         }
     }

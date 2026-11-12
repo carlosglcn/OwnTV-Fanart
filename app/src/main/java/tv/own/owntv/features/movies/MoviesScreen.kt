@@ -772,7 +772,8 @@ fun MoviesScreen(
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
                                     items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
-                                        val movie = movies[index] ?: return@items
+                                        // glcn: a poster still on its way shows its shape, shimmering, instead of a gap.
+                                        val movie = movies[index] ?: run { tv.own.owntv.glcn.SkeletonPoster(); return@items }
                                         val prog = movieProgress[movie.id]
                                         val done = prog?.let { vm.isMovieCompleted(it) } == true
                                         StagePoster(
