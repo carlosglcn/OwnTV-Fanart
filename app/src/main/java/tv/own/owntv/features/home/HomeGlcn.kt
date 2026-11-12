@@ -351,7 +351,7 @@ internal fun ArtLiveCard(
                     model = logo,
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
-                    colorFilter = CAPTION_LOGO_GREY,
+                    colorFilter = tv.own.owntv.glcn.rememberGhostFilter(logo),
                     alpha = if (focused) CAPTION_LOGO_ALPHA_FOCUSED else CAPTION_LOGO_ALPHA,
                     modifier = Modifier.align(Alignment.CenterEnd).offset(x = CAPTION_LOGO_W * 0.3f).size(CAPTION_LOGO_W, CAPTION_HEIGHT * 1.1f),
                 )
@@ -380,7 +380,6 @@ internal fun ArtLiveCard(
 }
 
 /** glcn: the faint channel logo behind a live card's words — greyscale, see [ArtLiveCard]. */
-private val CAPTION_LOGO_GREY = androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) })
 private const val CAPTION_LOGO_ALPHA = 0.08f
 private const val CAPTION_LOGO_ALPHA_FOCUSED = 0.14f
 private val CAPTION_LOGO_W = 170.mpx
