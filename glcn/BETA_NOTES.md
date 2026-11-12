@@ -28,3 +28,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Cine banner: the programme's picture is smaller (about a quarter less wide), leaving the title more room.
 - 🕰️ Player (live TV): the clock card in the corner is now a slim pill in the top centre — time · date · weather (icon, degrees, city) — and, only while they apply, the sleep timer's minutes left, "● Recording" and a reminder starting within 15 minutes ("In 5 min: … · channel"). The corners stay free for the channel's logo and the scoreboard; no more "Current time" label.
 - 🌫️ Player (live TV): the shades behind the bars no longer veil the picture — a short, light one at the top for the pill, and the one at the foot starts lower; in the light theme the match no longer looks like it is in fog.
+- 🎞️ Trakt: the app now signs in through its production Trakt app, so anyone can connect (the old one was limited to invited testers). Accounts connected before need to sign in again once.
