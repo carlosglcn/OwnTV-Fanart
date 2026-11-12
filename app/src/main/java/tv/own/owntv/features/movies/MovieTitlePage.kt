@@ -278,17 +278,25 @@ internal fun MovieTitlePage(
                 // One focus stop for the reading part, so ▼ always has somewhere to land.
                 // glcn: it shows when it has the focus — an accent outline and heading — so you always know where you are.
                 var lowerFocused by remember { mutableStateOf(false) }
+                // glcn: OK on the cast asks whose films to show, then lists the ones in your playlists.
+                var castOpen by remember { mutableStateOf(false) }
                 Column(
-                    Modifier.focusRequester(lowerFocus).onFocusChanged { lowerFocused = it.isFocused }.focusable()
+                    Modifier.focusRequester(lowerFocus).onFocusChanged { lowerFocused = it.isFocused }
+                        .onKeyEvent { e ->
+                            val ok = e.key == androidx.compose.ui.input.key.Key.DirectionCenter || e.key == androidx.compose.ui.input.key.Key.Enter || e.key == androidx.compose.ui.input.key.Key.NumPadEnter
+                            if (ok && e.type == androidx.compose.ui.input.key.KeyEventType.KeyUp && info.cast.isNotEmpty()) { castOpen = true; true } else false
+                        }
+                        .focusable()
                         .then(Modifier.border(2.5.mpx, if (lowerFocused) stageAccent.accent else Color.Transparent, RoundedCornerShape(16.mpx)))
                         .padding(horizontal = 14.mpx, vertical = 10.mpx),
                     verticalArrangement = Arrangement.spacedBy(22.mpx),
                 ) {
                     if (info.cast.isNotEmpty()) {
-                        Text(stringResource(R.string.content_media_cast), style = stageText(20, 700), color = if (lowerFocused) stageAccent.accent else StageColors.Text)
+                        Text(stringResource(R.string.content_media_cast), style = stageText(20, 700), color = if (lowerFocused) stageAccent.ink else StageColors.Text)
                         tv.own.owntv.features.shell.components.VodCast(info.cast, 10)
                     }
                 }
+                if (castOpen) CastFilmsPopup(info.cast.map { it.name }, movie.id, onOpen = { castOpen = false; onOpenRelated(it) }, onDismiss = { castOpen = false })
                 if (extras.isNotEmpty()) {
                     Text(stringResource(R.string.glcn_title_extras), style = stageText(20, 700), color = StageColors.Text)
                     Row(
@@ -432,3 +440,37 @@ internal fun versionBadges(m: MovieEntity): List<String> =
 private const val YEAR_GHOST_SIZE = 300
 private const val YEAR_GHOST_W = 900
 private const val YEAR_GHOST_H = 380
+
+/**
+ * glcn: the cast's films in your playlists — first who (the cast, by name), then that person's films (newest first),
+ * each opening its own page. Only films whose TMDB details the app has fetched are known.
+ */
+@Composable
+private fun CastFilmsPopup(names: List<String>, currentId: Long, onOpen: (tv.own.owntv.core.database.entity.MovieEntity) -> Unit, onDismiss: () -> Unit) {
+    var person by remember { mutableStateOf<String?>(null) }
+    val films by androidx.compose.runtime.produceState<List<tv.own.owntv.core.database.entity.MovieEntity>?>(null, person) {
+        val p = person ?: return@produceState
+        value = null
+        value = tv.own.owntv.core.metadata.CastLibrary.filmsWith(p, except = currentId)
+    }
+    val who = person
+    if (who == null) {
+        tv.own.owntv.ui.stage.StagePopup(onDismiss = onDismiss, title = stringResource(R.string.content_media_cast), body = stringResource(R.string.glcn_cast_pick), scroll = true) {
+            names.take(CAST_PICK_MAX).forEach { n -> tv.own.owntv.ui.stage.StagePopupOption(title = n, onClick = { person = n }) }
+        }
+    } else {
+        val list = films
+        tv.own.owntv.ui.stage.StagePopup(
+            onDismiss = { person = null },
+            title = stringResource(R.string.glcn_cast_films, who),
+            body = if (list != null && list.isEmpty()) stringResource(R.string.glcn_cast_none, who) else null,
+            scroll = true,
+        ) {
+            list?.forEach { f ->
+                tv.own.owntv.ui.stage.StagePopupOption(title = f.name, subtitle = f.year?.toString(), onClick = { onOpen(f) })
+            }
+        }
+    }
+}
+
+private const val CAST_PICK_MAX = 12

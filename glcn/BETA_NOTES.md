@@ -35,3 +35,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔘 Favourites, History, the playback report and Downloads: their actions (clear, export, share, watch setting, folder) are glass buttons instead of loose text with an icon.
 - 🪟 Popups float a little higher than the page, with a soft shadow.
 - ⚽ Player pill: while a team you follow (Sports › your teams) is playing, its score and minute show in the pill ("CZE 0-1 ESP · 67'"); not with spoiler-free on.
+- 🎭 Film page: OK on the cast asks whose films you want, then lists that person's films in your playlists (newest first); each opens its own page. Only films whose TMDB details the app has already fetched are known.
