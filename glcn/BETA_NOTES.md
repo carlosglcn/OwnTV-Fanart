@@ -86,3 +86,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ✂️ Home: a row only partly on screen — cut by the foot of the page or by the top bar — now fades as a whole instead of showing cut-off cards, and comes back as it slides fully in.
 - 🔁 TV en directo, Cinema layout: ▶ on the last channel goes round to the first; with the menu on top, ◀ on the first goes round to the last (with the side menu, ◀ there still opens the menu). Holding the key still stops at the end.
 - 🕗 Guide: the times of the focused programme are readable with every accent colour (they were dark grey on a light focus, under a white title); they now take the title's colour, a little softer.
+- 🎬 Trakt is now open to everyone (production access granted — no more 16-person limit). About and the Trakt window show Trakt's notice: "OwnTV Fanart uses Trakt but is not endorsed or certified by Trakt."

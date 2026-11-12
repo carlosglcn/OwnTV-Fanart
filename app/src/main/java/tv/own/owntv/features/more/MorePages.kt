@@ -847,7 +847,10 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
             modifier = Modifier.padding(top = 26.mpx).widthIn(max = 860.mpx))
         // glcn: what this version is, whose work it builds on, and where its own problems go.
         Text(stringResource(R.string.glcn_about_fork), style = stageText(17, 500).copy(lineHeight = 27.mpxSp), color = StageColors.Muted,
-            modifier = Modifier.padding(top = 12.mpx, bottom = 24.mpx).widthIn(max = 1000.mpx))
+            modifier = Modifier.padding(top = 12.mpx).widthIn(max = 1000.mpx))
+        // glcn: Trakt's required notice (production access terms).
+        Text(stringResource(R.string.glcn_trakt_notice), style = stageText(15, 500), color = StageColors.Dim,
+            modifier = Modifier.padding(top = 8.mpx, bottom = 24.mpx).widthIn(max = 1000.mpx))
         // glcn: this version's own Telegram group first, then the original project's — the same tile for both.
         Row(horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
             StageTile(Modifier.width(620.mpx)) {

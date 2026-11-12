@@ -59,6 +59,7 @@ fun TraktDialog(profileId: Long, onDismiss: () -> Unit) {
                 danger = true,
                 onClick = { Trakt.disconnect(profileId); onDismiss() },
             )
+            TraktNotice()
         }
         return
     }
@@ -108,6 +109,7 @@ fun TraktDialog(profileId: Long, onDismiss: () -> Unit) {
                 Text(c.userCode, style = stageText(56, 800), color = stageAccent.accent, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.mpx))
             }
         }
+        TraktNotice()
         when (state) {
             SignIn.DONE -> StagePopupOption(title = stringResource(R.string.glcn_trakt_close), onClick = onDismiss)
             SignIn.EXPIRED, SignIn.DENIED, SignIn.FAILED ->
@@ -115,6 +117,15 @@ fun TraktDialog(profileId: Long, onDismiss: () -> Unit) {
             SignIn.WAITING -> StagePopupOption(title = stringResource(R.string.glcn_trakt_cancel), onClick = onDismiss)
         }
     }
+}
+
+/** Trakt's required notice, small, under the dialog's options. */
+@Composable
+private fun TraktNotice() {
+    Text(
+        stringResource(R.string.glcn_trakt_notice), style = stageText(15, 500), color = StageColors.Dim, textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 10.mpx),
+    )
 }
 
 private enum class SignIn { WAITING, DONE, EXPIRED, DENIED, FAILED }
