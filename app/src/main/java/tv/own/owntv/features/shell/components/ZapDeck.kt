@@ -219,6 +219,27 @@ fun ZapDeck(
 
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    var pickerOpen by remember { mutableStateOf(false) }
+    if (pickerOpen) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { pickerOpen = false; runCatching { focus.requestFocus() } }) {
+            val first = remember { FocusRequester() }
+            LaunchedEffect(Unit) { androidx.compose.runtime.withFrameNanos { }; runCatching { first.requestFocus() } }
+            Column(Modifier.width(520.mpx).stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true).padding(horizontal = 16.mpx, vertical = 22.mpx)) {
+                chips.forEach { (id, name) ->
+                    tv.own.owntv.ui.stage.StageSheetItem(
+                        text = name,
+                        onClick = {
+                            pickerOpen = false
+                            if (id != activeChip) { playlists?.onSelect?.invoke(id); groupIdx = 0 }
+                            runCatching { focus.requestFocus() }
+                        },
+                        selected = id == activeChip,
+                        modifier = if (id == activeChip) Modifier.focusRequester(first) else Modifier,
+                    )
+                }
+            }
+        }
+    }
     BackHandler { onDismiss() }
 
     // Slides in.
@@ -400,8 +421,8 @@ fun ZapDeck(
                         when (column) {
                             2 -> column = 1
                             1 -> { column = 0; groupIdx = entries.indexOfFirst { it.item.key == shownKey }.takeIf { it >= 0 } ?: groupIdx }
-                            // glcn: ◀ ◀ from the channels — up to the playlist chips, on the active one (as TiviMate).
-                            0 -> if (chips.isNotEmpty()) { column = -1; chipIdx = chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0) }
+                            // glcn: ◀ ◀ ◀ from the picture — the quick playlist picker (as TiviMate, and as in Live TV).
+                            0 -> if (chips.isNotEmpty()) pickerOpen = true
                             -1 -> chipIdx = (chipIdx - 1).coerceAtLeast(0)
                         }
                         true
@@ -478,7 +499,7 @@ fun ZapDeck(
             Box(Modifier.matchParentSize().clip(RoundedCornerShape(StageRadii.Sheet)).background(shade))
             // glcn: a tab on the panel's right edge with a › — ▶ goes back to the channels.
             tv.own.owntv.glcn.EdgeTab(visible = column == 0 || column == -1, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
-            // glcn: ‹ on the left edge while on the categories: ◀ goes up to the playlists.
+            // glcn: ‹ on the left edge while on the categories: ◀ opens the playlists.
             if (chips.isNotEmpty()) tv.own.owntv.glcn.EdgeTab(visible = column == 0, modifier = Modifier.align(Alignment.CenterStart))
             Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
                 if (chips.isNotEmpty()) {

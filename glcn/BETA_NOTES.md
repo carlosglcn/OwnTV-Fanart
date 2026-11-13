@@ -56,5 +56,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⚪ **Pale channel logos on the light theme keep their own colours** (COSMO's red lines, STAR Channel's star) on a faint dark pill, instead of being turned grey
 - 📼 **Channels in a format the TV's hardware decoder refuses** (some MPEG-2 channels on a SHIELD) go straight to software decoding instead of timing out
 - 🏷️ Light theme: pale logos (white, or white with a touch of colour) are shaded down as a whole — every colour keeps its hue, white becomes grey — with no grey pill or dark plate behind them.
-- ◀ Player channel list: ◀ on the categories now goes up to the playlist chips (on the active playlist), with a ‹ tab on the panel's left edge showing it.
+- ◀ Player channel list: ◀ ◀ ◀ from the picture (channels, categories, then once more) opens the quick playlist picker, as in Live TV; a ‹ tab on the categories' left edge shows it.
 - 🏷️ Coloured logos (Antena 3, La 2, laSexta…) are left untouched again; only logos that are white or nearly so are shaded on light backgrounds.
