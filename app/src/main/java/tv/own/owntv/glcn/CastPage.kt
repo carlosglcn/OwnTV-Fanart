@@ -50,6 +50,7 @@ import tv.own.owntv.core.companion.CompanionLink
 import tv.own.owntv.core.database.entity.MovieEntity
 import tv.own.owntv.core.metadata.CastLibrary
 import tv.own.owntv.core.metadata.CastMember
+import tv.own.owntv.core.metadata.Wiki
 import tv.own.owntv.core.metadata.MetadataImages
 import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.components.OwnTVPopup
