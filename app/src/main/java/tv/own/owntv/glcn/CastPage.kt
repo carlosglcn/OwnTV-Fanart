@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -85,7 +86,7 @@ fun CastPage(
         LaunchedEffect(Unit) { delay(60); runCatching { first.requestFocus() } }
         Box(Modifier.fillMaxSize().background(page).trapAllFocusExit()) {
             tv.own.owntv.ui.components.ArtTint(backdrop, Modifier.matchParentSize(), strength = 0.6f)
-            Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(top = 48.mpx, bottom = 40.mpx)) {
+            Column(Modifier.fillMaxSize().then(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())).padding(top = 48.mpx, bottom = 40.mpx)) {
                 Text(
                     stringResource(R.string.content_media_cast).uppercase(), style = stageText(18, 800),
                     color = stageAccent.ink, modifier = Modifier.padding(horizontal = SIDE),
