@@ -83,18 +83,17 @@ fun ChannelLogoTile(
 
     // glcn: 0 classic (upstream), 1 none.
     val around = LocalLogoInk.current
-    @Suppress("NAME_SHADOWING")
-    val surfaceLuminance = if (around == null) surfaceLuminance else if (around.luminance() > 0.5f) ON_DARK_FILL else ON_LIGHT_FILL
+    val behind = if (around == null) surfaceLuminance else if (around.luminance() > 0.5f) ON_DARK_FILL else ON_LIGHT_FILL
     val needsPlate = LogoPlate.mode == 0 && ink != LOGO_INK_NONE &&
-        contrastRatio(Color(ink).luminance(), surfaceLuminance) < MIN_CONTRAST
+        contrastRatio(Color(ink).luminance(), behind) < MIN_CONTRAST
     // glcn: a white one-colour logo (Telecinco) on a light surface is drawn in the theme's text colour instead —
     // its own shape, no plate. Logos with colour, and every logo on a dark surface, are left as they are.
-    val inkOnLight = ink != LOGO_INK_NONE && surfaceLuminance >= 0.5f && isPaleMono(ink)
+    val inkOnLight = ink != LOGO_INK_NONE && behind >= 0.5f && isPaleMono(ink)
     val logoFilter = if (inkOnLight) PALE_LOGO_ON_LIGHT else null
     val background = when {
         !showLogo -> fill
         inkOnLight -> Color.Transparent
-        needsPlate -> if (surfaceLuminance < 0.5f) LightPlate else DarkPlate
+        needsPlate -> if (behind < 0.5f) LightPlate else DarkPlate
         else -> Color.Transparent
     }
 
