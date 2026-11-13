@@ -1,27 +1,29 @@
-run=43522825541 sha=fedb08eeeb554768265625ebe1daa6d545f99abf
-e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/core/src/main/java/tv/own/owntv/core/home/HomeFeed.kt:308:91 Unresolved reference 'matchName' on receiver of type 'ChannelEntity'.
+run=43523778607 sha=1b0bdbfbd9af3fb06ba919c6719d0267fbd5e5b0
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt:235:58 Unresolved reference 'SettingsRepository'.
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt:235:80 Unresolved reference 'activeProfileId'.
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt:235:96 Cannot infer type for type parameter 'T'. Specify it explicitly.
 
-> Task :core-src:core:compileReleaseKotlin FAILED
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1794610402619.json
+> Task :app:compileStandardReleaseKotlin FAILED
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1794610876667.json
 
 --
 * What went wrong:
-Execution failed for task ':core-src:core:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
+Execution failed for task ':app:compileStandardReleaseKotlin' (registered by plugin 'com.android.internal.application').
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
    > Kotlin compiler: UNRESOLVED_REFERENCE
 --
-         Unresolved reference 'matchName' on receiver of type 'ChannelEntity'.
-         Location: /home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/core/src/main/java/tv/own/owntv/core/home/HomeFeed.kt:308
+         Unresolved reference 'SettingsRepository'.
+         Location: /home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt:235
 
 --
-org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':core-src:core:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileStandardReleaseKotlin' (registered by plugin 'com.android.internal.application').
 	at org.gradle.api.internal.tasks.execution.DefaultTaskNodeExecutor.lambda$doExecute$1(DefaultTaskNodeExecutor.java:367)
 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
 --
-Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Unresolved reference 'matchName' on receiver of type 'ChannelEntity'.
+Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Unresolved reference 'SettingsRepository'.
 	at org.jetbrains.kotlin.gradle.plugin.diagnostics.DefaultCompilerDiagnosticsProblemsReporter.reportCompilerMessage(CompilerDiagnosticsProblemsReporter.kt:63)
 	at org.jetbrains.kotlin.compilerRunner.btapi.ProblemsApiCompilerMessageRenderer.replayTo(ProblemsApiCompilerMessageRenderer.kt:88)
 --
-BUILD FAILED in 1m 19s
-80 actionable tasks: 61 executed, 19 from cache
+BUILD FAILED in 3m 29s
+112 actionable tasks: 93 executed, 19 from cache
 Configuration cache entry stored.
