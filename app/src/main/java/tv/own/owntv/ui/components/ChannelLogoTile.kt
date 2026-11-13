@@ -90,7 +90,7 @@ fun ChannelLogoTile(
     // dot, a yellow WB) is shaded down as a whole — every colour keeps its hue, white becomes a mid grey — with no
     // pill or plate behind it. On a dark surface the classic plate still serves the rare dark logo.
     val pale = ink != LOGO_INK_NONE && behind >= 0.5f &&
-        (isPaleMono(ink) || contrastRatio(Color(ink).luminance(), behind) < MIN_CONTRAST)
+        (isPaleMono(ink) || Color(ink).luminance() > PALE_INK_MIN_LUMINANCE)
     val logoFilter = if (pale) SHADE_ON_LIGHT else null
     val background = when {
         !showLogo -> fill
@@ -225,6 +225,8 @@ private fun isPaleMono(ink: Int): Boolean {
 }
 
 private const val PALE_MONO_MAX_SAT = 0.18f
+/** glcn: only a logo this light on average is shaded; a coloured one (Antena 3, La 2, laSexta) reads as it is. */
+private const val PALE_INK_MIN_LUMINANCE = 0.6f
 private const val PALE_MONO_MIN_VALUE = 0.82f
 
 /** WCAG contrast ratio between two relative luminances, 1.0 (identical) to 21.0 (black on white). */
