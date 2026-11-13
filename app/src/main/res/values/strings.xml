@@ -107,5 +107,5 @@
     <string name="glcn_deck_group_hidden">Group hidden. Show it again in Settings › Customize.</string>
     <string name="glcn_deck_manage_title">Manage groups</string>
     <string name="glcn_deck_manage_hint">OK shows or hides · Back returns</string>
-    <string name="glcn_guide_matches">%1$d programmes in the guide with those words · OK takes you to one</string>
+    <string name="glcn_guide_matches">In the guide: %1$d · OK takes you to the programme</string>
 </resources>
