@@ -44,3 +44,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📐 Player channel list: the categories panel is now exactly as wide as the channel list under it.
 - 🏷️ Light theme: white one-colour logos are a lighter grey, and the dark glow some of them carry (made for dark backgrounds) is faded out, so they no longer look blurred.
 - 🏀 Sports: three more basketball leagues to follow — EuroCup, Primera FEB (Spain's second tier) and Lega Basket Serie A (Italy), with calendar, results and table.
+- 👥 Film page: OK on the cast opens a cast page — large portraits along the top; the one you're on shows its Wikipedia summary (in your language, else English) with a QR code to read the whole article on your phone, and their other films in your playlists (▼, OK opens one).
