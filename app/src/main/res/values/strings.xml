@@ -91,4 +91,9 @@
     <string name="glcn_wall_petalos">Petals</string>
     <string name="glcn_recent_clear_all">Clear all recent channels</string>
     <string name="glcn_wall_option">App wallpapers</string>
+    <plurals name="glcn_deck_films">
+        <item quantity="one">%1$d film</item>
+        <item quantity="many">%1$d films</item>
+        <item quantity="other">%1$d films</item>
+    </plurals>
 </resources>

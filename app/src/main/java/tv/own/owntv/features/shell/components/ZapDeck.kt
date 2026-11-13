@@ -490,11 +490,22 @@ fun ZapDeck(
             // glcn: ‹ on the left edge while on the categories: ◀ opens the playlists.
             if (chips.isNotEmpty()) tv.own.owntv.glcn.EdgeTab(visible = column == 0, modifier = Modifier.align(Alignment.CenterStart))
             if (column == -2) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
-                // glcn: the playlists, each a card of its own: its colour and initial, its name, how many channels it has.
-                val counts by androidx.compose.runtime.produceState<Map<Long, Int>>(emptyMap(), chips) {
-                    val dao = runCatching { org.koin.core.context.GlobalContext.get().get<tv.own.owntv.core.database.dao.ChannelDao>() }.getOrNull()
-                    if (dao != null) value = chips.filter { it.first > 0L }.associate { (id, _) -> id to runCatching { dao.countForSourceOnce(id) }.getOrDefault(0) }
+                // glcn: the playlists, each a card of its own: its colour and initial, its name, what is in it (channels,
+                // films, series) and how it stands (when it ends, when it was last updated).
+                val counts by androidx.compose.runtime.produceState<Map<Long, Triple<Int, Int, Int>>>(emptyMap(), chips) {
+                    val k = org.koin.core.context.GlobalContext.get()
+                    val ch = runCatching { k.get<tv.own.owntv.core.database.dao.ChannelDao>() }.getOrNull()
+                    val mv = runCatching { k.get<tv.own.owntv.core.database.dao.MovieDao>() }.getOrNull()
+                    val sr = runCatching { k.get<tv.own.owntv.core.database.dao.SeriesDao>() }.getOrNull()
+                    value = chips.filter { it.first > 0L }.associate { (id, _) ->
+                        id to Triple(
+                            ch?.let { runCatching { it.countForSourceOnce(id) }.getOrNull() } ?: 0,
+                            mv?.let { runCatching { it.countForSourceOnce(id) }.getOrNull() } ?: 0,
+                            sr?.let { runCatching { it.countForSourceOnce(id) }.getOrNull() } ?: 0,
+                        )
+                    }
                 }
+                val sources = remember(playlists?.playlists) { playlists?.playlists?.associateBy { it.id }.orEmpty() }
                 Text(
                     stringResource(R.string.settings_playlists),
                     style = stageText(24, 800), color = StageColors.Text, maxLines = 1, softWrap = false,
@@ -503,7 +514,7 @@ fun ZapDeck(
                 GlideColumn(
                     count = chips.size,
                     index = plIdx,
-                    rowHeight = 88.mpx,
+                    rowHeight = 104.mpx,
                     active = true,
                     resetKey = chips.size,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -513,7 +524,32 @@ fun ZapDeck(
                     val tint by animateColorAsState(if (focused) stageAccent.onAccent else StageColors.Text, tween(140), label = "deckPlaylistText")
                     val sub by animateColorAsState(if (focused) stageAccent.onAccent.copy(alpha = 0.8f) else StageColors.Muted, tween(140), label = "deckPlaylistSub")
                     val color = if (id > 0L) marks[id]?.shownColor ?: stageAccent.accent else stageAccent.accent
-                    val n = if (id > 0L) counts[id] else counts.values.sum().takeIf { counts.isNotEmpty() }
+                    val sep = stringResource(R.string.content_epg_bits_separator)
+                    val c = if (id > 0L) counts[id] else counts.values.takeIf { it.isNotEmpty() }?.let { v ->
+                        Triple(v.sumOf { it.first }, v.sumOf { it.second }, v.sumOf { it.third })
+                    }
+                    val what = c?.let { (ch, mv, sr) ->
+                        listOfNotNull(
+                            ch.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.content_live_channel_count, it, it) },
+                            mv.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.glcn_deck_films, it, it) },
+                            sr.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.content_vod_series_count, it, it) },
+                        ).ifEmpty { listOf(pluralStringResource(R.plurals.content_live_channel_count, 0, 0)) }.joinToString(sep)
+                    }
+                    // When it ends (soon is said in days, and in the warning colour) and when it was last updated.
+                    val src = sources[id]
+                    val expiryMs = if (id > 0L) remember(id) { tv.own.owntv.core.repository.SourceGlcnPrefs.expiry(id) } else null
+                    val daysLeft = expiryMs?.let { kotlin.math.floor((it - System.currentTimeMillis()) / 86_400_000.0).toInt() }
+                    val ends = when {
+                        daysLeft == null -> null
+                        daysLeft < 0 -> stringResource(R.string.glcn_src_expired)
+                        daysLeft == 0 -> stringResource(R.string.glcn_src_expires_today)
+                        daysLeft <= PLAYLIST_SOON_DAYS -> pluralStringResource(R.plurals.glcn_src_expires_days, daysLeft, daysLeft)
+                        else -> stringResource(R.string.settings_sources_expiry, java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(expiryMs)))
+                    }
+                    val synced = src?.lastSyncAt?.let {
+                        stringResource(R.string.glcn_src_synced_ago, android.text.format.DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString().replaceFirstChar { ch -> ch.lowercase() })
+                    }
+                    val warn = daysLeft != null && daysLeft <= PLAYLIST_SOON_DAYS
                     Row(
                         Modifier.fillMaxSize().padding(horizontal = 14.mpx),
                         verticalAlignment = Alignment.CenterVertically,
@@ -529,9 +565,11 @@ fun ZapDeck(
                         }
                         Column(Modifier.weight(1f)) {
                             Text(name, style = stageText(20, if (on) 800 else 700), color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
-                            if (n != null) Text(
-                                pluralStringResource(R.plurals.content_live_channel_count, n, n),
-                                style = stageText(15, 600), color = sub, maxLines = 1, softWrap = false,
+                            if (what != null) Text(what, style = stageText(15, 600), color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
+                            val state = listOfNotNull(ends, synced).joinToString(sep)
+                            if (state.isNotEmpty()) Text(
+                                state, style = stageText(14, if (warn) 700 else 500),
+                                color = if (warn && !focused) Color(0xFFD9822B) else sub, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
                             )
                         }
                         if (on) OwnTVIcon(OwnTVIcon.CHECK, tint, Modifier.size(22.mpx))
@@ -1150,3 +1188,6 @@ private fun deckAccentInk(): Color {
 /** glcn: room on the channel list's left for the categories tab. */
 private val DECK_TAB_ROOM = tv.own.owntv.glcn.EDGE_TAB_ROOM
 
+
+/** glcn: a playlist ending within this many days says so in days, in the warning colour (as in Playlists). */
+private const val PLAYLIST_SOON_DAYS = 15

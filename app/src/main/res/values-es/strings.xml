@@ -91,4 +91,9 @@
     <string name="glcn_wall_petalos">Pétalos</string>
     <string name="glcn_recent_clear_all">Borrar todos los recientes</string>
     <string name="glcn_wall_option">Fondos de la app</string>
+    <plurals name="glcn_deck_films">
+        <item quantity="one">%1$d película</item>
+        <item quantity="many">%1$d películas</item>
+        <item quantity="other">%1$d películas</item>
+    </plurals>
 </resources>
