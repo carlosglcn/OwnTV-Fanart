@@ -66,3 +66,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔴 "LIVE" only on a programme that really is live (a match, a "DIRECTO" broadcast); anything else being shown now says "ON AIR" — programme info, guide, Live TV's cinema view and the day's schedule.
 - 🔤 Programme info, light theme: the synopsis and the lines around it are darker and a touch bolder, and the picture behind them gets a little more wash where it is bright, so they read better.
 - 🗂️ Playlists panel: each card also says what the playlist holds (channels, films, series), when it ends (in days and in orange when it's close) and when it was last updated.
+- 📺 Home: the same channel listed twice by a playlist no longer shows twice in Recent channels.
