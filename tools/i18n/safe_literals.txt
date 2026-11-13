@@ -965,6 +965,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckFill
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckFold
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckGroupText
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckPlaylistSub
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckPlaylistText
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckRowSub
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt	deckRowText
