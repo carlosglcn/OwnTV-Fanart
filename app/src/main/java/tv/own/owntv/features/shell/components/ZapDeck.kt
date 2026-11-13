@@ -1007,7 +1007,10 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
         if (showNumber) {
             Text(channel.number?.toString().orEmpty(), style = stageText(17, 700), color = sub, maxLines = 1, modifier = Modifier.width(50.mpx))
         }
-        ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.width(72.mpx).height(48.mpx), fill = Color.Transparent) { }
+        // glcn: the lit row is the solid accent — the logo goes on it as on any focused fill.
+        androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.components.LocalLogoInk provides (if (lit) stageAccent.onAccent else null)) {
+            ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.width(72.mpx).height(48.mpx), fill = Color.Transparent) { }
+        }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
                 if (playing) tv.own.owntv.glcn.EqualizerBars(if (lit) stageAccent.onAccent else accent, Modifier.size(18.mpx))

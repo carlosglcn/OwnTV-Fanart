@@ -250,7 +250,17 @@ fun StageSurface(
             .then(if (focused && focusDecor && !sliding) Modifier.stageFocusDecor(focusStyle, radius, accent, palette) else if (focused) Modifier else idle)
             .stageClickable(interaction, enabled, onClick, onLongClick),
         contentAlignment = contentAlignment,
-    ) { content(focused) }
+    ) {
+        // glcn: a logo inside the focused item knows the text colour on its fill (ChannelLogoTile).
+        val ink = when {
+            !focused -> null
+            focusStyle == StageFocus.FX -> palette.fxText
+            focusStyle == StageFocus.FILLED || focusStyle == StageFocus.PRIMARY -> accent.onAccent
+            else -> null
+        }
+        if (ink == null) content(focused)
+        else androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.components.LocalLogoInk provides ink) { content(focused) }
+    }
 }
 
 /** The PRIMARY (1.04) and POSTER (1.08, from 50% 40%) lift; FX and FILLED stay put. An episode lifts 1.06 from 50% 30%. */

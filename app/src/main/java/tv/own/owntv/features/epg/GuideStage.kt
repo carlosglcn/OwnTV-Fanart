@@ -137,7 +137,7 @@ internal fun GuideVideo(
             ChannelLogoTile(
                 logoUrl = channel.displayLogoUrl,
                 modifier = Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f).graphicsLayer { alpha = 0.34f },
-                fill = Color.Transparent,
+                fill = Color.Transparent, surfaceLuminance = 0.02f,
             ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(48.mpx)) }
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.5f to Color.Transparent)))
         }

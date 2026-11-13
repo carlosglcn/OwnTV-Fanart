@@ -100,7 +100,6 @@ import tv.own.owntv.ui.theme.StageRadii
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.mpxSp
 import tv.own.owntv.ui.theme.stageAccent
-import androidx.compose.ui.graphics.luminance
 import tv.own.owntv.ui.theme.stageText
 
 /*
@@ -178,9 +177,8 @@ internal fun LiveStageRow(
             )
         }
         // glcn: every logo on the same rounded glass tile, one size — "1" and "2" no longer tower over the others.
-        // glcn: on the focused row the logo sits on the accent fill — a white logo turns grey only if that fill is light.
-        LivePlate(channel.displayLogoUrl, 80.mpx, 56.mpx, radius = 14.mpx, tile = logoTile,
-            behind = if (focused) stageAccent.accent.luminance() else null)
+        // glcn: on the focused row the logo knows the row's fill from the surface (LocalLogoInk).
+        LivePlate(channel.displayLogoUrl, 80.mpx, 56.mpx, radius = 14.mpx, tile = logoTile)
         Box(Modifier.weight(1f)) {
         // glcn: on the focused row, the channel's logo peeks in faint and grey on the right, behind the words (Ghosts).
         if (focused) tv.own.owntv.glcn.GhostLogo(
@@ -401,7 +399,7 @@ internal fun LiveStagePane(
                 ChannelLogoTile(
                     logoUrl = channel.displayLogoUrl,
                     modifier = (if (ficha) Modifier.align(Alignment.Center).fillMaxWidth(0.34f).fillMaxHeight(0.34f) else Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f)).graphicsLayer { alpha = if (ficha) 0.5f else 0.34f },
-                    fill = Color.Transparent,
+                    fill = Color.Transparent, surfaceLuminance = 0.02f,
                 ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(56.mpx)) }
                 Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.5f to Color.Transparent)))
             }

@@ -40,6 +40,14 @@ import kotlin.math.max
  * they sit on. The artwork itself is never recoloured, and the tile never changes size, so a plate
  * appearing cannot shift the layout around it.
  */
+/**
+ * glcn: the colour of the text around a logo when it sits on something other than the page — a focused row's fill.
+ * Set by [tv.own.owntv.ui.stage.StageSurface] for its focused item (and by lists that draw their own focus), so a logo
+ * knows what it is on without every caller passing it: light text means a dark fill (a white logo stays white), dark
+ * text a light one (a white logo turns grey).
+ */
+val LocalLogoInk = androidx.compose.runtime.compositionLocalOf<Color?> { null }
+
 @Composable
 fun ChannelLogoTile(
     logoUrl: String?,
@@ -74,6 +82,9 @@ fun ChannelLogoTile(
     }
 
     // glcn: 0 classic (upstream), 1 none.
+    val around = LocalLogoInk.current
+    @Suppress("NAME_SHADOWING")
+    val surfaceLuminance = if (around == null) surfaceLuminance else if (around.luminance() > 0.5f) ON_DARK_FILL else ON_LIGHT_FILL
     val needsPlate = LogoPlate.mode == 0 && ink != LOGO_INK_NONE &&
         contrastRatio(Color(ink).luminance(), surfaceLuminance) < MIN_CONTRAST
     // glcn: a white one-colour logo (Telecinco) on a light surface is drawn in the theme's text colour instead —
@@ -121,6 +132,9 @@ fun ChannelLogoTile(
         }
     }
 }
+
+private const val ON_DARK_FILL = 0.12f
+private const val ON_LIGHT_FILL = 0.9f
 
 /** Mean ink colour per logo URL, measured once per app run. [LOGO_INK_NONE] means "leave it alone". */
 private val logoInk = ConcurrentHashMap<String, Int>()
