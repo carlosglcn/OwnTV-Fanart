@@ -186,7 +186,7 @@ private fun Bitmap.measureInk(): Int {
 
 /**
  * glcn: a white one-colour logo on a light surface, turned to a soft grey that keeps its own detail: brightness is
- * inverted into a narrow grey band (white → mid grey, dark lines → light grey), so it reads without turning black
+ * inverted into a narrow grey band (white → a light grey, dark lines → lighter still), so it reads without turning black
  * and an outline or inner line inside the logo stays visible. Its dark glow or drop shadow (soft, half-transparent
  * dark pixels around the artwork, meant for dark backgrounds) is faded out: turned light, it would ring the logo with
  * a pale haze and make it look blurred.
@@ -203,8 +203,8 @@ private val PALE_LOGO_ON_LIGHT = androidx.compose.ui.graphics.ColorFilter.colorM
 )
 
 /** Grey of a black pixel (the lightest the logo gets); white comes out at [PALE_TOP] − [PALE_SPAN]. */
-private const val PALE_TOP = 0.80f
-private const val PALE_SPAN = 0.30f
+private const val PALE_TOP = 0.86f
+private const val PALE_SPAN = 0.24f
 /** How much opacity a dark pixel loses: a soft dark halo goes, a solid dark line inside the logo stays faintly. */
 private const val HALO_FADE = 0.75f
 

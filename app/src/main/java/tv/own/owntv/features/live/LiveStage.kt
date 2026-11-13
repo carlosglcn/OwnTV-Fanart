@@ -100,6 +100,7 @@ import tv.own.owntv.ui.theme.StageRadii
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.mpxSp
 import tv.own.owntv.ui.theme.stageAccent
+import androidx.compose.ui.graphics.luminance
 import tv.own.owntv.ui.theme.stageText
 
 /*
@@ -177,7 +178,9 @@ internal fun LiveStageRow(
             )
         }
         // glcn: every logo on the same rounded glass tile, one size — "1" and "2" no longer tower over the others.
-        LivePlate(channel.displayLogoUrl, 80.mpx, 56.mpx, radius = 14.mpx, tile = logoTile)
+        // glcn: on the focused row the logo sits on the accent fill — a white logo turns grey only if that fill is light.
+        LivePlate(channel.displayLogoUrl, 80.mpx, 56.mpx, radius = 14.mpx, tile = logoTile,
+            behind = if (focused) stageAccent.accent.luminance() else null)
         Box(Modifier.weight(1f)) {
         // glcn: on the focused row, the channel's logo peeks in faint and grey on the right, behind the words (Ghosts).
         if (focused) tv.own.owntv.glcn.GhostLogo(
@@ -275,6 +278,8 @@ internal fun LivePlate(
     height: androidx.compose.ui.unit.Dp,
     radius: androidx.compose.ui.unit.Dp = StageRadii.Plate,
     tile: Boolean = true,
+    /** glcn: the brightness of what is behind the logo when it is not the page (the focused row's accent fill). */
+    behind: Float? = null,
 ) {
     // glcn: a visible glass tile with the logo set inside it (room on every side), so every channel's logo reads the same
     // size — a bare "1" or "2" filled its whole box and towered over the others.
@@ -287,7 +292,7 @@ internal fun LivePlate(
         ),
         contentAlignment = Alignment.Center,
     ) {
-        ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize().padding(horizontal = width * 0.16f, vertical = height * 0.18f), fill = Color.Transparent, surfaceLuminance = if (light) 0.9f else 0.02f) {
+        ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize().padding(horizontal = width * 0.16f, vertical = height * 0.18f), fill = Color.Transparent, surfaceLuminance = behind ?: if (light) 0.9f else 0.02f) {
             OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.align(Alignment.Center).size(height * 0.5f))
         }
     }
