@@ -48,3 +48,7 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏷️ Light theme: white logos a lighter grey still, and back to their own white on the focused row (unless the accent there is light too).
 - 👥 Cast page: birth date and place, age (or date and age of death) from Wikidata; their films now come from the person's whole filmography, matched against every playlist and server (Emby included) by TMDB id, then by title and year; OK on a portrait jumps to their films; the page scrolls so nothing is cut.
 - 🏷️ Light theme: a logo now knows what it sits on everywhere — on a focused row with a solid accent fill (the player's channel list, menus) a white logo keeps its own white; it turns grey only on light fills; and on the dark preview boxes and programme cards it is never greyed.
+- 🏎️ **Long category and channel lists keep up with a held ▲▼:** the category list moves with the highlight at once instead of starting a glide on every step (rows no longer come up empty on big playlists), each group's icon is worked out once, and the panels beside the player's channel list read the channel only once the cursor rests
+- 🔊 **A channel that changes its sound mid-programme** (stereo to 5.1) and stalls on the switch is reopened once, instead of the player giving up
+- 📋 **The Live TV playlist you pick is remembered** after leaving the app or restarting the box
+- ⏪ **◀ ◀ ◀ from the picture opens a quick playlist picker** (with several playlists): ◀ channels, ◀ categories, ◀ playlists — as in TiviMate

@@ -106,7 +106,9 @@ fun CategoryBrowserOverlay(
     var peeked by remember { mutableStateOf<List<tv.own.owntv.core.database.entity.ChannelEntity>>(emptyList()) }
     var peekedNow by remember { mutableStateOf<Map<Long, tv.own.owntv.core.database.entity.EpgProgrammeEntity>>(emptyMap()) }
     val focusedKey = entries.getOrNull(focusedIndex)?.item?.key
-    val activePlaylistId = tv.own.owntv.features.live.LocalCategoryPlaylists.current?.activeId
+    val playlists = tv.own.owntv.features.live.LocalCategoryPlaylists.current
+    val activePlaylistId = playlists?.activeId
+    var pickerRequest by remember { mutableIntStateOf(0) }
     LaunchedEffect(focusedKey, activePlaylistId) {
         if (peekChannels == null || focusedKey == null) return@LaunchedEffect
         kotlinx.coroutines.delay(300)
@@ -152,6 +154,7 @@ fun CategoryBrowserOverlay(
             onRowFocus = { focusedIndex = it },
             onSearchEditingChange = { typing = it },
             onChipsFocused = { onChips = it },
+            pickerRequest = pickerRequest,
             modifier = Modifier
                 .align(Alignment.CenterStart)
                 .padding(horizontal = 20.mpx, vertical = 22.mpx)
@@ -159,9 +162,11 @@ fun CategoryBrowserOverlay(
                 .fillMaxHeight()
                 .onFocusChanged { hasFocus = it.hasFocus }
                 .onPreviewKeyEvent { e ->
-                    // Pushing outward from logical Start returns to the channel list.
+                    // glcn: pushing outward once more (◀ ◀ ◀ from the picture) opens the quick playlist picker, as in
+                    // TiviMate, when there are several playlists; with one, it returns to the channel list as before.
                     if (!typing && !onChips && e.type == KeyEventType.KeyDown && e.key.horizontalDirection(layoutDirection) == HorizontalDirection.START) {
-                        onDismiss(); true
+                        if (playlists != null) pickerRequest++ else onDismiss()
+                        true
                     } else false
                 }
                 .chNavPaging(

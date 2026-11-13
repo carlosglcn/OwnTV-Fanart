@@ -740,6 +740,8 @@ internal fun LiveCategories(
     showPlaylists: Boolean = false,
     /** glcn: the share of glass a sheet draws (below 1 over the player, so the picture shows through). */
     sheetGlass: Float = 1f,
+    /** glcn: each change opens the quick playlist picker (◀ once more from the player's categories). */
+    pickerRequest: Int = 0,
 ) {
     var localQuery by remember { mutableStateOf("") }
     val query = searchQuery ?: localQuery
@@ -795,6 +797,7 @@ internal fun LiveCategories(
     // the rows below, and the cursor must not be dragged down with them.
     var lastChipId by remember { mutableStateOf<Long?>(null) }
     var pickerOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(pickerRequest) { if (pickerRequest > 0) pickerOpen = true }
     // glcn: keyed by the chips' ids, not the list instance — switching list rebuilds the rows but the chips are the
     // same, and new focus requesters on them dropped the cursor for a frame (the highlight blinked).
     val chipIds = if (playlistRows.isEmpty()) emptyList() else listOf(PICKER_CHIP)
@@ -817,6 +820,7 @@ internal fun LiveCategories(
     // Where the fixed entries end and the provider groups begin (the "GROUPS · DE" heading).
     val firstGroup = entries.indexOfFirst { !it.item.nested && (it.item.key is tv.own.owntv.core.live.LiveKey.Folder || it.item.key is tv.own.owntv.core.live.LiveKey.Custom) }
     var stepTarget by remember { mutableStateOf<Int?>(null) }
+    var lastStepAt by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
     var stepJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     // glcn: the headings over the groups, by row position — one ("GROUPS · DE"), or one per section.
     val headingAt: Map<Int, String> = remember(visible, query, firstGroup, groupsHeading, sectionOf, sectionTitles) {
@@ -837,6 +841,12 @@ internal fun LiveCategories(
     fun stepTo(pos: Int) {
         stepTarget = pos
         stepJob?.cancel()
+        // glcn: a held ▲▼ (steps closer than a key repeat and a half): the list moves with the row at once instead
+        // of starting a glide every step — each glide was cancelled by the next press, so on a long list the
+        // highlight ran ahead of rows not drawn yet and showed empty.
+        val now = android.os.SystemClock.uptimeMillis()
+        val fast = now - lastStepAt < FAST_STEP_MS
+        lastStepAt = now
         stepJob = scope.launch {
             val li = lazyIndexOf(pos)
             val info = listState.layoutInfo
@@ -850,9 +860,14 @@ internal fun LiveCategories(
             }
             if (row != null) {
                 // glcn: the row is already composed — the highlight moves at once and the list glides under it.
-                runCatching { rowFocusers[pos].requestFocus() }
-                if (delta != 0f) runCatching {
-                    listState.animateScrollBy(delta, androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                if (fast) {
+                    if (delta != 0f) runCatching { listState.scrollBy(delta) }
+                    runCatching { rowFocusers[pos].requestFocus() }
+                } else {
+                    runCatching { rowFocusers[pos].requestFocus() }
+                    if (delta != 0f) runCatching {
+                        listState.animateScrollBy(delta, androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                    }
                 }
             } else {
                 if (delta != 0f) runCatching { listState.scrollBy(delta) }
@@ -1068,6 +1083,9 @@ internal fun LiveCategories(
 }
 
 private const val PICKER_CHIP = -2L
+
+/** glcn: steps closer than this are a held key — the category list follows at once, without a glide. */
+private const val FAST_STEP_MS = 120L
 
 /**
  * `.fcat` (the Separate column): 52 high, radius 15, 18.5/600, gap 12, 2 px between rows; the

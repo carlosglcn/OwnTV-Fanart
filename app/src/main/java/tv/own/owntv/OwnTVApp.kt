@@ -147,6 +147,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         tv.own.owntv.glcn.DeckWidths.ensure(this) // glcn: widths of the player's channel list
         tv.own.owntv.glcn.Labs.ensure(this) // glcn: test features (switched on with a key sequence in Settings)
         tv.own.owntv.glcn.AppShortcuts.ensure(this)
+        tv.own.owntv.glcn.LiveListFilter.init(this) // glcn: the Live TV playlist picked in the category sheet
         tv.own.owntv.glcn.EmbyGroupsPref.load(this) // glcn: how Emby / Jellyfin libraries are split into categories
         // First thing after the context exists: a crash from here on leaves a trace on disk that the
         // user can export from Settings, instead of being lost with the process.

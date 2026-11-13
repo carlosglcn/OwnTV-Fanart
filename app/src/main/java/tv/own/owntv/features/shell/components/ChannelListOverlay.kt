@@ -130,6 +130,9 @@ fun ChannelListOverlay(
     var schedCount by remember { mutableIntStateOf(0) }
     androidx.compose.runtime.LaunchedEffect(focusedIndex) { schedPick = -1 }
     var listFocused by remember { mutableStateOf(false) }
+    // glcn: the panels beside the list follow the cursor once it rests a moment. With ▲▼ held, every step read the
+    // channel's programme, schedule and picture again — on a long list the box fell behind and rows came up empty.
+    val panelChannel = rememberSettled(channels.getOrNull(focusedIndex), PANEL_SETTLE_MS)
     val scope = rememberCoroutineScope()
     val settingsVm: SettingsViewModel = koinViewModel()
     val chNavEnabled by settingsVm.chNavEnabled.collectAsStateWithLifecycle()
@@ -366,7 +369,7 @@ fun ChannelListOverlay(
         }
         if (unified && loadSchedule != null) {
             ZapSchedulePanel(
-                channel = channels.getOrNull(focusedIndex),
+                channel = panelChannel,
                 loadSchedule = loadSchedule,
                 loadNow = cachedNow, peek = { nowCache[it.id] },
                 joined = true,
@@ -378,7 +381,7 @@ fun ChannelListOverlay(
         }
         if (loadSchedule != null && !unified) {
             ZapSchedulePanel(
-                channel = channels.getOrNull(focusedIndex),
+                channel = panelChannel,
                 loadSchedule = loadSchedule,
                 modifier = Modifier
                     .align(if (alignEnd) Alignment.CenterEnd else Alignment.CenterStart)
@@ -391,7 +394,7 @@ fun ChannelListOverlay(
         } else if (loadSchedule == null && loadNow != null) {
             // The joined schedule view carries its own programme card; a second one would double it.
             ZapPreviewPanel(
-                channel = channels.getOrNull(focusedIndex),
+                channel = panelChannel,
                 loadNow = cachedNow!!, peek = { nowCache[it.id] },
                 modifier = Modifier
                     .align(if (alignEnd) Alignment.CenterStart else Alignment.CenterEnd)
@@ -712,6 +715,9 @@ internal fun ChannelListPanel(
     var targetIndex by remember(channels, entryIndex) { mutableIntStateOf(entryIndex) }
     var focusedIndex by remember(channels, entryIndex) { mutableIntStateOf(entryIndex) }
     var listFocused by remember { mutableStateOf(false) }
+    // glcn: the panels beside the list follow the cursor once it rests a moment. With ▲▼ held, every step read the
+    // channel's programme, schedule and picture again — on a long list the box fell behind and rows came up empty.
+    val panelChannel = rememberSettled(channels.getOrNull(focusedIndex), PANEL_SETTLE_MS)
     val scope = rememberCoroutineScope()
     val settingsVm: SettingsViewModel = koinViewModel()
     val chNavEnabled by settingsVm.chNavEnabled.collectAsStateWithLifecycle()
@@ -856,3 +862,18 @@ internal fun ChannelListPanel(
         )
     }
 }
+
+/** glcn: [value], once it has stayed the same for [delayMs] — the first one at once. */
+@Composable
+internal fun <T> rememberSettled(value: T, delayMs: Long): T {
+    var settled by remember { mutableStateOf(value) }
+    LaunchedEffect(value) {
+        if (value == settled) return@LaunchedEffect
+        kotlinx.coroutines.delay(delayMs)
+        settled = value
+    }
+    return settled
+}
+
+/** glcn: how long the cursor rests before the panels beside the channel list read the new channel. */
+private const val PANEL_SETTLE_MS = 140L
