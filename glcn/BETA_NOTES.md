@@ -58,3 +58,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏷️ Light theme: pale logos (white, or white with a touch of colour) are shaded down as a whole — every colour keeps its hue, white becomes grey — with no grey pill or dark plate behind them.
 - ◀ Player channel list: ◀ ◀ ◀ from the picture (channels, categories, then once more) opens the quick playlist picker, as in Live TV; a ‹ tab on the categories' left edge shows it.
 - 🏷️ Coloured logos (Antena 3, La 2, laSexta…) are left untouched again; only logos that are white or nearly so are shaded on light backgrounds.
+- 🏷️ Light theme, logos reworked: only the white parts of a logo that stand on its transparent background turn grey ("por M+" next to a red "Estrenos", Telecinco's ring); coloured parts keep their own colour exactly, white inside colour (La 2's "2") stays white; on a focused row every logo shows exactly as drawn.
+- ◀ Player channel list: the third ◀ opens a Playlists panel in the categories' place, at their width (▲▼, OK or ▶ picks, Back returns) — no popup.

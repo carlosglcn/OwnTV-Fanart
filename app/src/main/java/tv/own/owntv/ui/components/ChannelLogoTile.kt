@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -86,16 +87,12 @@ fun ChannelLogoTile(
     val behind = if (around == null) surfaceLuminance else if (around.luminance() > 0.5f) ON_DARK_FILL else ON_LIGHT_FILL
     val needsPlate = LogoPlate.mode == 0 && ink != LOGO_INK_NONE &&
         contrastRatio(Color(ink).luminance(), behind) < MIN_CONTRAST
-    // glcn: on a light surface a logo too pale to read (white, or white with a little colour: STAR's star, AXN's
-    // dot, a yellow WB) is shaded down as a whole — every colour keeps its hue, white becomes a mid grey — with no
-    // pill or plate behind it. On a dark surface the classic plate still serves the rare dark logo.
-    val pale = ink != LOGO_INK_NONE && behind >= 0.5f &&
-        (isPaleMono(ink) || Color(ink).luminance() > PALE_INK_MIN_LUMINANCE)
-    val logoFilter = if (pale) SHADE_ON_LIGHT else null
+    // glcn: on a light page the logo's white parts on its transparent background turn grey (LogoOnLight) — its
+    // colours stay as they are; on a focused row it shows exactly as drawn, faded across as the cursor arrives.
+    val lightPage = surfaceLuminance >= 0.5f
     val background = when {
         !showLogo -> fill
-        pale -> Color.Transparent
-        needsPlate && behind < 0.5f -> LightPlate
+        !lightPage && needsPlate && behind < 0.5f -> LightPlate
         else -> Color.Transparent
     }
 
@@ -105,15 +102,27 @@ fun ChannelLogoTile(
     val request = remember(logoUrl, platformContext) {
         ImageRequest.Builder(platformContext).data(logoUrl).allowHardware(false).transformations(LogoTrim).build()
     }
+    val onLightRequest = remember(logoUrl, platformContext, lightPage) {
+        if (!lightPage) null
+        else ImageRequest.Builder(platformContext).data(logoUrl).allowHardware(false).transformations(LogoTrim, LogoOnLight).build()
+    }
+    val asDrawn by androidx.compose.animation.core.animateFloatAsState(
+        if (onLightRequest == null || around != null) 1f else 0f, androidx.compose.animation.core.tween(160), label = "logoAsDrawn",
+    )
 
     Box(modifier.background(background), contentAlignment = Alignment.Center) {
         if (showLogo) {
+            if (onLightRequest != null && asDrawn < 1f) AsyncImage(
+                model = onLightRequest,
+                contentDescription = null,
+                contentScale = contentScale,
+                modifier = imageModifier.graphicsLayer { alpha = 1f - asDrawn },
+            )
             AsyncImage(
                 model = request,
                 contentDescription = null,
                 contentScale = contentScale,
-                colorFilter = logoFilter,
-                modifier = imageModifier,
+                modifier = imageModifier.graphicsLayer { alpha = asDrawn },
                 onState = { state ->
                     when (state) {
                         is AsyncImagePainter.State.Success -> {
@@ -156,7 +165,6 @@ private const val MAX_MEASURED_LOGOS = 4096
 
 // Slightly off-white and off-black rather than pure: a pure-white plate glares on a TV in a dark room.
 private val LightPlate = Color(0xFFEDF1F5)
-private val DarkPlate = Color(0xFF161C24)
 
 /**
  * The logo's mean colour, weighted by alpha so the transparent surround does not drag every logo
@@ -199,35 +207,6 @@ private fun Bitmap.measureInk(): Int {
     )
 }
 
-/**
- * glcn: a pale logo on a light surface, shaded down: each channel multiplied by the same factor, so hues stay what
- * they were (a red star stays red, only deeper) and white lands on a mid grey that reads on the light page.
- */
-private val SHADE_ON_LIGHT = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-    androidx.compose.ui.graphics.ColorMatrix(
-        floatArrayOf(
-            SHADE, 0f, 0f, 0f, 0f,
-            0f, SHADE, 0f, 0f, 0f,
-            0f, 0f, SHADE, 0f, 0f,
-            0f, 0f, 0f, 1f, 0f,
-        ),
-    ),
-)
-
-/** White comes out at this fraction of itself — a grey that still reads as "light" on a light page. */
-private const val SHADE = 0.58f
-
-/** glcn: a logo whose ink is near white and has (almost) no colour — a white one-colour logo. */
-private fun isPaleMono(ink: Int): Boolean {
-    val hsv = FloatArray(3)
-    android.graphics.Color.colorToHSV(ink, hsv)
-    return hsv[1] < PALE_MONO_MAX_SAT && hsv[2] > PALE_MONO_MIN_VALUE
-}
-
-private const val PALE_MONO_MAX_SAT = 0.18f
-/** glcn: only a logo this light on average is shaded; a coloured one (Antena 3, La 2, laSexta) reads as it is. */
-private const val PALE_INK_MIN_LUMINANCE = 0.6f
-private const val PALE_MONO_MIN_VALUE = 0.82f
 
 /** WCAG contrast ratio between two relative luminances, 1.0 (identical) to 21.0 (black on white). */
 private fun contrastRatio(a: Float, b: Float): Float {

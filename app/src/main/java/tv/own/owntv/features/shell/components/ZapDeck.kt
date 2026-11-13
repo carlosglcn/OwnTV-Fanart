@@ -219,28 +219,13 @@ fun ZapDeck(
 
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-    var pickerOpen by remember { mutableStateOf(false) }
-    if (pickerOpen) {
-        androidx.compose.ui.window.Dialog(onDismissRequest = { pickerOpen = false; runCatching { focus.requestFocus() } }) {
-            val first = remember { FocusRequester() }
-            LaunchedEffect(Unit) { androidx.compose.runtime.withFrameNanos { }; runCatching { first.requestFocus() } }
-            Column(Modifier.width(520.mpx).stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true).padding(horizontal = 16.mpx, vertical = 22.mpx)) {
-                chips.forEach { (id, name) ->
-                    tv.own.owntv.ui.stage.StageSheetItem(
-                        text = name,
-                        onClick = {
-                            pickerOpen = false
-                            if (id != activeChip) { playlists?.onSelect?.invoke(id); groupIdx = 0 }
-                            runCatching { focus.requestFocus() }
-                        },
-                        selected = id == activeChip,
-                        modifier = if (id == activeChip) Modifier.focusRequester(first) else Modifier,
-                    )
-                }
-            }
-        }
+    // glcn: ◀ ◀ ◀ — the playlists panel (column -2), in the categories' place and at their width.
+    var plIdx by remember { mutableIntStateOf(0) }
+    val pickPlaylist: () -> Unit = {
+        chips.getOrNull(plIdx)?.let { (id, _) -> if (id != activeChip) { playlists?.onSelect?.invoke(id); groupIdx = 0 } }
+        column = 0
     }
-    BackHandler { onDismiss() }
+    BackHandler { if (column == -2) column = 0 else onDismiss() }
 
     // Slides in.
     val enter = remember { Animatable(0f) }
@@ -394,6 +379,7 @@ fun ZapDeck(
                                 else -> groupIdx = (groupIdx + 1).coerceAtMost(entries.lastIndex.coerceAtLeast(0))
                             }
                             -1 -> if (!up) column = 0
+                            -2 -> plIdx = (plIdx + if (up) -1 else 1).coerceIn(0, chips.lastIndex)
                         }
                         true
                     }
@@ -422,7 +408,7 @@ fun ZapDeck(
                             2 -> column = 1
                             1 -> { column = 0; groupIdx = entries.indexOfFirst { it.item.key == shownKey }.takeIf { it >= 0 } ?: groupIdx }
                             // glcn: ◀ ◀ ◀ from the picture — the quick playlist picker (as TiviMate, and as in Live TV).
-                            0 -> if (chips.isNotEmpty()) pickerOpen = true
+                            0 -> if (chips.isNotEmpty()) { column = -2; plIdx = chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0) }
                             -1 -> chipIdx = (chipIdx - 1).coerceAtLeast(0)
                         }
                         true
@@ -437,6 +423,7 @@ fun ZapDeck(
                                 else onDismiss()
                             }
                             -1 -> chipIdx = (chipIdx + 1).coerceAtMost(chips.lastIndex)
+                            -2 -> pickPlaylist()
                         }
                         true
                     }
@@ -445,6 +432,7 @@ fun ZapDeck(
                             1, 2 -> tuneFocused()
                             0 -> if (list.isNotEmpty() && entries.getOrNull(groupIdx)?.item?.key == shownKey) column = 1
                             -1 -> chips.getOrNull(chipIdx)?.let { (id, _) -> playlists?.onSelect?.invoke(id); column = 0; groupIdx = 0 }
+                            -2 -> pickPlaylist()
                         }
                         true
                     }
@@ -498,10 +486,37 @@ fun ZapDeck(
             if (fold < 0.999f) Box(Modifier.width(groupsOpen).fillMaxHeight().graphicsLayer { alpha = 1f - fold; translationX = -slideGroupsPx * fold }) {
             Box(Modifier.matchParentSize().clip(RoundedCornerShape(StageRadii.Sheet)).background(shade))
             // glcn: a tab on the panel's right edge with a › — ▶ goes back to the channels.
-            tv.own.owntv.glcn.EdgeTab(visible = column == 0 || column == -1, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
+            tv.own.owntv.glcn.EdgeTab(visible = column == 0 || column == -1 || column == -2, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
             // glcn: ‹ on the left edge while on the categories: ◀ opens the playlists.
             if (chips.isNotEmpty()) tv.own.owntv.glcn.EdgeTab(visible = column == 0, modifier = Modifier.align(Alignment.CenterStart))
-            Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
+            if (column == -2) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
+                Text(
+                    stringResource(R.string.settings_playlists),
+                    style = stageText(17, 700), color = StageColors.Dim, maxLines = 1, softWrap = false,
+                    modifier = Modifier.padding(start = 14.mpx, top = 6.mpx, bottom = 8.mpx),
+                )
+                GlideColumn(
+                    count = chips.size,
+                    index = plIdx,
+                    rowHeight = 60.mpx,
+                    active = true,
+                    resetKey = chips.size,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) { i, focused ->
+                    val (id, name) = chips.getOrNull(i) ?: return@GlideColumn
+                    val on = id == activeChip
+                    val tint by animateColorAsState(if (focused) stageAccent.onAccent else if (on) StageColors.Text else StageColors.Muted, tween(140), label = "deckPlaylistText")
+                    Row(
+                        Modifier.fillMaxSize().padding(horizontal = 14.mpx),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.mpx),
+                    ) {
+                        marks[id]?.let { m -> Box(Modifier.size(12.mpx).clip(RoundedCornerShape(50)).background(m.shownColor)) }
+                        Text(name, style = stageText(19, if (on) 800 else 600), color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false, modifier = Modifier.weight(1f))
+                        if (on) OwnTVIcon(OwnTVIcon.CHECK, tint, Modifier.size(20.mpx))
+                    }
+                }
+            } else Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
                 if (chips.isNotEmpty()) {
                     DeckChips(chips, activeChip, if (column == -1) chipIdx else -1, colors = marks.mapValues { it.value.shownColor })
                     Spacer(Modifier.height(10.mpx))
