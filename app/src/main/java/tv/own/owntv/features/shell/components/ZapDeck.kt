@@ -227,6 +227,19 @@ fun ZapDeck(
     // playlist of the profile, the switched-off ones too (dimmed), so one can be switched back on from here.
     var plIdx by remember { mutableIntStateOf(0) }
     var okPending by remember { mutableStateOf(false) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val offIds by tv.own.owntv.core.repository.SourceGlcnPrefs.disabled.collectAsState()
+    val allSources by androidx.compose.runtime.produceState<List<tv.own.owntv.core.database.entity.SourceEntity>>(emptyList()) {
+        runCatching {
+            val k = org.koin.core.context.GlobalContext.get()
+            val pid = k.get<tv.own.owntv.core.settings.SettingsRepository>().activeProfileId.first()
+            k.get<tv.own.owntv.core.database.dao.SourceDao>().observeForProfile(pid).collect { value = it }
+        }
+    }
+    val panelLists = remember(chips, allSources, offIds) {
+        if (chips.isEmpty()) chips
+        else chips + allSources.filter { it.id in offIds && chips.none { c -> c.first == it.id } }.map { it.id to it.name }
+    }
     // glcn: "Manage groups" (column -3): every group of the playlist(s) shown, hidden ones too, each shown or hidden.
     var manageIdx by remember { mutableIntStateOf(0) }
     val deckScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -255,19 +268,6 @@ fun ZapDeck(
                 k.get<tv.own.owntv.core.customize.CustomizationStore>().setCategoryHidden(pid, tv.own.owntv.core.model.MediaType.LIVE, g.key, !g.hidden)
             }
         }
-    }
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val offIds by tv.own.owntv.core.repository.SourceGlcnPrefs.disabled.collectAsState()
-    val allSources by androidx.compose.runtime.produceState<List<tv.own.owntv.core.database.entity.SourceEntity>>(emptyList()) {
-        runCatching {
-            val k = org.koin.core.context.GlobalContext.get()
-            val pid = k.get<tv.own.owntv.core.settings.SettingsRepository>().activeProfileId.first()
-            k.get<tv.own.owntv.core.database.dao.SourceDao>().observeForProfile(pid).collect { value = it }
-        }
-    }
-    val panelLists = remember(chips, allSources, offIds) {
-        if (chips.isEmpty()) chips
-        else chips + allSources.filter { it.id in offIds && chips.none { c -> c.first == it.id } }.map { it.id to it.name }
     }
     val pickPlaylist: () -> Unit = {
         panelLists.getOrNull(plIdx)?.let { (id, _) ->
