@@ -233,7 +233,7 @@ fun ZapDeck(
     val manageRows by androidx.compose.runtime.produceState<List<ManagedGroup>>(emptyList(), activeChip, offIds) {
         runCatching {
             val k = org.koin.core.context.GlobalContext.get()
-            val pid = k.get<tv.own.owntv.core.repository.SettingsRepository>().activeProfileId.first()
+            val pid = k.get<tv.own.owntv.core.settings.SettingsRepository>().activeProfileId.first()
             val sourceIds = if (activeChip > 0L) listOf(activeChip)
                 else k.get<tv.own.owntv.core.database.dao.SourceDao>().observeForProfile(pid).first().map { it.id }.filterNot { it in offIds }
             kotlinx.coroutines.flow.combine(
@@ -251,7 +251,7 @@ fun ZapDeck(
         deckScope.launch {
             runCatching {
                 val k = org.koin.core.context.GlobalContext.get()
-                val pid = k.get<tv.own.owntv.core.repository.SettingsRepository>().activeProfileId.first()
+                val pid = k.get<tv.own.owntv.core.settings.SettingsRepository>().activeProfileId.first()
                 k.get<tv.own.owntv.core.customize.CustomizationStore>().setCategoryHidden(pid, tv.own.owntv.core.model.MediaType.LIVE, g.key, !g.hidden)
             }
         }
@@ -261,7 +261,7 @@ fun ZapDeck(
     val allSources by androidx.compose.runtime.produceState<List<tv.own.owntv.core.database.entity.SourceEntity>>(emptyList()) {
         runCatching {
             val k = org.koin.core.context.GlobalContext.get()
-            val pid = k.get<tv.own.owntv.core.repository.SettingsRepository>().activeProfileId.first()
+            val pid = k.get<tv.own.owntv.core.settings.SettingsRepository>().activeProfileId.first()
             k.get<tv.own.owntv.core.database.dao.SourceDao>().observeForProfile(pid).collect { value = it }
         }
     }
