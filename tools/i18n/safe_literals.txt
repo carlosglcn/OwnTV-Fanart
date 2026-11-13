@@ -1128,9 +1128,11 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/BootStart.kt	android.intent.action.QUICKBOOT_POWERON
 1	technical	app/src/main/java/tv/own/owntv/glcn/BootStart.kt	package:
 1	technical	app/src/main/java/tv/own/owntv/glcn/CastPage.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/glcn/CastPage.kt	$first · $second
 1	technical	app/src/main/java/tv/own/owntv/glcn/CastPage.kt	$i-${p.name}
 1	technical	app/src/main/java/tv/own/owntv/glcn/CastPage.kt	w342
 1	technical	app/src/main/java/tv/own/owntv/glcn/CastPage.kt	wiki
+1	technical	app/src/main/java/tv/own/owntv/glcn/CastPage.kt	· ${list.size}
 1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryGlyphPaths.kt	M100-240q-19 0-27-16.5t3-31.5l180-240q5-6 11-9t13-3q7 0 13 3t11 9l171 228h325L560-619 459-485q-9 12-21 12.5t-21-6.5q-9-7-12-18.5t6-23.5l125-167q5-6 11-9t13-3q7 0 13 3t11 9l300 400q11 15 3 31.5T860-240H100Zm335-60h365-334 51-82Zm-275 0h240L280-460 160-300Zm0 0h240-240Z
 1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryGlyphPaths.kt	M140-120q-24.75 0-42.37-17.63Q80-155.25 80-180v-642q0-5.25 4.5-7.13Q89-831 93-827l54 54 55-56q4.64-5 10.82-5 6.18 0 11.18 5l56 56 56-56q4.64-5 10.82-5 6.18 0 11.18 5l55 56 56-56q4.64-5 10.82-5 6.18 0 11.18 5l56 56 55-56q4.64-5 10.82-5 6.18 0 11.18 5l56 56 56-56q4.64-5 10.82-5 6.18 0 11.18 5l55 56 54-54q4-4 8.5-2.13 4.5 1.88 4.5 7.13v642q0 24.75-17.62 42.37Q844.75-120 820-120H140Zm0-60h310v-280H140v280Zm370 0h310v-110H510v110Zm0-170h310v-110H510v110ZM140-520h680v-120H140v120Z
 1	technical	app/src/main/java/tv/own/owntv/glcn/CategoryGlyphPaths.kt	M140-160q-24 0-42-18t-18-42v-520q0-24 18-42t42-18h520q24 0 42 18t18 42v215l134-134q7-7 16.5-3.46T880-649v338q0 9.92-9.5 13.46Q861-294 854-301L720-435v215q0 24-18 42t-42 18H140Zm0-60h520v-520H140v520Zm0 0v-520 520Z
@@ -1508,26 +1510,42 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	$name $ACTOR_HINT
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	%20
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	+
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	OPTIONAL { ?f wdt:P4947 ?t } OPTIONAL { ?f wdt:P577 ?date } OPTIONAL { ?f rdfs:label ?en FILTER(LANG(?en) = "$EN") }
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	OPTIONAL { wd:$qid wdt:P19 ?p } SERVICE wikibase:label { bd:serviceParam wikibase:language "$lang,$EN". } } LIMIT 1
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	OwnTV-Fanart (https://github.com/carlosglcn/OwnTV-Fanart)
+1	regex	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	Q\\d+
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	SELECT ?b ?d ?pLabel WHERE { OPTIONAL { wd:$qid wdt:P569 ?b } OPTIONAL { wd:$qid wdt:P570 ?d }
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	SELECT ?f ?fLabel ?en ?t (MIN(?date) AS ?d) WHERE { ?f wdt:P161 wd:$qid; wdt:P31 wd:Q11424.
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	SERVICE wikibase:label { bd:serviceParam wikibase:language "$lang,$EN". } } GROUP BY ?f ?fLabel ?en ?t LIMIT $MAX_FILMS
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	UTF-8
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	User-Agent
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	actor
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	b
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	bindings
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	content_urls
+2	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	d
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	description
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	desktop
-1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	en
+2	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	en
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	extract
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	fLabel
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	https://$lang.wikipedia.org/api/rest_v1/page/summary/$path
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	https://$lang.wikipedia.org/w/api.php?action=query&list=search&srlimit=5&format=json&srsearch=$q
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	https://query.wikidata.org/sparql?format=json&query=
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	mobile
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	pLabel
 2	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	page
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	query
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	results
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	search
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	source
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	standard
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	t
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	thumbnail
 2	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	title
 1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	type
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	value
+1	technical	app/src/main/java/tv/own/owntv/glcn/Wiki.kt	wikibase_item
 2	empty	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	eq
 1	technical	app/src/main/java/tv/own/owntv/player/AudioNowPlayingBar.kt	eqBar$i
