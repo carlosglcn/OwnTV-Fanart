@@ -315,7 +315,7 @@ private fun ProgrammeLine(p: EpgProgrammeEntity, now: Long, highlighted: Boolean
             }
             if (time == ProgrammeTime.NOW) StageProgress(progressOf(p, now), Modifier.width(340.mpx).padding(top = 8.mpx))
         }
-        if (time == ProgrammeTime.NOW) tv.own.owntv.ui.stage.StageLiveBadge(stringResource(R.string.player_live))
+        if (time == ProgrammeTime.NOW) tv.own.owntv.ui.stage.StageLiveBadge(tv.own.owntv.glcn.onAirLabel(p.title))
     }
 }
 

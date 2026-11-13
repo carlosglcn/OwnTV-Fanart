@@ -63,3 +63,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⚡ Quicker focus everywhere, same feel: the channel highlight's glide (still springy), the menus' and lists' highlight, the lists' scrolling and the player's channel list all settle sooner.
 - ⚡ Light theme: one logo image per row again (the as-drawn copy only while the row has focus).
 - 🗂️ Player channel list, Playlists panel: each playlist is a card — its colour and initial, its name and how many channels it has (all of them for "All").
+- 🔴 "LIVE" only on a programme that really is live (a match, a "DIRECTO" broadcast); anything else being shown now says "ON AIR" — programme info, guide, Live TV's cinema view and the day's schedule.
+- 🔤 Programme info, light theme: the synopsis and the lines around it are darker and a touch bolder, and the picture behind them gets a little more wash where it is bright, so they read better.

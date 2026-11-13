@@ -64,7 +64,8 @@ import tv.own.owntv.ui.theme.stageText
 // glcn: the screen follows the theme — dark ink on the light page, light ink on the dark one.
 private val light: Boolean @androidx.compose.runtime.Composable get() = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
 private val Ink: Color @androidx.compose.runtime.Composable get() = if (light) Color(0xFF111A1C) else Color(0xFFF2F6F5)
-private val Soft: Color @androidx.compose.runtime.Composable get() = if (light) Color(0xFF2E3B3E) else Color(0xFFC9D4D2)
+// glcn: near the title's own black in the light theme — the synopsis read grey over a busy picture.
+private val Soft: Color @androidx.compose.runtime.Composable get() = if (light) Color(0xFF1C2729) else Color(0xFFC9D4D2)
 private val Dim: Color @androidx.compose.runtime.Composable get() = if (light) Color(0xFF5E6B6E) else Color(0xFF93A09E)
 /** The page behind the words, and the panels on it. */
 private val Page: Color @androidx.compose.runtime.Composable get() = tv.own.owntv.ui.theme.LocalStagePalette.current.page
@@ -322,7 +323,7 @@ fun ProgrammeInfoScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.mpx),
             ) {
                 Box(Modifier.size(8.mpx).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFFFF3B30)))
-                Text(stringResource(R.string.glcn_live_badge), style = stageText(13, 800), color = Color.White, maxLines = 1)
+                Text(onAirLabel(cur?.title), style = stageText(13, 800), color = Color.White, maxLines = 1)
             }
         }
 
@@ -404,7 +405,7 @@ fun ProgrammeInfoScreen(
                     // without drifting.
                     // glcn: the cast sits on the right now, so the synopsis has the whole column down to the button.
                     // glcn: kept to the left half, so the picture's faces stay clear of it.
-                    DriftingSynopsis(it, modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W), style = stageText(21, 400), color = Soft, lines = if (next.isNotEmpty() && NEXT_CARDS > 0) SYNOPSIS_LINES_WITH_CARDS else SYNOPSIS_LINES, fade = true)
+                    DriftingSynopsis(it, modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W), style = stageText(21, if (light) 500 else 400), color = Soft, lines = if (next.isNotEmpty() && NEXT_CARDS > 0) SYNOPSIS_LINES_WITH_CARDS else SYNOPSIS_LINES, fade = true)
                 }
             }
             // glcn: what can be done with it, right under the synopsis (no longer down at the foot past an empty page).

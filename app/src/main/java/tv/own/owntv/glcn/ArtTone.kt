@@ -42,9 +42,9 @@ class ArtTone(val brightness: Float, val vivid: Color?) {
         private const val DARK_CARD_VALUE = 0.17f
         /** Under light text the picture is kept at or below this brightness; under dark text, at or above. */
         private const val DARK_TARGET = 0.22f
-        private const val LIGHT_TARGET = 0.80f
+        private const val LIGHT_TARGET = 0.84f
         private const val DARK_VEIL_MIN = 0.30f
-        private const val LIGHT_VEIL_MIN = 0.40f
+        private const val LIGHT_VEIL_MIN = 0.50f
         private const val VEIL_MAX = 0.88f
         private const val SAMPLE_W = 64
         private const val SAMPLE_H = 36

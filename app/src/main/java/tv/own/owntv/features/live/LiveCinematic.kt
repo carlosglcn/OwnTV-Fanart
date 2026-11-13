@@ -384,6 +384,7 @@ private fun LiveCinematicHero(
                 previewEngine = previewEngine,
                 showVideo = showVideo,
                 singleSessionBlocked = singleSessionBlocked,
+                nowTitle = nowNext?.now?.title,
                 modifier = Modifier.size(560.mpx, 315.mpx),
             )
         }
@@ -460,6 +461,7 @@ private fun LiveCinematicVideo(
     previewEngine: tv.own.owntv.player.LivePreviewEngine,
     showVideo: Boolean,
     singleSessionBlocked: Boolean,
+    nowTitle: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val state by previewEngine.state.collectAsStateWithLifecycle()
@@ -484,7 +486,7 @@ private fun LiveCinematicVideo(
         }
         if (loading) OwnTVSpinner(sizeDp = 28)
         if (channel != null) {
-            Box(Modifier.align(Alignment.TopStart).padding(start = 18.mpx, top = 16.mpx)) { StageLiveBadge(stringResource(R.string.player_live)) }
+            Box(Modifier.align(Alignment.TopStart).padding(start = 18.mpx, top = 16.mpx)) { StageLiveBadge(tv.own.owntv.glcn.onAirLabel(nowTitle)) }
         }
         if (singleSessionBlocked && !playing) {
             Text(
