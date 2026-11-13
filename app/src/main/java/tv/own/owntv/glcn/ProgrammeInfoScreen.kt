@@ -459,7 +459,7 @@ fun ProgrammeInfoScreen(
                 .shadow(tv.own.owntv.ui.theme.StageElevation.CARD, RoundedCornerShape(20.mpx), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f)).clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
-            Text(stringResource(R.string.glcn_pi_next), style = stageText(18, 800), color = accentInk, maxLines = 1)
+            Text(stringResource(R.string.glcn_pi_later), style = stageText(18, 800), color = accentInk, maxLines = 1)
             val room = when {
                 again.isNotEmpty() && cast.isNotEmpty() -> 3
                 again.isNotEmpty() || cast.isNotEmpty() -> 4
@@ -512,11 +512,11 @@ private fun InfoActions(
         fun lead(): Modifier = if (first) { first = false; Modifier.focusRequester(focus) } else Modifier
         if (onWatch != null) StageButton(
             text = stringResource(R.string.content_key_watch), onClick = onWatch, icon = OwnTVIcon.PLAY, iconFilled = true,
-            tinted = true, height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
+            height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
         )
         if (cur != null && onStartOver != null && channel.catchup) StageButton(
             text = stringResource(R.string.glcn_pi_start_over), onClick = { onStartOver(channel, cur) }, icon = OwnTVIcon.REWIND,
-            tinted = onWatch == null, height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
+            height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
         )
         if (cur != null && onRecord != null) StageButton(
             text = stringResource(R.string.recording_record), onClick = { onRecord(channel); onDismiss() }, icon = OwnTVIcon.REC,

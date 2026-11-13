@@ -36,3 +36,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪟 Popups float a little higher than the page, with a soft shadow.
 - ⚽ Player pill: while a team you follow (Sports › your teams) is playing, its score and minute show in the pill ("CZE 0-1 ESP · 67'"); not with spoiler-free on.
 - 🎭 Film page: OK on the cast asks whose films you want, then lists that person's films in your playlists (newest first); each opens its own page. Only films whose TMDB details the app has already fetched are known.
+- 🏷️ Light theme: white one-colour logos are now a soft grey that keeps their own detail (an outline or inner line stays visible), instead of solid black.
+- ℹ️ Programme info: the buttons are all the same glass (the faint tinted "Watch" looked disabled); the right-hand list is headed "Later", as "Up next" is now the picture cards.

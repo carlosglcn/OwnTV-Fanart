@@ -79,7 +79,7 @@ fun ChannelLogoTile(
     // glcn: a white one-colour logo (Telecinco) on a light surface is drawn in the theme's text colour instead —
     // its own shape, no plate. Logos with colour, and every logo on a dark surface, are left as they are.
     val inkOnLight = ink != LOGO_INK_NONE && surfaceLuminance >= 0.5f && isPaleMono(ink)
-    val logoFilter = if (inkOnLight) androidx.compose.ui.graphics.ColorFilter.tint(tv.own.owntv.ui.theme.StageColors.Text, androidx.compose.ui.graphics.BlendMode.SrcIn) else null
+    val logoFilter = if (inkOnLight) PALE_LOGO_ON_LIGHT else null
     val background = when {
         !showLogo -> fill
         inkOnLight -> Color.Transparent
@@ -183,6 +183,22 @@ private fun Bitmap.measureInk(): Int {
         (b / alphaSum).toInt().coerceIn(0, 255),
     )
 }
+
+/**
+ * glcn: a white one-colour logo on a light surface, turned to a soft grey that keeps its own detail: brightness is
+ * inverted into a narrow grey band (white → mid grey, dark lines → light grey), so it reads without turning black
+ * and an outline or inner line inside the logo stays visible.
+ */
+private val PALE_LOGO_ON_LIGHT = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+    androidx.compose.ui.graphics.ColorMatrix(
+        floatArrayOf(
+            -0.4f * 0.2126f, -0.4f * 0.7152f, -0.4f * 0.0722f, 0f, 0.78f * 255f,
+            -0.4f * 0.2126f, -0.4f * 0.7152f, -0.4f * 0.0722f, 0f, 0.78f * 255f,
+            -0.4f * 0.2126f, -0.4f * 0.7152f, -0.4f * 0.0722f, 0f, 0.78f * 255f,
+            0f, 0f, 0f, 1f, 0f,
+        ),
+    ),
+)
 
 /** glcn: a logo whose ink is near white and has (almost) no colour — a white one-colour logo. */
 private fun isPaleMono(ink: Int): Boolean {
