@@ -247,8 +247,20 @@ val stageAccent: StageAccent
         val pal = LocalStagePalette.current
         val l = it.primary.luminance()
         val ink = if ((pal.isLight && l > INK_LIGHT_MAX) || (!pal.isLight && l < INK_DARK_MIN)) pal.text else it.primary
-        StageAccent(it.primary, it.onPrimary, if (pal.isLight) it.primary else it.focusBorder, ink)
+        // glcn: text on the accent must read whatever the accent — a theme's own "on" colour is kept only while it
+        // stands out on it; otherwise near-black on a pale accent, white on a dark one.
+        val on = if (contrast(it.onPrimary, it.primary) >= ON_ACCENT_MIN_CONTRAST) it.onPrimary
+            else if (l > 0.4f) Color(0xFF111418) else Color.White
+        StageAccent(it.primary, on, if (pal.isLight) it.primary else it.focusBorder, ink)
     }
+
+private fun contrast(a: Color, b: Color): Float {
+    val la = a.luminance() + 0.05f
+    val lb = b.luminance() + 0.05f
+    return if (la > lb) la / lb else lb / la
+}
+
+private const val ON_ACCENT_MIN_CONTRAST = 3f
 
 /** glcn: past these the accent no longer reads as text on the light / dark page. */
 private const val INK_LIGHT_MAX = 0.55f

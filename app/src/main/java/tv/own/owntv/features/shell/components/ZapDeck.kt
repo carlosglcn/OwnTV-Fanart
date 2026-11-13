@@ -238,7 +238,6 @@ fun ZapDeck(
     // glcn: the widths chosen in Settings → Layout → Panel widths; while the channels or the schedule have the
     // cursor the groups fold to their icons and the programme column takes the room they leave.
     val widths = tv.own.owntv.glcn.DeckWidths.shares
-    val groupsOpenSet = tv.own.owntv.glcn.DeckWidths.width(widths.groups)
     val foldTarget = if (column == 1 || column == 2) 1f else 0f
     val fold by androidx.compose.animation.core.animateFloatAsState(
         foldTarget,
@@ -469,7 +468,8 @@ fun ZapDeck(
             // glcn: as TiviMate does — folded, the groups are not there at all (no column of initials); ◀ opens them
             // over the channels, which dim behind them, with their whole names, counts and playlist tags.
             // glcn: wide enough for the categories' whole names (the panel covers the channels, so it can take their room).
-            val groupsOpen = groupsOpenSet.coerceAtLeast(GROUPS_PANEL_MIN).coerceAtMost(chW + 20.mpx)
+            // glcn: the categories cover the channel list exactly — the same width as the sheet under them.
+            val groupsOpen = chW + 20.mpx
             val slideGroupsPx = with(density) { 40.mpx.toPx() }
             Box(Modifier.width(0.mpx).fillMaxHeight().wrapContentWidth(Alignment.Start, unbounded = true).zIndex(1f)) {
             if (fold < 0.999f) Box(Modifier.width(groupsOpen).fillMaxHeight().graphicsLayer { alpha = 1f - fold; translationX = -slideGroupsPx * fold }) {
@@ -634,7 +634,6 @@ private const val ZAP_DIGITS_MAX = 4
 private const val ZAP_DIGIT_HOLD_MS = 1_500L
 
 /** glcn: the categories panel at least this wide, so their names read whole. */
-private val GROUPS_PANEL_MIN = 460.mpx
 
 /** glcn: the room kept under the picture for the programme and what follows it. */
 private val UNDER_PICTURE = 330.mpx

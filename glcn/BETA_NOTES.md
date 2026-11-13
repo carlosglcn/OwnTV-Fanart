@@ -40,3 +40,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ℹ️ Programme info: the buttons are all the same glass (the faint tinted "Watch" looked disabled); the right-hand list is headed "Later", as "Up next" is now the picture cards.
 - 🎞️ Trakt: "My Trakt watchlist" on Home also finds films by their name and year when the app has not matched them on TMDB yet (before, only TMDB-matched films showed, so the row could stay empty). Films whose playlist name is in another language than Trakt's title may still be missed.
 - 📺 Channel change card: the channel's logo is the same one the lists use (the guide's picon when there is one), on a smaller, plain tile.
+- 🎨 Text on the accent colour always reads: with a pale accent (or a theme whose own text colour barely shows on it) the focused row's text turns near-black, and white on a dark accent.
+- 📐 Player channel list: the categories panel is now exactly as wide as the channel list under it.
