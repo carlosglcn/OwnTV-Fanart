@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
@@ -564,6 +565,24 @@ class EpgViewModel(
     fun setQuery(q: String) {
         _query.value = q
     }
+
+    /**
+     * glcn: what the search finds in the whole guide — every programme whose title has the words, on any of the
+     * days kept, not only the channels named so. The grid still narrows to channels by name; these are listed above it.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
+    val guideMatches: StateFlow<List<tv.own.owntv.core.content.ProgrammeSearchResult>> = _query
+        .debounce(GUIDE_SEARCH_DEBOUNCE_MS)
+        .distinctUntilChanged()
+        .mapLatest { q ->
+            if (q.trim().length < 2) emptyList()
+            else runCatching {
+                val reader = org.koin.core.context.GlobalContext.get().get<tv.own.owntv.core.content.SearchReader>()
+                val src = tv.own.owntv.core.repository.activeProfileSources(settings, sourceDao).first()
+                reader.searchGuide(src.profileId, src, q, settings.guideDaysToKeep.first())
+            }.getOrDefault(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** The channel last tuned from the guide — the screen refocuses its row after fullscreen exits. */
     var lastTunedChannelId: Long? = null
@@ -1267,3 +1286,6 @@ class EpgViewModel(
 /** glcn: the silent guide matching runs once per launch, whichever screen opened first. */
 /** glcn: the playlists already silently matched in this run of the app. */
 private object SilentEpgMatch { val done: MutableSet<Long> = java.util.Collections.synchronizedSet(HashSet()) }
+
+/** glcn: the pause after typing before the whole guide is searched. */
+private const val GUIDE_SEARCH_DEBOUNCE_MS = 350L

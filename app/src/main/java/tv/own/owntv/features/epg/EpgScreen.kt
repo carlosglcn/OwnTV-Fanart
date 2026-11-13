@@ -307,6 +307,7 @@ fun EpgScreen(
     var focusedRow by remember { mutableIntStateOf(0) }
     var gridHasFocus by remember { mutableStateOf(false) }
     var cursorTime by remember { mutableStateOf(0L) }
+    var pendingJump by remember { mutableStateOf<tv.own.owntv.core.content.ProgrammeSearchResult?>(null) }
     // Row stage (false): ▲ ▼ move between channels, ◀ leaves for the menu. Cell stage (true): ◀ ▶ go
     // through the programmes. Without it, reaching the channel list meant ◀ past every programme.
     var inCellMode by remember { mutableStateOf(false) }
@@ -685,6 +686,60 @@ fun EpgScreen(
             } else {
                 StageTool(text = stringResource(R.string.content_epg_match_button), icon = OwnTVIcon.SPARKLE, onClick = vm::autoMatchEpg)
             }
+        }
+
+        // glcn: the search also looks through every programme of every day kept — listed here, above the grid; OK on
+        // one takes the guide to it (its channel, its day and its hour).
+        val guideMatches by vm.guideMatches.collectAsStateWithLifecycle()
+        if (query.isNotBlank() && guideMatches.isNotEmpty()) {
+            val dayFmt = remember {
+                java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(), DAY_TIME_SKELETON), java.util.Locale.getDefault())
+            }
+            Text(
+                stringResource(R.string.glcn_guide_matches, guideMatches.size), style = stageText(17, 700), color = StageColors.Muted,
+                modifier = Modifier.padding(start = fx(48) + 16.mpx, top = 14.mpx, bottom = 6.mpx),
+            )
+            androidx.compose.foundation.lazy.LazyRow(
+                contentPadding = PaddingValues(horizontal = fx(48) + 8.mpx, vertical = 8.mpx),
+                horizontalArrangement = Arrangement.spacedBy(14.mpx),
+            ) {
+                items(guideMatches.size) { i ->
+                    val m = guideMatches[i]
+                    val onNow = System.currentTimeMillis() in m.programme.startMs until m.programme.stopMs
+                    tv.own.owntv.ui.stage.StageSurface(
+                        onClick = { pendingJump = m; vm.setQuery(""); searchOpen = false },
+                        radius = 14.mpx,
+                        modifier = Modifier.width(380.mpx).height(104.mpx),
+                    ) { focused ->
+                        Column(Modifier.fillMaxSize().padding(horizontal = 16.mpx, vertical = 12.mpx)) {
+                            Text(
+                                if (onNow) stringResource(R.string.glcn_on_air_badge) else dayFmt.format(java.util.Date(m.programme.startMs)).replaceFirstChar { it.uppercase() },
+                                style = stageText(14, 800), color = if (focused) stageAccent.onAccent else stageAccent.ink, maxLines = 1,
+                            )
+                            Text(
+                                tv.own.owntv.core.live.SportsNow.displayTitle(m.programme.title), style = stageText(18, 700),
+                                color = if (focused) stageAccent.onAccent else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = 2.mpx),
+                            )
+                            Text(
+                                m.channel.name, style = stageText(15, 500), color = if (focused) stageAccent.onAccent.copy(alpha = 0.8f) else StageColors.Muted,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        // glcn: a programme picked in the search results — once the grid has its channel again, go there.
+        LaunchedEffect(state.channels, pendingJump) {
+            val pj = pendingJump ?: return@LaunchedEffect
+            val idx = state.channels.indexOfFirst { it.id == pj.channel.id }
+            if (idx < 0) return@LaunchedEffect
+            pendingJump = null
+            showTime(pj.programme.startMs)
+            cursorTime = pj.programme.startMs
+            inCellMode = true
+            stepTo(idx)
         }
 
         // The grid: ruler at 518, rows from 566.
@@ -1226,3 +1281,6 @@ private inline fun androidx.compose.ui.graphics.drawscope.DrawScope.withLayerAlp
 private val GUIDE_GHOST_W = 440.mpx
 private val GUIDE_GHOST_H = 260.mpx
 private const val GUIDE_DAY_MS = 24L * 60 * 60 * 1000
+
+/** glcn: a search result's day and hour ("sáb 15, 21:30"), in the device's own order. */
+private const val DAY_TIME_SKELETON = "EEEdHHmm"

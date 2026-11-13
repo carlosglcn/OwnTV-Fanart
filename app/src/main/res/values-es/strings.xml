@@ -109,4 +109,5 @@
     <string name="glcn_deck_group_hidden">Grupo oculto. Vuelve a mostrarlo en Ajustes › Personalizar.</string>
     <string name="glcn_deck_manage_title">Gestionar grupos</string>
     <string name="glcn_deck_manage_hint">OK muestra u oculta · Atrás vuelve</string>
+    <string name="glcn_guide_matches">%1$d programas en la guía con esas palabras · OK lleva a cada uno</string>
 </resources>

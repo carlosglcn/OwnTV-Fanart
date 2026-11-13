@@ -90,8 +90,9 @@
 1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	jm
 1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	primary
 1	empty	app/src/main/java/tv/own/owntv/features/downloads/DownloadsViewModel.kt	\0
-1	technical	app/src/main/java/tv/own/owntv/features/epg/EpgScreen.kt	\0
+2	technical	app/src/main/java/tv/own/owntv/features/epg/EpgScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/epg/EpgScreen.kt	$p
+1	technical	app/src/main/java/tv/own/owntv/features/epg/EpgScreen.kt	EEEdHHmm
 1	technical	app/src/main/java/tv/own/owntv/features/epg/EpgScreen.kt	guideBackdrop
 2	technical	app/src/main/java/tv/own/owntv/features/epg/EpgScreen.kt	·
 1	technical	app/src/main/java/tv/own/owntv/features/epg/EpgScreen.kt	▲ ▼
