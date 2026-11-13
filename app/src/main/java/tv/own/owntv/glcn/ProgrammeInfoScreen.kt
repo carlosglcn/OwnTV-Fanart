@@ -404,7 +404,7 @@ fun ProgrammeInfoScreen(
                     // without drifting.
                     // glcn: the cast sits on the right now, so the synopsis has the whole column down to the button.
                     // glcn: kept to the left half, so the picture's faces stay clear of it.
-                    DriftingSynopsis(it, modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W), style = stageText(21, 400), color = Soft, lines = if (next.isNotEmpty()) SYNOPSIS_LINES_WITH_CARDS else SYNOPSIS_LINES, fade = true)
+                    DriftingSynopsis(it, modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W), style = stageText(21, 400), color = Soft, lines = if (next.isNotEmpty() && NEXT_CARDS > 0) SYNOPSIS_LINES_WITH_CARDS else SYNOPSIS_LINES, fade = true)
                 }
             }
             // glcn: what can be done with it, right under the synopsis (no longer down at the foot past an empty page).
@@ -413,7 +413,7 @@ fun ProgrammeInfoScreen(
                 onWatch = if (channel.id != startChannel.id && onTune != null) ({ onTune(channel) }) else null,
             )
             // glcn: what follows on the channel, as picture cards in the room under the buttons (the first one wider).
-            if (next.isNotEmpty() && !showTech) NextCards(next.take(NEXT_CARDS), timeFmt, Modifier.then(slideInLeft).padding(top = 34.mpx))
+            if (NEXT_CARDS > 0 && next.isNotEmpty() && !showTech) NextCards(next.take(NEXT_CARDS), timeFmt, Modifier.then(slideInLeft).padding(top = 34.mpx))
         }
 
         // Right: when it airs again this week, and under it a film's cast.
@@ -459,7 +459,7 @@ fun ProgrammeInfoScreen(
                 .shadow(tv.own.owntv.ui.theme.StageElevation.CARD, RoundedCornerShape(20.mpx), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f)).clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
-            Text(stringResource(R.string.glcn_pi_later), style = stageText(18, 800), color = accentInk, maxLines = 1)
+            Text(stringResource(if (NEXT_CARDS == 0) R.string.glcn_pi_next else R.string.glcn_pi_later), style = stageText(18, 800), color = accentInk, maxLines = 1)
             val room = when {
                 again.isNotEmpty() && cast.isNotEmpty() -> 3
                 again.isNotEmpty() || cast.isNotEmpty() -> 4
@@ -557,7 +557,9 @@ private fun NextCards(items: List<EpgProgrammeEntity>, timeFmt: java.text.DateFo
 }
 
 /** glcn: how many of the next programmes show as cards, and their widths. */
-private const val NEXT_CARDS = 4
+// glcn: no picture cards under the buttons — they took the synopsis's room and its first lines; what follows is the
+// right-hand list, headed "Up next".
+private const val NEXT_CARDS = 0
 private val NEXT_CARD_FIRST_W = 330.mpx
 private val NEXT_CARD_W = 250.mpx
 

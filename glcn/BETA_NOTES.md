@@ -52,3 +52,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔊 **A channel that changes its sound mid-programme** (stereo to 5.1) and stalls on the switch is reopened once, instead of the player giving up
 - 📋 **The Live TV playlist you pick is remembered** after leaving the app or restarting the box
 - ⏪ **◀ ◀ ◀ from the picture opens a quick playlist picker** (with several playlists): ◀ channels, ◀ categories, ◀ playlists — as in TiviMate
+- 🖼️ **Programme info:** the picture cards under the buttons are gone — the synopsis has its room back, from its first line; what follows is the list on the right, headed "Up next"
+- ⚪ **Pale channel logos on the light theme keep their own colours** (COSMO's red lines, STAR Channel's star) on a faint dark pill, instead of being turned grey
+- 📼 **Channels in a format the TV's hardware decoder refuses** (some MPEG-2 channels on a SHIELD) go straight to software decoding instead of timing out

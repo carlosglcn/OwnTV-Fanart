@@ -89,10 +89,12 @@ fun ChannelLogoTile(
     // glcn: a white one-colour logo (Telecinco) on a light surface is drawn in the theme's text colour instead —
     // its own shape, no plate. Logos with colour, and every logo on a dark surface, are left as they are.
     val inkOnLight = ink != LOGO_INK_NONE && behind >= 0.5f && isPaleMono(ink)
-    val logoFilter = if (inkOnLight) PALE_LOGO_ON_LIGHT else null
+    // glcn: the logo itself is never recoloured — its white and its colour (COSMO's red lines, STAR's star) stay
+    // as drawn; a pale one on a light surface sits on a faint dark pill instead, just enough to read it.
+    val logoFilter: androidx.compose.ui.graphics.ColorFilter? = null
     val background = when {
         !showLogo -> fill
-        inkOnLight -> Color.Transparent
+        inkOnLight -> PalePill
         needsPlate -> if (behind < 0.5f) LightPlate else DarkPlate
         else -> Color.Transparent
     }
@@ -154,6 +156,8 @@ private const val MAX_MEASURED_LOGOS = 4096
 
 // Slightly off-white and off-black rather than pure: a pure-white plate glares on a TV in a dark room.
 private val LightPlate = Color(0xFFEDF1F5)
+/** glcn: under a pale logo on a light surface — faint, the tile only a shade darker. */
+private val PalePill = Color(0xFF1B2430).copy(alpha = 0.34f)
 private val DarkPlate = Color(0xFF161C24)
 
 /**
