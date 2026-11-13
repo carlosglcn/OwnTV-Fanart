@@ -490,30 +490,51 @@ fun ZapDeck(
             // glcn: ‹ on the left edge while on the categories: ◀ opens the playlists.
             if (chips.isNotEmpty()) tv.own.owntv.glcn.EdgeTab(visible = column == 0, modifier = Modifier.align(Alignment.CenterStart))
             if (column == -2) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
+                // glcn: the playlists, each a card of its own: its colour and initial, its name, how many channels it has.
+                val counts by androidx.compose.runtime.produceState<Map<Long, Int>>(emptyMap(), chips) {
+                    val dao = runCatching { org.koin.core.context.GlobalContext.get().get<tv.own.owntv.core.database.dao.ChannelDao>() }.getOrNull()
+                    if (dao != null) value = chips.filter { it.first > 0L }.associate { (id, _) -> id to runCatching { dao.countForSourceOnce(id) }.getOrDefault(0) }
+                }
                 Text(
                     stringResource(R.string.settings_playlists),
-                    style = stageText(17, 700), color = StageColors.Dim, maxLines = 1, softWrap = false,
-                    modifier = Modifier.padding(start = 14.mpx, top = 6.mpx, bottom = 8.mpx),
+                    style = stageText(24, 800), color = StageColors.Text, maxLines = 1, softWrap = false,
+                    modifier = Modifier.padding(start = 14.mpx, top = 10.mpx, bottom = 14.mpx),
                 )
                 GlideColumn(
                     count = chips.size,
                     index = plIdx,
-                    rowHeight = 60.mpx,
+                    rowHeight = 88.mpx,
                     active = true,
                     resetKey = chips.size,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) { i, focused ->
                     val (id, name) = chips.getOrNull(i) ?: return@GlideColumn
                     val on = id == activeChip
-                    val tint by animateColorAsState(if (focused) stageAccent.onAccent else if (on) StageColors.Text else StageColors.Muted, tween(140), label = "deckPlaylistText")
+                    val tint by animateColorAsState(if (focused) stageAccent.onAccent else StageColors.Text, tween(140), label = "deckPlaylistText")
+                    val sub by animateColorAsState(if (focused) stageAccent.onAccent.copy(alpha = 0.8f) else StageColors.Muted, tween(140), label = "deckPlaylistSub")
+                    val color = if (id > 0L) marks[id]?.shownColor ?: stageAccent.accent else stageAccent.accent
+                    val n = if (id > 0L) counts[id] else counts.values.sum().takeIf { counts.isNotEmpty() }
                     Row(
                         Modifier.fillMaxSize().padding(horizontal = 14.mpx),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.mpx),
+                        horizontalArrangement = Arrangement.spacedBy(16.mpx),
                     ) {
-                        marks[id]?.let { m -> Box(Modifier.size(12.mpx).clip(RoundedCornerShape(50)).background(m.shownColor)) }
-                        Text(name, style = stageText(19, if (on) 800 else 600), color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false, modifier = Modifier.weight(1f))
-                        if (on) OwnTVIcon(OwnTVIcon.CHECK, tint, Modifier.size(20.mpx))
+                        Box(
+                            Modifier.size(52.mpx).clip(RoundedCornerShape(14.mpx))
+                                .background(if (focused) stageAccent.onAccent.copy(alpha = 0.18f) else color.copy(alpha = 0.18f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (id > 0L) Text(name.trim().take(1).uppercase(), style = stageText(24, 800), color = if (focused) stageAccent.onAccent else color)
+                            else OwnTVIcon(OwnTVIcon.LIVE_TV, if (focused) stageAccent.onAccent else color, Modifier.size(26.mpx))
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(name, style = stageText(20, if (on) 800 else 700), color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
+                            if (n != null) Text(
+                                pluralStringResource(R.plurals.content_live_channel_count, n, n),
+                                style = stageText(15, 600), color = sub, maxLines = 1, softWrap = false,
+                            )
+                        }
+                        if (on) OwnTVIcon(OwnTVIcon.CHECK, tint, Modifier.size(22.mpx))
                     }
                 }
             } else Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
@@ -952,10 +973,10 @@ private fun GlideColumn(
             androidx.compose.foundation.lazy.LazyListState((target / h).toInt(), (target - (target / h).toInt() * h).toInt())
         }
         LaunchedEffect(resetKey, target) {
-            scroll.animateTo(target, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 260f))
+            scroll.animateTo(target, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 380f))
         }
         LaunchedEffect(resetKey, index) {
-            glide.animateTo(index * h, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 520f))
+            glide.animateTo(index * h, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 760f))
         }
         // glcn: the list is laid out again only when the glide passes a whole row (it is placed on that row);
         // the part of a row in between is a translation of the drawn layer, read in drawing. Placing the list

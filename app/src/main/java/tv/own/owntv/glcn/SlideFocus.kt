@@ -55,7 +55,7 @@ class SlideFocusState {
     var origin = Offset.Zero
     val alpha = Animatable(0f)
     /** How briskly the box glides (spring stiffness): menus snap, Home's rows take their time. */
-    var stiffness = 700f
+    var stiffness = 950f
     /** glcn: below 1 the box overshoots a touch and settles back — an elastic glide (Home's rows). */
     var damping = 1f
     /** glcn: the box stretches as it goes — its leading edge gets there first, the trailing one follows (menu bars). */
@@ -204,7 +204,7 @@ fun Modifier.slidePop(st: SlideFocusState?, focused: Boolean): Modifier =
     }
 
 /** glcn: the channel lists' highlight (TV en directo): brisk, clearly springy — it passes the row by about an eighth and settles back, like a launcher's tiles. */
-const val CHANNEL_FOCUS_STIFFNESS = 480f
+const val CHANNEL_FOCUS_STIFFNESS = 760f
 const val CHANNEL_FOCUS_DAMPING = 0.55f
 
 /** glcn: a launcher-like pop — a small overshoot (about 6 % past the step), settled in a quarter of a second. */

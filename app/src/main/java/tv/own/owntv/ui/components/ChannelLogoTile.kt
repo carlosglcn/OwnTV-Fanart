@@ -117,8 +117,13 @@ fun ChannelLogoTile(
                 contentDescription = null,
                 contentScale = contentScale,
                 modifier = imageModifier.graphicsLayer { alpha = 1f - asDrawn },
+                onState = { state ->
+                    if (state is AsyncImagePainter.State.Success) loaded = true
+                    else if (state is AsyncImagePainter.State.Error) loaded = false
+                },
             )
-            AsyncImage(
+            // glcn: on a light page the as-drawn copy is only there while it shows (focus) — one image per row, not two.
+            if (onLightRequest == null || asDrawn > 0f) AsyncImage(
                 model = request,
                 contentDescription = null,
                 contentScale = contentScale,

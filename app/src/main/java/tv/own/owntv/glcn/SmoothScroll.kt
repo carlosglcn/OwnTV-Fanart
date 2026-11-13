@@ -125,9 +125,9 @@ val NoBringIntoViewSpec = object : BringIntoViewSpec {
 }
 
 /** glcn: the springs' pace (their angular frequency, 1/s): a single row's step lands in about 4.7 / ω seconds. */
-private const val GLIDE_OMEGA = 13f
+private const val GLIDE_OMEGA = 16f
 private const val HOME_OMEGA = 10f
-private const val LIST_OMEGA = 18f
+private const val LIST_OMEGA = 22f
 private const val ELASTIC_DAMPING = 0.62f
 private const val ELASTIC_STIFFNESS = 220f
 /** glcn: the settings highlight's slide, in step with [SmoothScroll.listAnimation]. */
