@@ -1,28 +1,17 @@
-run=43524653017 sha=ec94b8e4897ef489ee593413e69c7ea4d5668cb5
-e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt:233:106 Unresolved reference 'offIds'.
-e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt:238:135 Unresolved reference 'offIds'.
-
-> Task :app:compileStandardReleaseKotlin FAILED
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1794611266346.json
-
+run=43526187847 sha=2d4d277e3126772199958f56838eea2594c0f45a
+> Task :app:lintVitalStandardRelease FAILED
+/home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/res/values/strings.xml:110: Error: Formatting %d followed by words ("programmes"): This should probably be a plural rather than a string [PluralsCandidate]
+    <string name="glcn_guide_matches">%1$d programmes in the guide with those words · OK takes you to one</string>
 --
 * What went wrong:
-Execution failed for task ':app:compileStandardReleaseKotlin' (registered by plugin 'com.android.internal.application').
-> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Kotlin compiler: UNRESOLVED_REFERENCE
+Execution failed for task ':app:lintVitalStandardRelease' (registered by plugin 'com.android.internal.application').
+> Lint found fatal errors while assembling a release target.
+  
 --
-         Unresolved reference 'offIds'.
-         Location: /home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/features/shell/components/ZapDeck.kt:233
-
---
-org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileStandardReleaseKotlin' (registered by plugin 'com.android.internal.application').
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:lintVitalStandardRelease' (registered by plugin 'com.android.internal.application').
 	at org.gradle.api.internal.tasks.execution.DefaultTaskNodeExecutor.lambda$doExecute$1(DefaultTaskNodeExecutor.java:367)
 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
 --
-Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Unresolved reference 'offIds'.
-	at org.jetbrains.kotlin.gradle.plugin.diagnostics.DefaultCompilerDiagnosticsProblemsReporter.reportCompilerMessage(CompilerDiagnosticsProblemsReporter.kt:63)
-	at org.jetbrains.kotlin.compilerRunner.btapi.ProblemsApiCompilerMessageRenderer.replayTo(ProblemsApiCompilerMessageRenderer.kt:88)
---
-BUILD FAILED in 3m 49s
-112 actionable tasks: 93 executed, 19 from cache
+BUILD FAILED in 10m 50s
+124 actionable tasks: 105 executed, 19 from cache
 Configuration cache entry stored.
