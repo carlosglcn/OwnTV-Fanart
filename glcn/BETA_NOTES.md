@@ -38,3 +38,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎭 Film page: OK on the cast asks whose films you want, then lists that person's films in your playlists (newest first); each opens its own page. Only films whose TMDB details the app has already fetched are known.
 - 🏷️ Light theme: white one-colour logos are now a soft grey that keeps their own detail (an outline or inner line stays visible), instead of solid black.
 - ℹ️ Programme info: the buttons are all the same glass (the faint tinted "Watch" looked disabled); the right-hand list is headed "Later", as "Up next" is now the picture cards.
+- 🎞️ Trakt: "My Trakt watchlist" on Home also finds films by their name and year when the app has not matched them on TMDB yet (before, only TMDB-matched films showed, so the row could stay empty). Films whose playlist name is in another language than Trakt's title may still be missed.
+- 📺 Channel change card: the channel's logo is the same one the lists use (the guide's picon when there is one), on a smaller, plain tile.

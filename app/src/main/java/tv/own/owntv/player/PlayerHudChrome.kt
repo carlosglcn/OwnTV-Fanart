@@ -322,7 +322,7 @@ internal fun ChannelOsdCard(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Box(
-                        Modifier.size(width = 64.dp, height = 44.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.14f)).padding(5.dp),
+                        Modifier.size(width = 50.dp, height = 34.dp).clip(RoundedCornerShape(8.dp)).padding(3.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (!logoUrl.isNullOrBlank()) AsyncImage(model = logoUrl, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.fillMaxSize())

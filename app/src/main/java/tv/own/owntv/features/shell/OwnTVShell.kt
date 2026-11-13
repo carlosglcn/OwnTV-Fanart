@@ -2499,7 +2499,7 @@ fun OwnTVShell(
                         }
                     } else null,
                     zapChannel = if (isLiveChannel) {
-                        previewChannel?.let { tv.own.owntv.player.DirectTuneChannelInfo(it.number, it.name, it.logoUrl) }
+                        previewChannel?.let { tv.own.owntv.player.DirectTuneChannelInfo(it.number, it.name, it.displayLogoUrl) }
                     } else null,
                     // Guide card for the playing channel (nowNext follows previewChannel = what's playing).
                     liveEpgCard = if (isLiveChannel) {

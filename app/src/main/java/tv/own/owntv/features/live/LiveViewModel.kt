@@ -1828,7 +1828,7 @@ class LiveViewModel(
             if (tuned.id == currentChannel.id) {
                 return tv.own.owntv.player.DirectTuneResult.Found(
                     tv.own.owntv.player.DirectTuneChannelInfo(
-                        tuned.number, tuned.name, tuned.logoUrl, restarted = false,
+                        tuned.number, tuned.name, tuned.displayLogoUrl, restarted = false,
                     ),
                 )
             }
@@ -1838,7 +1838,7 @@ class LiveViewModel(
 
             return tv.own.owntv.player.DirectTuneResult.Found(
                 tv.own.owntv.player.DirectTuneChannelInfo(
-                    tuned.number, tuned.name, tuned.logoUrl, restarted = true,
+                    tuned.number, tuned.name, tuned.displayLogoUrl, restarted = true,
                 ),
             )
         } catch (e: kotlinx.coroutines.CancellationException) {
