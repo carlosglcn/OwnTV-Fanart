@@ -86,16 +86,16 @@ fun ChannelLogoTile(
     val behind = if (around == null) surfaceLuminance else if (around.luminance() > 0.5f) ON_DARK_FILL else ON_LIGHT_FILL
     val needsPlate = LogoPlate.mode == 0 && ink != LOGO_INK_NONE &&
         contrastRatio(Color(ink).luminance(), behind) < MIN_CONTRAST
-    // glcn: a white one-colour logo (Telecinco) on a light surface is drawn in the theme's text colour instead —
-    // its own shape, no plate. Logos with colour, and every logo on a dark surface, are left as they are.
-    val inkOnLight = ink != LOGO_INK_NONE && behind >= 0.5f && isPaleMono(ink)
-    // glcn: the logo itself is never recoloured — its white and its colour (COSMO's red lines, STAR's star) stay
-    // as drawn; a pale one on a light surface sits on a faint dark pill instead, just enough to read it.
-    val logoFilter: androidx.compose.ui.graphics.ColorFilter? = null
+    // glcn: on a light surface a logo too pale to read (white, or white with a little colour: STAR's star, AXN's
+    // dot, a yellow WB) is shaded down as a whole — every colour keeps its hue, white becomes a mid grey — with no
+    // pill or plate behind it. On a dark surface the classic plate still serves the rare dark logo.
+    val pale = ink != LOGO_INK_NONE && behind >= 0.5f &&
+        (isPaleMono(ink) || contrastRatio(Color(ink).luminance(), behind) < MIN_CONTRAST)
+    val logoFilter = if (pale) SHADE_ON_LIGHT else null
     val background = when {
         !showLogo -> fill
-        inkOnLight -> PalePill
-        needsPlate -> if (behind < 0.5f) LightPlate else DarkPlate
+        pale -> Color.Transparent
+        needsPlate && behind < 0.5f -> LightPlate
         else -> Color.Transparent
     }
 
@@ -156,8 +156,6 @@ private const val MAX_MEASURED_LOGOS = 4096
 
 // Slightly off-white and off-black rather than pure: a pure-white plate glares on a TV in a dark room.
 private val LightPlate = Color(0xFFEDF1F5)
-/** glcn: under a pale logo on a light surface — faint, the tile only a shade darker. */
-private val PalePill = Color(0xFF1B2430).copy(alpha = 0.34f)
 private val DarkPlate = Color(0xFF161C24)
 
 /**
@@ -202,28 +200,22 @@ private fun Bitmap.measureInk(): Int {
 }
 
 /**
- * glcn: a white one-colour logo on a light surface, turned to a soft grey that keeps its own detail: brightness is
- * inverted into a narrow grey band (white → a light grey, dark lines → lighter still), so it reads without turning black
- * and an outline or inner line inside the logo stays visible. Its dark glow or drop shadow (soft, half-transparent
- * dark pixels around the artwork, meant for dark backgrounds) is faded out: turned light, it would ring the logo with
- * a pale haze and make it look blurred.
+ * glcn: a pale logo on a light surface, shaded down: each channel multiplied by the same factor, so hues stay what
+ * they were (a red star stays red, only deeper) and white lands on a mid grey that reads on the light page.
  */
-private val PALE_LOGO_ON_LIGHT = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+private val SHADE_ON_LIGHT = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
     androidx.compose.ui.graphics.ColorMatrix(
         floatArrayOf(
-            -PALE_SPAN * 0.2126f, -PALE_SPAN * 0.7152f, -PALE_SPAN * 0.0722f, 0f, PALE_TOP * 255f,
-            -PALE_SPAN * 0.2126f, -PALE_SPAN * 0.7152f, -PALE_SPAN * 0.0722f, 0f, PALE_TOP * 255f,
-            -PALE_SPAN * 0.2126f, -PALE_SPAN * 0.7152f, -PALE_SPAN * 0.0722f, 0f, PALE_TOP * 255f,
-            HALO_FADE * 0.2126f, HALO_FADE * 0.7152f, HALO_FADE * 0.0722f, 1f, -HALO_FADE * 255f,
+            SHADE, 0f, 0f, 0f, 0f,
+            0f, SHADE, 0f, 0f, 0f,
+            0f, 0f, SHADE, 0f, 0f,
+            0f, 0f, 0f, 1f, 0f,
         ),
     ),
 )
 
-/** Grey of a black pixel (the lightest the logo gets); white comes out at [PALE_TOP] − [PALE_SPAN]. */
-private const val PALE_TOP = 0.86f
-private const val PALE_SPAN = 0.24f
-/** How much opacity a dark pixel loses: a soft dark halo goes, a solid dark line inside the logo stays faintly. */
-private const val HALO_FADE = 0.75f
+/** White comes out at this fraction of itself — a grey that still reads as "light" on a light page. */
+private const val SHADE = 0.58f
 
 /** glcn: a logo whose ink is near white and has (almost) no colour — a white one-colour logo. */
 private fun isPaleMono(ink: Int): Boolean {

@@ -55,3 +55,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ **Programme info:** the picture cards under the buttons are gone — the synopsis has its room back, from its first line; what follows is the list on the right, headed "Up next"
 - ⚪ **Pale channel logos on the light theme keep their own colours** (COSMO's red lines, STAR Channel's star) on a faint dark pill, instead of being turned grey
 - 📼 **Channels in a format the TV's hardware decoder refuses** (some MPEG-2 channels on a SHIELD) go straight to software decoding instead of timing out
+- 🏷️ Light theme: pale logos (white, or white with a touch of colour) are shaded down as a whole — every colour keeps its hue, white becomes grey — with no grey pill or dark plate behind them.
+- ◀ Player channel list: ◀ on the categories now goes up to the playlist chips (on the active playlist), with a ‹ tab on the panel's left edge showing it.

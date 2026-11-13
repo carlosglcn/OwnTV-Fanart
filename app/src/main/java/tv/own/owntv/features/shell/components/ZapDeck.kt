@@ -400,6 +400,8 @@ fun ZapDeck(
                         when (column) {
                             2 -> column = 1
                             1 -> { column = 0; groupIdx = entries.indexOfFirst { it.item.key == shownKey }.takeIf { it >= 0 } ?: groupIdx }
+                            // glcn: ◀ ◀ from the channels — up to the playlist chips, on the active one (as TiviMate).
+                            0 -> if (chips.isNotEmpty()) { column = -1; chipIdx = chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0) }
                             -1 -> chipIdx = (chipIdx - 1).coerceAtLeast(0)
                         }
                         true
@@ -476,6 +478,8 @@ fun ZapDeck(
             Box(Modifier.matchParentSize().clip(RoundedCornerShape(StageRadii.Sheet)).background(shade))
             // glcn: a tab on the panel's right edge with a › — ▶ goes back to the channels.
             tv.own.owntv.glcn.EdgeTab(visible = column == 0 || column == -1, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
+            // glcn: ‹ on the left edge while on the categories: ◀ goes up to the playlists.
+            if (chips.isNotEmpty()) tv.own.owntv.glcn.EdgeTab(visible = column == 0, modifier = Modifier.align(Alignment.CenterStart))
             Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
                 if (chips.isNotEmpty()) {
                     DeckChips(chips, activeChip, if (column == -1) chipIdx else -1, colors = marks.mapValues { it.value.shownColor })
