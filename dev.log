@@ -1,0 +1,27 @@
+run=43404622408 sha=e248ff4a2f4175bc22b7f514b58338a46ddebc11
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/glcn/CastPage.kt:88:43 Unresolved reference 'verticalScroll' on receiver of type 'Modifier'.
+
+> Task :app:compileStandardReleaseKotlin FAILED
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1794563487175.json
+
+--
+* What went wrong:
+Execution failed for task ':app:compileStandardReleaseKotlin' (registered by plugin 'com.android.internal.application').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Kotlin compiler: UNRESOLVED_REFERENCE
+--
+         Unresolved reference 'verticalScroll' on receiver of type 'Modifier'.
+         Location: /home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/java/tv/own/owntv/glcn/CastPage.kt:88
+
+--
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileStandardReleaseKotlin' (registered by plugin 'com.android.internal.application').
+	at org.gradle.api.internal.tasks.execution.DefaultTaskNodeExecutor.lambda$doExecute$1(DefaultTaskNodeExecutor.java:367)
+	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
+--
+Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Unresolved reference 'verticalScroll' on receiver of type 'Modifier'.
+	at org.jetbrains.kotlin.gradle.plugin.diagnostics.DefaultCompilerDiagnosticsProblemsReporter.reportCompilerMessage(CompilerDiagnosticsProblemsReporter.kt:63)
+	at org.jetbrains.kotlin.compilerRunner.btapi.ProblemsApiCompilerMessageRenderer.replayTo(ProblemsApiCompilerMessageRenderer.kt:88)
+--
+BUILD FAILED in 4m 41s
+112 actionable tasks: 92 executed, 20 from cache
+Configuration cache entry stored.
