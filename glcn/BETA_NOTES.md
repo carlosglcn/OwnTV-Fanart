@@ -42,3 +42,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 Channel change card: the channel's logo is the same one the lists use (the guide's picon when there is one), on a smaller, plain tile.
 - 🎨 Text on the accent colour always reads: with a pale accent (or a theme whose own text colour barely shows on it) the focused row's text turns near-black, and white on a dark accent.
 - 📐 Player channel list: the categories panel is now exactly as wide as the channel list under it.
+- 🏷️ Light theme: white one-colour logos are a lighter grey, and the dark glow some of them carry (made for dark backgrounds) is faded out, so they no longer look blurred.
