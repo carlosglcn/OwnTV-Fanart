@@ -92,8 +92,17 @@
     <string name="glcn_recent_clear_all">Clear all recent channels</string>
     <string name="glcn_wall_option">App wallpapers</string>
     <plurals name="glcn_deck_films">
-        <item quantity="one">%1$d film</item>
+        <item quantity="one">%1$s film</item>
         <item quantity="many">%1$d films</item>
-        <item quantity="other">%1$d films</item>
+        <item quantity="other">%1$s films</item>
     </plurals>
+    <plurals name="glcn_deck_channels">
+        <item quantity="one">%1$s channel</item>
+        <item quantity="other">%1$s channels</item>
+    </plurals>
+    <plurals name="glcn_deck_series">
+        <item quantity="one">%1$s series</item>
+        <item quantity="other">%1$s series</item>
+    </plurals>
+    <string name="glcn_deck_group_hidden">Group hidden. Show it again in Settings › Customize.</string>
 </resources>

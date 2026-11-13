@@ -41,6 +41,8 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -123,6 +125,8 @@ fun ZapDeck(
     /** Makes [key] the list the player zaps in (a channel tuned from another group). */
     onArmCategory: (LiveKey) -> Unit,
     onTune: (ChannelEntity) -> Unit,
+    /** glcn: OK held on a group hides it (undone in Settings › Customize); null = not offered. */
+    onHideCategory: ((LiveKey) -> Unit)? = null,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -219,10 +223,29 @@ fun ZapDeck(
 
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-    // glcn: ◀ ◀ ◀ — the playlists panel (column -2), in the categories' place and at their width.
+    // glcn: ◀ ◀ ◀ — the playlists panel (column -2), in the categories' place and at their width. It lists every
+    // playlist of the profile, the switched-off ones too (dimmed), so one can be switched back on from here.
     var plIdx by remember { mutableIntStateOf(0) }
+    var okPending by remember { mutableStateOf(false) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val offIds by tv.own.owntv.core.repository.SourceGlcnPrefs.disabled.collectAsState()
+    val allSources by androidx.compose.runtime.produceState<List<tv.own.owntv.core.database.entity.SourceEntity>>(emptyList()) {
+        runCatching {
+            val k = org.koin.core.context.GlobalContext.get()
+            val pid = k.get<tv.own.owntv.core.repository.SettingsRepository>().activeProfileId.first()
+            k.get<tv.own.owntv.core.database.dao.SourceDao>().observeForProfile(pid).collect { value = it }
+        }
+    }
+    val panelLists = remember(chips, allSources, offIds) {
+        if (chips.isEmpty()) chips
+        else chips + allSources.filter { it.id in offIds && chips.none { c -> c.first == it.id } }.map { it.id to it.name }
+    }
     val pickPlaylist: () -> Unit = {
-        chips.getOrNull(plIdx)?.let { (id, _) -> if (id != activeChip) { playlists?.onSelect?.invoke(id); groupIdx = 0 } }
+        panelLists.getOrNull(plIdx)?.let { (id, _) ->
+            // A switched-off playlist picked here is switched back on and shown.
+            if (id > 0L && id in offIds) tv.own.owntv.core.repository.SourceGlcnPrefs.setDisabled(id, false)
+            if (id != activeChip) { playlists?.onSelect?.invoke(id); groupIdx = 0 }
+        }
         column = 0
     }
     BackHandler { if (column == -2) column = 0 else onDismiss() }
@@ -350,6 +373,35 @@ fun ZapDeck(
                 if (e.type == KeyEventType.KeyUp && (e.key == Key.DirectionUp || e.key == Key.DirectionDown) && wheelTurning) {
                     wheelTurning = false; return@onPreviewKeyEvent true
                 }
+                // glcn: on the groups and the playlists OK acts when it comes up, so holding it can mean something else:
+                // held on a group it hides the group, held on a playlist it switches the playlist off (or on).
+                val okKey = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
+                if (okKey && (column == 0 || column == -2)) {
+                    when {
+                        e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0 -> okPending = true
+                        e.type == KeyEventType.KeyDown && okPending && e.nativeKeyEvent.repeatCount >= OK_HOLD_REPEATS -> {
+                            okPending = false
+                            if (column == 0) entries.getOrNull(groupIdx)?.item?.key?.let { key ->
+                                if (onHideCategory != null && key is LiveKey.Folder) {
+                                    onHideCategory(key)
+                                    tv.own.owntv.ui.components.AppToast.show(ctx.getString(R.string.glcn_deck_group_hidden))
+                                }
+                            } else panelLists.getOrNull(plIdx)?.let { (id, _) ->
+                                if (id > 0L) {
+                                    val off = !tv.own.owntv.core.repository.SourceGlcnPrefs.isDisabled(id)
+                                    tv.own.owntv.core.repository.SourceGlcnPrefs.setDisabled(id, off)
+                                    if (off && id == activeChip) playlists?.onSelect?.invoke(-1L)
+                                }
+                            }
+                        }
+                        e.type == KeyEventType.KeyUp && okPending -> {
+                            okPending = false
+                            if (column == 0) { if (list.isNotEmpty() && entries.getOrNull(groupIdx)?.item?.key == shownKey) column = 1 }
+                            else pickPlaylist()
+                        }
+                    }
+                    return@onPreviewKeyEvent true
+                }
                 if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 val first = e.nativeKeyEvent.repeatCount == 0
                 when (e.key) {
@@ -375,11 +427,12 @@ fun ZapDeck(
                             }
                             0 -> when {
                                 up && groupIdx == 0 && chips.isNotEmpty() -> { column = -1; chipIdx = chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0) }
-                                up -> groupIdx = (groupIdx - 1).coerceAtLeast(0)
-                                else -> groupIdx = (groupIdx + 1).coerceAtMost(entries.lastIndex.coerceAtLeast(0))
+                                // glcn: the groups go round — ▲ on the first reaches the last, ▼ on the last the first.
+                                up -> groupIdx = if (groupIdx == 0) entries.lastIndex.coerceAtLeast(0) else groupIdx - 1
+                                else -> groupIdx = if (groupIdx >= entries.lastIndex) 0 else groupIdx + 1
                             }
                             -1 -> if (!up) column = 0
-                            -2 -> plIdx = (plIdx + if (up) -1 else 1).coerceIn(0, chips.lastIndex)
+                            -2 -> plIdx = if (up) (if (plIdx == 0) panelLists.lastIndex else plIdx - 1) else (if (plIdx >= panelLists.lastIndex) 0 else plIdx + 1)
                         }
                         true
                     }
@@ -492,12 +545,12 @@ fun ZapDeck(
             if (column == -2) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
                 // glcn: the playlists, each a card of its own: its colour and initial, its name, what is in it (channels,
                 // films, series) and how it stands (when it ends, when it was last updated).
-                val counts by androidx.compose.runtime.produceState<Map<Long, Triple<Int, Int, Int>>>(emptyMap(), chips) {
+                val counts by androidx.compose.runtime.produceState<Map<Long, Triple<Int, Int, Int>>>(emptyMap(), panelLists) {
                     val k = org.koin.core.context.GlobalContext.get()
                     val ch = runCatching { k.get<tv.own.owntv.core.database.dao.ChannelDao>() }.getOrNull()
                     val mv = runCatching { k.get<tv.own.owntv.core.database.dao.MovieDao>() }.getOrNull()
                     val sr = runCatching { k.get<tv.own.owntv.core.database.dao.SeriesDao>() }.getOrNull()
-                    value = chips.filter { it.first > 0L }.associate { (id, _) ->
+                    value = panelLists.filter { it.first > 0L }.associate { (id, _) ->
                         id to Triple(
                             ch?.let { runCatching { it.countForSourceOnce(id) }.getOrNull() } ?: 0,
                             mv?.let { runCatching { it.countForSourceOnce(id) }.getOrNull() } ?: 0,
@@ -512,28 +565,31 @@ fun ZapDeck(
                     modifier = Modifier.padding(start = 14.mpx, top = 10.mpx, bottom = 14.mpx),
                 )
                 GlideColumn(
-                    count = chips.size,
+                    count = panelLists.size,
                     index = plIdx,
                     rowHeight = 104.mpx,
                     active = true,
                     resetKey = chips.size,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) { i, focused ->
-                    val (id, name) = chips.getOrNull(i) ?: return@GlideColumn
+                    val (id, name) = panelLists.getOrNull(i) ?: return@GlideColumn
                     val on = id == activeChip
+                    val switchedOff = id in offIds
                     val tint by animateColorAsState(if (focused) stageAccent.onAccent else StageColors.Text, tween(140), label = "deckPlaylistText")
                     val sub by animateColorAsState(if (focused) stageAccent.onAccent.copy(alpha = 0.8f) else StageColors.Muted, tween(140), label = "deckPlaylistSub")
                     val color = if (id > 0L) marks[id]?.shownColor ?: stageAccent.accent else stageAccent.accent
                     val sep = stringResource(R.string.content_epg_bits_separator)
-                    val c = if (id > 0L) counts[id] else counts.values.takeIf { it.isNotEmpty() }?.let { v ->
+                    // Grouped thousands ("14.734"), not a bare run of digits.
+                    val nf = remember { java.text.NumberFormat.getIntegerInstance() }
+                    val c = if (id > 0L) counts[id] else counts.filterKeys { it !in offIds }.values.takeIf { it.isNotEmpty() }?.let { v ->
                         Triple(v.sumOf { it.first }, v.sumOf { it.second }, v.sumOf { it.third })
                     }
                     val what = c?.let { (ch, mv, sr) ->
                         listOfNotNull(
-                            ch.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.content_live_channel_count, it, it) },
-                            mv.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.glcn_deck_films, it, it) },
-                            sr.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.content_vod_series_count, it, it) },
-                        ).ifEmpty { listOf(pluralStringResource(R.plurals.content_live_channel_count, 0, 0)) }.joinToString(sep)
+                            ch.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.glcn_deck_channels, it, nf.format(it)) },
+                            mv.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.glcn_deck_films, it, nf.format(it)) },
+                            sr.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.glcn_deck_series, it, nf.format(it)) },
+                        ).ifEmpty { listOf(pluralStringResource(R.plurals.glcn_deck_channels, 0, nf.format(0))) }.joinToString(sep)
                     }
                     // When it ends (soon is said in days, and in the warning colour) and when it was last updated.
                     val src = sources[id]
@@ -546,12 +602,13 @@ fun ZapDeck(
                         daysLeft <= PLAYLIST_SOON_DAYS -> pluralStringResource(R.plurals.glcn_src_expires_days, daysLeft, daysLeft)
                         else -> stringResource(R.string.settings_sources_expiry, java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(expiryMs)))
                     }
-                    val synced = src?.lastSyncAt?.let {
+                    val src2 = src ?: allSources.firstOrNull { it.id == id }
+                    val synced = src2?.lastSyncAt?.let {
                         stringResource(R.string.glcn_src_synced_ago, android.text.format.DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString().replaceFirstChar { ch -> ch.lowercase() })
                     }
                     val warn = daysLeft != null && daysLeft <= PLAYLIST_SOON_DAYS
                     Row(
-                        Modifier.fillMaxSize().padding(horizontal = 14.mpx),
+                        Modifier.fillMaxSize().graphicsLayer { alpha = if (switchedOff && !focused) 0.5f else 1f }.padding(horizontal = 14.mpx),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.mpx),
                     ) {
@@ -566,7 +623,7 @@ fun ZapDeck(
                         Column(Modifier.weight(1f)) {
                             Text(name, style = stageText(20, if (on) 800 else 700), color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
                             if (what != null) Text(what, style = stageText(15, 600), color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
-                            val state = listOfNotNull(ends, synced).joinToString(sep)
+                            val state = listOfNotNull(if (switchedOff) stringResource(R.string.glcn_pl_off) else null, ends, synced).joinToString(sep)
                             if (state.isNotEmpty()) Text(
                                 state, style = stageText(14, if (warn) 700 else 500),
                                 color = if (warn && !focused) Color(0xFFD9822B) else sub, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
@@ -596,6 +653,7 @@ fun ZapDeck(
                     val entry = entries.getOrNull(i) ?: return@GlideColumn
                     val shown = entry.item.key == shownKey
                     val lit = focused && column == 0
+                    val groupNf = remember { java.text.NumberFormat.getIntegerInstance() }
                     val tint by animateColorAsState(
                         when {
                             lit -> stageAccent.onAccent
@@ -615,11 +673,12 @@ fun ZapDeck(
                         Text(
                             if (tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) "" else entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
                             maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).alignByBaseline(),
                         )
                         // The playlist it comes from, when all playlists are listed together.
                         if (activeChip == -1L) entry.item.sourceId?.let(marks::get)?.let { tv.own.owntv.ui.stage.StagePlaylistMark(it, onLight = lit) }
-                        entry.count?.let { Text(it.toString(), style = stageText(15, 500), color = tint.copy(alpha = 0.7f), maxLines = 1, softWrap = false) }
+                        // glcn: the count on the name's line (it sat higher than the name), with grouped thousands.
+                        entry.count?.let { Text(groupNf.format(it), style = stageText(15, 500), color = tint.copy(alpha = 0.7f), maxLines = 1, softWrap = false, modifier = Modifier.alignByBaseline()) }
                     }
                 }
             }
@@ -1191,3 +1250,6 @@ private val DECK_TAB_ROOM = tv.own.owntv.glcn.EDGE_TAB_ROOM
 
 /** glcn: a playlist ending within this many days says so in days, in the warning colour (as in Playlists). */
 private const val PLAYLIST_SOON_DAYS = 15
+
+/** glcn: OK held this long (key repeats, about half a second) is a long press in the deck. */
+private const val OK_HOLD_REPEATS = 8

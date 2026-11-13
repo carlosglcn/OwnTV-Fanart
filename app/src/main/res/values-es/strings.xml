@@ -92,8 +92,19 @@
     <string name="glcn_recent_clear_all">Borrar todos los recientes</string>
     <string name="glcn_wall_option">Fondos de la app</string>
     <plurals name="glcn_deck_films">
-        <item quantity="one">%1$d película</item>
-        <item quantity="many">%1$d películas</item>
-        <item quantity="other">%1$d películas</item>
+        <item quantity="one">%1$s película</item>
+        <item quantity="many">%1$s películas</item>
+        <item quantity="other">%1$s películas</item>
     </plurals>
+    <plurals name="glcn_deck_channels">
+        <item quantity="one">%1$s canal</item>
+        <item quantity="many">%1$s canales</item>
+        <item quantity="other">%1$s canales</item>
+    </plurals>
+    <plurals name="glcn_deck_series">
+        <item quantity="one">%1$s serie</item>
+        <item quantity="many">%1$s series</item>
+        <item quantity="other">%1$s series</item>
+    </plurals>
+    <string name="glcn_deck_group_hidden">Grupo oculto. Vuelve a mostrarlo en Ajustes › Personalizar.</string>
 </resources>
