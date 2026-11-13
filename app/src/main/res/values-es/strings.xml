@@ -107,4 +107,6 @@
         <item quantity="other">%1$s series</item>
     </plurals>
     <string name="glcn_deck_group_hidden">Grupo oculto. Vuelve a mostrarlo en Ajustes › Personalizar.</string>
+    <string name="glcn_deck_manage_title">Gestionar grupos</string>
+    <string name="glcn_deck_manage_hint">OK muestra u oculta · Atrás vuelve</string>
 </resources>

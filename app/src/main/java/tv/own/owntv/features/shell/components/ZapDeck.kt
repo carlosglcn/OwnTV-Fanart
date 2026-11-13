@@ -227,6 +227,35 @@ fun ZapDeck(
     // playlist of the profile, the switched-off ones too (dimmed), so one can be switched back on from here.
     var plIdx by remember { mutableIntStateOf(0) }
     var okPending by remember { mutableStateOf(false) }
+    // glcn: "Manage groups" (column -3): every group of the playlist(s) shown, hidden ones too, each shown or hidden.
+    var manageIdx by remember { mutableIntStateOf(0) }
+    val deckScope = androidx.compose.runtime.rememberCoroutineScope()
+    val manageRows by androidx.compose.runtime.produceState<List<ManagedGroup>>(emptyList(), activeChip, offIds) {
+        runCatching {
+            val k = org.koin.core.context.GlobalContext.get()
+            val pid = k.get<tv.own.owntv.core.repository.SettingsRepository>().activeProfileId.first()
+            val sourceIds = if (activeChip > 0L) listOf(activeChip)
+                else k.get<tv.own.owntv.core.database.dao.SourceDao>().observeForProfile(pid).first().map { it.id }.filterNot { it in offIds }
+            kotlinx.coroutines.flow.combine(
+                k.get<tv.own.owntv.core.database.dao.CategoryDao>().observe(sourceIds, tv.own.owntv.core.model.MediaType.LIVE),
+                k.get<tv.own.owntv.core.customize.CustomizationStore>().observe(pid, tv.own.owntv.core.model.MediaType.LIVE),
+            ) { cats, cust ->
+                cats.map { c ->
+                    val key = tv.own.owntv.core.customize.CustomizeKeys.category(c)
+                    ManagedGroup(c.id, c.sourceId, tv.own.owntv.features.live.cleanGroupLabel(c.name), key, key in cust.hiddenCategories)
+                }
+            }.collect { value = it }
+        }
+    }
+    val toggleGroup: (ManagedGroup) -> Unit = { g ->
+        deckScope.launch {
+            runCatching {
+                val k = org.koin.core.context.GlobalContext.get()
+                val pid = k.get<tv.own.owntv.core.repository.SettingsRepository>().activeProfileId.first()
+                k.get<tv.own.owntv.core.customize.CustomizationStore>().setCategoryHidden(pid, tv.own.owntv.core.model.MediaType.LIVE, g.key, !g.hidden)
+            }
+        }
+    }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val offIds by tv.own.owntv.core.repository.SourceGlcnPrefs.disabled.collectAsState()
     val allSources by androidx.compose.runtime.produceState<List<tv.own.owntv.core.database.entity.SourceEntity>>(emptyList()) {
@@ -248,7 +277,7 @@ fun ZapDeck(
         }
         column = 0
     }
-    BackHandler { if (column == -2) column = 0 else onDismiss() }
+    BackHandler { if (column == -2 || column == -3) column = 0 else onDismiss() }
 
     // Slides in.
     val enter = remember { Animatable(0f) }
@@ -381,11 +410,12 @@ fun ZapDeck(
                         e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0 -> okPending = true
                         e.type == KeyEventType.KeyDown && okPending && e.nativeKeyEvent.repeatCount >= OK_HOLD_REPEATS -> {
                             okPending = false
-                            if (column == 0) entries.getOrNull(groupIdx)?.item?.key?.let { key ->
-                                if (onHideCategory != null && key is LiveKey.Folder) {
-                                    onHideCategory(key)
-                                    tv.own.owntv.ui.components.AppToast.show(ctx.getString(R.string.glcn_deck_group_hidden))
-                                }
+                            // Held on a group: the groups to show or hide, with the cursor on that one (as TiviMate's
+                            // "Manage groups"); nothing is hidden without a second, deliberate OK.
+                            if (column == 0) {
+                                val key = entries.getOrNull(groupIdx)?.item?.key
+                                manageIdx = (key as? LiveKey.Folder)?.let { k -> manageRows.indexOfFirst { it.id == k.id } }?.takeIf { it >= 0 } ?: 0
+                                column = -3
                             } else panelLists.getOrNull(plIdx)?.let { (id, _) ->
                                 if (id > 0L) {
                                     val off = !tv.own.owntv.core.repository.SourceGlcnPrefs.isDisabled(id)
@@ -432,6 +462,7 @@ fun ZapDeck(
                                 else -> groupIdx = if (groupIdx >= entries.lastIndex) 0 else groupIdx + 1
                             }
                             -1 -> if (!up) column = 0
+                            -3 -> if (manageRows.isNotEmpty()) manageIdx = if (up) (if (manageIdx == 0) manageRows.lastIndex else manageIdx - 1) else (if (manageIdx >= manageRows.lastIndex) 0 else manageIdx + 1)
                             -2 -> plIdx = if (up) (if (plIdx == 0) panelLists.lastIndex else plIdx - 1) else (if (plIdx >= panelLists.lastIndex) 0 else plIdx + 1)
                         }
                         true
@@ -460,6 +491,7 @@ fun ZapDeck(
                         when (column) {
                             2 -> column = 1
                             1 -> { column = 0; groupIdx = entries.indexOfFirst { it.item.key == shownKey }.takeIf { it >= 0 } ?: groupIdx }
+                            -3 -> column = 0
                             // glcn: ◀ ◀ ◀ from the picture — the quick playlist picker (as TiviMate, and as in Live TV).
                             0 -> if (chips.isNotEmpty()) { column = -2; plIdx = chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0) }
                             -1 -> chipIdx = (chipIdx - 1).coerceAtLeast(0)
@@ -477,6 +509,7 @@ fun ZapDeck(
                             }
                             -1 -> chipIdx = (chipIdx + 1).coerceAtMost(chips.lastIndex)
                             -2 -> pickPlaylist()
+                            -3 -> column = 0
                         }
                         true
                     }
@@ -486,6 +519,7 @@ fun ZapDeck(
                             0 -> if (list.isNotEmpty() && entries.getOrNull(groupIdx)?.item?.key == shownKey) column = 1
                             -1 -> chips.getOrNull(chipIdx)?.let { (id, _) -> playlists?.onSelect?.invoke(id); column = 0; groupIdx = 0 }
                             -2 -> pickPlaylist()
+                            -3 -> manageRows.getOrNull(manageIdx)?.let { toggleGroup(it) }
                         }
                         true
                     }
@@ -539,10 +573,42 @@ fun ZapDeck(
             if (fold < 0.999f) Box(Modifier.width(groupsOpen).fillMaxHeight().graphicsLayer { alpha = 1f - fold; translationX = -slideGroupsPx * fold }) {
             Box(Modifier.matchParentSize().clip(RoundedCornerShape(StageRadii.Sheet)).background(shade))
             // glcn: a tab on the panel's right edge with a › — ▶ goes back to the channels.
-            tv.own.owntv.glcn.EdgeTab(visible = column == 0 || column == -1 || column == -2, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
+            tv.own.owntv.glcn.EdgeTab(visible = column == 0 || column == -1 || column == -2 || column == -3, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
             // glcn: ‹ on the left edge while on the categories: ◀ opens the playlists.
             if (chips.isNotEmpty()) tv.own.owntv.glcn.EdgeTab(visible = column == 0, modifier = Modifier.align(Alignment.CenterStart))
-            if (column == -2) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
+            if (column == -3) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
+                Text(
+                    stringResource(R.string.glcn_deck_manage_title), style = stageText(24, 800), color = StageColors.Text, maxLines = 1, softWrap = false,
+                    modifier = Modifier.padding(start = 14.mpx, top = 10.mpx),
+                )
+                Text(
+                    stringResource(R.string.glcn_deck_manage_hint), style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, softWrap = false,
+                    modifier = Modifier.padding(start = 14.mpx, top = 2.mpx, bottom = 10.mpx),
+                )
+                GlideColumn(
+                    count = manageRows.size,
+                    index = manageIdx,
+                    rowHeight = 60.mpx,
+                    active = true,
+                    resetKey = activeChip,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) { i, focused ->
+                    val g = manageRows.getOrNull(i) ?: return@GlideColumn
+                    val ink = if (focused) stageAccent.onAccent else StageColors.Text
+                    Row(
+                        Modifier.fillMaxSize().padding(horizontal = 14.mpx),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.mpx),
+                    ) {
+                        Text(
+                            g.name, style = stageText(18, 600), color = if (g.hidden && !focused) StageColors.Muted else ink,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false, modifier = Modifier.weight(1f),
+                        )
+                        if (activeChip == -1L) marks[g.sourceId]?.let { tv.own.owntv.ui.stage.StagePlaylistMark(it, onLight = focused) }
+                        DeckSwitch(on = !g.hidden, focused = focused)
+                    }
+                }
+            } else if (column == -2) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
                 // glcn: the playlists, each a card of its own: its colour and initial, its name, what is in it (channels,
                 // films, series) and how it stands (when it ends, when it was last updated).
                 val counts by androidx.compose.runtime.produceState<Map<Long, Triple<Int, Int, Int>>>(emptyMap(), panelLists) {
@@ -1253,3 +1319,22 @@ private const val PLAYLIST_SOON_DAYS = 15
 
 /** glcn: OK held this long (key repeats, about half a second) is a long press in the deck. */
 private const val OK_HOLD_REPEATS = 8
+
+/** glcn: a group in "Manage groups": its customization key and whether it is hidden. */
+private data class ManagedGroup(val id: Long, val sourceId: Long, val name: String, val key: String, val hidden: Boolean)
+
+/** glcn: a small on/off switch: a pill that fills with the accent when on, its knob sliding across. */
+@Composable
+private fun DeckSwitch(on: Boolean, focused: Boolean) {
+    val a = stageAccent
+    val x by androidx.compose.animation.core.animateFloatAsState(if (on) 1f else 0f, tween(160), label = "deckSwitch")
+    val track = when {
+        focused -> a.onAccent.copy(alpha = if (on) 0.9f else 0.35f)
+        on -> a.accent
+        else -> StageColors.Ink.copy(alpha = 0.18f)
+    }
+    val knob = if (focused && on) a.accent else Color.White
+    Box(Modifier.size(52.mpx, 30.mpx).clip(RoundedCornerShape(50)).background(track).padding(3.mpx)) {
+        Box(Modifier.graphicsLayer { translationX = x * 22.mpx.toPx() }.size(24.mpx).clip(RoundedCornerShape(50)).background(knob))
+    }
+}

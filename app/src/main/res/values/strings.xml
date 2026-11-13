@@ -105,4 +105,6 @@
         <item quantity="other">%1$s series</item>
     </plurals>
     <string name="glcn_deck_group_hidden">Group hidden. Show it again in Settings › Customize.</string>
+    <string name="glcn_deck_manage_title">Manage groups</string>
+    <string name="glcn_deck_manage_hint">OK shows or hides · Back returns</string>
 </resources>
