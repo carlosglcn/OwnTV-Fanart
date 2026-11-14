@@ -93,7 +93,7 @@ fun LiveEpgCard(
             if (now != null) {
                 val remaining = ((now.stopMs - nowMs) / 60_000L).toInt()
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SlotLabel(stringResource(R.string.content_live_now), tv.own.owntv.ui.theme.stageAccent.accent)
+                    SlotLabel(tv.own.owntv.glcn.onAirNowLabel(now.title), tv.own.owntv.ui.theme.stageAccent.accent)
                     Text(
                         now.title + (if (remaining in 1..600) "  ·  " + stringResource(R.string.content_live_time_remaining, formatTime(now.stopMs), remaining) else ""),
                         style = MaterialTheme.typography.labelMedium, color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -103,7 +103,7 @@ fun LiveEpgCard(
             return@Column
         }
         if (now != null) {
-            SlotLabel(stringResource(if (archive) R.string.content_archive_playing else R.string.content_live_now), tv.own.owntv.ui.theme.stageAccent.accent)
+            SlotLabel(if (archive) stringResource(R.string.content_archive_playing) else tv.own.owntv.glcn.onAirNowLabel(now?.title), tv.own.owntv.ui.theme.stageAccent.accent)
             Text(
                 now.title,
                 style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
@@ -190,7 +190,7 @@ fun LiveEpgCardWithArt(epg: EpgNowNext?, art: String?, modifier: Modifier = Modi
     if (art.isNullOrBlank()) { LiveEpgCard(epg, modifier.padding(vertical = 4.dp), bare = true); return }
     // glcn: no panel of its own (the bar's shade is behind it); the picture 144 × 81, big enough to tell what is on.
     Row(
-        modifier.padding(vertical = 4.dp),
+        modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -198,7 +198,7 @@ fun LiveEpgCardWithArt(epg: EpgNowNext?, art: String?, modifier: Modifier = Modi
             url = art,
             modifier = Modifier.size(width = 144.dp, height = 81.dp).clip(RoundedCornerShape(10.dp)),
         )
-        LiveEpgCard(epg, bare = true)
+        LiveEpgCard(epg, Modifier.weight(1f), bare = true)
     }
 }
 
@@ -215,7 +215,7 @@ fun ZapGuideLines(epg: EpgNowNext?, modifier: Modifier = Modifier) {
     val nowMs = remember(epg) { System.currentTimeMillis() }
     Column(modifier.padding(top = 8.dp)) {
         epg.now?.let { entry ->
-            SlotLabel(stringResource(R.string.content_live_now), tv.own.owntv.ui.theme.stageAccent.accent)
+            SlotLabel(tv.own.owntv.glcn.onAirNowLabel(entry.title), tv.own.owntv.ui.theme.stageAccent.accent)
             Text(entry.title, style = tv.own.owntv.ui.theme.stageText(24, 500), color = hudInk, maxLines = 2, overflow = TextOverflow.Ellipsis) // glcn: two lines, not cut
             val remaining = ((entry.stopMs - nowMs) / 60_000L).toInt()
             Text(

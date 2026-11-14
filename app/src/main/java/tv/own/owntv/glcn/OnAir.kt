@@ -12,3 +12,9 @@ import tv.own.owntv.R
 fun onAirLabel(title: String?): String =
     if (title != null && tv.own.owntv.core.live.SportsNow.displayTitle(title) != title) stringResource(R.string.player_live)
     else stringResource(R.string.glcn_on_air_badge)
+
+/** glcn: the same rule for the player's card and the zap banner — "EN DIRECTO AHORA" only for a real live broadcast. */
+@Composable
+fun onAirNowLabel(title: String?): String =
+    if (title != null && tv.own.owntv.core.live.SportsNow.displayTitle(title) != title) stringResource(R.string.content_live_now)
+    else stringResource(R.string.glcn_on_air_now)

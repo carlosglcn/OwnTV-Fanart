@@ -732,11 +732,13 @@ internal fun BottomBar(
                 // glcn: the programme beside never takes more than about half the row, so the channel's name and its
                 // facts keep room (on a narrower screen or a bigger zoom they were cut through).
                 androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
-                    val sideMax = minOf(540.dp, maxWidth * 0.46f)
+                    // glcn: one fixed width, so the picture and the lines always start at the same place whatever the
+                    // programme's title, and the channel's name keeps the rest.
+                    val sideW = minOf(560.dp, maxWidth * 0.44f)
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.weight(1f)) { header() }
                         Spacer(Modifier.width(18.dp))
-                        Box(Modifier.widthIn(max = sideMax)) { side() }
+                        Box(Modifier.width(sideW).padding(end = 12.dp)) { side() }
                     }
                 }
             } else header()

@@ -74,3 +74,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🖼️ Channel-change banner: on a quick zap the picture of the channel you just left no longer shows over the next one while its own loads.
 - 🔁 **Channels whose server ends the stream every half minute** reopen at once, with a blink instead of growing waits, and those ends no longer count towards giving the channel up
 - 📺 **Amlogic boxes:** a channel with sound but no picture because the decoder refuses the direct video output now plays through software decoding
+- 📺 Player and zap banner: "LIVE NOW" only for a real live broadcast; anything else being shown reads "ON AIR NOW".
+- 📐 Player: the programme card on the right has one fixed width, a little further left — the picture and lines always start at the same place, nothing runs past the edge, and the channel name keeps the rest of the line.

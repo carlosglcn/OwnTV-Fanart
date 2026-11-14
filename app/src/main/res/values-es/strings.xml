@@ -110,4 +110,5 @@
     <string name="glcn_deck_manage_title">Gestionar grupos</string>
     <string name="glcn_deck_manage_hint">OK muestra u oculta · Atrás vuelve</string>
     <string name="glcn_guide_matches">En la guía: %1$d · OK te lleva al programa</string>
+    <string name="glcn_on_air_now">EN EMISIÓN AHORA</string>
 </resources>
