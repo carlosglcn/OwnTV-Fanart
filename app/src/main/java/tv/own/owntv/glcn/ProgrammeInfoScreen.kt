@@ -92,6 +92,8 @@ fun ProgrammeInfoScreen(
     channels: List<ChannelEntity> = emptyList(),
     /** glcn: OK on another channel's page tunes it. */
     onTune: ((ChannelEntity) -> Unit)? = null,
+    /** glcn: a film picked on the cast page — its page, out of the player. */
+    onOpenFilm: ((tv.own.owntv.core.database.entity.MovieEntity) -> Unit)? = null,
 ) {
     // glcn: the channel whose page is shown — the one playing at first; the window keeps playing that one throughout.
     var channel by remember { mutableStateOf(startChannel) }
@@ -185,6 +187,10 @@ fun ProgrammeInfoScreen(
             ?: runCatching { epgDao.programmeDescription(c.id) }.getOrNull()?.takeIf { it.isNotBlank() }
     }
 
+    // glcn: the names the guide gives after "Reparto:", for the cast panel and the Cast button.
+    val guidePeople = remember(ownSynopsis) { guideCast(ownSynopsis) }
+    var castOpen by remember(cur?.id) { mutableStateOf(false) }
+
     // TMDB lends the wide picture, the rating and a synopsis when the guide says little.
     val lent by produceState<ProgrammeArtResolver.Info?>(null, cur?.title, cur?.categories) {
         val c = cur ?: return@produceState
@@ -203,6 +209,14 @@ fun ProgrammeInfoScreen(
         value = runCatching { resolver.filmFor(c.title, c.categories) }.getOrNull()
     }
     val filmLogo = film?.logoPath?.let { tv.own.owntv.core.metadata.MetadataImages.logo(it) }
+    // glcn: who is in it — TMDB's cast for a film, else the guide's names; the Cast button opens the cast page on them.
+    val pageCast = film?.cast.orEmpty().ifEmpty { guidePeople }
+    if (castOpen && pageCast.isNotEmpty()) CastPage(
+        film = cur?.title.orEmpty(),
+        backdrop = film?.backdropPath?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w1280") } ?: cur?.imageUrl,
+        cast = pageCast, currentId = -1L,
+        onOpen = { m -> castOpen = false; onOpenFilm?.invoke(m) }, onDismiss = { castOpen = false },
+    )
     var logoFailed by remember(titleLogo, filmLogo) { mutableStateOf(false) }
 
     // glcn: the channels either side are read ahead (schedule, then TMDB for what they show), so a page is ready before ◀ ▶.
@@ -436,7 +450,8 @@ fun ProgrammeInfoScreen(
         }
         // glcn: a film's cast, in the room between the repeats and "Up next" — two rows of four, one when the repeats
         // run long (so it never reaches "Up next"); not while the technical data take that corner.
-        val cast = film?.cast.orEmpty()
+        // glcn: TMDB's cast for a film; otherwise the names the guide gives after "Reparto:" (Wikipedia lends their photos).
+        val cast = film?.cast.orEmpty().ifEmpty { guidePeople }
         if (cast.isNotEmpty() && !showTech) Column(
             Modifier.then(slideInRight).fillMaxWidth()
                 .shadow(tv.own.owntv.ui.theme.StageElevation.CARD, RoundedCornerShape(20.mpx), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f)).clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
@@ -445,7 +460,7 @@ fun ProgrammeInfoScreen(
             Text(stringResource(R.string.content_media_cast), style = stageText(18, 800), color = accentInk, maxLines = 1)
             val castRows = if (again.isNotEmpty()) 1 else 2
             cast.take(CAST_PER_ROW * castRows).chunked(CAST_PER_ROW).forEach { row ->
-                tv.own.owntv.features.shell.components.VodCast(row, CAST_PER_ROW, gap = 12.mpx)
+                CastFaces(row, face = 72.mpx, max = CAST_PER_ROW, ink = Ink)
             }
         }
 
@@ -474,6 +489,7 @@ fun ProgrammeInfoScreen(
         // synopsis ends; so ◀ ▶ through the channels never moves the buttons.
         InfoActions(
             cur, channel, showTech, onToggleTech = { showTech = !showTech }, onStartOver, onRecord, onDismiss, focus, pageFocus,
+            onCast = if (pageCast.isNotEmpty()) ({ castOpen = true }) else null,
             onWatch = if (channel.id != startChannel.id && onTune != null) ({ onTune(channel) }) else null,
             modifier = Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = INFO_ACTIONS_BOTTOM).then(slide),
         )
@@ -500,6 +516,8 @@ private fun InfoActions(
     pageFocus: FocusRequester,
     /** Another channel's page: watch it. */
     onWatch: (() -> Unit)? = null,
+    /** glcn: who is in it — the cast page. */
+    onCast: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -524,6 +542,10 @@ private fun InfoActions(
         )
         if (cur != null && onRecord != null) StageButton(
             text = stringResource(R.string.recording_record), onClick = { onRecord(channel); onDismiss() }, icon = OwnTVIcon.REC,
+            height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
+        )
+        if (onCast != null) StageButton(
+            text = stringResource(R.string.content_media_cast), onClick = onCast, icon = OwnTVIcon.PERSON,
             height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
         )
         StageButton(

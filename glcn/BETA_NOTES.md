@@ -81,3 +81,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ✏️ Edit-source form: the "Edit" hint now shows on every field (dimmed until the row is focused), not only on the focused one.
 - ✅ Playlist cards: the green "up to date" tag now reads "Actualizada" in Spanish instead of "Al día", which read like "daily".
 - 🗑️ Player's Recently watched list: hold OK on a channel to remove it, or clear all recent channels at once (films and series keep their own history).
+- 🎭 Cast as faces: the Cine pause screen now shows who is in the film or episode as round photos with names, and the Info tab lists them too — OK on a face opens the cast page on that person (the film pauses; a film picked there opens its page).
+- 🎭 Live TV programme page: when the guide names the cast ("Reparto: …"), it shows them as faces (Wikipedia photos) and a new Cast button opens the cast page, as for films.

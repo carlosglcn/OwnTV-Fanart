@@ -554,6 +554,8 @@ fun OwnTVShell(
                     genres = cinemaJsonList(meta?.genresJson),
                     overview = meta?.overview?.takeIf { it.isNotBlank() } ?: m.plot,
                     cast = tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson).map { it.name },
+                    people = tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson),
+                    movieId = m.id,
                     capabilities = m.advertisedCapabilities,
                     qualityRank = m.qualityRank,
                 )
@@ -571,6 +573,7 @@ fun OwnTVShell(
                     genres = cinemaJsonList(meta?.genresJson),
                     overview = ep?.plot?.takeIf { it.isNotBlank() } ?: meta?.overview ?: show.plot,
                     cast = tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson).map { it.name },
+                    people = tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson),
                     show = show.name,
                     season = ep?.seasonNumber,
                     episode = ep?.episodeNumber,
@@ -2577,6 +2580,7 @@ fun OwnTVShell(
                     onToastOk = goalToast?.let { a -> { switchToMatch(a.match) } },
                     // glcn: films and episodes get the cinema chrome.
                     cinema = if (!isLiveStream && !isLiveChannel) cinemaInfo else null,
+                    onOpenFilm = { m -> exitPlayer(); homeFilm = m },
                     cinemaEpisodes = if (zapSource == MainSection.SERIES) cinemaEpisodes else emptyList(),
                     cinemaEpisodeIndex = cinemaQueue?.second ?: -1,
                     nextEpisodeArt = if (zapSource == MainSection.SERIES) nextEpisodeArt else null,
@@ -2622,6 +2626,7 @@ fun OwnTVShell(
                         onRecord = { ch -> liveVm.recordNow(ch) },
                         channels = zapChannels,
                         onTune = { ch -> showProgramInfo = false; liveVm.ensurePlaying(ch) },
+                        onOpenFilm = { m -> showProgramInfo = false; exitPlayer(); homeFilm = m },
                     ) else showProgramInfo = false
                 }
                 if (showCopies) {

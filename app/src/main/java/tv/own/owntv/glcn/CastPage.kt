@@ -77,11 +77,15 @@ fun CastPage(
     currentId: Long,
     onOpen: (MovieEntity) -> Unit,
     onDismiss: () -> Unit,
+    /** glcn: the person to open on (a face picked in the player or the programme page). */
+    startAt: Int = 0,
 ) {
     val first = remember { FocusRequester() }
     val filmsFocus = remember { FocusRequester() }
-    var at by remember { mutableIntStateOf(0) }
     val people = cast.take(CAST_MAX)
+    val start = startAt.coerceIn(0, (people.size - 1).coerceAtLeast(0))
+    var at by remember { mutableIntStateOf(start) }
+    val rowState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = start)
     val page = stageTone(Color(0xFF070B0E), LocalStagePalette.current.page)
     OwnTVPopup(onDismissRequest = onDismiss, stageLayout = true, stageScaled = false) {
         LaunchedEffect(Unit) { delay(60); runCatching { first.requestFocus() } }
@@ -95,14 +99,15 @@ fun CastPage(
                 Text(film, style = stageText(30, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(horizontal = SIDE).padding(top = 4.mpx))
                 LazyRow(
-                    Modifier.fillMaxWidth().padding(top = 22.mpx).focusGroup(),
+                    state = rowState,
+                    modifier = Modifier.fillMaxWidth().padding(top = 22.mpx).focusGroup(),
                     contentPadding = PaddingValues(horizontal = SIDE, vertical = 14.mpx),
                     horizontalArrangement = Arrangement.spacedBy(22.mpx),
                 ) {
                     itemsIndexed(people, key = { i, p -> "$i-${p.name}" }) { i, p ->
                         StagePoster(
                             title = p.name, onClick = { runCatching { filmsFocus.requestFocus() } }, width = PORTRAIT_W, height = PORTRAIT_H,
-                            modifier = Modifier.then(if (i == 0) Modifier.focusRequester(first) else Modifier)
+                            modifier = Modifier.then(if (i == start) Modifier.focusRequester(first) else Modifier)
                                 .onFocusChanged { if (it.hasFocus || it.isFocused) at = i },
                         ) { Portrait(p) }
                     }
@@ -116,7 +121,9 @@ fun CastPage(
 
 @Composable
 private fun Portrait(p: CastMember) {
-    val photo = MetadataImages.profile(p.profilePath, PHOTO_SIZE)
+    val tmdb = MetadataImages.profile(p.profilePath, PHOTO_SIZE)
+    // glcn: a name read from the guide has no TMDB photo — Wikipedia's, then.
+    val photo by produceState(tmdb, p.name, tmdb) { if (tmdb == null) value = runCatching { Wiki.person(p.name)?.photo }.getOrNull() }
     Box(Modifier.fillMaxSize().background(StageColors.Ink.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
         if (photo == null) {
             Text(initials(p.name), style = stageDisplay(56), color = StageColors.Muted)

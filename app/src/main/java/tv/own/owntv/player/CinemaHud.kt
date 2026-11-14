@@ -5,6 +5,7 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -342,6 +343,8 @@ internal class CinemaActions(
     val onTechDetails: () -> Unit,
     val onSearchSubtitles: (() -> Unit)?,
     val onLocalSubtitle: (() -> Unit)?,
+    /** glcn: OK on a face in the Info tab — the cast page, on that person. */
+    val onCast: ((Int) -> Unit)? = null,
 )
 
 /** The side panel. The picture has slid to the left (the shell does that from [tv.own.owntv.glcn.CinemaStage]). */
@@ -453,8 +456,13 @@ private fun InfoTab(info: CinemaInfo, tech: CinemaTech, actions: CinemaActions) 
         info.overview?.takeIf { it.isNotBlank() }?.let {
             Text(it, style = stageText(18, 400), color = Color.White.copy(alpha = 0.85f), maxLines = 6, overflow = TextOverflow.Ellipsis)
         }
-        if (info.cast.isNotEmpty()) {
-            Text(stringResource(R.string.glcn_cine_cast) + ": " + info.cast.take(5).joinToString(", "), style = stageText(16, 500), color = Color.White.copy(alpha = 0.6f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        val people = info.people.ifEmpty { info.cast.map { tv.own.owntv.core.metadata.CastMember(it) } }
+        if (people.isNotEmpty()) {
+            // glcn: who is in it, as faces — OK on one opens the cast page on that person.
+            Text(stringResource(R.string.glcn_cine_cast), style = stageText(16, 800), color = stageAccent.ink)
+            androidx.compose.foundation.layout.Box(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
+                tv.own.owntv.glcn.CastFaces(people, face = 78.mpx, max = CAST_FACES_PANEL, onPick = actions.onCast)
+            }
         }
         Spacer(Modifier.height(6.mpx))
         Text(stringResource(R.string.glcn_cine_tech), style = stageText(16, 800), color = stageAccent.ink)
@@ -765,12 +773,10 @@ internal fun CinemaPauseScreen(info: CinemaInfo, position: () -> Long, duration:
                     modifier = Modifier.padding(top = 20.mpx),
                 )
             }
-            if (info.cast.isNotEmpty()) {
-                Text(
-                    stringResource(R.string.glcn_cine_cast) + ": " + info.cast.take(4).joinToString(", "),
-                    style = stageText(19, 500), color = Color.White.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 16.mpx),
-                )
+            // glcn: who is in it, as faces (only shown here — any key brings the controls back; the Info tab has them to pick).
+            val people = info.people.ifEmpty { info.cast.map { tv.own.owntv.core.metadata.CastMember(it) } }
+            if (people.isNotEmpty()) {
+                tv.own.owntv.glcn.CastFaces(people, face = 92.mpx, max = CAST_FACES_PAUSE, modifier = Modifier.padding(top = 24.mpx))
             }
         }
     }
@@ -846,3 +852,7 @@ private fun SeekThumb(src: tv.own.owntv.core.emby.EmbyTrickplay.Source, position
 }
 
 private const val SEEK_THUMB_STEP_MS = 1_000L
+
+/** glcn: faces in the Info tab (it scrolls sideways) and on the pause screen. */
+private const val CAST_FACES_PANEL = 12
+private const val CAST_FACES_PAUSE = 6

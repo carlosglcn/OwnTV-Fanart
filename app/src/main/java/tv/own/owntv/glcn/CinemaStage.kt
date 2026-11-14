@@ -36,6 +36,10 @@ data class CinemaInfo(
     val qualityRank: Int = 0,
     /** glcn: the show's TMDB id, for the episode's intro times (TheIntroDB). */
     val tmdbId: Int? = null,
+    /** glcn: the cast with their photos, for the faces in the pause screen and the Info tab. */
+    val people: List<tv.own.owntv.core.metadata.CastMember> = emptyList(),
+    /** glcn: the film playing, kept out of its cast's "other films". */
+    val movieId: Long? = null,
 )
 
 /** One episode of the season playing, for the Episodes tab. */
