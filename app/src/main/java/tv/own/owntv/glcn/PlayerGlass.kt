@@ -34,6 +34,10 @@ object PlayerGlass {
     /** A panel's [base] share (e.g. 0.78) at the chosen level. */
     fun share(base: Float): Float = if (level == NORMAL) base else (base * FACTORS[level]).coerceIn(FLOOR, 1f)
 
+    /** glcn: [share] as a panel sees it — glass off makes every player panel solid. */
+    @androidx.compose.runtime.Composable
+    fun shareNow(base: Float): Float = if (tv.own.owntv.ui.theme.LocalGlass.current.enabled) share(base) else 1f
+
     private fun prefs(context: Context) = context.applicationContext.getSharedPreferences("glcn_player_glass", Context.MODE_PRIVATE)
     private const val KEY = "level"
 }
