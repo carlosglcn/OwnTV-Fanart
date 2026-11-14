@@ -71,3 +71,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔎 Guide search now looks through every programme on every day of the guide at once: matches appear in a row above the grid (day, time, title, channel) and OK takes you straight to that programme
 - 📌 Programme info: the buttons (Watch, Record, Technical data) now stay in the same place at the bottom of the page, whatever the length of the title and synopsis.
 - ⏩ Player channel list: holding ▲ ▼ speeds up sooner and goes faster, and while it runs a rail on the right shows where you are in the list with the channel number.
+- 🖼️ Channel-change banner: on a quick zap the picture of the channel you just left no longer shows over the next one while its own loads.

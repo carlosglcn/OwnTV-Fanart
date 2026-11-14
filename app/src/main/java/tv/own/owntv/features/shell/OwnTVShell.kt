@@ -2489,7 +2489,11 @@ fun OwnTVShell(
                                     contentAlignment = androidx.compose.ui.Alignment.Center,
                                 ) {
                                     val url = art?.takeIf { it.isNotBlank() }
-                                    if (url != null) tv.own.owntv.ui.components.ProgrammeArt(url = url, modifier = Modifier.fillMaxSize())
+                                    // glcn: a new image per channel — on a quick zap the picture just left (laSexta's) must not
+                                    // stay up over the next channel while its own loads.
+                                    if (url != null) androidx.compose.runtime.key(zapChannel?.id, url) {
+                                        tv.own.owntv.ui.components.ProgrammeArt(url = url, modifier = Modifier.fillMaxSize())
+                                    }
                                     else zapChannel?.logoUrl?.takeIf { it.isNotBlank() }?.let { logo ->
                                         coil3.compose.AsyncImage(model = logo, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.fillMaxSize(0.5f))
                                     }
@@ -2525,6 +2529,8 @@ fun OwnTVShell(
                                     // glcn: the programme's picture beside it, as on the channel-change banner.
                                     val artChannel = previewChannel
                                     val art by androidx.compose.runtime.produceState<String?>(liveVm.peekArt(artChannel?.id, epg?.now?.startMs), artChannel?.id, epg?.now?.startMs) {
+                                        // glcn: the picture of the channel just left is not kept while this one's is looked up.
+                                        value = liveVm.peekArt(artChannel?.id, epg?.now?.startMs)
                                         value = artChannel?.let { liveVm.nowArtUrl(it, epg?.now?.startMs) }
                                     }
                                     // glcn: the banner style chosen in Settings → Player (Compact is the one it always was).
@@ -2547,6 +2553,8 @@ fun OwnTVShell(
                             val watching by liveVm.watchingWallMs.collectAsStateWithLifecycle()
                             val artChannel = previewChannel
                             val art by androidx.compose.runtime.produceState<String?>(liveVm.peekArt(artChannel?.id, epg?.now?.startMs), artChannel?.id, epg?.now?.startMs) {
+                                        // glcn: the picture of the channel just left is not kept while this one's is looked up.
+                                        value = liveVm.peekArt(artChannel?.id, epg?.now?.startMs)
                                 value = artChannel?.let { liveVm.nowArtUrl(it, epg?.now?.startMs) }
                             }
                             if (watching == null) {
