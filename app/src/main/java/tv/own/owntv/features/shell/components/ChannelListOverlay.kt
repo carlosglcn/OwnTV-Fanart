@@ -106,7 +106,33 @@ fun ChannelListOverlay(
     loadSchedule: (suspend (ChannelEntity) -> List<EpgProgrammeEntity>)? = null,
     /** glcn: ▶ steps the view — picture, schedule, posters — remembered for next time. */
     onCyclePanel: (() -> Unit)? = null,
+    /** glcn: Recent only — held OK on a row offers to drop that channel from the list, or all of them. */
+    onForget: ((ChannelEntity) -> Unit)? = null,
+    onForgetAll: (() -> Unit)? = null,
 ) {
+    // glcn: the row held OK on in Recent; while set, the "drop it or all of them" popup is up.
+    var forgetFor by remember { mutableStateOf<ChannelEntity?>(null) }
+    forgetFor?.let { ch ->
+        val drop = remember { FocusRequester() }
+        androidx.compose.runtime.LaunchedEffect(ch.id) { kotlinx.coroutines.delay(FORGET_FOCUS_DELAY_MS); runCatching { drop.requestFocus() } }
+        tv.own.owntv.ui.stage.StagePopup(
+            onDismiss = { forgetFor = null },
+            title = stringResource(R.string.content_category_recently_watched),
+            body = stringResource(R.string.glcn_recent_forget_body),
+            width = 760.mpx,
+            buttons = {
+                tv.own.owntv.ui.stage.StageButton(
+                    stringResource(R.string.glcn_recent_forget_one, ProviderTags.parse(ch.name).name),
+                    onClick = { onForget?.invoke(ch); forgetFor = null }, height = 56.mpx, textSize = 19, modifier = Modifier.focusRequester(drop),
+                )
+                tv.own.owntv.ui.stage.StageButton(
+                    stringResource(R.string.glcn_recent_forget_all),
+                    onClick = { forgetFor = null; onForgetAll?.invoke() }, height = 56.mpx, textSize = 19,
+                )
+                tv.own.owntv.ui.stage.StageButton(stringResource(R.string.common_cancel), onClick = { forgetFor = null }, height = 56.mpx, textSize = 19)
+            },
+        )
+    }
     // glcn: what is on each channel, kept once read (the prefetch reads the rows around the cursor), so the panel
     // beside the list shows the picture at once instead of reading it again when the row is reached.
     val nowCache = remember { java.util.concurrent.ConcurrentHashMap<Long, Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>>() }
@@ -300,7 +326,7 @@ fun ChannelListOverlay(
                         mark = if (oneSource) null else playlistMarks[ch.sourceId],
                         onFocus = { focusedIndex = index },
                         onClick = { onSelect(ch) },
-                        onLongClick = {},
+                        onLongClick = { if (history && onForget != null) forgetFor = ch },
                         logoTile = false,
                         trailing = watchedAt?.let { times ->
                             {
@@ -346,6 +372,7 @@ fun ChannelListOverlay(
                         else -> null
                     },
                     "CH±" to stringResource(R.string.content_key_page),
+                    if (history && onForget != null) stringResource(R.string.content_key_hold_ok) to stringResource(R.string.glcn_recent_forget_hint) else null,
                     when {
                         unified && loadSchedule != null && !alignEnd && schedPick < 0 && schedCount > 0 -> "▶" to stringResource(R.string.content_key_programmes)
                         onCyclePanel != null && !alignEnd -> "▶" to stringResource(R.string.glcn_zap_view_next)
@@ -877,3 +904,6 @@ internal fun <T> rememberSettled(value: T, delayMs: Long): T {
 
 /** glcn: how long the cursor rests before the panels beside the channel list read the new channel. */
 private const val PANEL_SETTLE_MS = 140L
+
+/** glcn: the forget popup takes focus a beat after it opens — the held OK that opened it is still coming up. */
+private const val FORGET_FOCUS_DELAY_MS = 450L

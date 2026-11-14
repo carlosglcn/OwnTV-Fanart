@@ -2854,6 +2854,8 @@ fun OwnTVShell(
                         alignEnd = true,
                         onSelect = { liveVm.ensurePlaying(it); showHistoryList = false },
                         onDismiss = { showHistoryList = false },
+                        onForget = { liveVm.removeFromHistory(it.id) },
+                        onForgetAll = { liveVm.clearLiveHistory(); showHistoryList = false },
                         loadNow = { liveVm.nowFull(it) },
                         loadSchedule = if (glcnZapPanel == 1) ({ liveVm.scheduleFor(it) }) else null,
                         modifier = Modifier.fillMaxSize(),

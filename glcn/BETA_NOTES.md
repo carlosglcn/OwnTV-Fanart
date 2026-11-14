@@ -80,3 +80,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🧾 Playback report: now also lists every live group of each playlist (provider id, channel count, first channels) — to track down groups showing the wrong channels from a report alone.
 - ✏️ Edit-source form: the "Edit" hint now shows on every field (dimmed until the row is focused), not only on the focused one.
 - ✅ Playlist cards: the green "up to date" tag now reads "Actualizada" in Spanish instead of "Al día", which read like "daily".
+- 🗑️ Player's Recently watched list: hold OK on a channel to remove it, or clear all recent channels at once (films and series keep their own history).

@@ -2776,6 +2776,14 @@ class LiveViewModel(
         }
     }
 
+    /** glcn: Recent emptied from the player's list — the live channels only; films and series keep theirs. */
+    fun clearLiveHistory() {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            userDataWriter.clearHistory(pid, MediaType.LIVE)
+        }
+    }
+
     fun removeFromHistory(channelId: Long) {
         viewModelScope.launch {
             val pid = currentProfileId() ?: return@launch

@@ -111,4 +111,8 @@
     <string name="glcn_deck_manage_hint">OK muestra u oculta · Atrás vuelve</string>
     <string name="glcn_guide_matches">En la guía: %1$d · OK te lleva al programa</string>
     <string name="glcn_on_air_now">EN EMISIÓN AHORA</string>
+    <string name="glcn_recent_forget_body">Quita canales de Vistos recientemente: solo este o todos. Las películas y las series no se tocan.</string>
+    <string name="glcn_recent_forget_one">Quitar %1$s</string>
+    <string name="glcn_recent_forget_all">Borrar todos</string>
+    <string name="glcn_recent_forget_hint">Quitar</string>
 </resources>
