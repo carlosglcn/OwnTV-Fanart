@@ -408,11 +408,6 @@ fun ProgrammeInfoScreen(
                     DriftingSynopsis(it, modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W), style = stageText(21, if (light) 500 else 400), color = Soft, lines = if (next.isNotEmpty() && NEXT_CARDS > 0) SYNOPSIS_LINES_WITH_CARDS else SYNOPSIS_LINES, fade = true)
                 }
             }
-            // glcn: what can be done with it, right under the synopsis (no longer down at the foot past an empty page).
-            InfoActions(
-                cur, channel, showTech, onToggleTech = { showTech = !showTech }, onStartOver, onRecord, onDismiss, focus, pageFocus,
-                onWatch = if (channel.id != startChannel.id && onTune != null) ({ onTune(channel) }) else null,
-            )
             // glcn: what follows on the channel, as picture cards in the room under the buttons (the first one wider).
             if (NEXT_CARDS > 0 && next.isNotEmpty() && !showTech) NextCards(next.take(NEXT_CARDS), timeFmt, Modifier.then(slideInLeft).padding(top = 34.mpx))
         }
@@ -475,6 +470,13 @@ fun ProgrammeInfoScreen(
         }
         }
 
+        // glcn: what can be done with it — always in the same place, low on the page above the hint, wherever the
+        // synopsis ends; so ◀ ▶ through the channels never moves the buttons.
+        InfoActions(
+            cur, channel, showTech, onToggleTech = { showTech = !showTech }, onStartOver, onRecord, onDismiss, focus, pageFocus,
+            onWatch = if (channel.id != startChannel.id && onTune != null) ({ onTune(channel) }) else null,
+            modifier = Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = INFO_ACTIONS_BOTTOM).then(slide),
+        )
         if (channels.size > 1) Text(
             "◀ ▶  " + stringResource(R.string.glcn_pi_hint_channels) + "   ·   ▼  " + stringResource(R.string.glcn_pi_hint_options),
             style = stageText(15, 600), color = Dim, maxLines = 1,
@@ -498,9 +500,10 @@ private fun InfoActions(
     pageFocus: FocusRequester,
     /** Another channel's page: watch it. */
     onWatch: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        Modifier.padding(top = 30.mpx).onPreviewKeyEvent { e ->
+        modifier.onPreviewKeyEvent { e ->
             if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown && e.key == androidx.compose.ui.input.key.Key.DirectionUp) {
                 runCatching { pageFocus.requestFocus() }; true
             } else false
@@ -588,6 +591,8 @@ private const val REPEATS_SHOWN = 3
 
 /** glcn: the page's buttons, as the guide's. */
 private val INFO_BUTTON_H = 56.mpx
+/** glcn: the buttons' fixed place, from the foot of the page (the hint line sits under them). */
+private val INFO_ACTIONS_BOTTOM = 76.mpx
 private const val INFO_BUTTON_TEXT = 19
 /** glcn: the shade until the picture has been read — the old fixed one. */
 private const val VEIL_UNREAD = 0.82f

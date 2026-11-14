@@ -338,6 +338,8 @@ fun ZapDeck(
     val wheelList = androidx.compose.runtime.rememberUpdatedState(list)
     var wheelHeld by remember { mutableStateOf(false) }
     var wheelTurning by remember { mutableStateOf(false) }
+    // glcn: a held ▲ ▼ that has sped up — the list shows where it is (FastRunRail) until the key comes up.
+    var fastRun by remember { mutableStateOf(false) }
     var wheelJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun turnWheel(dir: Int) {
         wheelHeld = true
@@ -400,7 +402,7 @@ fun ZapDeck(
             .onPreviewKeyEvent { e ->
                 // glcn: the key comes up — the wheel coasts and stops.
                 if (e.type == KeyEventType.KeyUp && (e.key == Key.DirectionUp || e.key == Key.DirectionDown) && wheelTurning) {
-                    wheelTurning = false; return@onPreviewKeyEvent true
+                    wheelTurning = false; fastRun = false; return@onPreviewKeyEvent true
                 }
                 // glcn: on the groups and the playlists OK acts when it comes up, so holding it can mean something else:
                 // held on a group it hides the group, held on a playlist it switches the playlist off (or on).
@@ -452,6 +454,7 @@ fun ZapDeck(
                                     held < ZAP_ACCEL_2_MS -> ZAP_ACCEL_1_STEP
                                     else -> ZAP_ACCEL_2_STEP
                                 }
+                                fastRun = step > 1
                                 chIdx = if (step == 1) (if (up) (if (chIdx == 0) list.lastIndex else chIdx - 1) else (if (chIdx == list.lastIndex) 0 else chIdx + 1))
                                     else (chIdx + if (up) -step else step).coerceIn(0, list.lastIndex)
                             }
@@ -792,6 +795,11 @@ fun ZapDeck(
                         showNumber = showNumbers,
                     )
                 }
+                FastRunRail(
+                    visible = fastRun && column == 1, index = chIdx, count = list.size,
+                    label = list.getOrNull(chIdx)?.let { c -> c.number?.toString() ?: ProviderTags.displayName(c.name).take(1).uppercase() }.orEmpty(),
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                )
                 }
                 StageKeyHints(
                     listOfNotNull(
@@ -850,10 +858,10 @@ fun ZapDeck(
     }
 }
 
-private const val ZAP_ACCEL_1_MS = 900L
-private const val ZAP_ACCEL_2_MS = 2_200L
+private const val ZAP_ACCEL_1_MS = 600L
+private const val ZAP_ACCEL_2_MS = 1_500L
 private const val ZAP_ACCEL_1_STEP = 3
-private const val ZAP_ACCEL_2_STEP = 6
+private const val ZAP_ACCEL_2_STEP = 8
 private const val ZAP_DIGITS_MAX = 4
 private const val ZAP_DIGIT_HOLD_MS = 1_500L
 
@@ -1338,3 +1346,38 @@ private fun DeckSwitch(on: Boolean, focused: Boolean) {
         Box(Modifier.graphicsLayer { translationX = x * 22.mpx.toPx() }.size(24.mpx).clip(RoundedCornerShape(50)).background(knob))
     }
 }
+
+/**
+ * glcn: while a held ▲ ▼ runs fast through a long list, where it is: a rail down the list's right edge with a mark at
+ * the cursor's place, and beside the mark a bubble with the channel's number (or its initial). Gone when the key
+ * comes up.
+ */
+@Composable
+private fun FastRunRail(visible: Boolean, index: Int, count: Int, label: String, modifier: Modifier = Modifier) {
+    val shown by androidx.compose.animation.core.animateFloatAsState(if (visible) 1f else 0f, tween(if (visible) 120 else 380), label = "fastRun")
+    if (shown <= 0f || count < 2) return
+    val at = (index.toFloat() / (count - 1)).coerceIn(0f, 1f)
+    val place by androidx.compose.animation.core.animateFloatAsState(at, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 900f), label = "fastRunAt")
+    val accent = stageAccent
+    BoxWithConstraints(modifier.fillMaxHeight().width(150.mpx).graphicsLayer { alpha = shown }) {
+        val railH = maxHeight - FAST_BUBBLE_H
+        Box(
+            Modifier.align(Alignment.TopEnd).padding(top = FAST_BUBBLE_H / 2, end = 6.mpx).width(6.mpx).height(railH)
+                .clip(RoundedCornerShape(3.mpx)).background(StageColors.Text.copy(alpha = 0.18f)),
+        )
+        Row(
+            Modifier.align(Alignment.TopEnd).graphicsLayer { translationY = railH.toPx() * place },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.height(FAST_BUBBLE_H).clip(RoundedCornerShape(FAST_BUBBLE_H / 2)).background(accent.accent).padding(horizontal = 18.mpx),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, style = stageText(26, 800), color = accent.onAccent, maxLines = 1)
+            }
+            Box(Modifier.padding(start = 8.mpx).width(10.mpx).height(34.mpx).clip(RoundedCornerShape(5.mpx)).background(accent.accent))
+        }
+    }
+}
+
+private val FAST_BUBBLE_H = 52.mpx

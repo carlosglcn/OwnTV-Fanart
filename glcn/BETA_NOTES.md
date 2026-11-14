@@ -69,3 +69,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 Home: the same channel listed twice by a playlist no longer shows twice in Recent channels.
 - 🗂️ Player channel list: hold OK on a playlist to switch it off (or back on) without leaving the player — switched-off ones stay listed, dimmed, and OK on one turns it back on; hold OK on a group to open "Manage groups" — every group of the playlist with an on/off switch, hidden ones included, so groups are shown or hidden from the player itself; the groups and the playlists go round (▼ on the last reaches the first); counts with grouped thousands and level with the names.
 - 🔎 Guide search now looks through every programme on every day of the guide at once: matches appear in a row above the grid (day, time, title, channel) and OK takes you straight to that programme
+- 📌 Programme info: the buttons (Watch, Record, Technical data) now stay in the same place at the bottom of the page, whatever the length of the title and synopsis.
+- ⏩ Player channel list: holding ▲ ▼ speeds up sooner and goes faster, and while it runs a rail on the right shows where you are in the list with the channel number.
