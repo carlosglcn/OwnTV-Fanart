@@ -1052,7 +1052,8 @@ fun StageFieldRow(
             if (password && lit && !editing && panel == null) {
                 Text("▶ " + stringResource(if (shown) R.string.common_hide else R.string.common_show), style = stageText(18, 700), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            if (lit && !editing) Text(stringResource(R.string.common_edit), style = stageText(18, 700), color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // glcn: always there, quiet until the row is lit — a field that can be changed says so before it is reached.
+            if (!editing) Text(stringResource(R.string.common_edit), style = stageText(18, 700), color = if (lit) a.ink else StageColors.Muted.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

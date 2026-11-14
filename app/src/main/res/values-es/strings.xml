@@ -39,7 +39,7 @@
         <item quantity="one">Caduca mañana</item>
         <item quantity="other">Caduca en %d días</item>
     </plurals>
-    <string name="glcn_src_state_ok">Al día</string>
+    <string name="glcn_src_state_ok">Actualizada</string>
     <string name="glcn_src_state_stale">Antigua</string>
     <string name="glcn_src_state_error">Con error</string>
     <string name="glcn_src_state_expiring">Caduca pronto</string>

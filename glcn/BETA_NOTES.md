@@ -78,3 +78,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📐 Player: the programme card on the right has one fixed width, a little further left — the picture and lines always start at the same place, nothing runs past the edge, and the channel name keeps the rest of the line.
 - 🧊 Glass effect off now means solid everywhere: the player's panels (channel list, recently watched, coming up, zapping) no longer let the video through either.
 - 🧾 Playback report: now also lists every live group of each playlist (provider id, channel count, first channels) — to track down groups showing the wrong channels from a report alone.
+- ✏️ Edit-source form: the "Edit" hint now shows on every field (dimmed until the row is focused), not only on the focused one.
+- ✅ Playlist cards: the green "up to date" tag now reads "Actualizada" in Spanish instead of "Al día", which read like "daily".
