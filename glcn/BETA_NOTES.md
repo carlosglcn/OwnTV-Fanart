@@ -72,3 +72,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📌 Programme info: the buttons (Watch, Record, Technical data) now stay in the same place at the bottom of the page, whatever the length of the title and synopsis.
 - ⏩ Player channel list: holding ▲ ▼ speeds up sooner and goes faster, and while it runs a rail on the right shows where you are in the list with the channel number.
 - 🖼️ Channel-change banner: on a quick zap the picture of the channel you just left no longer shows over the next one while its own loads.
+- 🔁 **Channels whose server ends the stream every half minute** reopen at once, with a blink instead of growing waits, and those ends no longer count towards giving the channel up
+- 📺 **Amlogic boxes:** a channel with sound but no picture because the decoder refuses the direct video output now plays through software decoding
