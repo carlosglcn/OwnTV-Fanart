@@ -94,6 +94,8 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         if (tv.own.owntv.glcn.CrashScreen.isCrashProcess(this)) { super.onCreate(); return }
         // glcn: the app's Trakt keys (from the build; blank in a build without them, and then no Trakt row shows).
         tv.own.owntv.core.trakt.Trakt.configure(this, BuildConfig.TRAKT_CLIENT_ID, BuildConfig.TRAKT_CLIENT_SECRET)
+        // glcn: the report also tells how the live groups are filled (GroupsReport).
+        tv.own.owntv.player.PlaybackErrorLog.extraSection = { tv.own.owntv.glcn.GroupsReport.build() }
         // glcn: the app went down last time — open the report first, in that separate process, so it shows
         // even when what broke is the start-up below.
         if (tv.own.owntv.glcn.CrashScreen.pending(this)) runCatching {
