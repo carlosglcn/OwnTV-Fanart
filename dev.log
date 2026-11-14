@@ -1,17 +1,54 @@
-run=43526187847 sha=2d4d277e3126772199958f56838eea2594c0f45a
-> Task :app:lintVitalStandardRelease FAILED
-/home/runner/work/OwnTV-Fanart/OwnTV-Fanart/app/src/main/res/values/strings.xml:110: Error: Formatting %d followed by words ("programmes"): This should probably be a plural rather than a string [PluralsCandidate]
-    <string name="glcn_guide_matches">%1$d programmes in the guide with those words · OK takes you to one</string>
+run=43583270287 sha=17618cb4aca17ad018dd199f8f44fab46cf3077f
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:999:113 Overload resolution ambiguity between candidates:
+var readySinceMs: Long
+var readySinceMs: Long
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:999:126 'operator' modifier is required on 'fun <T> Comparable<T>.compareTo(other: T): Int'.
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:1001:87 Overload resolution ambiguity between candidates:
+var readySinceMs: Long
+var readySinceMs: Long
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:1002:99 Overload resolution ambiguity between candidates:
+var readySinceMs: Long
+var readySinceMs: Long
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:1358:26 Overload resolution ambiguity between candidates:
+var readySinceMs: Long
+var readySinceMs: Long
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:1387:26 Overload resolution ambiguity between candidates:
+var readySinceMs: Long
+var readySinceMs: Long
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:1410:53 Overload resolution ambiguity between candidates:
+var readySinceMs: Long
+var readySinceMs: Long
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:1410:66 'operator' modifier is required on 'fun <T> Comparable<T>.compareTo(other: T): Int'.
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:1410:85 Overload resolution ambiguity between candidates:
+var readySinceMs: Long
+var readySinceMs: Long
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:2108:77 Overload resolution ambiguity between candidates:
+var readySinceMs: Long
+var readySinceMs: Long
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:4133:9 Conflicting declarations:
+readySinceMs: Long = ...
+readySinceMs: Long = ...
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:4133:9 Conflicting declarations:
+var readySinceMs: Long
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:4196:9 Conflicting declarations:
+readySinceMs: Long = ...
+readySinceMs: Long = ...
+e: file:///home/runner/work/OwnTV-Fanart/OwnTV-Fanart/core-src/player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt:4196:9 Conflicting declarations:
+var readySinceMs: Long
+
+> Task :core-src:player-core:compileReleaseKotlin FAILED
+> Task :core-src:core:lintVitalAnalyzeRelease
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build-1794650522661.json
 --
 * What went wrong:
-Execution failed for task ':app:lintVitalStandardRelease' (registered by plugin 'com.android.internal.application').
-> Lint found fatal errors while assembling a release target.
-  
+Execution failed for task ':core-src:player-core:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Kotlin compiler: OVERLOAD_RESOLUTION_AMBIGUITY
 --
-org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:lintVitalStandardRelease' (registered by plugin 'com.android.internal.application').
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':core-src:player-core:compileReleaseKotlin' (registered by plugin 'com.android.internal.library').
 	at org.gradle.api.internal.tasks.execution.DefaultTaskNodeExecutor.lambda$doExecute$1(DefaultTaskNodeExecutor.java:367)
 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
 --
-BUILD FAILED in 10m 50s
-124 actionable tasks: 105 executed, 19 from cache
+BUILD FAILED in 3m 17s
+96 actionable tasks: 77 executed, 19 from cache
 Configuration cache entry stored.
