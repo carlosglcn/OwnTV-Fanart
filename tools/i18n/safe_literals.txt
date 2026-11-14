@@ -26,6 +26,7 @@
 1	log	app/src/main/java/tv/own/owntv/BlurredBackdropLoader.kt	blur: produceState failed: ${it.javaClass.simpleName}: ${it.message}
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	OwnTVHome
 1	compiler	app/src/main/java/tv/own/owntv/MainActivity.kt	RememberReturnType
+1	technical	app/src/main/java/tv/own/owntv/MainActivity.kt	activity-create
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	back-hold
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	database probe failed: $error
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	db-probed
@@ -38,7 +39,7 @@
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	onNewIntent deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	profile-id-loaded
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	profiles-loaded
-1	log	app/src/main/java/tv/own/owntv/OwnTVApp.kt	\0
+2	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	\0
 1	log	app/src/main/java/tv/own/owntv/OwnTVApp.kt	,
 3	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	DEPRECATION
 1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	beta-tv
@@ -46,6 +47,7 @@
 1	file-path	app/src/main/java/tv/own/owntv/OwnTVApp.kt	image_cache
 1	performance	app/src/main/java/tv/own/owntv/OwnTVApp.kt	koin-started
 1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	memory warning (level $level) ·
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	prefs-loaded
 1	log	app/src/main/java/tv/own/owntv/OwnTVApp.kt	· syncing $s
 3	empty	app/src/main/java/tv/own/owntv/core/i18n/LocalizedContent.kt	\0
 1	empty	app/src/main/java/tv/own/owntv/features/autostart/AutoStart.kt	\0
