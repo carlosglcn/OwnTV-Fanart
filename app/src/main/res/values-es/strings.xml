@@ -125,4 +125,9 @@
     <string name="glcn_badges_desc">4K, HDR, Atmos… en texto o con las imágenes de un paquete</string>
     <string name="glcn_badges_help">Muestra las marcas de calidad (4K, Dolby Vision, TrueHD, 5.1…) como etiquetas de texto de la app o con las imágenes de un paquete de insignias. La app no incluye ningún paquete: el que elijas se descarga una vez desde la página de su autor y se guarda. Elite Badges es obra de leonevz. Lo que el paquete no tenga se sigue mostrando en texto.</string>
     <string name="glcn_badges_url">Dirección del paquete (badges.json)</string>
+    <string name="glcn_dream_hint">OK · abrir</string>
+    <string name="glcn_dream_title">Salvapantallas Fanart</string>
+    <string name="glcn_dream_desc">Cuando la tele reposa: las imágenes de lo que se emite y de tus películas y series. OK abre lo que se ve. Se elige en la pantalla de salvapantallas de Android.</string>
+    <string name="glcn_dream_on">En uso</string>
+    <string name="glcn_dream_choose">Elegir</string>
 </resources>

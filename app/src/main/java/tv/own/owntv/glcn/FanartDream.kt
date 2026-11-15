@@ -46,7 +46,12 @@ class FanartDream : DreamService() {
         val poster: String? = null,
         val movie: tv.own.owntv.core.database.entity.MovieEntity? = null,
         val series: tv.own.owntv.core.database.entity.SeriesEntity? = null,
+        /** glcn: the channel a programme is on — OK tunes it. */
+        val channel: tv.own.owntv.core.database.entity.ChannelEntity? = null,
     )
+
+    /** glcn: the slide on screen, for OK. */
+    @Volatile private var current: Slide? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var front: ImageView
@@ -59,7 +64,8 @@ class FanartDream : DreamService() {
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        isInteractive = false
+        // glcn: OK opens what is on screen (its page, or the channel); any other key wakes the TV as before.
+        isInteractive = true
         isFullscreen = true
         isScreenBright = false
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
@@ -134,6 +140,17 @@ class FanartDream : DreamService() {
             },
             FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END),
         )
+        // glcn: what OK does, small, under the clock.
+        root.addView(
+            TextView(this).apply {
+                text = getString(tv.own.owntv.R.string.glcn_dream_hint)
+                setTextColor(Color.argb(150, 255, 255, 255))
+                textSize = 15f
+                setShadowLayer(10f, 0f, 2f, Color.argb(160, 0, 0, 0))
+                setPadding(pad, 0, pad, pad)
+            },
+            FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END),
+        )
         setContentView(root)
     }
 
@@ -166,7 +183,30 @@ class FanartDream : DreamService() {
         super.onDetachedFromWindow()
     }
 
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (event.action != android.view.KeyEvent.ACTION_UP) return true
+        val ok = event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == android.view.KeyEvent.KEYCODE_ENTER ||
+            event.keyCode == android.view.KeyEvent.KEYCODE_NUMPAD_ENTER
+        val s = current
+        val link = if (!ok || s == null) null else when {
+            s.movie != null -> tv.own.owntv.core.launcher.LauncherDeepLink.OpenMovie(s.movie.id)
+            s.series != null -> tv.own.owntv.core.launcher.LauncherDeepLink.OpenSeries(s.series.id)
+            s.channel != null -> tv.own.owntv.core.launcher.LauncherDeepLink.Live(itemId = s.channel.id)
+            else -> null
+        }
+        if (link != null) runCatching {
+            startActivity(
+                android.content.Intent(android.content.Intent.ACTION_VIEW, link.toUri())
+                    .setClass(this, tv.own.owntv.MainActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            )
+        }
+        finish()
+        return true
+    }
+
     private fun show(bmp: Bitmap, s: Slide, posterBmp: Bitmap?, logoBmp: Bitmap?) {
+        current = s
         back.setImageBitmap(bmp)
         back.animate().alpha(1f).setDuration(FADE_MS).start()
         front.animate().alpha(0f).setDuration(FADE_MS).start()
@@ -240,7 +280,7 @@ class FanartDream : DreamService() {
         favourites.forEach { ch ->
             val p = now[ch.id] ?: return@forEach
             val url = p.imageUrl?.takeIf { it.isNotBlank() } ?: return@forEach
-            out += Slide(url, p.title, ch.name + " · " + fmt.format(java.util.Date(p.startMs)) + " – " + fmt.format(java.util.Date(p.stopMs)))
+            out += Slide(url, p.title, ch.name + " · " + fmt.format(java.util.Date(p.startMs)) + " – " + fmt.format(java.util.Date(p.stopMs)), channel = ch)
         }
         // The newest films and series in the library.
         val movieIds = activeSourceIds(settings, sourceDao, pid, MediaType.MOVIE)

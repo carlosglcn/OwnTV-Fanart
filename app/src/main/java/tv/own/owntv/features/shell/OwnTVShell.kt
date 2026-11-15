@@ -1123,6 +1123,17 @@ fun OwnTVShell(
                 onSelectSection(MainSection.LIVE_TV)
                 onDeepLinkConsumed()
             }
+            // glcn: the screensaver's OK on a film or a series — its page.
+            is LauncherDeepLink.OpenMovie -> {
+                val m = org.koin.core.context.GlobalContext.get().get<tv.own.owntv.core.database.dao.MovieDao>().getById(deepLink.itemId)
+                if (m != null) homeFilm = m
+                onDeepLinkConsumed()
+            }
+            is LauncherDeepLink.OpenSeries -> {
+                val show = org.koin.core.context.GlobalContext.get().get<tv.own.owntv.core.database.dao.SeriesDao>().getSeriesById(deepLink.itemId)
+                if (show != null) { onSelectSection(MainSection.SERIES); seriesVm.openSeries(show) }
+                onDeepLinkConsumed()
+            }
             else -> when (val launch = launcherIntegrationRepository.resolveLaunch(pid, deepLink)) {
                 is LauncherLaunch.Movie -> {
                     onSelectSection(MainSection.MOVIES)

@@ -123,4 +123,9 @@
     <string name="glcn_badges_desc">4K, HDR, Atmos… as text, or as pictures from a badge pack</string>
     <string name="glcn_badges_help">Show quality marks (4K, Dolby Vision, TrueHD, 5.1…) as the app\'s text badges, or as pictures from a badge pack. The app includes no pack: the one you pick is downloaded once from its author\'s page and kept. Elite Badges is made by leonevz. A mark the pack has no picture for stays as text.</string>
     <string name="glcn_badges_url">Pack address (badges.json)</string>
+    <string name="glcn_dream_hint">OK · open it</string>
+    <string name="glcn_dream_title">Fanart screensaver</string>
+    <string name="glcn_dream_desc">When the TV rests: the pictures of what is on now and of your films and series. OK opens what is on screen. Pick it on Android\'s screensaver page.</string>
+    <string name="glcn_dream_on">In use</string>
+    <string name="glcn_dream_choose">Choose</string>
 </resources>

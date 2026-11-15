@@ -995,6 +995,7 @@ fun SettingsScreen(
             onClick = { saveScroll(); dialogReturn = startupRowFocus; showStartup = true },
         ),
         *autoStartRootRows(autoStart).toTypedArray(),
+        tv.own.owntv.glcn.dreamRootRow(),
         *tv.own.owntv.features.settings.lock.settingsLockRootRows(settingsLock, settingsLockVm) { saveScroll(); dialogReturn = settingsLock.rowFocus }.toTypedArray(),
         RootRow(
             "check_updates", TileTone.PRIMARY, OwnTVIcon.REFRESH,
