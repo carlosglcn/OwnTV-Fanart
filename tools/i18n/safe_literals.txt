@@ -456,6 +456,7 @@
 2	locale	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	hi
 2	locale	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	hr
 1	url	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	https://your-worker.example.workers.dev
+1	technical	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	https://…/badges.json
 2	locale	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	hu
 2	locale	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	id
 2	locale	app/src/main/java/tv/own/owntv/features/settings/MetadataSettingsScreen.kt	it
@@ -1134,6 +1135,46 @@
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	release
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	repeats
 1	log	app/src/main/java/tv/own/owntv/glcn/BackHold.kt	timer
+2	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	1080p
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	4K
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	5.1
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	5.1 Audio
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	7.1
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	7.1 Audio
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	720p
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	8K
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	ATMOS
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	BluRay
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	DD+
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	DTS
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	DTS-HD MA
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	DTS:X
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	DV
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	Dolby Atmos
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	Dolby Vision
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	HDR
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	HDR10
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	HDR10+
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	IMAX
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	REMUX
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	SD
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	TrueHD
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	WEB-DL
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	WEBRip
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	filters
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	glcn_badge_pack.json
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	glcn_badges
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	groupId
+2	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	http
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	https://raw.githubusercontent.com/leonevz/Elite-Badges/main/badges.json
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	id
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	imageURL
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	isEnabled
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	mode
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	name
+1	technical	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	pattern
+1	preference-key	app/src/main/java/tv/own/owntv/glcn/BadgePack.kt	url
 1	technical	app/src/main/java/tv/own/owntv/glcn/BootStart.kt	android.intent.action.QUICKBOOT_POWERON
 1	technical	app/src/main/java/tv/own/owntv/glcn/BootStart.kt	package:
 1	technical	app/src/main/java/tv/own/owntv/glcn/CastFaces.kt	\0

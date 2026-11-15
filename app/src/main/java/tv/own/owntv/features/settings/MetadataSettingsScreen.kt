@@ -1,5 +1,6 @@
 package tv.own.owntv.features.settings
 
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -234,6 +235,46 @@ fun MetadataSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             value = SettingValue.Switch(squareLogos),
             onClick = { squareLogos = !squareLogos; tv.own.owntv.glcn.PlatformLogoStyle.setSquare(logoCtx, squareLogos) },
         )
+        // glcn: the quality badges — the app's own text, or the pictures of a badge pack picked here (Elite Badges by
+        // name, or any other pack's address). The app ships no pack; the one chosen is fetched once and kept.
+        val badgeScope = androidx.compose.runtime.rememberCoroutineScope()
+        val badgeTitle = stringResource(R.string.glcn_badges_title)
+        val badgeLabels = listOf(
+            stringResource(R.string.glcn_badges_text),
+            stringResource(R.string.glcn_badges_elite),
+            stringResource(R.string.glcn_badges_custom),
+        )
+        val badgeMode = tv.own.owntv.glcn.BadgePack.mode
+        val badgeLine = when (tv.own.owntv.glcn.BadgePack.status) {
+            tv.own.owntv.glcn.BadgePack.Status.LOADING -> stringResource(R.string.glcn_badges_loading)
+            tv.own.owntv.glcn.BadgePack.Status.FAILED -> stringResource(R.string.glcn_badges_failed)
+            tv.own.owntv.glcn.BadgePack.Status.READY -> stringResource(R.string.glcn_badges_ready, tv.own.owntv.glcn.BadgePack.filters.size)
+            else -> stringResource(R.string.glcn_badges_desc)
+        }
+        fun pickBadges(i: Int) {
+            val m = tv.own.owntv.glcn.BadgePack.Mode.entries[(i + 3) % 3]
+            badgeScope.launch { tv.own.owntv.glcn.BadgePack.choose(logoCtx, m) }
+        }
+        StageSettingRow(
+            icon = OwnTVIcon.STAR,
+            title = badgeTitle,
+            desc = badgeLine,
+            value = SettingValue.Stepper(badgeLabels[badgeMode.ordinal]),
+            onClick = { pickBadges(badgeMode.ordinal + 1) },
+            onStep = { d -> pickBadges(badgeMode.ordinal + d) },
+            help = SettingHelp(badgeTitle, stringResource(R.string.glcn_badges_help), badgeLabels, chosen = badgeMode.ordinal),
+        )
+        if (badgeMode == tv.own.owntv.glcn.BadgePack.Mode.CUSTOM) {
+            var packUrl by remember { mutableStateOf(tv.own.owntv.glcn.BadgePack.customUrl) }
+            val urlLabel = stringResource(R.string.glcn_badges_url)
+            StageFieldRow(
+                OwnTVIcon.PENCIL, urlLabel, packUrl, { packUrl = it },
+                SettingHelp(urlLabel, stringResource(R.string.glcn_badges_help)),
+                placeholder = BADGE_URL_PLACEHOLDER,
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri,
+                onDone = { badgeScope.launch { tv.own.owntv.glcn.BadgePack.choose(logoCtx, tv.own.owntv.glcn.BadgePack.Mode.CUSTOM, packUrl.trim()) } },
+            )
+        }
         // The language and the TMDB tier only make sense when TMDB is on (mode != Provider).
         if (mode.enrich) {
             val langTitle = stringResource(R.string.settings_metadata_language)
@@ -511,3 +552,6 @@ internal fun CompanionKeyDialog(
         buttons = { tv.own.owntv.ui.stage.StageButton(stringResource(R.string.common_cancel), onClick = onDismiss, height = 56.mpx, textSize = 19, modifier = Modifier.focusRequester(closeFocus)) },
     ) { tv.own.owntv.ui.components.StageCompanionStatus(state) }
 }
+
+/** glcn: what a badge pack address looks like. */
+private const val BADGE_URL_PLACEHOLDER = "https://…/badges.json"

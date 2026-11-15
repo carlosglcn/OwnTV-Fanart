@@ -115,4 +115,14 @@
     <string name="glcn_recent_forget_one">Quitar %1$s</string>
     <string name="glcn_recent_forget_all">Borrar todos</string>
     <string name="glcn_recent_forget_hint">Quitar</string>
+    <string name="glcn_badges_title">Insignias de calidad</string>
+    <string name="glcn_badges_text">Texto</string>
+    <string name="glcn_badges_elite">Elite Badges (leonevz)</string>
+    <string name="glcn_badges_custom">Otro paquete (dirección)</string>
+    <string name="glcn_badges_loading">Descargando el paquete de insignias…</string>
+    <string name="glcn_badges_failed">No se pudo cargar el paquete; se muestran insignias de texto</string>
+    <string name="glcn_badges_ready">Insignias con imagen en uso: %1$d</string>
+    <string name="glcn_badges_desc">4K, HDR, Atmos… en texto o con las imágenes de un paquete</string>
+    <string name="glcn_badges_help">Muestra las marcas de calidad (4K, Dolby Vision, TrueHD, 5.1…) como etiquetas de texto de la app o con las imágenes de un paquete de insignias. La app no incluye ningún paquete: el que elijas se descarga una vez desde la página de su autor y se guarda. Elite Badges es obra de leonevz. Lo que el paquete no tenga se sigue mostrando en texto.</string>
+    <string name="glcn_badges_url">Dirección del paquete (badges.json)</string>
 </resources>

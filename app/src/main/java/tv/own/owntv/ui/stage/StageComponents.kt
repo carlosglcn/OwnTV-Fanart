@@ -567,6 +567,11 @@ fun StageSegmented(
 /** `.tag`: a provider or quality badge, 13/800 caps-spaced on white 8%. [onAccent] inside a focused item; [tint] for a coloured tag. */
 @Composable
 fun StageTag(text: String, onAccent: Color? = null, tint: Color? = null) {
+    // glcn: a quality mark the chosen badge pack has a picture for is shown as that picture.
+    if (onAccent == null && tint == null) tv.own.owntv.glcn.BadgePack.imageFor(text)?.let { url ->
+        tv.own.owntv.glcn.PackBadge(url, text, 24.mpx)
+        return
+    }
     Text(
         text,
         style = stageText(13, 800, 0.05.em),
@@ -1038,6 +1043,9 @@ fun StagePoster(
 private fun PosterQualityBadges(badges: List<String>, compact: Boolean, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(5.mpx)) {
         badges.forEach { b ->
+            // glcn: the chosen badge pack's picture, when it has one for this mark.
+            val packed = tv.own.owntv.glcn.BadgePack.imageFor(b)
+            if (packed != null) { tv.own.owntv.glcn.PackBadge(packed, b, if (compact) 18.mpx else 20.mpx, onPoster = true); return@forEach }
             val hdr = b.startsWith("HDR") || b == "DV"
             Text(
                 b,
