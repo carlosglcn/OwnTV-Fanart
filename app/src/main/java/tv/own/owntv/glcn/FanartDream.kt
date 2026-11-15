@@ -143,7 +143,7 @@ class FanartDream : DreamService() {
         // glcn: what OK does, small, under the clock.
         root.addView(
             TextView(this).apply {
-                text = getString(tv.own.owntv.R.string.glcn_dream_hint)
+                setText(tv.own.owntv.R.string.glcn_dream_hint)
                 setTextColor(Color.argb(150, 255, 255, 255))
                 textSize = 15f
                 setShadowLayer(10f, 0f, 2f, Color.argb(160, 0, 0, 0))
