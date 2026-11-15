@@ -123,7 +123,11 @@ fun CastPage(
 private fun Portrait(p: CastMember) {
     val tmdb = MetadataImages.profile(p.profilePath, PHOTO_SIZE)
     // glcn: a name read from the guide has no TMDB photo — Wikipedia's, then.
-    val photo by produceState(tmdb, p.name, tmdb) { if (tmdb == null) value = runCatching { Wiki.person(p.name)?.photo }.getOrNull() }
+    val photo by produceState(tmdb, p.name, tmdb) {
+        // glcn: a new person in this place starts from their own photo (or none) — never the one who was here before.
+        value = tmdb
+        if (tmdb == null) value = runCatching { Wiki.person(p.name)?.photo }.getOrNull()
+    }
     Box(Modifier.fillMaxSize().background(StageColors.Ink.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
         if (photo == null) {
             Text(initials(p.name), style = stageDisplay(56), color = StageColors.Muted)

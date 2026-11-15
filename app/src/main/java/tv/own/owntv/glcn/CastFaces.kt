@@ -73,7 +73,11 @@ fun CastFaces(
 @Composable
 private fun FacePhoto(p: CastMember, face: Dp) {
     val tmdb = MetadataImages.profile(p.profilePath, FACE_PHOTO)
-    val photo by produceState(tmdb, p.name, tmdb) { if (tmdb == null) value = runCatching { Wiki.person(p.name)?.photo }.getOrNull() }
+    val photo by produceState(tmdb, p.name, tmdb) {
+        // glcn: a new person in this place starts from their own photo (or none) — never the one who was here before.
+        value = tmdb
+        if (tmdb == null) value = runCatching { Wiki.person(p.name)?.photo }.getOrNull()
+    }
     Box(Modifier.size(face).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
         Text(initialsOf(p.name), style = stageText(26, 800), color = Color.White.copy(alpha = 0.7f))
         photo?.let { AsyncImage(it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
