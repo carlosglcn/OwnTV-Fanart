@@ -40,9 +40,13 @@ data class RailDetails(
     val downloading: Int = 0,
     /** Bytes done over bytes expected across the running downloads, null while no size is known. */
     val downloadProgress: Float? = null,
+    /** glcn: pictures for the focused row — the last channel's logo, the last film's and series' backdrops. */
+    val liveArt: String? = null,
+    val movieArt: String? = null,
+    val seriesArt: String? = null,
 )
 
-data class RailEpisode(val series: String, val season: Int, val episode: Int, val resume: Boolean)
+data class RailEpisode(val series: String, val season: Int, val episode: Int, val resume: Boolean, val art: String? = null)
 
 /**
  * The numbers beside Live TV, Movies, Series and Downloads in the open Stage rail, for the playlists
@@ -101,25 +105,28 @@ class RailCountsViewModel(
                     customize.observe(pid, section),
                 ) { h, cust -> h to cust }
             val live = lastOf(MediaType.LIVE, MediaType.LIVE).map { (h, cust) ->
-                h?.let { channelDao.getById(it.itemId) }?.takeIf { allowed(it.categoryId) }?.let { cust.displayName(it) }
+                h?.let { channelDao.getById(it.itemId) }?.takeIf { allowed(it.categoryId) }?.let { cust.displayName(it) to it.logoUrl }
             }
             val movie = lastOf(MediaType.MOVIE, MediaType.MOVIE).map { (h, cust) ->
                 h?.let { movieDao.getById(it.itemId) }
                     ?.takeIf { allowed(it.categoryId) && (progressDao.get(pid, MediaType.MOVIE, it.id)?.positionMs ?: 0L) > 0 }
-                    ?.let { cust.displayName(it) }
+                    ?.let { cust.displayName(it) to it.backdropUrl }
             }
             val episode = lastOf(MediaType.EPISODE, MediaType.SERIES).map { (h, cust) ->
                 val ep = h?.let { seriesDao.getEpisodeById(it.itemId) } ?: return@map null
                 val s = seriesDao.getSeriesById(ep.seriesId)?.takeIf { allowed(it.categoryId) } ?: return@map null
                 val pos = progressDao.get(pid, MediaType.EPISODE, ep.id)?.positionMs ?: 0L
-                RailEpisode(cust.displayName(s), ep.seasonNumber, ep.episodeNumber, resume = pos > 0)
+                RailEpisode(cust.displayName(s), ep.seasonNumber, ep.episodeNumber, resume = pos > 0, art = s.backdropUrl)
             }
             val downloads = downloadDao.observeForProfile(pid).map { all -> all.filter { it.status == DownloadStatus.RUNNING } }
             combine(live, movie, episode, downloads) { l, m, e, running ->
                 val total = running.sumOf { it.totalBytes }
                 RailDetails(
-                    lastChannel = l,
-                    resumeMovie = m,
+                    lastChannel = l?.first,
+                    resumeMovie = m?.first,
+                    liveArt = l?.second?.takeIf { it.isNotBlank() },
+                    movieArt = m?.second?.takeIf { it.isNotBlank() },
+                    seriesArt = e?.art?.takeIf { it.isNotBlank() },
                     episode = e,
                     downloading = running.size,
                     downloadProgress = if (total > 0) running.sumOf { it.downloadedBytes }.toFloat() / total else null,

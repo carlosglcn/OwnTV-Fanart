@@ -141,6 +141,8 @@ fun StageRail(
     onSelect: (MainSection) -> Unit,
     count: (MainSection) -> Int?,
     detail: @Composable (MainSection) -> String?,
+    /** glcn: the picture for a section's focused row. */
+    detailArt: @Composable (MainSection) -> String? = { null },
     profileName: String,
     profileLine: String,
     onSwitchProfile: () -> Unit,
@@ -308,6 +310,7 @@ fun StageRail(
                     label = stringResource(section.labelRes),
                     trailing = if (counts) count(section)?.let { NumberFormat.getIntegerInstance(LocalConfiguration.current.locales[0]).format(it) } else null,
                     detail = if (details) detail(section) else null,
+                    detailArt = if (shown) detailArt(section) else null,
                     open = shown,
                     namesAlpha = namesAlpha,
                     active = section == selected ||
@@ -403,6 +406,8 @@ private fun RailItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     accentIcon: Boolean = false,
+    /** glcn: the picture of what waits there (last channel, film, series), shown on the focused row. */
+    detailArt: String? = null,
 ) {
     val a = stageAccent
     val r = 20.mpx
@@ -456,13 +461,21 @@ private fun RailItem(
                     )
                 }
             }
-            if (trailing != null) {
+            // glcn: on the focused row, the picture of what waits there takes the count's place.
+            if (focused && detailArt != null) {
+                coil3.compose.AsyncImage(
+                    detailArt, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.size(RAIL_ART_W, RAIL_ART_H).clip(RoundedCornerShape(8.mpx)).graphicsLayer { alpha = namesAlpha() },
+                )
+            } else if (trailing != null) {
                 Text(trailing, style = stageText(16, 600), color = if (focused) a.onAccent else StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.graphicsLayer { alpha = namesAlpha() })
             }
         }
     }
 }
 
+private val RAIL_ART_W = 72.mpx
+private val RAIL_ART_H = 40.mpx
 private const val RAIL_ICON_POP = 1.16f
 private const val RAIL_ICON_DAMPING = 0.45f
 private const val RAIL_ICON_STIFFNESS = 520f

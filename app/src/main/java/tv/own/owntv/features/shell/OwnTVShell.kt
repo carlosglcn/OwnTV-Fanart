@@ -2078,6 +2078,14 @@ fun OwnTVShell(
                 onSelect = selectFromNav,
                 count = { section -> railCounts[section]?.takeIf { it > 0 } },
                 detail = { section -> railDetail(section, railDetails) },
+                detailArt = { section ->
+                    when (section) {
+                        MainSection.LIVE_TV -> railDetails.liveArt
+                        MainSection.MOVIES -> railDetails.movieArt
+                        MainSection.SERIES -> railDetails.seriesArt
+                        else -> null
+                    }
+                },
                 profileName = profileName.ifBlank { stringResource(R.string.common_own_tv_user) },
                 profileLine = stringResource(R.string.shell_rail_profile_line, playlistLabel),
                 onSwitchProfile = onSwitchProfile,
