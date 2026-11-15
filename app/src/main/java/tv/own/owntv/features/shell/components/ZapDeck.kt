@@ -563,7 +563,9 @@ fun ZapDeck(
             // glcn: both parts on a share of the same glass, so the picture shows through everywhere, both solid
             // enough for their words to read over a bright picture or its subtitles.
             Box(Modifier.fillMaxHeight()) {
-            Box(Modifier.matchParentSize().graphicsLayer { alpha = tv.own.owntv.glcn.PlayerGlass.share(DECK_LIST_GLASS) }.stageGlass(StageRadii.Sheet, overContent = true))
+            // glcn: glass off makes it solid, as every player panel.
+            val deckShare = tv.own.owntv.glcn.PlayerGlass.shareNow(DECK_LIST_GLASS)
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = deckShare }.stageGlass(StageRadii.Sheet, overContent = true))
             Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
             // ---- Groups (and the playlists above them).
             // glcn: as TiviMate does — folded, the groups are not there at all (no column of initials); ◀ opens them
@@ -575,6 +577,9 @@ fun ZapDeck(
             Box(Modifier.width(0.mpx).fillMaxHeight().wrapContentWidth(Alignment.Start, unbounded = true).zIndex(1f)) {
             if (fold < 0.999f) Box(Modifier.width(groupsOpen).fillMaxHeight().graphicsLayer { alpha = 1f - fold; translationX = -slideGroupsPx * fold }) {
             Box(Modifier.matchParentSize().clip(RoundedCornerShape(StageRadii.Sheet)).background(shade))
+            // glcn: the same glass as the channel list on top of the solid page — groups and playlists look like the list
+            // they cover (glass on), while the words behind stay hidden.
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = deckShare }.stageGlass(StageRadii.Sheet, overContent = true))
             // glcn: a tab on the panel's right edge with a › — ▶ goes back to the channels.
             tv.own.owntv.glcn.EdgeTab(visible = column == 0 || column == -1 || column == -2 || column == -3, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
             // glcn: ‹ on the left edge while on the categories: ◀ opens the playlists.

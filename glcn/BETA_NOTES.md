@@ -86,3 +86,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⏱️ Playback report: now includes this run's start-up timeline (when each step finished), to find what makes the app slow to open.
 - 📝 Programme page: a long synopsis now uses all the room down to the buttons before it starts drifting.
 - 🐛 Cast faces: changing channel no longer leaves the previous programme's photos on the new names.
+- 🧊 Player's channel list: the groups and playlists panels now wear the same glass as the channel list (they were flat black), and with glass off every panel of the list, the player menu and the sports panel is solid.
