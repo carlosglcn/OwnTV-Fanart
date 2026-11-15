@@ -107,6 +107,8 @@ internal fun MovieTitlePage(
     var fullTrailer by remember { mutableStateOf<String?>(null) }
     val playFocus = remember { FocusRequester() }
     val enter = remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
+    // glcn: where the focus box last was — the card this page was opened from — for the page to grow out of it.
+    val growFrom = remember { tv.own.owntv.glcn.SlideFocusTrail.rect.takeIf { it.width > 0f && it.height > 0f } }
     val enterSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(PAGE_ENTER_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
     LaunchedEffect(Unit) { enter.animateTo(1f, enterSpec) }
     LaunchedEffect(Unit) { androidx.compose.runtime.withFrameNanos { }; runCatching { playFocus.requestFocus() } }
@@ -155,8 +157,18 @@ internal fun MovieTitlePage(
             Modifier.fillMaxSize()
                 // glcn: opened over another screen, the page grows out of the card it came from (a short zoom).
                 .then(if (inPlace) Modifier else Modifier.graphicsLayer {
-                    val s = PAGE_ZOOM_FROM + (1f - PAGE_ZOOM_FROM) * enter.value
-                    scaleX = s; scaleY = s; alpha = (enter.value * 2f).coerceAtMost(1f)
+                    val t = enter.value
+                    val from = growFrom
+                    if (from != null && size.width > 0f) {
+                        // glcn: the page opens out of the card it came from — a window growing from the card's
+                        // place and shape to the whole screen, the page already there behind it.
+                        clip = true
+                        shape = tv.own.owntv.glcn.RevealShape(from, t)
+                        alpha = (t * 4f).coerceAtMost(1f)
+                    } else {
+                        val s = PAGE_ZOOM_FROM + (1f - PAGE_ZOOM_FROM) * t
+                        scaleX = s; scaleY = s; alpha = (t * 2f).coerceAtMost(1f)
+                    }
                 })
                 .then(if (inPlace) Modifier else Modifier.background(page)).trapAllFocusExit()
                 .onPreviewKeyEvent { e ->

@@ -95,3 +95,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🧹 Film page: the huge outlined year in the lower right is gone (the year is still in the facts line).
 - 🌌 Fanart screensaver: OK now opens what is on screen — a film's or a series' page, or tunes the channel — and a small "OK · open it" says so; Settings › App has a "Fanart screensaver" row that shows whether the TV uses it and opens Android's screensaver page to pick it.
 - 🖼️ Settings and More now sit over the picture of the film or series you watched last — faint and soft — instead of a bare page.
+- 🪟 Film pages now open out of the card you pressed: a window grows from the poster's place and shape to the whole screen, with the page already behind it.
+- 🧭 Open side menu: the focused Live TV, Films and Series rows show a small picture of what waits there (the last channel's logo, the film or series you were watching).
