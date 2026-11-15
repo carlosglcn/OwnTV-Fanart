@@ -90,3 +90,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🧊 Player's channel list with Glass on: the lit row in channels, groups and playlists is now the app's glass focus (tinted wash, sheen and ring) instead of a solid bar, with the words in the glass's colour.
 - 🏷️ Quality badges on film and series pages now also show IMAX, the source (BluRay, WEB-DL, WEBRip) and the sound format (DTS:X, TrueHD, DTS-HD MA, DTS, DD+) — read from the title, and for Emby from the file's own tracks (after its next sync).
 - 🏅 Quality badges as pictures: Settings → Metadata → Quality badges now offers Text (the app's own), Elite Badges (by leonevz) or another pack by its address. The app ships no pack — the one picked is downloaded from its author's page once and kept; any mark the pack lacks stays as text. On light pages and over posters the pictures sit on a small dark plate.
+- 🏅 Badge pictures drawn sharper (high-quality smoothing) and a little larger on title pages.

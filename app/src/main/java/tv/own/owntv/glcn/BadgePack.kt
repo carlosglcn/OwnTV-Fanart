@@ -139,6 +139,8 @@ fun PackBadge(url: String, label: String, height: androidx.compose.ui.unit.Dp, o
         model = url,
         contentDescription = label,
         contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+        // A big picture drawn small: smoothed properly, or its fine letters ("ULTRA HD") break up.
+        filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
         modifier = androidx.compose.ui.Modifier
             .then(
                 if (plate) androidx.compose.ui.Modifier
