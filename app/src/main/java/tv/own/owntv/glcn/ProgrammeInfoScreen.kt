@@ -1,5 +1,6 @@
 package tv.own.owntv.glcn
 
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -419,7 +420,24 @@ fun ProgrammeInfoScreen(
                     // without drifting.
                     // glcn: the cast sits on the right now, so the synopsis has the whole column down to the button.
                     // glcn: kept to the left half, so the picture's faces stay clear of it.
-                    DriftingSynopsis(it, modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W), style = stageText(21, if (light) 500 else 400), color = Soft, lines = if (next.isNotEmpty() && NEXT_CARDS > 0) SYNOPSIS_LINES_WITH_CARDS else SYNOPSIS_LINES, fade = true)
+                    // glcn: as many lines as fit between where it starts and the buttons fixed at the foot — a long synopsis
+                    // reads whole instead of drifting, a short one changes nothing.
+                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    val pageH = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height.toFloat()
+                    var synTop by remember(cur.id) { mutableStateOf(-1f) }
+                    val synStyle = stageText(21, if (light) 500 else 400)
+                    val fitLines = if (synTop < 0f || pageH <= 0f) SYNOPSIS_LINES else with(density) {
+                        val lineH = synStyle.fontSize.toPx() * SYNOPSIS_LINE_HEIGHT
+                        val room = pageH - synTop - (INFO_ACTIONS_BOTTOM + INFO_BUTTON_H + SYNOPSIS_CLEARANCE).toPx()
+                        (room / lineH).toInt().coerceIn(SYNOPSIS_LINES, SYNOPSIS_LINES_MAX)
+                    }
+                    DriftingSynopsis(
+                        it,
+                        modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W)
+                            .onGloballyPositioned { c -> if (synTop < 0f) synTop = c.positionInRoot().y },
+                        style = synStyle, color = Soft,
+                        lines = if (next.isNotEmpty() && NEXT_CARDS > 0) SYNOPSIS_LINES_WITH_CARDS else fitLines, fade = true,
+                    )
                 }
             }
             // glcn: what follows on the channel, as picture cards in the room under the buttons (the first one wider).
@@ -599,6 +617,10 @@ private const val PREFETCH_DELAY_MS = 250L
 
 /** glcn: the synopsis' lines, now that the cast is on the right. */
 private const val SYNOPSIS_LINES = 9
+/** glcn: the most a long synopsis may take, down to the buttons; the room left above them, and its line height. */
+private const val SYNOPSIS_LINES_MAX = 18
+private val SYNOPSIS_CLEARANCE = 30.mpx
+private const val SYNOPSIS_LINE_HEIGHT = 1.4f
 /** glcn: fewer, with the next programmes as cards under the buttons (the synopsis drifts to show the rest). */
 private const val SYNOPSIS_LINES_WITH_CARDS = 5
 private val SYNOPSIS_W = 860.mpx
