@@ -87,3 +87,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📝 Programme page: a long synopsis now uses all the room down to the buttons before it starts drifting.
 - 🐛 Cast faces: changing channel no longer leaves the previous programme's photos on the new names.
 - 🧊 Player's channel list: the groups and playlists panels now wear the same glass as the channel list (they were flat black), and with glass off every panel of the list, the player menu and the sports panel is solid.
+- 🧊 Player's channel list with Glass on: the lit row in channels, groups and playlists is now the app's glass focus (tinted wash, sheen and ring) instead of a solid bar, with the words in the glass's colour.

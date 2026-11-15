@@ -1,5 +1,7 @@
 package tv.own.owntv.features.shell.components
 
+import tv.own.owntv.ui.stage.StageFocus
+import tv.own.owntv.ui.stage.drawStageFocus
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.ui.zIndex
@@ -602,7 +604,7 @@ fun ZapDeck(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) { i, focused ->
                     val g = manageRows.getOrNull(i) ?: return@GlideColumn
-                    val ink = if (focused) stageAccent.onAccent else StageColors.Text
+                    val ink = if (focused) litInk() else StageColors.Text
                     Row(
                         Modifier.fillMaxSize().padding(horizontal = 14.mpx),
                         verticalAlignment = Alignment.CenterVertically,
@@ -649,8 +651,8 @@ fun ZapDeck(
                     val (id, name) = panelLists.getOrNull(i) ?: return@GlideColumn
                     val on = id == activeChip
                     val switchedOff = id in offIds
-                    val tint by animateColorAsState(if (focused) stageAccent.onAccent else StageColors.Text, tween(140), label = "deckPlaylistText")
-                    val sub by animateColorAsState(if (focused) stageAccent.onAccent.copy(alpha = 0.8f) else StageColors.Muted, tween(140), label = "deckPlaylistSub")
+                    val tint by animateColorAsState(if (focused) litInk() else StageColors.Text, tween(140), label = "deckPlaylistText")
+                    val sub by animateColorAsState(if (focused) litInk().copy(alpha = 0.8f) else StageColors.Muted, tween(140), label = "deckPlaylistSub")
                     val color = if (id > 0L) marks[id]?.shownColor ?: stageAccent.accent else stageAccent.accent
                     val sep = stringResource(R.string.content_epg_bits_separator)
                     // Grouped thousands ("14.734"), not a bare run of digits.
@@ -688,11 +690,11 @@ fun ZapDeck(
                     ) {
                         Box(
                             Modifier.size(52.mpx).clip(RoundedCornerShape(14.mpx))
-                                .background(if (focused) stageAccent.onAccent.copy(alpha = 0.18f) else color.copy(alpha = 0.18f)),
+                                .background(if (focused) litInk().copy(alpha = 0.18f) else color.copy(alpha = 0.18f)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (id > 0L) Text(name.trim().take(1).uppercase(), style = stageText(24, 800), color = if (focused) stageAccent.onAccent else color)
-                            else OwnTVIcon(OwnTVIcon.LIVE_TV, if (focused) stageAccent.onAccent else color, Modifier.size(26.mpx))
+                            if (id > 0L) Text(name.trim().take(1).uppercase(), style = stageText(24, 800), color = if (focused) litInk() else color)
+                            else OwnTVIcon(OwnTVIcon.LIVE_TV, if (focused) litInk() else color, Modifier.size(26.mpx))
                         }
                         Column(Modifier.weight(1f)) {
                             Text(name, style = stageText(20, if (on) 800 else 700), color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
@@ -730,7 +732,7 @@ fun ZapDeck(
                     val groupNf = remember { java.text.NumberFormat.getIntegerInstance() }
                     val tint by animateColorAsState(
                         when {
-                            lit -> stageAccent.onAccent
+                            lit -> litInk()
                             shown -> StageColors.Text
                             else -> StageColors.Muted
                         },
@@ -1101,10 +1103,10 @@ private fun DeckInfoPanel(
                         ) {
                             Text(
                                 fmt.format(java.util.Date(r.startMs)), style = stageText(19, 700),
-                                color = if (lit) stageAccent.onAccent else deckAccentInk(), maxLines = 1, modifier = Modifier.width(70.mpx),
+                                color = if (lit) litInk() else deckAccentInk(), maxLines = 1, modifier = Modifier.width(70.mpx),
                             )
                             Text(
-                                r.title, style = stageText(19, if (lit) 800 else 600), color = if (lit) stageAccent.onAccent else StageColors.Text,
+                                r.title, style = stageText(19, if (lit) 800 else 600), color = if (lit) litInk() else StageColors.Text,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
                         }
@@ -1139,6 +1141,11 @@ private fun GlideColumn(
     val liveCount = androidx.compose.runtime.rememberUpdatedState(count)
     val accent = stageAccent.accent
     val fill by animateColorAsState(if (active) accent else accent.copy(alpha = 0.20f), tween(180), label = "deckFill")
+    // glcn: Glass on — the lit row is the app's glass focus (tinted wash, sheen, ring), not a solid bar.
+    val glassFocus = tv.own.owntv.glcn.GlassFocus.active
+    val focusAccent = stageAccent
+    val focusPalette = tv.own.owntv.ui.theme.LocalStagePalette.current
+    val glassAlpha by androidx.compose.animation.core.animateFloatAsState(if (active) 1f else GLASS_IDLE_ALPHA, tween(180), label = "deckGlassFocus")
     BoxWithConstraints(modifier.clipToBounds()) {
         val viewH = constraints.maxHeight.toFloat()
         val maxScroll = (count * h - viewH).coerceAtLeast(0f)
@@ -1167,9 +1174,11 @@ private fun GlideColumn(
                 Modifier
                     .fillMaxWidth()
                     .height(rowHeight)
-                    .graphicsLayer { translationY = glide.value - scroll.value }
-                    .clip(RoundedCornerShape(14.mpx))
-                    .background(fill),
+                    .graphicsLayer { translationY = glide.value - scroll.value; if (glassFocus) alpha = glassAlpha }
+                    .then(
+                        if (glassFocus) Modifier.drawBehind { drawStageFocus(StageFocus.FX, 14.mpx, focusAccent, focusPalette) }
+                        else Modifier.clip(RoundedCornerShape(14.mpx)).background(fill),
+                    ),
             )
         }
         LazyColumn(
@@ -1226,8 +1235,8 @@ private const val PLAYING_WASH = 0.16f
 @Composable
 private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, playing: Boolean, lit: Boolean, showNumber: Boolean) {
     val accent = stageAccent.accent
-    val text by animateColorAsState(if (lit) stageAccent.onAccent else StageColors.Text, tween(140), label = "deckRowText")
-    val sub by animateColorAsState(if (lit) stageAccent.onAccent.copy(alpha = 0.8f) else StageColors.Muted, tween(140), label = "deckRowSub")
+    val text by animateColorAsState(if (lit) litInk() else StageColors.Text, tween(140), label = "deckRowText")
+    val sub by animateColorAsState(if (lit) litInk().copy(alpha = 0.8f) else StageColors.Muted, tween(140), label = "deckRowSub")
     Row(
         Modifier
             .fillMaxSize()
@@ -1245,12 +1254,12 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
             Text(channel.number?.toString().orEmpty(), style = stageText(17, 700), color = sub, maxLines = 1, modifier = Modifier.width(50.mpx))
         }
         // glcn: the lit row is the solid accent — the logo goes on it as on any focused fill.
-        androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.components.LocalLogoInk provides (if (lit) stageAccent.onAccent else null)) {
+        androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.components.LocalLogoInk provides (if (lit) litInk() else null)) {
             ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.width(72.mpx).height(48.mpx), fill = Color.Transparent) { }
         }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
-                if (playing) tv.own.owntv.glcn.EqualizerBars(if (lit) stageAccent.onAccent else accent, Modifier.size(18.mpx))
+                if (playing) tv.own.owntv.glcn.EqualizerBars(if (lit) litInk() else accent, Modifier.size(18.mpx))
                 Text(ProviderTags.displayName(channel.name), style = stageText(20, if (playing) 800 else 700), color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (now != null) {
@@ -1258,7 +1267,7 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
                 val span = (now.stopMs - now.startMs).coerceAtLeast(1L)
                 val f = ((System.currentTimeMillis() - now.startMs).toFloat() / span).coerceIn(0f, 1f)
                 Box(Modifier.padding(top = 5.mpx).fillMaxWidth(0.9f).height(3.mpx).clip(RoundedCornerShape(2.mpx)).background(sub.copy(alpha = 0.25f))) {
-                    Box(Modifier.fillMaxWidth(f).height(3.mpx).background(if (lit) stageAccent.onAccent else accent))
+                    Box(Modifier.fillMaxWidth(f).height(3.mpx).background(if (lit) litInk() else accent))
                 }
             }
         }
@@ -1386,3 +1395,10 @@ private fun FastRunRail(visible: Boolean, index: Int, count: Int, label: String,
 }
 
 private val FAST_BUBBLE_H = 52.mpx
+
+/** glcn: words on the lit row — on the accent bar, the accent's own ink; on the glass focus (Glass on), the glass's. */
+@Composable
+private fun litInk(): Color = if (tv.own.owntv.glcn.GlassFocus.active) tv.own.owntv.ui.theme.LocalStagePalette.current.fxText else stageAccent.onAccent
+
+/** glcn: the glass focus on a list that is not the one being moved through — still there, quieter. */
+private const val GLASS_IDLE_ALPHA = 0.35f
