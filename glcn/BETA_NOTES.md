@@ -92,3 +92,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏅 Quality badges as pictures: Settings → Metadata → Quality badges now offers Text (the app's own), Elite Badges (by leonevz) or another pack by its address. The app ships no pack — the one picked is downloaded from its author's page once and kept; any mark the pack lacks stays as text. On light pages and over posters the pictures sit on a small dark plate.
 - 🏅 Badge pictures drawn sharper (high-quality smoothing) and a little larger on title pages.
 - 🔊 FFmpeg audio for ExoPlayer is now on by default (unless you switched it off): channels in AC-3, E-AC-3, DTS or MP2 play their main audio even on stereo output, instead of only the audio-description track.
+- 🧹 Film page: the huge outlined year in the lower right is gone (the year is still in the facts line).

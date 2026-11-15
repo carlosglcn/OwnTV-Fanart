@@ -192,14 +192,6 @@ internal fun MovieTitlePage(
                     .background(Brush.verticalGradient(0.4f to Color.Transparent, 0.75f to page.copy(alpha = 0.8f), 1f to page.copy(alpha = 0.95f))),
             )
             Box(Modifier.fillMaxSize().graphicsLayer { alpha = lowerAt }.background(page.copy(alpha = 0.86f)))
-            // glcn: the year, huge and in outline, behind the words on the right — a ghost, not a label.
-            shownInfo.year?.let { y ->
-                tv.own.owntv.glcn.GhostOutline(
-                    y.toString(), YEAR_GHOST_SIZE.mpxSp, Color.White,
-                    Modifier.align(Alignment.BottomEnd).padding(end = 72.mpx, bottom = 40.mpx).size(YEAR_GHOST_W.mpx, YEAR_GHOST_H.mpx)
-                        .graphicsLayer { alpha = enter.value * (1f - lowerAt) },
-                )
-            }
             // First part: the title, its facts and the buttons.
             androidx.compose.runtime.DisposableEffect(Unit) { onDispose { tv.own.owntv.glcn.TitleRoom.textTop = 0f } }
             Column(
@@ -437,7 +429,4 @@ internal fun versionBadges(m: MovieEntity): List<String> =
         .ifEmpty { tv.own.owntv.features.shell.components.cinematicQualityBadges(m.qualityRank, m.advertisedCapabilities) }
 
 /** glcn: the year's ghost behind the title page's words. */
-private const val YEAR_GHOST_SIZE = 300
-private const val YEAR_GHOST_W = 900
-private const val YEAR_GHOST_H = 380
 
