@@ -95,6 +95,7 @@ import tv.own.owntv.ui.stage.stageBackground
 import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.components.LocalRemoteShortcuts
 import tv.own.owntv.ui.components.RemoteShortcutEnvironment
+import tv.own.owntv.glcn.fanartAmbience
 import tv.own.owntv.ui.theme.LocalGlass
 import tv.own.owntv.core.theme.ThemeMode
 import tv.own.owntv.core.live.LiveKey
@@ -1566,7 +1567,9 @@ fun OwnTVShell(
                     .background(shellBase)
                     // The Stage page, across the whole width — under a docked rail's reserve too.
                     // Over a picture it draws only the Accent light; the picture shows through.
-                    .stageBackground(tv.own.owntv.ui.theme.stageAccent.accent),
+                    .stageBackground(tv.own.owntv.ui.theme.stageAccent.accent)
+                    // glcn: Settings and More over the last film's picture, faint.
+                    .then(if (selectedSection == MainSection.SETTINGS || selectedSection == MainSection.MORE) Modifier.fanartAmbience() else Modifier),
             ) {
                 // Live TV's view (List / Guide), and how a guide — the TV Guide or Live TV's Guide view —
                 // starts a channel or an archive programme: through LiveViewModel, the one live path.

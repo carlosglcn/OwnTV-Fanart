@@ -94,3 +94,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔊 FFmpeg audio for ExoPlayer is now on by default (unless you switched it off): channels in AC-3, E-AC-3, DTS or MP2 play their main audio even on stereo output, instead of only the audio-description track.
 - 🧹 Film page: the huge outlined year in the lower right is gone (the year is still in the facts line).
 - 🌌 Fanart screensaver: OK now opens what is on screen — a film's or a series' page, or tunes the channel — and a small "OK · open it" says so; Settings › App has a "Fanart screensaver" row that shows whether the TV uses it and opens Android's screensaver page to pick it.
+- 🖼️ Settings and More now sit over the picture of the film or series you watched last — faint and soft — instead of a bare page.
