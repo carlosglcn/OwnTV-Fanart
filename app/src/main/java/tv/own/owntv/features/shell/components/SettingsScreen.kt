@@ -545,6 +545,8 @@ fun SettingsScreen(
         glcnAccessibleRow(accessibleContext),
         glcnEmbyGroupsRow(accessibleContext),
         glcnCategoryIconsRow(accessibleContext),
+        // glcn: the Fanart screensaver — also listed under App (SettingsTiers.fanartHome).
+        tv.own.owntv.glcn.dreamRootRow(),
         // glcn: a TV profile has a Home of its own — the layouts and backdrops of the other Homes mean nothing there.
         if (tv.own.owntv.glcn.TvProfiles.activeIsTv) glcnTvHomeRow(accessibleContext) else glcnHomeBackdropRow(homeBackdrop) { showHomeLayout = true },
         // glcn: picture, own image and dimming are one row now — "Home background" — with its three choices in a popup.
@@ -995,7 +997,6 @@ fun SettingsScreen(
             onClick = { saveScroll(); dialogReturn = startupRowFocus; showStartup = true },
         ),
         *autoStartRootRows(autoStart).toTypedArray(),
-        tv.own.owntv.glcn.dreamRootRow(),
         *tv.own.owntv.features.settings.lock.settingsLockRootRows(settingsLock, settingsLockVm) { saveScroll(); dialogReturn = settingsLock.rowFocus }.toTypedArray(),
         RootRow(
             "check_updates", TileTone.PRIMARY, OwnTVIcon.REFRESH,
