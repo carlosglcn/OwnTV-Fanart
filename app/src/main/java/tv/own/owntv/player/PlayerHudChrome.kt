@@ -507,7 +507,8 @@ internal fun BottomBar(
         val toolFocus = androidx.compose.runtime.remember { ToolFocusState() }
         val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
         // glcn: the tool's name above the row; on the Ficha banner under it (above, it left an empty band at the top).
-        if (!toolsUp) ToolLabelLine(toolFocus)
+        // glcn: with the programme card above (live), the tool's name line is the compact one — less gap to the buttons.
+        if (!toolsUp) ToolLabelLine(toolFocus, compact = isLive && side != null)
         androidx.compose.runtime.CompositionLocalProvider(LocalToolFocus provides toolFocus) {
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().onGloballyPositioned { toolFocus.origin = it.positionInWindow() }) {
         val toolsMaxWidth = maxWidth * 0.62f
