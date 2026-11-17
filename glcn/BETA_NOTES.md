@@ -103,3 +103,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎚️ Film player: a frame rate under 10 fps (a placeholder some streams carry, "1 fps") is no longer shown.
 - ▶️ Films and Series: a new "Keep watching" category (after Recent) lists what is under way — films started and not finished, shows with an episode half seen or the next one waiting (a new season brings a finished show back). It is only there while something is under way.
 - 🐞 Home: a show in Keep watching opens its page again (it only opened Series).
+- 🕐 Player: when a programme ends the banner moves on to the next one at once — a now/next kept for up to 5 min still showed the finished one as on air.
