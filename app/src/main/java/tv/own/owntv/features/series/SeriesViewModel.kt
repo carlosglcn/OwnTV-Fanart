@@ -551,7 +551,9 @@ class SeriesViewModel(
                 customize.observeVisible(c.profileId, MediaType.SERIES),
                 sortMode,
                 profileDao.observeById(c.profileId),
-            ) { cats, cust, sort, profile ->
+                // glcn: "Keep watching" is in the list only while something is under way.
+                seriesDao.countContinue(c.profileId, c.sourceIds.ifEmpty { listOf(-1L) }, listOf(Long.MIN_VALUE)).map { it > 0 }.distinctUntilChanged(),
+            ) { cats, cust, sort, profile, underWay ->
                 // The categories follow the sort chip too (A–Z by shown name, custom categories
                 // included); a category the user moved keeps its place in either sort. Custom categories
                 // ride the SAME customization keys, so renames/hides/reorders apply to them too.
@@ -562,7 +564,7 @@ class SeriesViewModel(
                 )
                 val multiSourceNames = c.sourceNames.takeIf { it.size > 1 }.orEmpty()
                 val categoriesById = cats.associateBy { it.id }
-                defaultRail + folders.map { e ->
+                (if (underWay) defaultRail.take(2) + LiveRailItem(LiveKey.Continue, icon = OwnTVIcon.PLAY_CIRCLE) + defaultRail.drop(2) else defaultRail) + folders.map { e ->
                     LiveRailItem(
                         key = e.categoryId?.let { LiveKey.Folder(it) } ?: LiveKey.Custom(e.customId!!),
                         title = e.displayName, locked = e.locked, sealed = e.sealed,
@@ -1378,7 +1380,7 @@ class SeriesViewModel(
                 is LiveKey.Folder -> seriesDao.snapshotByCategoryManual(key.id, pid, contextKey, alpha, 5000)
                 is LiveKey.Custom -> customCategoryDao.snapshotSeries(pid, key.id, ctx.value.sourceIds.ifEmpty { listOf(-1L) }, alpha, 5000)
                 LiveKey.Favorites -> seriesDao.snapshotFavoritesManual(pid, contextKey, ctx.value.sourceIds.ifEmpty { listOf(-1L) }, 5000)
-                LiveKey.History, LiveKey.All -> return@launch
+                LiveKey.History, LiveKey.All, LiveKey.Continue -> return@launch
             }
             val idx = items.indexOfFirst { it.id == series.id }
             if (idx < 0) return@launch
@@ -1452,6 +1454,7 @@ class SeriesViewModel(
             }
             LiveKey.Favorites -> seriesDao.pagingFavoritesManual(c.profileId, ContentOrderEntity.FAV_CONTEXT, ids)
             LiveKey.History -> seriesDao.pagingHistory(c.profileId, ids)
+            LiveKey.Continue -> seriesDao.pagingContinue(c.profileId, ids)
             is LiveKey.Custom -> customCategoryDao.pagingSeries(c.profileId, key.id, ids, alpha = !playlist)
             is LiveKey.Folder -> {
                 val ctxKey = folderContextKeys.value[key.id] ?: ""
@@ -1470,6 +1473,7 @@ class SeriesViewModel(
                 else seriesDao.searchAll(query, ids)
             LiveKey.Favorites -> seriesDao.searchFavorites(query, c.profileId, ids)
             LiveKey.History -> seriesDao.searchHistory(query, c.profileId, ids)
+            LiveKey.Continue -> seriesDao.searchContinue(query, c.profileId, ids)
             is LiveKey.Custom -> customCategoryDao.searchSeries(query, c.profileId, key.id, ids)
             is LiveKey.Folder ->
                 if (dateAdded) seriesDao.searchInCategoryDateAdded(query, key.id)

@@ -13,6 +13,7 @@ fun LiveRailItem.displayLabel(@StringRes allLabelRes: Int = R.string.content_cat
     LiveKey.History -> stringResource(R.string.content_category_history)
     LiveKey.Catchup -> stringResource(R.string.content_catchup)
     LiveKey.All -> stringResource(allLabelRes)
+    LiveKey.Continue -> stringResource(R.string.home_row_keep_watching)
     is LiveKey.Folder -> stringResource(allLabelRes)
     is LiveKey.Custom -> stringResource(allLabelRes)
 }

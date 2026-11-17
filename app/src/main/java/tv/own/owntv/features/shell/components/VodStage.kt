@@ -807,6 +807,7 @@ internal fun vodCategoryEntries(
             icon = when (item.key) {
                 LiveKey.Favorites -> OwnTVIcon.FAVORITE
                 LiveKey.History -> OwnTVIcon.HISTORY
+                LiveKey.Continue -> OwnTVIcon.PLAY_CIRCLE
                 LiveKey.All -> if (series) OwnTVIcon.SERIES else OwnTVIcon.MOVIES
                 else -> if (item.locked) OwnTVIcon.LOCK else null
             },

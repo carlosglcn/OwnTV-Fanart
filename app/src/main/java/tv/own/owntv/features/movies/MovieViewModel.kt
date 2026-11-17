@@ -443,7 +443,9 @@ class MovieViewModel(
                 customize.observeVisible(c.profileId, MediaType.MOVIE),
                 sortMode,
                 profileDao.observeById(c.profileId),
-            ) { cats, cust, sort, profile ->
+                // glcn: "Keep watching" is in the list only while something is under way.
+                movieDao.countContinue(c.profileId, c.sourceIds.ifEmpty { listOf(-1L) }, listOf(Long.MIN_VALUE)).map { it > 0 }.distinctUntilChanged(),
+            ) { cats, cust, sort, profile, underWay ->
                 // The categories follow the sort chip too (A–Z by shown name, custom categories
                 // included); a category the user moved keeps its place in either sort. Custom categories
                 // ride the SAME customization keys, so renames/hides/reorders apply to them too.
@@ -454,7 +456,7 @@ class MovieViewModel(
                 )
                 val multiSourceNames = c.sourceNames.takeIf { it.size > 1 }.orEmpty()
                 val categoriesById = cats.associateBy { it.id }
-                defaultRail + folders.map { e ->
+                (if (underWay) defaultRail.take(2) + LiveRailItem(LiveKey.Continue, icon = OwnTVIcon.PLAY_CIRCLE) + defaultRail.drop(2) else defaultRail) + folders.map { e ->
                     LiveRailItem(
                         key = e.categoryId?.let { LiveKey.Folder(it) } ?: LiveKey.Custom(e.customId!!),
                         title = e.displayName, locked = e.locked, sealed = e.sealed,
@@ -1040,7 +1042,7 @@ class MovieViewModel(
                 is LiveKey.Folder -> movieDao.snapshotByCategoryManual(key.id, pid, contextKey, alpha, 5000)
                 is LiveKey.Custom -> customCategoryDao.snapshotMovies(pid, key.id, ctx.value.sourceIds.ifEmpty { listOf(-1L) }, alpha, 5000)
                 LiveKey.Favorites -> movieDao.snapshotFavoritesManual(pid, contextKey, ctx.value.sourceIds.ifEmpty { listOf(-1L) }, 5000)
-                LiveKey.History, LiveKey.All -> return@launch
+                LiveKey.History, LiveKey.All, LiveKey.Continue -> return@launch
             }
             val idx = items.indexOfFirst { it.id == movie.id }
             if (idx < 0) return@launch
@@ -1111,6 +1113,7 @@ class MovieViewModel(
             }
             LiveKey.Favorites -> movieDao.pagingFavoritesManual(c.profileId, ContentOrderEntity.FAV_CONTEXT, ids)
             LiveKey.History -> movieDao.pagingHistory(c.profileId, ids)
+            LiveKey.Continue -> movieDao.pagingContinue(c.profileId, ids)
             is LiveKey.Custom -> customCategoryDao.pagingMovies(c.profileId, key.id, ids, alpha = !playlist)
             is LiveKey.Folder -> {
                 val ctxKey = folderContextKeys.value[key.id] ?: ""
@@ -1129,6 +1132,7 @@ class MovieViewModel(
                 else movieDao.searchAll(query, ids)
             LiveKey.Favorites -> movieDao.searchFavorites(query, c.profileId, ids)
             LiveKey.History -> movieDao.searchHistory(query, c.profileId, ids)
+            LiveKey.Continue -> movieDao.searchContinue(query, c.profileId, ids)
             is LiveKey.Custom -> customCategoryDao.searchMovies(query, c.profileId, key.id, ids)
             is LiveKey.Folder ->
                 if (dateAdded) movieDao.searchInCategoryDateAdded(query, key.id)
