@@ -1601,7 +1601,9 @@ fun OwnTVShell(
                     }
                 }
                 val openContinueSeries: ((Long) -> Unit)? = if (!tv.own.owntv.glcn.DockPrefs.titlePage) null else { id ->
-                    seriesVm.openSeriesById(id)
+                    // glcn: the card carries the episode (its sourceItemId), so the show is found through it —
+                    // taken as a show's id it found nothing and only Series opened.
+                    seriesVm.openSeriesByEpisode(id)
                     restoreFocus = true
                     seriesFromHome = true
                     onSelectSection(MainSection.SERIES)

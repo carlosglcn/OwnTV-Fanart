@@ -1005,6 +1005,15 @@ class SeriesViewModel(
         }
     }
 
+    /** glcn: Home's Keep watching cards carry the episode, not the show — the show's page from one of its episodes. */
+    fun openSeriesByEpisode(episodeId: Long) {
+        viewModelScope.launch {
+            val episode = seriesDao.getEpisodeById(episodeId) ?: return@launch
+            val show = seriesDao.getSeriesById(episode.seriesId) ?: return@launch
+            openSeries(show)
+        }
+    }
+
     suspend fun playFromHomeAsync(seriesId: Long, episodeId: Long, startPositionMs: Long = 0): Boolean {
         val episode = seriesDao.getEpisodeById(episodeId) ?: return false
         val showId = if (seriesId > 0) seriesId else episode.seriesId

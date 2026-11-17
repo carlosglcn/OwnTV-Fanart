@@ -102,3 +102,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📝 Film player: an episode's synopsis is the richest there is — TMDB's when the list gives only a one-line tag, with the show's synopsis after it otherwise.
 - 🎚️ Film player: a frame rate under 10 fps (a placeholder some streams carry, "1 fps") is no longer shown.
 - ▶️ Films and Series: a new "Keep watching" category (after Recent) lists what is under way — films started and not finished, shows with an episode half seen or the next one waiting (a new season brings a finished show back). It is only there while something is under way.
+- 🐞 Home: a show in Keep watching opens its page again (it only opened Series).
