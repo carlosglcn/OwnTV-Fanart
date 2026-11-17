@@ -99,3 +99,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🧭 Open side menu: the focused Live TV, Films and Series rows show a small picture of what waits there (the last channel's logo, the film or series you were watching).
 - 🔴 Player: the LIVE badge is a quiet red at the live edge (nothing to do there) and strong only when you are behind; on live TV the buttons sit a little closer under the programme.
 - 🎞️ Programme info: ◀ ▶ between channels no longer catches — the next page is read while the old one leaves and comes in whole, and quick presses all count.
+- 📝 Film player: an episode's synopsis is the richest there is — TMDB's when the list gives only a one-line tag, with the show's synopsis after it otherwise.
+- 🎚️ Film player: a frame rate under 10 fps (a placeholder some streams carry, "1 fps") is no longer shown.

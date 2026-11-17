@@ -572,7 +572,7 @@ fun OwnTVShell(
                     durationMin = ep?.durationSecs?.let { it / 60 }?.takeIf { it > 0 },
                     rating = meta?.rating?.takeIf { it > 0 } ?: show.rating?.takeIf { it > 0 },
                     genres = cinemaJsonList(meta?.genresJson),
-                    overview = ep?.plot?.takeIf { it.isNotBlank() } ?: meta?.overview ?: show.plot,
+                    overview = cinemaEpisodeOverview(ep?.plot, ep?.let { e -> runCatching { cinemaMeta.resolveEpisode(show, e) }.getOrNull()?.overview }, meta?.overview ?: show.plot),
                     cast = tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson).map { it.name },
                     people = tv.own.owntv.core.metadata.MetadataCast.parse(meta?.castJson),
                     show = show.name,
@@ -3142,3 +3142,21 @@ private fun Modifier.cinemaInset(p: Float): Modifier = if (p <= 0f) this else th
 /** glcn: a section's way in — how long, and from how far below. */
 private const val SECTION_IN_MS = 260
 private val SECTION_RISE = 18.mpx
+
+/**
+ * glcn: the synopsis for an episode in the film player — the richest one there is. Lists often give an episode a
+ * one-line tag ("El comienzo de un nuevo día"); TMDB's episode synopsis is used then, and the show's when neither says much.
+ */
+private fun cinemaEpisodeOverview(listPlot: String?, tmdbEpisode: String?, showOverview: String?): String? {
+    val own = listPlot?.trim()?.takeIf { it.isNotBlank() }
+    val tmdb = tmdbEpisode?.trim()?.takeIf { it.isNotBlank() }
+    return when {
+        own != null && own.length >= SHORT_PLOT_CHARS -> own
+        tmdb != null && tmdb.length > (own?.length ?: 0) -> tmdb
+        own != null && showOverview.isNullOrBlank() -> own
+        own != null -> listOf(own, showOverview!!.trim()).joinToString(System.lineSeparator().repeat(2))
+        else -> showOverview?.trim()?.takeIf { it.isNotBlank() }
+    }
+}
+
+private const val SHORT_PLOT_CHARS = 90

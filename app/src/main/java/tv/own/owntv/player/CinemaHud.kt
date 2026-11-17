@@ -491,7 +491,8 @@ private fun TechLine(label: String, value: String?) {
 private fun pictureText(t: CinemaTech): String? {
     val parts = buildList {
         if ((t.width ?: 0) > 0 && (t.height ?: 0) > 0) add("${t.width}×${t.height}")
-        t.fps?.takeIf { it > 0 }?.let { f ->
+        // glcn: some streams say 1 fps (a container's placeholder) — a rate that low is not shown.
+        t.fps?.takeIf { it >= MIN_REAL_FPS }?.let { f ->
             val whole = kotlin.math.abs(f - Math.round(f)) < 0.01
             add(if (whole) String.format(java.util.Locale.ROOT, FPS_WHOLE, Math.round(f)) else String.format(java.util.Locale.ROOT, FPS_FORMAT, f))
         }
@@ -704,6 +705,7 @@ private const val RANK_4K = 4
 private const val STAR = "★ "
 private const val FPS_FORMAT = "%.3f fps"
 private const val FPS_WHOLE = "%d fps"
+private const val MIN_REAL_FPS = 10.0
 private const val BADGE_PREFIX = "glcn_badge_"
 private const val KEY_4K = "4k"
 private const val KEY_HD = "hd"
