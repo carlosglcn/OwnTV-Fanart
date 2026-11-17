@@ -5,6 +5,7 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -102,18 +103,39 @@ fun ProgrammeInfoScreen(
     val swapScope = androidx.compose.runtime.rememberCoroutineScope()
     var lastSwapAt by remember { mutableStateOf(0L) }
     val swapAnimated = DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn
+    // glcn: where ◀ ▶ are heading — counted from here, not from the page on screen, so quick presses all count
+    // (a press during the slide used to cancel the one before and the page stayed where it was).
+    var target by remember { mutableStateOf(startChannel) }
+    var swapJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    val warmResolver: ProgrammeArtResolver = org.koin.compose.koinInject()
     fun go(step: Int) {
         if (channels.size < 2) return
-        val at = channels.indexOfFirst { it.id == channel.id }.takeIf { it >= 0 } ?: return
+        val at = channels.indexOfFirst { it.id == target.id }.takeIf { it >= 0 } ?: return
         val next = channels[(at + step + channels.size) % channels.size]
+        target = next
         val now = android.os.SystemClock.uptimeMillis()
         // A held key gets shorter moves, so the pages keep up with it.
         val quick = now - lastSwapAt < QUICK_SWAP_MS
         lastSwapAt = now
         val calm = swapAnimated
-        swapScope.launch {
+        swapJob?.cancel()
+        swapJob = swapScope.launch {
             if (!calm) { channel = next; return@launch }
+            // glcn: the next page is read while the old one leaves, so it comes in whole — before, its picture,
+            // title and cast arrived one by one after it had slid in, and the page seemed to catch.
+            val ready = async {
+                kotlinx.coroutines.withTimeoutOrNull(SWAP_READY_MS) {
+                    val rows = runCatching { loadSchedule(next) }.getOrNull().orEmpty()
+                    val onAir = rows.filter { nowMsForSwap() in it.startMs until it.stopMs }.maxByOrNull { it.startMs } ?: return@withTimeoutOrNull
+                    kotlinx.coroutines.coroutineScope {
+                        launch { runCatching { warmResolver.filmFor(onAir.title, onAir.categories) } }
+                        launch { runCatching { warmResolver.detailsFor(onAir.title, onAir.categories) } }
+                        launch { runCatching { warmResolver.logoFor(onAir.title, onAir.categories) } }
+                    }
+                }
+            }
             swap.animateTo(-step.toFloat(), androidx.compose.animation.core.tween(if (quick) 70 else SWAP_OUT_MS, easing = androidx.compose.animation.core.FastOutLinearInEasing))
+            if (quick) ready.cancel() else ready.await()
             channel = next
             swap.snapTo(step.toFloat())
             swap.animateTo(0f, androidx.compose.animation.core.tween(if (quick) 140 else SWAP_IN_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
@@ -612,6 +634,9 @@ private const val SWAP_OUT_MS = 140
 private const val SWAP_IN_MS = 300
 private val SWAP_SHIFT = 90.mpx
 private const val QUICK_SWAP_MS = 350L
+/** glcn: how long a page change waits for the next page's picture and details before sliding in anyway. */
+private const val SWAP_READY_MS = 450L
+private fun nowMsForSwap() = System.currentTimeMillis()
 /** glcn: how long a page rests before the channels either side are read ahead. */
 private const val PREFETCH_DELAY_MS = 250L
 

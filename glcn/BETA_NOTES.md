@@ -98,3 +98,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🪟 Film pages now open out of the card you pressed: a window grows from the poster's place and shape to the whole screen, with the page already behind it.
 - 🧭 Open side menu: the focused Live TV, Films and Series rows show a small picture of what waits there (the last channel's logo, the film or series you were watching).
 - 🔴 Player: the LIVE badge is a quiet red at the live edge (nothing to do there) and strong only when you are behind; on live TV the buttons sit a little closer under the programme.
+- 🎞️ Programme info: ◀ ▶ between channels no longer catches — the next page is read while the old one leaves and comes in whole, and quick presses all count.
