@@ -732,7 +732,7 @@ fun ZapDeck(
                 // glcn: the width of the pictures' slot, in line-icon sizes: a logo's when any group has one, an icon's when
                 // any has an icon, none otherwise.
                 val glyphSlot = remember(entries) {
-                    val glyphs = entries.map { it.icon != null to it.groupGlyph() }
+                    val glyphs = entries.map { (it.icon != null) to it.groupGlyph() }
                     when {
                         glyphs.any { it.second is tv.own.owntv.glcn.CategoryIcons.Glyph.Logo } -> tv.own.owntv.glcn.CATEGORY_LOGO_SLOT_BESIDE
                         glyphs.any { it.first || it.second != null } -> 1f
