@@ -1360,6 +1360,7 @@
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/EmbyGroupsPref.kt	\0
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/EmbyGroupsPref.kt	glcn_emby_groups
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/EmbyGroupsPref.kt	mode
+1	technical	app/src/main/java/tv/own/owntv/glcn/FanartAmbience.kt	ambience
 3	technical	app/src/main/java/tv/own/owntv/glcn/FanartDream.kt	·
 2	technical	app/src/main/java/tv/own/owntv/glcn/FanartDream.kt	★ %.1f
 2	empty	app/src/main/java/tv/own/owntv/glcn/FrameMeter.kt	\0
