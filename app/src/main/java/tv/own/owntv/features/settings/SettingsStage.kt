@@ -708,7 +708,8 @@ fun StageSettingRow(
                     )
                 }
             }
-            if (value != null) androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.stage.LocalStageLit provides focused) { SettingValueView(value) }
+            // A disabled row's "−" / "+" must not change it either.
+            if (value != null) androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.stage.LocalStageLit provides focused) { SettingValueView(value, onStep.takeIf { enabled }) }
         }
     }
 }
@@ -738,7 +739,7 @@ internal fun StageRowBadge(text: String, filled: Boolean, lit: Boolean = false) 
 }
 
 @Composable
-private fun SettingValueView(value: SettingValue) {
+private fun SettingValueView(value: SettingValue, onStep: ((Int) -> Unit)?) {
     val a = stageAccent
     val lit = tv.own.owntv.ui.stage.LocalStageLit.current
     val valueStyle = stageText(18, 700)
@@ -756,7 +757,7 @@ private fun SettingValueView(value: SettingValue) {
                 }
                 OwnTVIcon(OwnTVIcon.CHEVRON, if (lit) a.onAccent.copy(alpha = 0.8f) else StageColors.Muted, Modifier.size(20.mpx))
             }
-            is SettingValue.Stepper -> StageStepper(value.text)
+            is SettingValue.Stepper -> StageStepper(value.text, onStep)
             is SettingValue.Segmented -> SegmentedDisplay(value.options, value.selected)
             is SettingValue.Saved -> {
                 Text(value.text, style = valueStyle, color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
