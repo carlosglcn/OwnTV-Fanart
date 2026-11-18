@@ -109,3 +109,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🗂️ Player categories: ◀ ◀ ◀ opens the playlists as a panel the size of the categories — each a card with its colour, initial, what is in it and how it stands, as in the deck — instead of a small menu over the channels.
 - 🎨 Settings and More: behind them, the colours of what was watched last as a soft glow, instead of its picture.
 - 🎞️ Programme info: ◀ ▶ glide more smoothly — the next channel's picture is decoded ahead (with the neighbours'), and the week's repeats are worked out off the screen's thread.
+- ↔️ Compact player banner: the programme card takes a little over half the bar (it was 44 %), so more of the title and synopsis fits; the live badge and the tools below line up with it as one column. The channel's name keeps the rest.
