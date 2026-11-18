@@ -568,7 +568,7 @@ fun ZapDeck(
             // glcn: glass off makes it solid, as every player panel.
             val deckShare = tv.own.owntv.glcn.PlayerGlass.shareNow(DECK_LIST_GLASS)
             Box(Modifier.matchParentSize().graphicsLayer { alpha = deckShare }.stageGlass(StageRadii.Sheet, overContent = true))
-            Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
+            Row(Modifier.fillMaxHeight().padding(vertical = DECK_SHEET_INSET)) {
             // ---- Groups (and the playlists above them).
             // glcn: as TiviMate does — folded, the groups are not there at all (no column of initials); ◀ opens them
             // over the channels, which dim behind them, with their whole names, counts and playlist tags.
@@ -577,7 +577,18 @@ fun ZapDeck(
             val groupsOpen = chW + 20.mpx
             val slideGroupsPx = with(density) { 40.mpx.toPx() }
             Box(Modifier.width(0.mpx).fillMaxHeight().wrapContentWidth(Alignment.Start, unbounded = true).zIndex(1f)) {
-            if (fold < 0.999f) Box(Modifier.width(groupsOpen).fillMaxHeight().graphicsLayer { alpha = 1f - fold; translationX = -slideGroupsPx * fold }) {
+            // glcn: the panel reaches over the sheet's top and bottom margins, so its edge lies on the sheet's own —
+            // it stopped 20 short, and the two edges showed as a double line at the top.
+            if (fold < 0.999f) Box(
+                Modifier.width(groupsOpen).fillMaxHeight()
+                    .layout { m, c ->
+                        val bleed = DECK_SHEET_INSET.roundToPx()
+                        val h = c.maxHeight + 2 * bleed
+                        val p = m.measure(c.copy(minHeight = h, maxHeight = h))
+                        layout(p.width, c.maxHeight) { p.place(0, -bleed) }
+                    }
+                    .graphicsLayer { alpha = 1f - fold; translationX = -slideGroupsPx * fold },
+            ) {
             Box(Modifier.matchParentSize().clip(RoundedCornerShape(StageRadii.Sheet)).background(shade))
             // glcn: the same glass as the channel list on top of the solid page — groups and playlists look like the list
             // they cover (glass on), while the words behind stay hidden.
@@ -586,7 +597,7 @@ fun ZapDeck(
             tv.own.owntv.glcn.EdgeTab(visible = column == 0 || column == -1 || column == -2 || column == -3, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
             // glcn: ‹ on the left edge while on the categories: ◀ opens the playlists.
             if (chips.isNotEmpty()) tv.own.owntv.glcn.EdgeTab(visible = column == 0, modifier = Modifier.align(Alignment.CenterStart))
-            if (column == -3) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
+            if (column == -3) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM, top = DECK_SHEET_INSET, bottom = DECK_SHEET_INSET)) {
                 Text(
                     stringResource(R.string.glcn_deck_manage_title), style = stageText(24, 800), color = StageColors.Text, maxLines = 1, softWrap = false,
                     modifier = Modifier.padding(start = 14.mpx, top = 10.mpx),
@@ -618,7 +629,7 @@ fun ZapDeck(
                         DeckSwitch(on = !g.hidden, focused = focused)
                     }
                 }
-            } else if (column == -2) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
+            } else if (column == -2) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM, top = DECK_SHEET_INSET, bottom = DECK_SHEET_INSET)) {
                 // glcn: the playlists, each a card of its own: its colour and initial, its name, what is in it (channels,
                 // films, series) and how it stands (when it ends, when it was last updated).
                 val counts by androidx.compose.runtime.produceState<Map<Long, Triple<Int, Int, Int>>>(emptyMap(), panelLists) {
@@ -708,7 +719,7 @@ fun ZapDeck(
                         if (on) OwnTVIcon(OwnTVIcon.CHECK, tint, Modifier.size(22.mpx))
                     }
                 }
-            } else Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM)) {
+            } else Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM, top = DECK_SHEET_INSET, bottom = DECK_SHEET_INSET)) {
                 if (chips.isNotEmpty()) {
                     DeckChips(chips, activeChip, if (column == -1) chipIdx else -1, colors = marks.mapValues { it.value.shownColor })
                     Spacer(Modifier.height(10.mpx))
@@ -718,6 +729,16 @@ fun ZapDeck(
                     style = stageText(17, 700), color = StageColors.Dim, maxLines = 1, softWrap = false,
                     modifier = Modifier.padding(start = 14.mpx, bottom = 8.mpx),
                 )
+                // glcn: the width of the pictures' slot, in line-icon sizes: a logo's when any group has one, an icon's when
+                // any has an icon, none otherwise.
+                val glyphSlot = remember(entries) {
+                    val glyphs = entries.map { it.icon != null to it.groupGlyph() }
+                    when {
+                        glyphs.any { it.second is tv.own.owntv.glcn.CategoryIcons.Glyph.Logo } -> tv.own.owntv.glcn.CATEGORY_LOGO_SLOT_BESIDE
+                        glyphs.any { it.first || it.second != null } -> 1f
+                        else -> 0f
+                    }
+                }
                 GlideColumn(
                     count = entries.size,
                     index = groupIdx,
@@ -743,18 +764,26 @@ fun ZapDeck(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.mpx),
                     ) {
-                        entry.icon?.let { OwnTVIcon(it, tint, Modifier.size(20.mpx)) }
+                        // glcn: every name starts at the same place — the picture sits in a slot as wide as the list's
+                        // widest (none when no group has one), so a group without one is not further left.
                         val glyph = entry.groupGlyph()
-                        glyph?.let { tv.own.owntv.glcn.CategoryGlyphView(it, tint, size = 20.mpx, name = entry.label) }
-                        Text(
-                            if (tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) "" else entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
-                            modifier = Modifier.weight(1f).alignByBaseline(),
-                        )
-                        // The playlist it comes from, when all playlists are listed together.
-                        if (activeChip == -1L) entry.item.sourceId?.let(marks::get)?.let { tv.own.owntv.ui.stage.StagePlaylistMark(it, onLight = lit) }
-                        // glcn: the count on the name's line (it sat higher than the name), with grouped thousands.
-                        entry.count?.let { Text(groupNf.format(it), style = stageText(15, 500), color = tint.copy(alpha = 0.7f), maxLines = 1, softWrap = false, modifier = Modifier.alignByBaseline()) }
+                        if (glyphSlot > 0f) Box(Modifier.width(20.mpx * glyphSlot), contentAlignment = Alignment.CenterStart) {
+                            entry.icon?.let { OwnTVIcon(it, tint, Modifier.size(20.mpx)) }
+                            glyph?.let { tv.own.owntv.glcn.CategoryGlyphView(it, tint, size = 20.mpx, name = entry.label) }
+                        }
+                        // glcn: name, playlist tag and count in a row of their own height, centred on the row — on the big
+                        // row the baseline pair sat at its top, above the picture beside it.
+                        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
+                            Text(
+                                if (tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) "" else entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
+                                modifier = Modifier.weight(1f).alignByBaseline(),
+                            )
+                            // The playlist it comes from, when all playlists are listed together.
+                            if (activeChip == -1L) entry.item.sourceId?.let(marks::get)?.let { tv.own.owntv.ui.stage.StagePlaylistMark(it, onLight = lit) }
+                            // glcn: the count on the name's line, with grouped thousands.
+                            entry.count?.let { Text(groupNf.format(it), style = stageText(15, 500), color = tint.copy(alpha = 0.7f), maxLines = 1, softWrap = false, modifier = Modifier.alignByBaseline()) }
+                        }
                     }
                 }
             }
@@ -1402,3 +1431,6 @@ private fun litInk(): Color = if (tv.own.owntv.glcn.GlassFocus.active) tv.own.ow
 
 /** glcn: the glass focus on a list that is not the one being moved through — still there, quieter. */
 private const val GLASS_IDLE_ALPHA = 0.35f
+
+/** glcn: the sheet's margin above and below the lists — the categories panel reaches over it. */
+private val DECK_SHEET_INSET = 20.mpx
