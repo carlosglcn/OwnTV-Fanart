@@ -106,3 +106,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🕐 Player: when a programme ends the banner moves on to the next one at once — a now/next kept for up to 5 min still showed the finished one as on air.
 - 📐 Channel deck categories: names and counts on one line and centred with their icons, every name starting at the same place with or without an icon, and no double edge at the panel's top.
 - 🔤 Spanish: "Series" with a capital S in Settings, like "Películas".
+- 🗂️ Player categories: ◀ ◀ ◀ opens the playlists as a panel the size of the categories — each a card with its colour, initial, what is in it and how it stands, as in the deck — instead of a small menu over the channels.
+- 🎨 Settings and More: behind them, the colours of what was watched last as a soft glow, instead of its picture.

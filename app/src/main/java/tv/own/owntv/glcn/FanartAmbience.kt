@@ -5,11 +5,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.paint
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import coil3.compose.rememberAsyncImagePainter
-import coil3.request.ImageRequest
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import kotlinx.coroutines.flow.first
 import org.koin.core.context.GlobalContext
 import tv.own.owntv.core.database.dao.HistoryDao
@@ -19,19 +19,31 @@ import tv.own.owntv.core.model.MediaType
 import tv.own.owntv.core.settings.SettingsRepository
 
 /**
- * glcn: Settings and More keep the app's look — behind them, the picture of the film or series watched last, faint
- * and soft (fetched small and drawn large, so it blurs for free), instead of a bare page. Nothing watched yet: the
- * page as before.
+ * glcn: Settings and More keep the app's look — behind them, the colours of the film or series watched last as a soft
+ * glow (its most vivid colour from one corner, a neighbouring hue from the other), not the picture itself: a picture
+ * behind the tiles took their contrast and drew the eye. Nothing watched yet, or a picture without colour: the page
+ * as before.
  */
 @Composable
 fun Modifier.fanartAmbience(): Modifier {
     val url by produceState<String?>(null) { value = runCatching { lastBackdrop() }.getOrNull() }
-    val u = url ?: return this
-    val context = LocalContext.current
-    val request = remember(u) { ImageRequest.Builder(context).data(u).size(AMBIENCE_W, AMBIENCE_H).build() }
-    val painter = rememberAsyncImagePainter(request)
-    val alpha = if (tv.own.owntv.ui.theme.LocalStagePalette.current.isLight) AMBIENCE_ALPHA_LIGHT else AMBIENCE_ALPHA_DARK
-    return this.paint(painter, contentScale = ContentScale.Crop, alpha = alpha)
+    val tone by ArtTone.of(url)
+    val c = tone?.vivid
+    val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    val shown by androidx.compose.animation.core.animateFloatAsState(if (c != null) 1f else 0f, androidx.compose.animation.core.tween(AMBIENCE_FADE_MS), label = "ambience")
+    val main = c ?: return this
+    val other = remember(main) {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(main.toArgb(), hsv)
+        hsv[0] = (hsv[0] + AMBIENCE_HUE_SHIFT) % 360f
+        Color(android.graphics.Color.HSVToColor(hsv))
+    }
+    val strength = if (light) AMBIENCE_ALPHA_LIGHT else AMBIENCE_ALPHA_DARK
+    return this.drawBehind {
+        val a = strength * shown
+        drawRect(Brush.radialGradient(listOf(main.copy(alpha = a), Color.Transparent), center = Offset(size.width * 0.88f, size.height * 0.08f), radius = size.maxDimension * 0.75f))
+        drawRect(Brush.radialGradient(listOf(other.copy(alpha = a * 0.6f), Color.Transparent), center = Offset(size.width * 0.08f, size.height * 0.98f), radius = size.maxDimension * 0.6f))
+    }
 }
 
 /** The last film's picture, or the last episode's series'. */
@@ -52,7 +64,7 @@ private suspend fun lastBackdrop(): String? {
     }
 }
 
-private const val AMBIENCE_W = 384
-private const val AMBIENCE_H = 216
-private const val AMBIENCE_ALPHA_DARK = 0.20f
-private const val AMBIENCE_ALPHA_LIGHT = 0.12f
+private const val AMBIENCE_ALPHA_DARK = 0.30f
+private const val AMBIENCE_ALPHA_LIGHT = 0.18f
+private const val AMBIENCE_HUE_SHIFT = 40f
+private const val AMBIENCE_FADE_MS = 600
