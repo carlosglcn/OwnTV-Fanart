@@ -105,3 +105,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🐞 Home: a show in Keep watching opens its page again (it only opened Series).
 - 🕐 Player: when a programme ends the banner moves on to the next one at once — a now/next kept for up to 5 min still showed the finished one as on air.
 - 📐 Channel deck categories: names and counts on one line and centred with their icons, every name starting at the same place with or without an icon, and no double edge at the panel's top.
+- 🔤 Spanish: "Series" with a capital S in Settings, like "Películas".
