@@ -94,6 +94,10 @@ internal data class CinemaTech(
     val dvLayer: DolbyVisionNow.Layer? = null,
     /** Dolby Vision turned off in Settings: the film plays as HDR10. */
     val dvOff: Boolean = false,
+    /** glcn: the Dolby Vision profile ("8.1"…), shown with it in the technical line. */
+    val dvProfile: String? = null,
+    /** glcn: Dolby Vision this device cannot decode, played from its base layer — what the TV gets ("HDR10"…). */
+    val dvBase: String? = null,
     val audioCodec: String? = null,
     val channels: Int? = null,
     val passthrough: Boolean? = null,
@@ -126,6 +130,7 @@ internal fun rememberCinemaTech(player: PlaybackEngine): CinemaTech {
     return t.copy(
         dolbyVision = onExo && dv.dolbyVision, dvConverted = onExo && dv.converted,
         dvLayer = if (onExo) dv.layer else null, dvOff = onExo && dv.turnedOff,
+        dvProfile = if (onExo) dv.profile else null, dvBase = if (onExo) dv.base else null,
     )
 }
 
@@ -144,7 +149,7 @@ internal fun cinemaBadges(t: CinemaTech, info: CinemaInfo?): List<CinemaBadge> {
         t.dolbyVision -> out += CinemaBadge(KEY_DV, LABEL_DV)
         t.hdr == StreamHdrMode.HDR10_PQ -> out += if ("hdr10+" in caps) CinemaBadge(KEY_HDR10P, LABEL_HDR10P) else CinemaBadge(KEY_HDR10, LABEL_HDR10)
         t.hdr == StreamHdrMode.HLG -> out += CinemaBadge(KEY_HLG, LABEL_HLG)
-        t.hdr == null && !t.dvOff && "dolby vision" in caps -> out += CinemaBadge(KEY_DV, LABEL_DV)
+        t.hdr == null && !t.dvOff && t.dvBase == null && "dolby vision" in caps -> out += CinemaBadge(KEY_DV, LABEL_DV)
         t.hdr == null && "hdr" in caps -> out += CinemaBadge(KEY_HDR10, LABEL_HDR10)
     }
     soundBadge(t.audioCodec, caps)?.let { out += it }
@@ -501,6 +506,9 @@ private fun pictureText(t: CinemaTech): String? {
             t.dvConverted && t.dvLayer == DolbyVisionNow.Layer.MEL -> add(stringResource(R.string.glcn_cine_dv_converted_mel))
             t.dvConverted -> add(stringResource(R.string.glcn_cine_dv_converted))
             t.dvOff -> add(stringResource(R.string.glcn_cine_dv_off))
+            // glcn: Dolby Vision this box has no decoder for: what really reaches the TV, and why.
+            t.dvBase != null -> add(stringResource(R.string.glcn_cine_dv_base_only, t.dvBase))
+            t.dolbyVision && t.dvProfile != null -> add(stringResource(R.string.glcn_cine_dv_profile, t.dvProfile))
             t.dolbyVision -> add(LABEL_DV)
             t.hdr == StreamHdrMode.HDR10_PQ -> add(LABEL_HDR10)
             t.hdr == StreamHdrMode.HLG -> add(LABEL_HLG)

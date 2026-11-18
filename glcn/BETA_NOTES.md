@@ -111,3 +111,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ Programme info: ◀ ▶ glide more smoothly — the next channel's picture is decoded ahead (with the neighbours'), and the week's repeats are worked out off the screen's thread.
 - ↔️ Compact player banner: the programme card takes a little over half the bar (it was 44 %), so more of the title and synopsis fits; the live badge and the tools below line up with it as one column. The channel's name keeps the rest.
 - 🎞️ Programme info: ◀ ▶ lighter still — the window for the picture is cut by a clip instead of an offscreen copy of the whole screen redrawn on every frame, and the shade's change is drawn rather than recomposed. The report counts this page's frames apart ("info", "info·swap").
+- 🎬 Film player: Dolby Vision shows its profile ("Dolby Vision profile 8.1", "profile 5"…) in the technical line.
+- 🎬 Film player: Dolby Vision on a device with no Dolby Vision decoder now says what really plays — "HDR10 (this device does not decode Dolby Vision)" — instead of "Dolby Vision".
