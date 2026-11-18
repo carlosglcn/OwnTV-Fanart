@@ -74,6 +74,21 @@ fun ProgrammeArt(
 private val TopBias = BiasAlignment(0f, -0.4f)
 
 /** glcn: what was already learnt about a picture, so coming back to it does not wait again. */
+/**
+ * glcn: a picture fetched ahead (to disk and memory, at screen size) with its shape noted, so a page that shows it next
+ * has it at once — no blank frame, no switch of layout once its shape is known.
+ */
+suspend fun warmProgrammeArt(context: android.content.Context, url: String) {
+    if (url.isBlank()) return
+    val request = coil3.request.ImageRequest.Builder(context).data(url).size(WARM_W, WARM_H).build()
+    val result = coil3.SingletonImageLoader.get(context).execute(request) as? coil3.request.SuccessResult ?: return
+    val img = result.image
+    if (img.height > 0) Memo.ratio.put(url, img.width.toFloat() / img.height)
+}
+
+private const val WARM_W = 1920
+private const val WARM_H = 1080
+
 private object Memo {
     val ratio = object : android.util.LruCache<String, Float>(300) {}
     val wide = object : android.util.LruCache<String, String>(300) {}

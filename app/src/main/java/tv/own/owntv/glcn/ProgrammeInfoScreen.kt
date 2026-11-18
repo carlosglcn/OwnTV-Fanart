@@ -108,6 +108,7 @@ fun ProgrammeInfoScreen(
     var target by remember { mutableStateOf(startChannel) }
     var swapJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val warmResolver: ProgrammeArtResolver = org.koin.compose.koinInject()
+    val swapContext = androidx.compose.ui.platform.LocalContext.current
     fun go(step: Int) {
         if (channels.size < 2) return
         val at = channels.indexOfFirst { it.id == target.id }.takeIf { it >= 0 } ?: return
@@ -128,9 +129,11 @@ fun ProgrammeInfoScreen(
                     val rows = runCatching { loadSchedule(next) }.getOrNull().orEmpty()
                     val onAir = rows.filter { nowMsForSwap() in it.startMs until it.stopMs }.maxByOrNull { it.startMs } ?: return@withTimeoutOrNull
                     kotlinx.coroutines.coroutineScope {
-                        launch { runCatching { warmResolver.filmFor(onAir.title, onAir.categories) } }
-                        launch { runCatching { warmResolver.detailsFor(onAir.title, onAir.categories) } }
+                        val film = async { runCatching { warmResolver.filmFor(onAir.title, onAir.categories) }.getOrNull() }
+                        val lent = async { runCatching { warmResolver.detailsFor(onAir.title, onAir.categories) }.getOrNull() }
                         launch { runCatching { warmResolver.logoFor(onAir.title, onAir.categories) } }
+                        // glcn: and the picture itself, decoded, so the new page's backdrop is there as it slides in.
+                        pageArt(film.await(), lent.await(), onAir)?.let { u -> runCatching { tv.own.owntv.ui.components.warmProgrammeArt(swapContext, u) } }
                     }
                 }
             }
@@ -180,8 +183,11 @@ fun ProgrammeInfoScreen(
     // found by its own name — the title without the episode, the season and what follows " · ". Never for
     // sport (a league's name is the same for every match) nor for a name too short to tell shows apart:
     // those still need the very same title.
-    val again = remember(cur?.title, week) {
-        if (cur == null) return@remember emptyList<Pair<EpgProgrammeEntity, String?>>()
+    // glcn: worked out away from the screen's thread — a week of titles folded twice took frames as a page slid in.
+    val againState = produceState(emptyList<Pair<EpgProgrammeEntity, String?>>(), cur?.id, week) {
+        val cur = cur ?: run { value = emptyList(); return@produceState }
+        val week = week
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
         val exact = ProgrammeArtResolver.fold(cur.title)
         val show = ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(cur.title))
         val byShow = show.length >= 4 && show != exact && !tv.own.owntv.core.live.SportsNow.isSport(cur)
@@ -200,7 +206,9 @@ fun ProgrammeInfoScreen(
             }
             .distinctBy { it.first.startMs }
             .take(7)
+        }
     }
+    val again = againState.value
 
     // The zap cache keeps programmes without their synopsis (it is heavy); this one is read on demand.
     val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
@@ -252,8 +260,10 @@ fun ProgrammeInfoScreen(
             if (n.id == channel.id) continue
             val rows = runCatching { loadSchedule(n) }.getOrNull().orEmpty()
             val onAir = rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs } ?: continue
-            runCatching { resolver.filmFor(onAir.title, onAir.categories) }
-            runCatching { resolver.detailsFor(onAir.title, onAir.categories) }
+            val f = runCatching { resolver.filmFor(onAir.title, onAir.categories) }.getOrNull()
+            val l = runCatching { resolver.detailsFor(onAir.title, onAir.categories) }.getOrNull()
+            // glcn: the neighbours' pictures too, decoded ahead — the page's backdrop is the heaviest thing it brings.
+            pageArt(f, l, onAir)?.let { u -> runCatching { tv.own.owntv.ui.components.warmProgrammeArt(swapContext, u) } }
         }
     }
     var showTech by remember { mutableStateOf(false) }
@@ -319,8 +329,7 @@ fun ProgrammeInfoScreen(
                 },
         ) {
             Box(Modifier.fillMaxSize().background(Page))
-            val art = film?.backdropPath?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w1280") }
-                ?: lent?.backdropUrl ?: cur?.imageUrl?.takeIf { it.isNotBlank() }
+            val art = pageArt(film, lent, cur)
             androidx.compose.animation.Crossfade(targetState = art, animationSpec = androidx.compose.animation.core.tween(SWAP_IN_MS), label = "infoArt") { url ->
                 if (url != null) ProgrammeArt(url = url, modifier = Modifier.fillMaxSize())
             }
@@ -635,7 +644,7 @@ private const val SWAP_IN_MS = 300
 private val SWAP_SHIFT = 90.mpx
 private const val QUICK_SWAP_MS = 350L
 /** glcn: how long a page change waits for the next page's picture and details before sliding in anyway. */
-private const val SWAP_READY_MS = 450L
+private const val SWAP_READY_MS = 350L
 private fun nowMsForSwap() = System.currentTimeMillis()
 /** glcn: how long a page rests before the channels either side are read ahead. */
 private const val PREFETCH_DELAY_MS = 250L
@@ -699,3 +708,11 @@ object InfoStage {
         return androidx.compose.ui.geometry.Rect(left, top, left + 420f * sx, top + 236f * sy)
     }
 }
+
+/** glcn: the page's backdrop — the film's wide picture, else TMDB's for the programme, else the guide's own. */
+private fun pageArt(
+    film: tv.own.owntv.core.metadata.MovieDetails?,
+    lent: ProgrammeArtResolver.Info?,
+    cur: EpgProgrammeEntity?,
+): String? = film?.backdropPath?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w1280") }
+    ?: lent?.backdropUrl ?: cur?.imageUrl?.takeIf { it.isNotBlank() }

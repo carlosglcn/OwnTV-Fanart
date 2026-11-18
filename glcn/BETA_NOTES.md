@@ -108,3 +108,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔤 Spanish: "Series" with a capital S in Settings, like "Películas".
 - 🗂️ Player categories: ◀ ◀ ◀ opens the playlists as a panel the size of the categories — each a card with its colour, initial, what is in it and how it stands, as in the deck — instead of a small menu over the channels.
 - 🎨 Settings and More: behind them, the colours of what was watched last as a soft glow, instead of its picture.
+- 🎞️ Programme info: ◀ ▶ glide more smoothly — the next channel's picture is decoded ahead (with the neighbours'), and the week's repeats are worked out off the screen's thread.
