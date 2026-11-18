@@ -15,6 +15,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -109,6 +111,12 @@ fun ProgrammeInfoScreen(
     var swapJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val warmResolver: ProgrammeArtResolver = org.koin.compose.koinInject()
     val swapContext = androidx.compose.ui.platform.LocalContext.current
+    // glcn: the frames this page draws are told apart in the report ("info", and "info·swap" while ◀ ▶ change page).
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        val before = FrameWatch.screen
+        FrameWatch.screen = "info"
+        onDispose { FrameWatch.screen = before }
+    }
     fun go(step: Int) {
         if (channels.size < 2) return
         val at = channels.indexOfFirst { it.id == target.id }.takeIf { it >= 0 } ?: return
@@ -122,6 +130,7 @@ fun ProgrammeInfoScreen(
         swapJob?.cancel()
         swapJob = swapScope.launch {
             if (!calm) { channel = next; return@launch }
+            FrameWatch.screen = "info·swap"
             // glcn: the next page is read while the old one leaves, so it comes in whole — before, its picture,
             // title and cast arrived one by one after it had slid in, and the page seemed to catch.
             val ready = async {
@@ -142,6 +151,8 @@ fun ProgrammeInfoScreen(
             channel = next
             swap.snapTo(step.toFloat())
             swap.animateTo(0f, androidx.compose.animation.core.tween(if (quick) 140 else SWAP_IN_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+            kotlinx.coroutines.delay(SWAP_SETTLE_MS)
+            if (FrameWatch.screen == "info·swap") FrameWatch.screen = "info"
         }
     }
     val slide = Modifier.graphicsLayer {
@@ -306,26 +317,27 @@ fun ProgrammeInfoScreen(
         // glcn: the backdrop, with a window cut in it up on the right where the channel goes on playing.
         val windowRadius = 18.mpx
         var holeOrigin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+        val holePath = remember { androidx.compose.ui.graphics.Path() }
         Box(
             Modifier.fillMaxSize()
                 .onGloballyPositioned { holeOrigin = it.positionInWindow() }
-                .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
                 // glcn: the backdrop comes up as the picture shrinks, and the window follows the picture all the way —
                 // the TV seems to fold itself into its place on the right instead of jumping there.
                 .graphicsLayer { alpha = (InfoStage.progress * 1.4f).coerceAtMost(1f) }
+                // glcn: the window is left out of the drawing (a clip) instead of cleared from an offscreen copy of the whole
+                // screen — that copy was redrawn on every frame while a new page's picture, shade and tint came in.
                 .drawWithContent {
-                    drawContent()
                     val p = InfoStage.progress
                     val r = InfoStage.windowRect(size.width, size.height, holeOrigin)
                     val left = r.left * p
                     val top = r.top * p
                     val w = size.width + (r.width - size.width) * p
                     val h = size.height + (r.height - size.height) * p
-                    drawRoundRect(
-                        Color.Black, topLeft = androidx.compose.ui.geometry.Offset(left, top), size = androidx.compose.ui.geometry.Size(w, h),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(windowRadius.toPx() * p),
-                        blendMode = androidx.compose.ui.graphics.BlendMode.Clear,
+                    holePath.reset()
+                    holePath.addRoundRect(
+                        androidx.compose.ui.geometry.RoundRect(left, top, left + w, top + h, androidx.compose.ui.geometry.CornerRadius(windowRadius.toPx() * p)),
                     )
+                    clipPath(holePath, androidx.compose.ui.graphics.ClipOp.Difference) { this@drawWithContent.drawContent() }
                 },
         ) {
             Box(Modifier.fillMaxSize().background(Page))
@@ -339,14 +351,18 @@ fun ProgrammeInfoScreen(
             // glcn: as much shade as this picture needs for the words over it to read, and no more — a pale picture
             // under the light theme (or a dark one under the dark theme) stays seen instead of washed out.
             val tone by ArtTone.of(art)
-            val need by androidx.compose.animation.core.animateFloatAsState(tone?.veil(light) ?: VEIL_UNREAD, androidx.compose.animation.core.tween(400), label = "infoVeil")
+            val needState = androidx.compose.animation.core.animateFloatAsState(tone?.veil(light) ?: VEIL_UNREAD, androidx.compose.animation.core.tween(400), label = "infoVeil")
+            // glcn: read while drawing, not composing — the shade's change no longer rebuilds the page on every frame.
             Box(
-                Modifier.fillMaxSize().background(
-                    Brush.horizontalGradient(
-                        0f to pg.copy(alpha = (need + 0.12f).coerceAtMost(0.96f)), 0.55f to pg.copy(alpha = need),
-                        0.75f to pg.copy(alpha = need * 0.55f), 1f to pg.copy(alpha = need * 0.3f),
-                    ),
-                ),
+                Modifier.fillMaxSize().drawBehind {
+                    val need = needState.value
+                    drawRect(
+                        Brush.horizontalGradient(
+                            0f to pg.copy(alpha = (need + 0.12f).coerceAtMost(0.96f)), 0.55f to pg.copy(alpha = need),
+                            0.75f to pg.copy(alpha = need * 0.55f), 1f to pg.copy(alpha = need * 0.3f),
+                        ),
+                    )
+                },
             )
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to pg.copy(alpha = 0.9f))))
             // glcn: the page takes a soft glow in the picture's own tone, as the film and series pages do.
@@ -645,6 +661,8 @@ private val SWAP_SHIFT = 90.mpx
 private const val QUICK_SWAP_MS = 350L
 /** glcn: how long a page change waits for the next page's picture and details before sliding in anyway. */
 private const val SWAP_READY_MS = 350L
+/** glcn: after a page has slid in, how long its picture, shade and tint still settle (counted as part of the swap). */
+private const val SWAP_SETTLE_MS = 700L
 private fun nowMsForSwap() = System.currentTimeMillis()
 /** glcn: how long a page rests before the channels either side are read ahead. */
 private const val PREFETCH_DELAY_MS = 250L
