@@ -109,7 +109,6 @@ fun ProgrammeInfoScreen(
     // (a press during the slide used to cancel the one before and the page stayed where it was).
     var target by remember { mutableStateOf(startChannel) }
     var swapJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    val warmResolver: ProgrammeArtResolver = org.koin.compose.koinInject()
     val swapContext = androidx.compose.ui.platform.LocalContext.current
     // glcn: the frames this page draws are told apart in the report ("info", and "info·swap" while ◀ ▶ change page).
     androidx.compose.runtime.DisposableEffect(Unit) {
@@ -117,6 +116,9 @@ fun ProgrammeInfoScreen(
         FrameWatch.screen = "info"
         onDispose { FrameWatch.screen = before }
     }
+    // glcn: the page on screen (its channel's schedule, repeats, synopsis and TMDB details), and how to read one.
+    var page by remember { mutableStateOf<InfoPage?>(null) }
+    var pageLoader: (suspend (ChannelEntity) -> InfoPage)? = null
     fun go(step: Int) {
         if (channels.size < 2) return
         val at = channels.indexOfFirst { it.id == target.id }.takeIf { it >= 0 } ?: return
@@ -129,28 +131,19 @@ fun ProgrammeInfoScreen(
         val calm = swapAnimated
         swapJob?.cancel()
         swapJob = swapScope.launch {
-            if (!calm) { channel = next; return@launch }
+            if (!calm) { page = pageLoader?.invoke(next); channel = next; return@launch }
             FrameWatch.screen = "info·swap"
-            // glcn: the next page is read while the old one leaves, so it comes in whole — before, its picture,
-            // title and cast arrived one by one after it had slid in, and the page seemed to catch.
-            val ready = async {
-                kotlinx.coroutines.withTimeoutOrNull(SWAP_READY_MS) {
-                    val rows = runCatching { loadSchedule(next) }.getOrNull().orEmpty()
-                    val onAir = rows.filter { nowMsForSwap() in it.startMs until it.stopMs }.maxByOrNull { it.startMs } ?: return@withTimeoutOrNull
-                    kotlinx.coroutines.coroutineScope {
-                        val film = async { runCatching { warmResolver.filmFor(onAir.title, onAir.categories) }.getOrNull() }
-                        val lent = async { runCatching { warmResolver.detailsFor(onAir.title, onAir.categories) }.getOrNull() }
-                        launch { runCatching { warmResolver.logoFor(onAir.title, onAir.categories) } }
-                        // glcn: and the picture itself, decoded, so the new page's backdrop is there as it slides in.
-                        pageArt(film.await(), lent.await(), onAir)?.let { u -> runCatching { tv.own.owntv.ui.components.warmProgrammeArt(swapContext, u) } }
-                    }
-                }
-            }
+            // glcn: the next page is read while the old one leaves and comes in whole, in one change.
+            val load = pageLoader
+            val ready = async { load?.invoke(next) }
             swap.animateTo(-step.toFloat(), androidx.compose.animation.core.tween(if (quick) 70 else SWAP_OUT_MS, easing = androidx.compose.animation.core.FastOutLinearInEasing))
-            if (quick) ready.cancel() else ready.await()
+            val p = kotlinx.coroutines.withTimeoutOrNull(if (quick) QUICK_READY_MS else SWAP_READY_MS) { ready.await() }
             channel = next
+            page = p ?: InfoPage(next.id, emptyList(), loading = true)
             swap.snapTo(step.toFloat())
             swap.animateTo(0f, androidx.compose.animation.core.tween(if (quick) 140 else SWAP_IN_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+            // Not ready in time (a slow server): it lands when it comes.
+            if (p == null) ready.await()?.let { if (channel.id == it.channelId) page = it }
             kotlinx.coroutines.delay(SWAP_SETTLE_MS)
             if (FrameWatch.screen == "info·swap") FrameWatch.screen = "info"
         }
@@ -176,80 +169,54 @@ fun ProgrammeInfoScreen(
     val dayFmt = remember { java.text.SimpleDateFormat("EEE d", java.util.Locale.getDefault()) }
     val nowMs = remember { System.currentTimeMillis() }
 
-    // What is on, and what follows: from the cache the zap lists already filled, so it is there at once.
-    val schedule by produceState<List<EpgProgrammeEntity>?>(null, channel.id) {
-        value = runCatching { loadSchedule(channel) }.getOrDefault(emptyList())
+    // glcn: everything a page shows, read in one go away from the screen and put on screen at once — before, the
+    // schedule, the week, the synopsis and TMDB's film each landed on its own frame while a page slid in (the old
+    // film's picture behind the new title, names before their faces), and the slide stuttered under them.
+    val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
+    suspend fun loadPage(ch: ChannelEntity): InfoPage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        val rows = runCatching { loadSchedule(ch) }.getOrDefault(emptyList())
+        val onAir = rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
+        if (onAir == null) return@withContext InfoPage(ch.id, rows)
+        kotlinx.coroutines.coroutineScope {
+            val week = async { runCatching { loadWeek(ch) }.getOrDefault(emptyList()) }
+            val synopsis = async {
+                onAir.description?.takeIf { it.isNotBlank() }
+                    ?: runCatching { epgDao.programmeDescription(onAir.id) }.getOrNull()?.takeIf { it.isNotBlank() }
+            }
+            val lent = async { runCatching { resolver.detailsFor(onAir.title, onAir.categories) }.getOrNull() }
+            val logo = async { runCatching { resolver.logoFor(onAir.title, onAir.categories) }.getOrNull() }
+            val film = async { runCatching { resolver.filmFor(onAir.title, onAir.categories) }.getOrNull() }
+            val f = film.await(); val l = lent.await()
+            // The picture decoded too, so it is on screen with the words.
+            pageArt(f, l, onAir)?.let { u -> runCatching { tv.own.owntv.ui.components.warmProgrammeArt(swapContext, u) } }
+            // glcn: the cast's faces too (TMDB's or Wikipedia's), briefly — so the page does not open on initials.
+            val people = f?.cast.orEmpty().ifEmpty { guideCast(synopsis.await()) }.take(CAST_WARM)
+            kotlinx.coroutines.withTimeoutOrNull(CAST_WARM_MS) {
+                people.map { m -> async { runCatching { warmCastFace(swapContext, m) } } }.forEach { it.await() }
+            }
+            InfoPage(ch.id, rows, airsAgain(onAir, week.await()), synopsis.await(), l, logo.await(), f, complete = true)
+        }
     }
+    pageLoader = { ch -> loadPage(ch) }
+    LaunchedEffect(Unit) { if (page == null) page = loadPage(startChannel) }
+    val shown = page?.takeIf { it.channelId == channel.id }
+    val schedule = shown?.rows
     val rows = schedule.orEmpty()
     // glcn: with overlapping guides, the one that started last — as the banner, the lists and Home pick it.
     val cur = rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
     // glcn: what follows — the rest of the evening, not two lines.
     val next = if (cur == null) emptyList() else rows.filter { it.startMs >= cur.stopMs }.take(NEXT_MAX)
-
-    // The week, read after the screen is up; the repeats are the same title again later.
-    val week by produceState<List<EpgProgrammeEntity>?>(null, channel.id) {
-        value = runCatching { loadWeek(channel) }.getOrDefault(emptyList())
-    }
-    // glcn: a daily show changes its title every night ("El hormiguero T21 · <guests>"), so a show is also
-    // found by its own name — the title without the episode, the season and what follows " · ". Never for
-    // sport (a league's name is the same for every match) nor for a name too short to tell shows apart:
-    // those still need the very same title.
-    // glcn: worked out away from the screen's thread — a week of titles folded twice took frames as a page slid in.
-    val againState = produceState(emptyList<Pair<EpgProgrammeEntity, String?>>(), cur?.id, week) {
-        val cur = cur ?: run { value = emptyList(); return@produceState }
-        val week = week
-        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-        val exact = ProgrammeArtResolver.fold(cur.title)
-        val show = ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(cur.title))
-        val byShow = show.length >= 4 && show != exact && !tv.own.owntv.core.live.SportsNow.isSport(cur)
-        week.orEmpty()
-            .filter { it.startMs >= cur.stopMs }
-            .mapNotNull { p ->
-                val t = ProgrammeArtResolver.fold(p.title)
-                when {
-                    t == exact -> p to null
-                    byShow && !tv.own.owntv.core.live.SportsNow.isSport(p) &&
-                        ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(p.title)) == show ->
-                        // Another night of the show: say which one (its guests, its episode).
-                        p to p.title.substringAfter(" · ", "").trim().takeIf { it.isNotBlank() }
-                    else -> null
-                }
-            }
-            .distinctBy { it.first.startMs }
-            .take(7)
-        }
-    }
-    val again = againState.value
-
-    // The zap cache keeps programmes without their synopsis (it is heavy); this one is read on demand.
-    val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
-    val ownSynopsis by produceState<String?>(null, cur?.id) {
-        val c = cur ?: return@produceState
-        value = c.description?.takeIf { it.isNotBlank() }
-            ?: runCatching { epgDao.programmeDescription(c.id) }.getOrNull()?.takeIf { it.isNotBlank() }
-    }
-
+    val again = shown?.again.orEmpty()
+    val ownSynopsis = shown?.synopsis
     // glcn: the names the guide gives after "Reparto:", for the cast panel and the Cast button.
     val guidePeople = remember(ownSynopsis) { guideCast(ownSynopsis) }
     var castOpen by remember(cur?.id) { mutableStateOf(false) }
-
     // TMDB lends the wide picture, the rating and a synopsis when the guide says little.
-    val lent by produceState<ProgrammeArtResolver.Info?>(null, cur?.title, cur?.categories) {
-        val c = cur ?: return@produceState
-        value = runCatching { resolver.detailsFor(c.title, c.categories) }.getOrNull()
-    }
-
+    val lent = shown?.lent
     // A film's own lettering, when TMDB has it, stands where its name would.
-    val titleLogo by produceState<String?>(null, cur?.title, cur?.categories) {
-        val c = cur ?: return@produceState
-        value = runCatching { resolver.logoFor(c.title, c.categories) }.getOrNull()
-    }
+    val titleLogo = shown?.titleLogo
     // glcn: a film on the channel, in full (TMDB): lettering, year, genres, rating, synopsis, cast and the wide picture.
-    // Warmed when the channel is tuned, so it is usually here at once.
-    val film by produceState<tv.own.owntv.core.metadata.MovieDetails?>(null, cur?.title, cur?.categories) {
-        val c = cur ?: return@produceState
-        value = runCatching { resolver.filmFor(c.title, c.categories) }.getOrNull()
-    }
+    val film = shown?.film
     val filmLogo = film?.logoPath?.let { tv.own.owntv.core.metadata.MetadataImages.logo(it) }
     // glcn: who is in it — TMDB's cast for a film, else the guide's names; the Cast button opens the cast page on them.
     val pageCast = film?.cast.orEmpty().ifEmpty { guidePeople }
@@ -341,7 +308,9 @@ fun ProgrammeInfoScreen(
                 },
         ) {
             Box(Modifier.fillMaxSize().background(Page))
-            val art = pageArt(film, lent, cur)
+            // glcn: while a page is still being read, the last picture stays rather than fading to nothing and back.
+            val lastArt = remember { arrayOfNulls<String>(1) }
+            val art = pageArt(film, lent, cur).also { if (it != null) lastArt[0] = it } ?: lastArt[0].takeIf { shown?.loading == true }
             androidx.compose.animation.Crossfade(targetState = art, animationSpec = androidx.compose.animation.core.tween(SWAP_IN_MS), label = "infoArt") { url ->
                 if (url != null) ProgrammeArt(url = url, modifier = Modifier.fillMaxSize())
             }
@@ -404,7 +373,7 @@ fun ProgrammeInfoScreen(
             Spacer(Modifier.height(26.mpx))
             if (cur == null) {
                 Text(
-                    if (schedule == null) "" else stringResource(R.string.glcn_pi_no_guide),
+                    if (schedule == null || shown?.loading == true) "" else stringResource(R.string.glcn_pi_no_guide),
                     style = stageText(26, 600), color = Soft,
                 )
             } else {
@@ -661,6 +630,11 @@ private val SWAP_SHIFT = 90.mpx
 private const val QUICK_SWAP_MS = 350L
 /** glcn: how long a page change waits for the next page's picture and details before sliding in anyway. */
 private const val SWAP_READY_MS = 350L
+/** glcn: under a held key, how long a page change waits for its page (the neighbours are usually read ahead). */
+private const val QUICK_READY_MS = 120L
+/** glcn: faces read ahead with a page, and for how long at most. */
+private const val CAST_WARM = 8
+private const val CAST_WARM_MS = 250L
 /** glcn: after a page has slid in, how long its picture, shade and tint still settle (counted as part of the swap). */
 private const val SWAP_SETTLE_MS = 700L
 private fun nowMsForSwap() = System.currentTimeMillis()
@@ -734,3 +708,42 @@ private fun pageArt(
     cur: EpgProgrammeEntity?,
 ): String? = film?.backdropPath?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w1280") }
     ?: lent?.backdropUrl ?: cur?.imageUrl?.takeIf { it.isNotBlank() }
+
+/** glcn: one page of the programme screen, read in one go — see ProgrammeInfoScreen's loadPage. */
+private data class InfoPage(
+    val channelId: Long,
+    val rows: List<EpgProgrammeEntity>,
+    val again: List<Pair<EpgProgrammeEntity, String?>> = emptyList(),
+    val synopsis: String? = null,
+    val lent: ProgrammeArtResolver.Info? = null,
+    val titleLogo: String? = null,
+    val film: tv.own.owntv.core.metadata.MovieDetails? = null,
+    val complete: Boolean = false,
+    /** Still being read (shown as an empty page, not as "no guide"). */
+    val loading: Boolean = false,
+)
+
+/**
+ * glcn: when [cur] airs again this week. A daily show changes its title every night ("El hormiguero T21 · <guests>"),
+ * so a show is also found by its own name — the title without the episode, the season and what follows " · ". Never
+ * for sport (a league's name is the same for every match) nor for a name too short to tell shows apart.
+ */
+private fun airsAgain(cur: EpgProgrammeEntity, week: List<EpgProgrammeEntity>): List<Pair<EpgProgrammeEntity, String?>> {
+    val exact = ProgrammeArtResolver.fold(cur.title)
+    val show = ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(cur.title))
+    val byShow = show.length >= 4 && show != exact && !tv.own.owntv.core.live.SportsNow.isSport(cur)
+    return week
+        .filter { it.startMs >= cur.stopMs }
+        .mapNotNull { p ->
+            val t = ProgrammeArtResolver.fold(p.title)
+            when {
+                t == exact -> p to null
+                byShow && !tv.own.owntv.core.live.SportsNow.isSport(p) &&
+                    ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(p.title)) == show ->
+                    p to p.title.substringAfter(" · ", "").trim().takeIf { it.isNotBlank() }
+                else -> null
+            }
+        }
+        .distinctBy { it.first.startMs }
+        .take(7)
+}

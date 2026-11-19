@@ -84,6 +84,14 @@ private fun FacePhoto(p: CastMember, face: Dp) {
     }
 }
 
+/** glcn: a face fetched ahead (its photo found and decoded at the face's size), for a page about to show it. */
+internal suspend fun warmCastFace(context: android.content.Context, p: CastMember) {
+    val url = MetadataImages.profile(p.profilePath, FACE_PHOTO) ?: runCatching { Wiki.person(p.name)?.photo }.getOrNull() ?: return
+    coil3.SingletonImageLoader.get(context).execute(coil3.request.ImageRequest.Builder(context).data(url).size(FACE_WARM_PX).build())
+}
+
+private const val FACE_WARM_PX = 256
+
 private fun initialsOf(name: String) = name.split(' ').filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1).uppercase() }
 
 /**

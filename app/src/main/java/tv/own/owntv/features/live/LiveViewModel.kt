@@ -175,7 +175,9 @@ class LiveViewModel(
         }
         val rows = guideReader.slice(listOf(channel), custom.value, epgOffset.value, now, now + 14 * 3_600_000L)[channel.id]
             .orEmpty().filter { it.stopMs > now }.sortedBy { it.startMs }.take(12)
-        synchronized(scheduleCache) { scheduleCache[channel.id] = now to rows }
+        // glcn: an empty answer is not kept — read while the guide was still loading, it hid the channel's programmes
+        // ("the guide has nothing") for five minutes.
+        if (rows.isNotEmpty()) synchronized(scheduleCache) { scheduleCache[channel.id] = now to rows }
         return rows
     }
 
@@ -186,7 +188,7 @@ class LiveViewModel(
         synchronized(weekCache) { weekCache[channel.id] }?.takeIf { now - it.first < 10 * 60_000L }?.let { return it.second }
         val rows = guideReader.slice(listOf(channel), custom.value, epgOffset.value, now, now + 7 * 24 * 3_600_000L)[channel.id]
             .orEmpty().filter { it.stopMs > now }.sortedBy { it.startMs }
-        synchronized(weekCache) { weekCache[channel.id] = now to rows }
+        if (rows.isNotEmpty()) synchronized(weekCache) { weekCache[channel.id] = now to rows }
         return rows
     }
 
