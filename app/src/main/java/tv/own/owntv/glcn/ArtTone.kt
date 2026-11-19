@@ -46,6 +46,7 @@ class ArtTone(val brightness: Float, val vivid: Color?) {
         private const val DARK_VEIL_MIN = 0.30f
         private const val LIGHT_VEIL_MIN = 0.50f
         private const val VEIL_MAX = 0.88f
+        private const val HUE_BINS = 24
         private const val SAMPLE_W = 64
         private const val SAMPLE_H = 36
         private const val MIN_VIVID_WEIGHT = 0.04f
@@ -73,18 +74,28 @@ class ArtTone(val brightness: Float, val vivid: Color?) {
                 val px = IntArray(w * h).also { bmp.getPixels(it, 0, w, 0, 0, w, h) }
                 val lum = FloatArray(px.size)
                 val hsv = FloatArray(3)
-                var wr = 0f; var wg = 0f; var wb = 0f; var wt = 0f
+                // glcn: the picture's leading colour — the hue that covers the most of it (weighted by how vivid each spot
+                // is), not the average of all its colours: a pink-and-yellow poster with a blue jacket came out blue.
+                val br = FloatArray(HUE_BINS); val bg = FloatArray(HUE_BINS); val bb = FloatArray(HUE_BINS); val bw = FloatArray(HUE_BINS)
+                var wt = 0f
                 for (i in px.indices) {
                     val c = px[i]
                     val r = AColor.red(c) / 255f; val g = AColor.green(c) / 255f; val b = AColor.blue(c) / 255f
                     lum[i] = 0.2126f * r + 0.7152f * g + 0.0722f * b
                     AColor.colorToHSV(c, hsv)
                     val wgt = hsv[1] * hsv[1] * hsv[2]
-                    wr += r * wgt; wg += g * wgt; wb += b * wgt; wt += wgt
+                    val bin = ((hsv[0] / 360f) * HUE_BINS).toInt().coerceIn(0, HUE_BINS - 1)
+                    br[bin] += r * wgt; bg[bin] += g * wgt; bb[bin] += b * wgt; bw[bin] += wgt; wt += wgt
                 }
                 lum.sort()
                 val bright = lum[(lum.size * 3) / 4]
-                val vivid = if (wt / px.size >= MIN_VIVID_WEIGHT) Color(wr / wt, wg / wt, wb / wt) else null
+                // The leading hue with its two neighbours, so a colour split across a bin edge still counts whole.
+                val lead = (0 until HUE_BINS).maxByOrNull { k -> bw[k] + 0.5f * (bw[(k + 1) % HUE_BINS] + bw[(k + HUE_BINS - 1) % HUE_BINS]) } ?: 0
+                val ks = listOf((lead + HUE_BINS - 1) % HUE_BINS, lead, (lead + 1) % HUE_BINS)
+                val lw = ks.sumOf { bw[it].toDouble() }.toFloat()
+                val vivid = if (wt / px.size >= MIN_VIVID_WEIGHT && lw > 0f)
+                    Color(ks.sumOf { br[it].toDouble() }.toFloat() / lw, ks.sumOf { bg[it].toDouble() }.toFloat() / lw, ks.sumOf { bb[it].toDouble() }.toFloat() / lw)
+                else null
                 ArtTone(bright, vivid)
             }
         }.getOrNull()

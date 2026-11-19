@@ -918,7 +918,8 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
 }
 
 /** glcn: the card under the picture, and the room left under it. */
-private val DECK_CARD = Color(0xFF0E1726)
+// glcn: a neutral graphite when the picture has no colour of its own (it was navy, so every grey picture read blue).
+private val DECK_CARD = Color(0xFF15191D)
 /** The veil until the picture has been read: strong, so text never shows unreadable for a moment. */
 private const val VEIL_UNREAD = 0.7f
 private val DECK_FOOT = 28.mpx
@@ -1029,6 +1030,8 @@ private fun DeckInfoPanel(
                 val fit = (maxHeight / 50.mpx).toInt().coerceAtLeast(1)
                 val at = coming.indexOfFirst { it.index == selected }
                 val start = if (at >= fit) at - fit + 1 else 0
+                val schedAccent = stageAccent
+                val schedPalette = tv.own.owntv.ui.theme.LocalStagePalette.current
                 Column(verticalArrangement = Arrangement.spacedBy(2.mpx)) {
                     for ((i, r) in coming.drop(start).take(fit)) {
                         val lit = i == selected
@@ -1037,7 +1040,13 @@ private fun DeckInfoPanel(
                                 .fillMaxWidth()
                                 .height(48.mpx)
                                 .clip(RoundedCornerShape(12.mpx))
-                                .background(if (lit) stageAccent.accent else Color.Transparent)
+                                // glcn: with glass on, the lit row is the glass focus (its words in the glass ink) — the
+                                // solid accent bar under glass-ink words read as a blank white bar.
+                                .then(
+                                    if (!lit) Modifier
+                                    else if (tv.own.owntv.glcn.GlassFocus.active) Modifier.drawBehind { drawStageFocus(StageFocus.FX, 12.mpx, schedAccent, schedPalette) }
+                                    else Modifier.background(stageAccent.accent),
+                                )
                                 .padding(horizontal = 12.mpx),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(16.mpx),
