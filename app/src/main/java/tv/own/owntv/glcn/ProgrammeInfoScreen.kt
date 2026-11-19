@@ -119,6 +119,10 @@ fun ProgrammeInfoScreen(
     // glcn: the page on screen (its channel's schedule, repeats, synopsis and TMDB details), and how to read one.
     var page by remember { mutableStateOf<InfoPage?>(null) }
     var pageLoader: (suspend (ChannelEntity) -> InfoPage)? = null
+    var baseLoader: (suspend (ChannelEntity) -> InfoPage)? = null
+    var extrasLoader: (suspend (InfoPage) -> InfoPage)? = null
+    // glcn: pages already read (this screen's channel and its neighbours), so ◀ ▶ usually find theirs whole.
+    val pageCache = remember { java.util.concurrent.ConcurrentHashMap<Long, InfoPage>() }
     fun go(step: Int) {
         if (channels.size < 2) return
         val at = channels.indexOfFirst { it.id == target.id }.takeIf { it >= 0 } ?: return
@@ -133,17 +137,23 @@ fun ProgrammeInfoScreen(
         swapJob = swapScope.launch {
             if (!calm) { page = pageLoader?.invoke(next); channel = next; return@launch }
             FrameWatch.screen = "info·swap"
-            // glcn: the next page is read while the old one leaves and comes in whole, in one change.
-            val load = pageLoader
-            val ready = async { load?.invoke(next) }
+            // glcn: no waiting between the two halves — a pause there read as a catch. The next page is the one read
+            // ahead when there is one; else the guide's part is read while the old page leaves (it is on the device)
+            // and what TMDB and the pictures add comes in after, in one more change.
+            val cached = pageCache[next.id]?.takeIf { it.complete }
+            val base = if (cached != null) null else async { baseLoader?.invoke(next) }
             swap.animateTo(-step.toFloat(), androidx.compose.animation.core.tween(if (quick) 70 else SWAP_OUT_MS, easing = androidx.compose.animation.core.FastOutLinearInEasing))
-            val p = kotlinx.coroutines.withTimeoutOrNull(if (quick) QUICK_READY_MS else SWAP_READY_MS) { ready.await() }
+            val first = cached ?: kotlinx.coroutines.withTimeoutOrNull(BASE_WAIT_MS) { base?.await() }
             channel = next
-            page = p ?: InfoPage(next.id, emptyList(), loading = true)
+            page = first ?: InfoPage(next.id, emptyList(), loading = true)
             swap.snapTo(step.toFloat())
             swap.animateTo(0f, androidx.compose.animation.core.tween(if (quick) 140 else SWAP_IN_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
-            // Not ready in time (a slow server): it lands when it comes.
-            if (p == null) ready.await()?.let { if (channel.id == it.channelId) page = it }
+            if (first?.complete != true) {
+                val b = first ?: base?.await()
+                if (b != null && channel.id == next.id && page?.loading == true) page = b
+                val full = b?.let { extrasLoader?.invoke(it) }
+                if (full != null) { pageCache[next.id] = full; if (channel.id == next.id) page = full }
+            }
             kotlinx.coroutines.delay(SWAP_SETTLE_MS)
             if (FrameWatch.screen == "info·swap") FrameWatch.screen = "info"
         }
@@ -173,32 +183,53 @@ fun ProgrammeInfoScreen(
     // schedule, the week, the synopsis and TMDB's film each landed on its own frame while a page slid in (the old
     // film's picture behind the new title, names before their faces), and the slide stuttered under them.
     val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
-    suspend fun loadPage(ch: ChannelEntity): InfoPage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+    // Two steps: the guide's own part (fast, from the device) and what TMDB and the pictures add (network, bounded).
+    suspend fun loadBase(ch: ChannelEntity): InfoPage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
         val rows = runCatching { loadSchedule(ch) }.getOrDefault(emptyList())
         val onAir = rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
-        if (onAir == null) return@withContext InfoPage(ch.id, rows)
+            ?: return@withContext InfoPage(ch.id, rows, complete = true)
         kotlinx.coroutines.coroutineScope {
             val week = async { runCatching { loadWeek(ch) }.getOrDefault(emptyList()) }
-            val synopsis = async {
-                onAir.description?.takeIf { it.isNotBlank() }
-                    ?: runCatching { epgDao.programmeDescription(onAir.id) }.getOrNull()?.takeIf { it.isNotBlank() }
-            }
+            val synopsis = onAir.description?.takeIf { it.isNotBlank() }
+                ?: runCatching { epgDao.programmeDescription(onAir.id) }.getOrNull()?.takeIf { it.isNotBlank() }
+            InfoPage(ch.id, rows, airsAgain(onAir, week.await()), synopsis)
+        }
+    }
+    suspend fun loadExtras(base: InfoPage): InfoPage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        val onAir = base.rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
+            ?: return@withContext base.copy(complete = true)
+        kotlinx.coroutines.coroutineScope {
             val lent = async { runCatching { resolver.detailsFor(onAir.title, onAir.categories) }.getOrNull() }
             val logo = async { runCatching { resolver.logoFor(onAir.title, onAir.categories) }.getOrNull() }
             val film = async { runCatching { resolver.filmFor(onAir.title, onAir.categories) }.getOrNull() }
             val f = film.await(); val l = lent.await()
-            // The picture decoded too, so it is on screen with the words.
-            pageArt(f, l, onAir)?.let { u -> runCatching { tv.own.owntv.ui.components.warmProgrammeArt(swapContext, u) } }
-            // glcn: the cast's faces too (TMDB's or Wikipedia's), briefly — so the page does not open on initials.
-            val people = f?.cast.orEmpty().ifEmpty { guideCast(synopsis.await()) }.take(CAST_WARM)
+            // The picture and the faces decoded too, each for a short while at most.
+            kotlinx.coroutines.withTimeoutOrNull(ART_WARM_MS) {
+                pageArt(f, l, onAir)?.let { u -> runCatching { tv.own.owntv.ui.components.warmProgrammeArt(swapContext, u) } }
+            }
+            val people = f?.cast.orEmpty().ifEmpty { guideCast(base.synopsis) }.take(CAST_WARM)
             kotlinx.coroutines.withTimeoutOrNull(CAST_WARM_MS) {
                 people.map { m -> async { runCatching { warmCastFace(swapContext, m) } } }.forEach { it.await() }
             }
-            InfoPage(ch.id, rows, airsAgain(onAir, week.await()), synopsis.await(), l, logo.await(), f, complete = true)
+            base.copy(lent = l, titleLogo = logo.await(), film = f, complete = true)
         }
     }
+    suspend fun loadPage(ch: ChannelEntity): InfoPage {
+        pageCache[ch.id]?.takeIf { it.complete }?.let { return it }
+        val full = loadExtras(loadBase(ch))
+        pageCache[ch.id] = full
+        return full
+    }
     pageLoader = { ch -> loadPage(ch) }
-    LaunchedEffect(Unit) { if (page == null) page = loadPage(startChannel) }
+    baseLoader = { ch -> loadBase(ch) }
+    extrasLoader = { b -> loadExtras(b) }
+    LaunchedEffect(Unit) {
+        if (page != null) return@LaunchedEffect
+        val base = loadBase(startChannel)
+        if (page == null) page = base
+        val full = loadExtras(base).also { pageCache[startChannel.id] = it }
+        if (channel.id == startChannel.id) page = full
+    }
     val shown = page?.takeIf { it.channelId == channel.id }
     val schedule = shown?.rows
     val rows = schedule.orEmpty()
@@ -236,12 +267,8 @@ fun ProgrammeInfoScreen(
         for (d in listOf(1, -1, 2, -2)) {
             val n = channels[((at + d) % channels.size + channels.size) % channels.size]
             if (n.id == channel.id) continue
-            val rows = runCatching { loadSchedule(n) }.getOrNull().orEmpty()
-            val onAir = rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs } ?: continue
-            val f = runCatching { resolver.filmFor(onAir.title, onAir.categories) }.getOrNull()
-            val l = runCatching { resolver.detailsFor(onAir.title, onAir.categories) }.getOrNull()
-            // glcn: the neighbours' pictures too, decoded ahead — the page's backdrop is the heaviest thing it brings.
-            pageArt(f, l, onAir)?.let { u -> runCatching { tv.own.owntv.ui.components.warmProgrammeArt(swapContext, u) } }
+            // glcn: the whole page, into the cache ◀ ▶ take from.
+            runCatching { loadPage(n) }
         }
     }
     var showTech by remember { mutableStateOf(false) }
@@ -632,6 +659,10 @@ private const val QUICK_SWAP_MS = 350L
 private const val SWAP_READY_MS = 350L
 /** glcn: under a held key, how long a page change waits for its page (the neighbours are usually read ahead). */
 private const val QUICK_READY_MS = 120L
+/** glcn: how long a page change waits for the guide's part of the next page (read from the device). */
+private const val BASE_WAIT_MS = 120L
+/** glcn: how long a page's picture may take to come in ahead of it. */
+private const val ART_WARM_MS = 1500L
 /** glcn: faces read ahead with a page, and for how long at most. */
 private const val CAST_WARM = 8
 private const val CAST_WARM_MS = 250L

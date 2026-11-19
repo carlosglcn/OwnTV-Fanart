@@ -120,3 +120,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🗓️ Programme info and player lists: an empty schedule read while the guide was still loading is no longer kept for five minutes (it showed "the guide has nothing for this channel").
 - 🗓️ Big playlists: the guide of groups hidden in every profile is no longer downloaded and stored — far less guide data for lists of thousands of channels, so the Guide, Home and the lists are lighter. A group shown again gets its guide on the next refresh.
 - 💬 Series and films: the kind of subtitle you pick is remembered with its language — "Spanish (full)" comes back on the next episode instead of the forced-only Spanish track listed first.
+- 🎞️ Programme info: ◀ ▶ no longer pause between pages — the next page is the one read ahead, or its guide part (from the device) comes at once and TMDB's picture and details follow; a slow picture can no longer leave a page empty.
