@@ -40,6 +40,7 @@ import tv.own.owntv.features.shell.components.vodCategoryEntries
 import tv.own.owntv.features.shell.components.vodCount
 import tv.own.owntv.features.shell.components.vodLine
 import tv.own.owntv.features.shell.components.vodRating
+import tv.own.owntv.features.shell.components.vodRuntime
 import tv.own.owntv.features.shell.components.vodSortLabel
 import tv.own.owntv.ui.stage.StageKeyHints
 import tv.own.owntv.ui.stage.StagePoster
@@ -87,6 +88,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
@@ -276,9 +278,13 @@ fun MoviesScreen(
     var runwayAt by androidx.compose.runtime.saveable.rememberSaveable(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
     var runwayWindow by remember { mutableStateOf(0..0) }
     val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
+    // glcn: "Keep watching" above the posters, in All, while something is under way (the strip is the lists' first item).
+    val stripMovies by vm.continueStrip.collectAsStateWithLifecycle()
+    val showStrip = stripMovies.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
+    val stripOffset = if (showStrip && !runway) 1 else 0
     suspend fun scrollToIndex(i: Int) {
         if (runway) { runwayAt = i; return }
-        runCatching { if (usesList) effectiveListState.scrollToItem(i) else effectiveGridState.scrollToItem(i) }
+        runCatching { if (usesList) effectiveListState.scrollToItem(i + stripOffset) else effectiveGridState.scrollToItem(i + stripOffset) }
     }
     val stepper = remember { VodStepper(scope) { effectiveListState } }
     val playlistMarks by vm.playlistMarks.collectAsStateWithLifecycle()
@@ -537,6 +543,25 @@ fun MoviesScreen(
         vm.onMovieFocused(movie)
         if (rememberMovies) perCategoryMovieIds[selectedKey] = movie.id
     }
+    val stripCards = stripMovies.map { m ->
+        val prog = movieProgress[m.id]
+        val left = prog?.takeIf { it.durationMs > 0 }?.let { ((it.durationMs - it.positionMs) / 1000).toInt().coerceAtLeast(60) }
+        tv.own.owntv.glcn.StripCard(
+            key = m.id, title = m.name, image = m.backdropUrl ?: runwayBackdrops[m.id] ?: m.posterUrl,
+            line = left?.let { stringResource(R.string.home_time_left, vodRuntime(it)) },
+            progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
+        )
+    }
+    val continueStrip: @Composable (Dp, Dp) -> Unit = { start, end ->
+        tv.own.owntv.glcn.ContinueStrip(
+            stripCards, start, end,
+            onFocus = { i -> stripMovies.getOrNull(i)?.let { vm.onMovieFocused(it) } },
+            // OK plays it on from where it stopped; hold OK opens its page.
+            onClick = { i -> stripMovies.getOrNull(i)?.let { playMovieNow(it) } },
+            onLongClick = { i -> stripMovies.getOrNull(i)?.let { titleMovie = it } },
+            modifier = Modifier.padding(bottom = 18.mpx),
+        )
+    }
     val posterOf: (MovieEntity) -> String? = {
         val own = it.posterUrl?.takeIf { u -> u.isNotBlank() }
         if (it.id in overridden) cachedPosters[it.id] ?: own else own ?: cachedPosters[it.id]
@@ -720,6 +745,7 @@ fun MoviesScreen(
                         val glide = remember(effectiveGridState) { tv.own.owntv.glcn.GlideScroller(effectiveGridState, glideScope) }
                         if (runway) {
                             Spacer(Modifier.height(10.mpx))
+                            if (showStrip) continueStrip(fx(84), fx(64))
                             tv.own.owntv.glcn.PosterRunway(
                                 count = movies.itemCount,
                                 focusedAt = runwayAt.coerceIn(0, (movies.itemCount - 1).coerceAtLeast(0)),
@@ -773,6 +799,14 @@ fun MoviesScreen(
                                     contentPadding = PaddingValues(start = fx(84), end = fx(64), top = 14.mpx, bottom = glowRoom),
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
+                                    if (showStrip) item(key = STRIP_KEY, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }, contentType = STRIP_KEY) {
+                                        // The strip spans the row, bleeding to the grid's edges.
+                                        Box(Modifier.layout { m, c ->
+                                            val bleed = (fx(84) + fx(64)).roundToPx()
+                                            val pl = m.measure(c.copy(minWidth = c.maxWidth + bleed, maxWidth = c.maxWidth + bleed))
+                                            layout(c.maxWidth, pl.height) { pl.place(-fx(84).roundToPx(), 0) }
+                                        }) { continueStrip(fx(84), fx(64)) }
+                                    }
                                     items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
                                         // glcn: a poster still on its way shows its shape, shimmering, instead of a gap.
                                         val movie = movies[index] ?: run { tv.own.owntv.glcn.SkeletonPoster(); return@items }
@@ -795,7 +829,7 @@ fun MoviesScreen(
                                                     selectedId = targetMovieId, selectedFocus = selFocus,
                                                     firstItemFocus = firstItemFocus,
                                                 )
-                                                .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); glide.focused(index) } }
+                                                .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); glide.focused(index + stripOffset) } }
                                                 .onPreviewKeyEvent { e ->
                                                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                     when (e.key) {
@@ -898,6 +932,7 @@ fun MoviesScreen(
                             contentPadding = PaddingValues(start = glowRoom, end = glowRoom, bottom = 16.mpx),
                             modifier = Modifier.fillMaxWidth().weight(1f).then(glowWide),
                         ) {
+                            if (showStrip) item(key = STRIP_KEY, contentType = STRIP_KEY) { continueStrip(0.mpx, 0.mpx) }
                             items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
                                 val movie = movies[index] ?: return@items
                                 val prog = movieProgress[movie.id]
@@ -951,6 +986,9 @@ fun MoviesScreen(
                                 contentPadding = PaddingValues(start = glowRoom, end = glowRoom, top = 12.mpx, bottom = 24.mpx),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
+                                if (showStrip) item(key = STRIP_KEY, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }, contentType = STRIP_KEY) {
+                                    continueStrip(0.mpx, 0.mpx)
+                                }
                                 items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
                                     val movie = movies[index] ?: return@items
                                     val prog = movieProgress[movie.id]
@@ -1421,3 +1459,6 @@ internal fun movieTitleInfo(
         tmdbId = meta?.tmdbId,
     )
 }
+
+/** glcn: the Keep watching strip's key in the lists (never a film id). */
+private const val STRIP_KEY = "glcn_strip"

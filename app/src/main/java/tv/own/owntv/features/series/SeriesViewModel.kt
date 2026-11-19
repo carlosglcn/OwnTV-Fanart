@@ -668,6 +668,35 @@ class SeriesViewModel(
     /** Per-episode resume progress for the open series (keyed by episode id). Reactive so the UI's watched
      *  indicators, season counts, "Hide watched" filter, and "Next up" card update the instant a position
      *  is saved — no manual refresh needed. Re-seeds when the profile or open series changes. */
+    /** glcn: one card of the "Keep watching" strip: the show, the episode that is next and how far it is seen. */
+    data class StripShow(val series: SeriesEntity, val season: Int, val episode: Int, val progress: Float?, val episodeId: Long = 0L, val positionMs: Long = 0L)
+
+    /** glcn: the shows under way, newest first, each with the episode it stands at — the strip above the posters. */
+    val continueStrip: StateFlow<List<StripShow>> = ctx
+        .flatMapLatest { c ->
+            if (c.profileId < 0 || c.sourceIds.isEmpty()) flowOf(emptyList())
+            else seriesDao.observeContinue(c.profileId, c.sourceIds, STRIP_MAX).map { shows -> stripShows(c.profileId, shows) }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private suspend fun stripShows(profileId: Long, shows: List<SeriesEntity>): List<StripShow> {
+        if (shows.isEmpty()) return emptyList()
+        val seen = runCatching { seriesDao.lastSeenEpisodes(profileId, shows.map { it.id }) }.getOrDefault(emptyList())
+            .groupBy { it.seriesId }.mapValues { it.value.first() }
+        return shows.map { show ->
+            val last = seen[show.id]
+            when {
+                last == null -> StripShow(show, 0, 0, null)
+                // Finished: the next one, from its start.
+                last.durationMs > 0 && last.positionMs >= last.durationMs * 0.95f -> {
+                    val nextEp = runCatching { seriesDao.episodeAfter(show.id, last.season, last.episode) }.getOrNull()
+                    if (nextEp != null) StripShow(show, nextEp.seasonNumber, nextEp.episodeNumber, null, nextEp.id) else StripShow(show, last.season, last.episode, 1f, last.episodeId)
+                }
+                else -> StripShow(show, last.season, last.episode, if (last.durationMs > 0) last.positionMs.toFloat() / last.durationMs else null, last.episodeId, last.positionMs)
+            }
+        }
+    }
+
     val episodeProgress: StateFlow<Map<Long, PlaybackProgressEntity>> =
         combine(ctx, _openedSeries) { c, s -> c to s }
             .flatMapLatest { (c, s) ->
@@ -1571,3 +1600,6 @@ class SeriesViewModel(
             .map { tv.own.owntv.features.shell.components.RelatedUi(it.name, it.posterUrl, it.year) }
     }
 }
+
+/** glcn: how many shows the Keep watching strip shows at most (the category lists them all). */
+private const val STRIP_MAX = 20

@@ -341,9 +341,13 @@ private fun SeriesGrid(
     var runwayAt by androidx.compose.runtime.saveable.rememberSaveable(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
     var runwayWindow by remember { mutableStateOf(0..0) }
     val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
+    // glcn: "Keep watching" above the posters, in All, while something is under way (the strip is the lists' first item).
+    val stripShows by vm.continueStrip.collectAsStateWithLifecycle()
+    val showStrip = stripShows.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
+    val stripOffset = if (showStrip && !runway) 1 else 0
     suspend fun scrollToIndex(i: Int) {
         if (runway) { runwayAt = i; return }
-        runCatching { if (usesList) effectiveListState.scrollToItem(i) else effectiveGridState.scrollToItem(i) }
+        runCatching { if (usesList) effectiveListState.scrollToItem(i + stripOffset) else effectiveGridState.scrollToItem(i + stripOffset) }
     }
     val stepper = remember { VodStepper(scope) { effectiveListState } }
     val playlistMarks by vm.playlistMarks.collectAsStateWithLifecycle()
@@ -608,6 +612,23 @@ private fun SeriesGrid(
         vm.onSeriesFocused(show)
         if (rememberSeries) perCategorySeriesIds[selectedKey] = show.id
     }
+    val stripCards = stripShows.map { st ->
+        tv.own.owntv.glcn.StripCard(
+            key = st.series.id, title = st.series.name, image = st.series.backdropUrl ?: st.series.posterUrl,
+            line = if (st.season > 0 || st.episode > 0) stringResource(R.string.glcn_cine_episode_code, st.season, st.episode) else null,
+            progress = st.progress,
+        )
+    }
+    val continueStrip: @Composable (androidx.compose.ui.unit.Dp, androidx.compose.ui.unit.Dp) -> Unit = { start, end ->
+        tv.own.owntv.glcn.ContinueStrip(
+            stripCards, start, end,
+            onFocus = { i -> stripShows.getOrNull(i)?.let { vm.onSeriesFocused(it.series) } },
+            // OK opens the show's page, where Play goes on with the episode it stands at.
+            onClick = { i -> stripShows.getOrNull(i)?.let { vm.openSeries(it.series) } },
+            onLongClick = { i -> stripShows.getOrNull(i)?.let { vm.openSeries(it.series) } },
+            modifier = Modifier.padding(bottom = 18.mpx),
+        )
+    }
     val posterOf: (tv.own.owntv.core.database.entity.SeriesEntity) -> String? = {
         val own = it.posterUrl?.takeIf { u -> u.isNotBlank() }
         if (it.id in overridden) cachedPosters[it.id] ?: own else own ?: cachedPosters[it.id]
@@ -748,6 +769,7 @@ private fun SeriesGrid(
                         val glide = remember(effectiveGridState) { tv.own.owntv.glcn.GlideScroller(effectiveGridState, glideScope) }
                         if (runway) {
                             Spacer(Modifier.height(10.mpx))
+                            if (showStrip) continueStrip(fx(84), fx(64))
                             tv.own.owntv.glcn.PosterRunway(
                                 count = series.itemCount,
                                 focusedAt = runwayAt.coerceIn(0, (series.itemCount - 1).coerceAtLeast(0)),
@@ -799,6 +821,14 @@ private fun SeriesGrid(
                                     contentPadding = PaddingValues(start = fx(84), end = fx(64), top = 14.mpx, bottom = glowRoom),
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
+                                    if (showStrip) item(key = STRIP_KEY, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }, contentType = STRIP_KEY) {
+                                        // The strip spans the row, bleeding to the grid's edges.
+                                        Box(Modifier.layout { m, c ->
+                                            val bleed = (fx(84) + fx(64)).roundToPx()
+                                            val pl = m.measure(c.copy(minWidth = c.maxWidth + bleed, maxWidth = c.maxWidth + bleed))
+                                            layout(c.maxWidth, pl.height) { pl.place(-fx(84).roundToPx(), 0) }
+                                        }) { continueStrip(fx(84), fx(64)) }
+                                    }
                                     items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
                                         // glcn: a poster still on its way shows its shape, shimmering, instead of a gap.
                                         val show = series[index] ?: run { tv.own.owntv.glcn.SkeletonPoster(); return@items }
@@ -819,7 +849,7 @@ private fun SeriesGrid(
                                                     selectedId = targetSeriesId, selectedFocus = gridSelFocus,
                                                     firstItemFocus = firstItemFocus,
                                                 )
-                                                .onFocusChanged { if (it.isFocused) { onShowFocus(show); glide.focused(index) } }
+                                                .onFocusChanged { if (it.isFocused) { onShowFocus(show); glide.focused(index + stripOffset) } }
                                                 .onPreviewKeyEvent { e ->
                                                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                     when (e.key) {
@@ -922,6 +952,7 @@ private fun SeriesGrid(
                             contentPadding = PaddingValues(start = glowRoom, end = glowRoom, bottom = 16.mpx),
                             modifier = Modifier.fillMaxWidth().weight(1f).then(glowWide),
                         ) {
+                            if (showStrip) item(key = STRIP_KEY, contentType = STRIP_KEY) { continueStrip(0.mpx, 0.mpx) }
                             items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
                                 val show = series[index] ?: return@items
                                 VodListRow(
@@ -973,6 +1004,9 @@ private fun SeriesGrid(
                                 contentPadding = PaddingValues(start = glowRoom, end = glowRoom, top = 12.mpx, bottom = 24.mpx),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
+                                if (showStrip) item(key = STRIP_KEY, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }, contentType = STRIP_KEY) {
+                                    continueStrip(0.mpx, 0.mpx)
+                                }
                                 items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
                                     // glcn: a poster still on its way shows its shape, shimmering, instead of a gap.
                                     val show = series[index] ?: run { tv.own.owntv.glcn.SkeletonPoster(); return@items }
@@ -2218,3 +2252,6 @@ private fun episodeLine(aired: String?, durationSecs: Int?, secondsLeft: Int?, w
 private val SEASON_GHOST_SIZE = 380.mpx
 private val SEASON_GHOST_TOP = 560.mpx
 private val SEASON_GHOST_START = 1260.mpx
+
+/** glcn: the Keep watching strip's key in the lists (never a show id). */
+private const val STRIP_KEY = "glcn_strip"

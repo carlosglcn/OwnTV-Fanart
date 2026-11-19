@@ -539,6 +539,11 @@ class MovieViewModel(
 
     /** Resume/watched progress for the visible movies, keyed by movie id — drives the ✓ tick and the
      *  in-progress bar on posters/list rows. Only started/finished movies have a row, so this is small. */
+    /** glcn: the films under way, newest first — the "Keep watching" strip above the posters (in All). */
+    val continueStrip: StateFlow<List<MovieEntity>> = ctx
+        .flatMapLatest { c -> if (c.profileId < 0 || c.sourceIds.isEmpty()) flowOf(emptyList()) else movieDao.observeContinue(c.profileId, c.sourceIds, STRIP_MAX) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val movieProgress: StateFlow<Map<Long, PlaybackProgressEntity>> = ctx
         .flatMapLatest { c -> if (c.profileId < 0) flowOf(emptyList()) else progressDao.observeMovieProgress(c.profileId) }
         .map { list -> list.associateBy { it.itemId } }
@@ -1202,3 +1207,6 @@ class MovieViewModel(
             .map { tv.own.owntv.features.shell.components.RelatedUi(it.name, it.posterUrl, it.year ?: it.parsedYear) }
     }
 }
+
+/** glcn: how many titles the Keep watching strip shows at most (the category lists them all). */
+private const val STRIP_MAX = 20
