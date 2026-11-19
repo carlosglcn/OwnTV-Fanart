@@ -46,6 +46,8 @@
          is needed. From Android 11 the app can only see that recogniser if it names the action here;
          without it Search would hide the microphone even where one exists. -->
     <queries>
+        <!-- glcn: the TV settings app, to open its screensaver page (DreamSetting). -->
+        <package android:name="com.android.tv.settings" />
         <intent>
             <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
         </intent>

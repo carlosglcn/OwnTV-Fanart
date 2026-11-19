@@ -41,10 +41,26 @@ private fun isOurDream(context: Context): Boolean = runCatching {
     Settings.Secure.getString(context.contentResolver, SCREENSAVER_COMPONENTS)?.contains(context.packageName) == true
 }.getOrDefault(false)
 
+// glcn: the TV's own screensaver page first (Device preferences › Screensaver). On the SHIELD the generic
+// "dream settings" action is not handled by the TV settings app, and Android answered with its side panel of
+// quick settings; only a page that really resolves is opened, the general one as the last resort.
 private fun openDreamSettings(context: Context) {
-    val tries = listOf(Intent(Settings.ACTION_DREAM_SETTINGS), Intent(Settings.ACTION_DISPLAY_SETTINGS), Intent(Settings.ACTION_SETTINGS))
-    for (i in tries) if (runCatching { context.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
+    val tries = listOf(
+        Intent().setClassName(TV_SETTINGS_PKG, TV_DAYDREAM_ACTIVITY),
+        Intent(Settings.ACTION_DREAM_SETTINGS).setPackage(TV_SETTINGS_PKG),
+        Intent(Settings.ACTION_DREAM_SETTINGS),
+        Intent(Settings.ACTION_DISPLAY_SETTINGS).setPackage(TV_SETTINGS_PKG),
+        Intent(Settings.ACTION_SETTINGS),
+    )
+    val pm = context.packageManager
+    for (i in tries) {
+        if (i.resolveActivity(pm) == null) continue
+        if (runCatching { context.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
+    }
 }
+
+private const val TV_SETTINGS_PKG = "com.android.tv.settings"
+private const val TV_DAYDREAM_ACTIVITY = "com.android.tv.settings.device.display.daydream.DaydreamActivity"
 
 private const val SCREENSAVER_COMPONENTS = "screensaver_components"
 private const val DREAM_ROW_KEY = "glcn_dream"
