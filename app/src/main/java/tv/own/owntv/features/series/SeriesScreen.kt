@@ -1916,6 +1916,22 @@ private fun EpisodeView(
                 contextEpisode = null
                 if (watched) vm.markEpisodeUnwatched(ep) else vm.markEpisodeWatched(ep)
             })
+            // glcn: the whole season, and the whole show, at once — each toggles by whether all of it is seen.
+            val seasonEps = episodes.filter { it.seasonNumber == ep.seasonNumber }
+            if (seasonEps.size > 1) {
+                val seasonSeen = seasonEps.all { it.id in completedIds }
+                add(MenuAction("mark_season", stringResource(if (seasonSeen) R.string.glcn_mark_season_unwatched else R.string.glcn_mark_season_watched, ep.seasonNumber), OwnTVIcon.CHECK, group = VodGroupLibrary) {
+                    contextEpisode = null
+                    vm.markEpisodesWatched(seasonEps, !seasonSeen)
+                })
+            }
+            if (episodes.map { it.seasonNumber }.distinct().size > 1) {
+                val showSeen = episodes.all { it.id in completedIds }
+                add(MenuAction("mark_series", stringResource(if (showSeen) R.string.glcn_mark_series_unwatched else R.string.glcn_mark_series_watched), OwnTVIcon.CHECK, group = VodGroupLibrary) {
+                    contextEpisode = null
+                    vm.markEpisodesWatched(episodes, !showSeen)
+                })
+            }
             add(MenuAction("tmdb_details", stringResource(R.string.content_episode_details), OwnTVIcon.INFO, group = VodGroupDetails) {
                 if (metadataMode.enrich && cacheForEp != null) { contextEpisode = null; detailsEpisode = ep }
             })

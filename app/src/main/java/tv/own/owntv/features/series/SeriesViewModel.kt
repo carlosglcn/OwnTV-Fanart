@@ -734,6 +734,26 @@ class SeriesViewModel(
         tv.own.owntv.core.trakt.TraktSync.watchedEpisode(profileId, series, episode)
     }
 
+    /**
+     * glcn: a season or a whole show marked seen (or unseen) at once, with the same sentinel as [markEpisodeWatched];
+     * episodes already seen keep their own record. Keep watching then moves on to the first unseen one, or drops the
+     * show. Trakt is told only of single episodes, not of a whole season in one go.
+     */
+    fun markEpisodesWatched(episodes: List<EpisodeEntity>, watched: Boolean) {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            val done = completedEpisodeIds.value
+            for (e in episodes) {
+                if (watched) {
+                    if (e.id in done) continue
+                    progressDao.save(PlaybackProgressEntity(profileId = pid, mediaType = MediaType.EPISODE, itemId = e.id, positionMs = 1L, durationMs = 1L))
+                } else {
+                    userDataWriter.clearProgress(pid, MediaType.EPISODE, e.id)
+                }
+            }
+        }
+    }
+
     /** Mark an episode as unwatched — clears its resume position (removes the ✓ and any progress bar). */
     fun markEpisodeUnwatched(episode: EpisodeEntity) {
         viewModelScope.launch {
