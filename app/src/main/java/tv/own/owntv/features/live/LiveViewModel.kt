@@ -173,8 +173,15 @@ class LiveViewModel(
         synchronized(scheduleCache) { scheduleCache[channel.id] }?.takeIf { now - it.first < 5 * 60_000L }?.let { (_, rows) ->
             return rows.filter { it.stopMs > now }
         }
-        val rows = guideReader.slice(listOf(channel), custom.value, epgOffset.value, now, now + 14 * 3_600_000L)[channel.id]
+        val stored = guideReader.slice(listOf(channel), custom.value, epgOffset.value, now, now + 14 * 3_600_000L)[channel.id]
             .orEmpty().filter { it.stopMs > now }.sortedBy { it.startMs }.take(12)
+        // glcn: nothing stored is not nothing on — the provider's own short guide answers for such a channel (it is
+        // what the banner shows), so the info page asks it too, for a moment at most.
+        val rows = stored.ifEmpty {
+            kotlinx.coroutines.withTimeoutOrNull(PROVIDER_GUIDE_WAIT_MS) {
+                guideReader.row(channel, custom.value, epgOffset.value, now, now + 14 * 3_600_000L, withText = true)
+            }.orEmpty().filter { it.stopMs > now }.sortedBy { it.startMs }.take(12)
+        }
         // glcn: an empty answer is not kept — read while the guide was still loading, it hid the channel's programmes
         // ("the guide has nothing") for five minutes.
         if (rows.isNotEmpty()) synchronized(scheduleCache) { scheduleCache[channel.id] = now to rows }
@@ -2905,6 +2912,8 @@ class LiveViewModel(
         /** How long a remembered category may wait for the complete rail before the channel's own
          *  folder is used instead — a startup must not hold the list on a slow, large playlist. */
         private const val RAIL_WAIT_MS = 2_000L
+        /** glcn: how long the info page waits for the provider's short guide when nothing is stored. */
+        private const val PROVIDER_GUIDE_WAIT_MS = 3_000L
         val defaultRail = listOf(
             LiveRailItem(LiveKey.Favorites, icon = OwnTVIcon.FAVORITE),
             LiveRailItem(LiveKey.History, icon = OwnTVIcon.HISTORY),

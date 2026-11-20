@@ -1454,6 +1454,8 @@
 2	empty	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	EEE d
 2	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	info
+1	log	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	info page: details of channel ${base.channelId} took $took ms
+1	log	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	info page: guide part of channel ${ch.id} took $took ms (${rows.size} rows)
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	infoArt
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	infoVeil
 2	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	info·swap

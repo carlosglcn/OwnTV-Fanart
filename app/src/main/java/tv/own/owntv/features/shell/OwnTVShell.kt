@@ -2636,6 +2636,7 @@ fun OwnTVShell(
                         channels = zapChannels,
                         onTune = { ch -> showProgramInfo = false; liveVm.ensurePlaying(ch) },
                         onOpenFilm = { m -> showProgramInfo = false; exitPlayer(); homeFilm = m },
+                        seed = remember(infoChannel.id) { tv.own.owntv.glcn.infoSeed(liveVm.nowNext.value) },
                     ) else showProgramInfo = false
                 }
                 if (showCopies) {

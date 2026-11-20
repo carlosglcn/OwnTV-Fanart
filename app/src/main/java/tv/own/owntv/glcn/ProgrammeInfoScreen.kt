@@ -6,6 +6,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
+import kotlinx.coroutines.ensureActive
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -98,6 +99,12 @@ fun ProgrammeInfoScreen(
     onTune: ((ChannelEntity) -> Unit)? = null,
     /** glcn: a film picked on the cast page — its page, out of the player. */
     onOpenFilm: ((tv.own.owntv.core.database.entity.MovieEntity) -> Unit)? = null,
+    /**
+     * glcn: what the player's banner already knows about [startChannel] (what is on, what follows) — see [infoSeed].
+     * The page opens on it at once, whatever the guide's own read takes, and keeps it when the stored guide has
+     * nothing for a channel whose programmes come from the provider.
+     */
+    seed: List<EpgProgrammeEntity> = emptyList(),
 ) {
     // glcn: the channel whose page is shown — the one playing at first; the window keeps playing that one throughout.
     var channel by remember { mutableStateOf(startChannel) }
@@ -120,8 +127,9 @@ fun ProgrammeInfoScreen(
     var page by remember { mutableStateOf<InfoPage?>(null) }
     var pageLoader: (suspend (ChannelEntity) -> InfoPage)? = null
     var baseLoader: (suspend (ChannelEntity) -> InfoPage)? = null
-    var extrasLoader: (suspend (InfoPage) -> InfoPage)? = null
+    var extrasLoader: (suspend (ChannelEntity, InfoPage) -> InfoPage)? = null
     // glcn: pages already read (this screen's channel and its neighbours), so ◀ ▶ usually find theirs whole.
+    val nowMs = remember { System.currentTimeMillis() }
     val pageCache = remember { java.util.concurrent.ConcurrentHashMap<Long, InfoPage>() }
     fun go(step: Int) {
         if (channels.size < 2) return
@@ -151,8 +159,8 @@ fun ProgrammeInfoScreen(
             if (first?.complete != true) {
                 val b = first ?: base?.await()
                 if (b != null && channel.id == next.id && page?.loading == true) page = b
-                val full = b?.let { extrasLoader?.invoke(it) }
-                if (full != null) { pageCache[next.id] = full; if (channel.id == next.id) page = full }
+                val full = b?.let { extrasLoader?.invoke(next, it) }
+                if (full != null) { if (full.onAir(nowMs) != null) pageCache[next.id] = full; if (channel.id == next.id) page = full }
             }
             kotlinx.coroutines.delay(SWAP_SETTLE_MS)
             if (FrameWatch.screen == "info·swap") FrameWatch.screen = "info"
@@ -177,60 +185,91 @@ fun ProgrammeInfoScreen(
     val resolver: ProgrammeArtResolver = org.koin.compose.koinInject()
     val timeFmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
     val dayFmt = remember { java.text.SimpleDateFormat("EEE d", java.util.Locale.getDefault()) }
-    val nowMs = remember { System.currentTimeMillis() }
 
     // glcn: everything a page shows, read in one go away from the screen and put on screen at once — before, the
     // schedule, the week, the synopsis and TMDB's film each landed on its own frame while a page slid in (the old
     // film's picture behind the new title, names before their faces), and the slide stuttered under them.
     val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
-    // Two steps: the guide's own part (fast, from the device) and what TMDB and the pictures add (network, bounded).
-    suspend fun loadBase(ch: ChannelEntity): InfoPage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-        val rows = runCatching { loadSchedule(ch) }.getOrDefault(emptyList())
+    // Two steps: the guide's own part (what is on and what follows — from the device, at once) and everything else
+    // (the week's repeats, TMDB, the picture, the faces), each bounded in time.
+    //
+    // glcn: none of this runs on Dispatchers.Default. Right after the app starts, the guide's refresh and the channel
+    // matcher keep every one of that pool's threads busy for minutes, and a page read there simply waited its turn:
+    // the screen opened empty and filled in "much later". The guide and TMDB calls are safe to make from here (they
+    // move to their own threads); only the week's repeats are worked out aside, on the elastic IO pool.
+    suspend fun loadBase(ch: ChannelEntity): InfoPage {
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        val rows = quiet { loadSchedule(ch) }.orEmpty()
         val onAir = rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
-            ?: return@withContext InfoPage(ch.id, rows, complete = true)
-        kotlinx.coroutines.coroutineScope {
-            val week = async { runCatching { loadWeek(ch) }.getOrDefault(emptyList()) }
-            val synopsis = onAir.description?.takeIf { it.isNotBlank() }
-                ?: runCatching { epgDao.programmeDescription(onAir.id) }.getOrNull()?.takeIf { it.isNotBlank() }
-            InfoPage(ch.id, rows, airsAgain(onAir, week.await()), synopsis)
-        }
+        val synopsis = onAir?.description?.takeIf { it.isNotBlank() }
+            ?: onAir?.let { kotlinx.coroutines.withTimeoutOrNull(SYNOPSIS_WAIT_MS) { quiet { epgDao.programmeDescription(it.id) } } }?.takeIf { it.isNotBlank() }
+        val took = android.os.SystemClock.elapsedRealtime() - t0
+        if (took > SLOW_PAGE_MS) tv.own.owntv.player.LiveDiagnosticsLog.event("info page: guide part of channel ${ch.id} took $took ms (${rows.size} rows)")
+        return InfoPage(ch.id, rows, synopsis = synopsis, complete = onAir == null)
     }
-    suspend fun loadExtras(base: InfoPage): InfoPage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+    // [warm]: also decode the picture and the faces ahead — for a page read before it is shown (the neighbours); a
+    // page already on screen gets its details as soon as they are known and lets its pictures load in place.
+    suspend fun loadExtras(ch: ChannelEntity, base: InfoPage, warm: Boolean): InfoPage {
         val onAir = base.rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
-            ?: return@withContext base.copy(complete = true)
-        kotlinx.coroutines.coroutineScope {
-            val lent = async { runCatching { resolver.detailsFor(onAir.title, onAir.categories) }.getOrNull() }
-            val logo = async { runCatching { resolver.logoFor(onAir.title, onAir.categories) }.getOrNull() }
-            val film = async { runCatching { resolver.filmFor(onAir.title, onAir.categories) }.getOrNull() }
-            val f = film.await(); val l = lent.await()
-            // The picture and the faces decoded too, each for a short while at most.
-            kotlinx.coroutines.withTimeoutOrNull(ART_WARM_MS) {
-                pageArt(f, l, onAir)?.let { u -> runCatching { tv.own.owntv.ui.components.warmProgrammeArt(swapContext, u) } }
+            ?: return base.copy(complete = true)
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        return kotlinx.coroutines.coroutineScope {
+            val again = async {
+                kotlinx.coroutines.withTimeoutOrNull(WEEK_WAIT_MS) {
+                    val week = quiet { loadWeek(ch) }.orEmpty()
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { airsAgain(onAir, week) }
+                }.orEmpty()
             }
-            val people = f?.cast.orEmpty().ifEmpty { guideCast(base.synopsis) }.take(CAST_WARM)
-            kotlinx.coroutines.withTimeoutOrNull(CAST_WARM_MS) {
-                people.map { m -> async { runCatching { warmCastFace(swapContext, m) } } }.forEach { it.await() }
+            val synopsis = async {
+                base.synopsis ?: kotlinx.coroutines.withTimeoutOrNull(TMDB_WAIT_MS) { quiet { epgDao.programmeDescription(onAir.id) } }?.takeIf { it.isNotBlank() }
             }
-            base.copy(lent = l, titleLogo = logo.await(), film = f, complete = true)
+            val lent = async { kotlinx.coroutines.withTimeoutOrNull(TMDB_WAIT_MS) { quiet { resolver.detailsFor(onAir.title, onAir.categories) } } }
+            val logo = async { kotlinx.coroutines.withTimeoutOrNull(TMDB_WAIT_MS) { quiet { resolver.logoFor(onAir.title, onAir.categories) } } }
+            val film = async { kotlinx.coroutines.withTimeoutOrNull(TMDB_WAIT_MS) { quiet { resolver.filmFor(onAir.title, onAir.categories) } } }
+            val f = film.await(); val l = lent.await(); val syn = synopsis.await()
+            if (warm) {
+                kotlinx.coroutines.withTimeoutOrNull(ART_WARM_MS) {
+                    pageArt(f, l, onAir)?.let { u -> quiet { tv.own.owntv.ui.components.warmProgrammeArt(swapContext, u) } }
+                }
+                val people = f?.cast.orEmpty().ifEmpty { guideCast(syn) }.take(CAST_WARM)
+                kotlinx.coroutines.withTimeoutOrNull(CAST_WARM_MS) {
+                    people.map { m -> async { quiet { warmCastFace(swapContext, m) } } }.forEach { it.await() }
+                }
+            }
+            val full = base.copy(again = again.await(), synopsis = syn, lent = l, titleLogo = logo.await(), film = f, complete = true)
+            val took = android.os.SystemClock.elapsedRealtime() - t0
+            if (took > SLOW_EXTRAS_MS) tv.own.owntv.player.LiveDiagnosticsLog.event("info page: details of channel ${base.channelId} took $took ms")
+            full
         }
     }
     suspend fun loadPage(ch: ChannelEntity): InfoPage {
         pageCache[ch.id]?.takeIf { it.complete }?.let { return it }
-        val full = loadExtras(loadBase(ch))
-        pageCache[ch.id] = full
+        val full = loadExtras(ch, loadBase(ch), warm = true)
+        // glcn: only a page that was read to its end, and that has something on, is kept — a read cut short (the
+        // screen moved on) came back as "nothing on" and was kept as the channel's page.
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        if (full.onAir(nowMs) != null) pageCache[ch.id] = full
         return full
     }
     pageLoader = { ch -> loadPage(ch) }
     baseLoader = { ch -> loadBase(ch) }
-    extrasLoader = { b -> loadExtras(b) }
+    extrasLoader = { c, b -> loadExtras(c, b, warm = false) }
+    // glcn: the banner's own now/next for the channel playing, as a page — on screen from the first frame.
+    val seedPage = remember(seed) {
+        seed.takeIf { rows -> rows.any { nowMs in it.startMs until it.stopMs } }
+            ?.let { rows -> InfoPage(startChannel.id, rows, synopsis = rows.firstOrNull { nowMs in it.startMs until it.stopMs }?.description?.takeIf { d -> d.isNotBlank() }) }
+    }
     LaunchedEffect(Unit) {
-        if (page != null) return@LaunchedEffect
-        val base = loadBase(startChannel)
-        if (page == null) page = base
-        val full = loadExtras(base).also { pageCache[startChannel.id] = it }
+        val read = loadBase(startChannel)
+        // The stored guide may have nothing for a channel the provider answers for: the banner's page stays then.
+        val base = if (read.onAir(nowMs) != null) read else seedPage ?: read
+        if (channel.id == startChannel.id) page = base
+        val full = loadExtras(startChannel, base, warm = false)
+        if (full.onAir(nowMs) != null) pageCache[startChannel.id] = full
         if (channel.id == startChannel.id) page = full
     }
-    val shown = page?.takeIf { it.channelId == channel.id }
+    val real = page?.takeIf { it.channelId == channel.id }
+    val shown = if (channel.id == startChannel.id && seedPage != null && (real == null || real.loading || real.onAir(nowMs) == null)) seedPage else real
     val schedule = shown?.rows
     val rows = schedule.orEmpty()
     // glcn: with overlapping guides, the one that started last — as the banner, the lists and Home pick it.
@@ -663,6 +702,14 @@ private const val QUICK_READY_MS = 120L
 private const val BASE_WAIT_MS = 120L
 /** glcn: how long a page's picture may take to come in ahead of it. */
 private const val ART_WARM_MS = 1500L
+/** glcn: how long the guide's part of a page waits for the synopsis (a single row; the details bring it later if not). */
+private const val SYNOPSIS_WAIT_MS = 250L
+/** glcn: how long a page's details wait for the week's repeats, and for each TMDB answer. */
+private const val WEEK_WAIT_MS = 4_000L
+private const val TMDB_WAIT_MS = 4_000L
+/** glcn: page reads slower than this are noted in the report. */
+private const val SLOW_PAGE_MS = 400L
+private const val SLOW_EXTRAS_MS = 3_000L
 /** glcn: faces read ahead with a page, and for how long at most. */
 private const val CAST_WARM = 8
 private const val CAST_WARM_MS = 250L
@@ -752,7 +799,34 @@ private data class InfoPage(
     val complete: Boolean = false,
     /** Still being read (shown as an empty page, not as "no guide"). */
     val loading: Boolean = false,
-)
+) {
+    /** The programme on air at [at]: with overlapping guides, the one that started last. */
+    fun onAir(at: Long): EpgProgrammeEntity? = rows.filter { at in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
+}
+
+/** glcn: [block]'s answer, or null when it fails — but never swallowing a cancellation, which must end the read. */
+private inline fun <T> quiet(block: () -> T): T? = try {
+    block()
+} catch (c: kotlinx.coroutines.CancellationException) {
+    throw c
+} catch (_: Throwable) {
+    null
+}
+
+/**
+ * glcn: the player banner's now/next as guide rows, for [ProgrammeInfoScreen]'s first frame: what is on (with its
+ * synopsis and the details the guide gave) and what follows. Empty when the banner knows nothing.
+ */
+fun infoSeed(epg: tv.own.owntv.core.live.EpgNowNext?): List<EpgProgrammeEntity> {
+    val now = epg?.now ?: return emptyList()
+    fun row(e: tv.own.owntv.core.parser.XtEpgEntry, d: tv.own.owntv.core.parser.EpgDetails? = null) = EpgProgrammeEntity(
+        id = e.programmeId, sourceId = 0L, epgChannelId = String(), startMs = e.startMs, stopMs = e.stopMs, title = e.title,
+        description = e.description, categories = d?.categories, year = d?.year, rating = d?.rating,
+        lengthMin = d?.lengthMin, episode = d?.episode, imageUrl = d?.imageUrl,
+    )
+    return (listOf(row(now, epg.nowDetails)) + (listOfNotNull(epg.next) + epg.upcoming).map { row(it) })
+        .distinctBy { it.startMs }.sortedBy { it.startMs }
+}
 
 /**
  * glcn: when [cur] airs again this week. A daily show changes its title every night ("El hormiguero T21 · <guests>"),
