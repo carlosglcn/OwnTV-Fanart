@@ -129,7 +129,12 @@ fun ProgrammeInfoScreen(
     var baseLoader: (suspend (ChannelEntity) -> InfoPage)? = null
     var extrasLoader: (suspend (ChannelEntity, InfoPage) -> InfoPage)? = null
     // glcn: pages already read (this screen's channel and its neighbours), so ◀ ▶ usually find theirs whole.
-    val nowMs = remember { System.currentTimeMillis() }
+    // glcn: the clock moves while the screen is open. It was read once, on opening: walking the channels across the
+    // hour, the guide (asked at the real time) no longer gave the programme that had just ended, the page's own
+    // stopped clock was not yet at the next one, and a channel with a full guide said "nothing right now".
+    val nowMs by androidx.compose.runtime.produceState(System.currentTimeMillis()) {
+        while (true) { kotlinx.coroutines.delay(CLOCK_TICK_MS); value = System.currentTimeMillis() }
+    }
     val pageCache = remember { java.util.concurrent.ConcurrentHashMap<Long, InfoPage>() }
     fun go(step: Int) {
         if (channels.size < 2) return
@@ -148,7 +153,7 @@ fun ProgrammeInfoScreen(
             // glcn: no waiting between the two halves — a pause there read as a catch. The next page is the one read
             // ahead when there is one; else the guide's part is read while the old page leaves (it is on the device)
             // and what TMDB and the pictures add comes in after, in one more change.
-            val cached = pageCache[next.id]?.takeIf { it.complete }
+            val cached = pageCache[next.id]?.takeIf { it.fresh(nowMs) }
             val base = if (cached != null) null else async { baseLoader?.invoke(next) }
             swap.animateTo(-step.toFloat(), androidx.compose.animation.core.tween(if (quick) 70 else SWAP_OUT_MS, easing = androidx.compose.animation.core.FastOutLinearInEasing))
             val first = cached ?: kotlinx.coroutines.withTimeoutOrNull(BASE_WAIT_MS) { base?.await() }
@@ -236,14 +241,14 @@ fun ProgrammeInfoScreen(
                     people.map { m -> async { quiet { warmCastFace(swapContext, m) } } }.forEach { it.await() }
                 }
             }
-            val full = base.copy(again = again.await(), synopsis = syn, lent = l, titleLogo = logo.await(), film = f, complete = true)
+            val full = base.copy(again = again.await(), synopsis = syn, lent = l, titleLogo = logo.await(), film = f, complete = true, forStart = onAir.startMs)
             val took = android.os.SystemClock.elapsedRealtime() - t0
             if (took > SLOW_EXTRAS_MS) tv.own.owntv.player.LiveDiagnosticsLog.event("info page: details of channel ${base.channelId} took $took ms")
             full
         }
     }
     suspend fun loadPage(ch: ChannelEntity): InfoPage {
-        pageCache[ch.id]?.takeIf { it.complete }?.let { return it }
+        pageCache[ch.id]?.takeIf { it.fresh(nowMs) }?.let { return it }
         val full = loadExtras(ch, loadBase(ch), warm = true)
         // glcn: only a page that was read to its end, and that has something on, is kept — a read cut short (the
         // screen moved on) came back as "nothing on" and was kept as the channel's page.
@@ -274,6 +279,19 @@ fun ProgrammeInfoScreen(
     val rows = schedule.orEmpty()
     // glcn: with overlapping guides, the one that started last — as the banner, the lists and Home pick it.
     val cur = rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
+    // glcn: the programme changed while its page was on screen (or the page was read for the one before): read again,
+    // so the title, the picture and the cast are the new programme's, not the last one's under a new title.
+    LaunchedEffect(channel.id, cur?.startMs) {
+        val p = page?.takeIf { it.channelId == channel.id && it.complete } ?: return@LaunchedEffect
+        if (p.forStart == cur?.startMs) return@LaunchedEffect
+        val ch = channel
+        val base = loadBase(ch)
+        if (base.onAir(nowMs) == null) return@LaunchedEffect
+        if (channel.id == ch.id) page = base
+        val full = loadExtras(ch, base, warm = false)
+        if (full.onAir(nowMs) != null) pageCache[ch.id] = full
+        if (channel.id == ch.id) page = full
+    }
     // glcn: what follows — the rest of the evening, not two lines.
     val next = if (cur == null) emptyList() else rows.filter { it.startMs >= cur.stopMs }.take(NEXT_MAX)
     val again = shown?.again.orEmpty()
@@ -712,6 +730,7 @@ private const val SLOW_PAGE_MS = 400L
 private const val SLOW_EXTRAS_MS = 3_000L
 /** glcn: faces read ahead with a page, and for how long at most. */
 private const val CAST_WARM = 8
+private const val CLOCK_TICK_MS = 15_000L
 private const val CAST_WARM_MS = 250L
 /** glcn: after a page has slid in, how long its picture, shade and tint still settle (counted as part of the swap). */
 private const val SWAP_SETTLE_MS = 700L
@@ -797,11 +816,16 @@ private data class InfoPage(
     val titleLogo: String? = null,
     val film: tv.own.owntv.core.metadata.MovieDetails? = null,
     val complete: Boolean = false,
+    /** The start of the programme the details (TMDB, repeats) were read for; null when nothing was on. */
+    val forStart: Long? = null,
     /** Still being read (shown as an empty page, not as "no guide"). */
     val loading: Boolean = false,
 ) {
     /** The programme on air at [at]: with overlapping guides, the one that started last. */
     fun onAir(at: Long): EpgProgrammeEntity? = rows.filter { at in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
+
+    /** Read whole, and for the programme that is on at [at] — not for the one before it. */
+    fun fresh(at: Long): Boolean = complete && forStart != null && onAir(at)?.startMs == forStart
 }
 
 /** glcn: [block]'s answer, or null when it fails — but never swallowing a cancellation, which must end the read. */
