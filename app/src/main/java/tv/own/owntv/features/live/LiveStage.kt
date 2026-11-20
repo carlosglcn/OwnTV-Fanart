@@ -1,5 +1,6 @@
 package tv.own.owntv.features.live
 
+import tv.own.owntv.glcn.edgeGive
 import tv.own.owntv.glcn.groupGlyph
 import tv.own.owntv.ui.theme.stageTone
 import tv.own.owntv.ui.theme.stageShadow
@@ -951,7 +952,7 @@ internal fun LiveCategories(
         }
         // Edge-only scrolling, as the channel list (no double step on ▼).
         androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
-        tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f)) {
+        tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f).edgeGive()) {
         LazyColumn(
             state = listState,
             modifier = Modifier

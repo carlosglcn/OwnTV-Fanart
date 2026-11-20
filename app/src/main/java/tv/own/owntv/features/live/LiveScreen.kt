@@ -1,5 +1,6 @@
 package tv.own.owntv.features.live
 
+import tv.own.owntv.glcn.edgeGive
 import tv.own.owntv.ui.stage.drawStageFocus
 import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.draw.drawBehind
@@ -1124,7 +1125,7 @@ fun LiveScreen(
                         tv.own.owntv.glcn.LocalQuietFocus provides wheel.turning,
                     ) {
                     // glcn: the channel highlight slides from row to row with a little give, instead of jumping.
-                    tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f), stiffness = tv.own.owntv.glcn.CHANNEL_FOCUS_STIFFNESS, damping = tv.own.owntv.glcn.CHANNEL_FOCUS_DAMPING) {
+                    tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f).edgeGive(), stiffness = tv.own.owntv.glcn.CHANNEL_FOCUS_STIFFNESS, damping = tv.own.owntv.glcn.CHANNEL_FOCUS_DAMPING) {
                     LazyColumn(
                         state = effectiveListState,
                         verticalArrangement = Arrangement.spacedBy(8.mpx),

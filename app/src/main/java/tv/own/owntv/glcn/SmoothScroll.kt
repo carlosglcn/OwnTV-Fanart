@@ -45,9 +45,9 @@ object SmoothScroll {
     val elasticAnimation: AnimationSpec<Float>
         get() = when {
             still -> snap<Float>()
-            // glcn: no give with the Subtle style — the list glides and stops.
-            tv.own.owntv.ui.stage.GlcnMotion.subtle -> FollowSpring(GLIDE_OMEGA)
-            else -> androidx.compose.animation.core.spring(dampingRatio = ELASTIC_DAMPING, stiffness = ELASTIC_STIFFNESS)
+            // glcn: the lists glide and stop, as Home and Settings do — the give at every step read as a bounce that
+            // people turned animations off to be rid of. The give is kept for the list's ends ([edgeGive]).
+            else -> FollowSpring(GLIDE_OMEGA)
         }
 
     /** The app-wide default: scroll only as far as the focused item needs, eased. */
@@ -136,8 +136,6 @@ val NoBringIntoViewSpec = object : BringIntoViewSpec {
 private const val GLIDE_OMEGA = 16f
 private const val HOME_OMEGA = 10f
 private const val LIST_OMEGA = 22f
-private const val ELASTIC_DAMPING = 0.62f
-private const val ELASTIC_STIFFNESS = 220f
 /** glcn: the settings highlight's slide, in step with [SmoothScroll.listAnimation]. */
 const val SETTINGS_FOCUS_STIFFNESS = 900f
 

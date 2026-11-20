@@ -1,5 +1,6 @@
 package tv.own.owntv.features.epg
 
+import tv.own.owntv.glcn.edgeGive
 import androidx.compose.foundation.background
 import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.ui.stage.backdropLeftWash
@@ -819,6 +820,7 @@ fun EpgScreen(
                             modifier = Modifier
                                 .padding(start = fx(48), end = fx(64), top = 48.mpx)
                                 .fillMaxSize()
+                                .edgeGive()
                                 .onFocusChanged { gridHasFocus = it.hasFocus }
                                 .focusProperties { onEnter = { runCatching { rowFocus(focusedRow.coerceIn(0, state.channels.size - 1)).requestFocus() } } }
                                 .focusGroup(),
