@@ -1,5 +1,9 @@
 package tv.own.owntv.glcn
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -77,6 +81,42 @@ fun ContinueStrip(
         }
     }
 }
+
+/**
+ * glcn: the Runway's page under its toolbar — the strip and the row of posters do not both fit there, and drawn one
+ * over the other they overlapped. They are one page that moves: on the strip, the strip is whole and the posters'
+ * tops show below; on the posters, the row is whole and the strip's foot shows above. What is cut fades out.
+ */
+fun Modifier.runwayPage(scroll: androidx.compose.foundation.ScrollState): Modifier = this
+    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val fade = RUNWAY_FADE.mpx.toPx()
+        if (scroll.value > 0) drawRect(
+            androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color.Transparent, androidx.compose.ui.graphics.Color.Black), startY = 0f, endY = fade),
+            size = androidx.compose.ui.geometry.Size(size.width, fade), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+        )
+        if (scroll.value < scroll.maxValue) drawRect(
+            androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color.Black, androidx.compose.ui.graphics.Color.Transparent), startY = size.height - fade, endY = size.height),
+            topLeft = androidx.compose.ui.geometry.Offset(0f, size.height - fade), size = androidx.compose.ui.geometry.Size(size.width, fade),
+            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+        )
+    }
+    .clipToBounds()
+    .verticalScroll(scroll, enabled = false)
+
+/** glcn: the page follows the focus — up to the strip, down to the posters. */
+@Composable
+fun RunwayPageFollow(scroll: androidx.compose.foundation.ScrollState, onStrip: Boolean) {
+    androidx.compose.runtime.LaunchedEffect(onStrip, scroll.maxValue) {
+        val to = if (onStrip) 0 else scroll.maxValue
+        if (LowRam.on || tv.own.owntv.ui.stage.GlcnMotion.off) scroll.scrollTo(to)
+        else scroll.animateScrollTo(to, androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = RUNWAY_PAGE_STIFFNESS))
+    }
+}
+
+private const val RUNWAY_FADE = 46
+private const val RUNWAY_PAGE_STIFFNESS = 260f
 
 /** glcn: the strip's cards, wide and lower than the 196 × 294 posters. */
 private const val STRIP_W = 300

@@ -541,7 +541,20 @@ class MovieViewModel(
      *  in-progress bar on posters/list rows. Only started/finished movies have a row, so this is small. */
     /** glcn: the films under way, newest first — the "Keep watching" strip above the posters (in All). */
     val continueStrip: StateFlow<List<MovieEntity>> = ctx
-        .flatMapLatest { c -> if (c.profileId < 0 || c.sourceIds.isEmpty()) flowOf(emptyList()) else movieDao.observeContinue(c.profileId, c.sourceIds, STRIP_MAX) }
+        .flatMapLatest { c ->
+            if (c.profileId < 0 || c.sourceIds.isEmpty()) flowOf(emptyList())
+            else combine(
+                movieDao.observeContinue(c.profileId, c.sourceIds, STRIP_MAX),
+                progressDao.observeMovieProgress(c.profileId),
+                tv.own.owntv.glcn.StripDismissed.marks,
+            ) { films, progress, gone ->
+                // glcn: taken out for good — away while it stands at the minute it was left (see StripDismissed).
+                if (gone.isEmpty()) films else {
+                    val at = progress.associate { it.itemId to it.positionMs }
+                    films.filter { tv.own.owntv.glcn.StripDismissed.film(c.profileId, it.sourceId, it.name, at[it.id] ?: 0L) !in gone }
+                }
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val movieProgress: StateFlow<Map<Long, PlaybackProgressEntity>> = ctx
@@ -1090,6 +1103,17 @@ class MovieViewModel(
         viewModelScope.launch {
             val pid = currentProfileId() ?: return@launch
             customize.setItemHidden(pid, MediaType.MOVIE, CustomizeKeys.movie(movie), movie.name, true)
+        }
+    }
+
+    /** glcn: out of Keep watching, and not back when the list or the Emby library is loaded again. */
+    fun dismissFromStrip(context: android.content.Context, movie: MovieEntity) {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            val at = movieProgress.value[movie.id]?.positionMs ?: 0L
+            tv.own.owntv.glcn.StripDismissed.add(context, tv.own.owntv.glcn.StripDismissed.film(pid, movie.sourceId, movie.name, at))
+            userDataWriter.removeHistory(pid, MediaType.MOVIE, movie.id)
+            userDataWriter.clearProgress(pid, MediaType.MOVIE, movie.id)
         }
     }
 

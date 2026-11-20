@@ -675,9 +675,35 @@ class SeriesViewModel(
     val continueStrip: StateFlow<List<StripShow>> = ctx
         .flatMapLatest { c ->
             if (c.profileId < 0 || c.sourceIds.isEmpty()) flowOf(emptyList())
-            else seriesDao.observeContinue(c.profileId, c.sourceIds, STRIP_MAX).map { shows -> stripShows(c.profileId, shows) }
+            else combine(
+                seriesDao.observeContinue(c.profileId, c.sourceIds, STRIP_MAX).map { shows -> stripShows(c.profileId, shows) },
+                tv.own.owntv.glcn.StripDismissed.marks,
+            ) { shows, gone ->
+                // glcn: taken out for good — away while it stands where it was left (see StripDismissed).
+                if (gone.isEmpty()) shows else shows.filter { stripMark(c.profileId, it) !in gone }
+            }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private fun stripMark(profileId: Long, s: StripShow) =
+        tv.own.owntv.glcn.StripDismissed.show(profileId, s.series.sourceId, s.series.name, s.season, s.episode, s.positionMs)
+
+    /** glcn: out of Keep watching, and not back when the list or the Emby library is loaded again. */
+    fun dismissFromStrip(context: android.content.Context, show: StripShow) {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            tv.own.owntv.glcn.StripDismissed.add(context, stripMark(pid, show))
+            userDataWriter.removeSeriesHistory(pid, show.series.id)
+        }
+    }
+
+    /** glcn: the whole show seen, from its card in Keep watching. */
+    fun markShowWatched(show: SeriesEntity) {
+        viewModelScope.launch {
+            val all = runCatching { seriesDao.episodesBySeries(show.id).first() }.getOrDefault(emptyList())
+            if (all.isNotEmpty()) markEpisodesWatched(all, true)
+        }
+    }
 
     private suspend fun stripShows(profileId: Long, shows: List<SeriesEntity>): List<StripShow> {
         if (shows.isEmpty()) return emptyList()

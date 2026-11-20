@@ -2,6 +2,7 @@
 
 package tv.own.owntv.features.movies
 
+import tv.own.owntv.glcn.runwayPage
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.PaddingValues
@@ -280,6 +281,11 @@ fun MoviesScreen(
     val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
     // glcn: "Keep watching" above the posters, in All, while something is under way (the strip is the lists' first item).
     val stripMovies by vm.continueStrip.collectAsStateWithLifecycle()
+    // glcn: the menu opened from a card of Keep watching (it adds "out of Keep watching"), and the Runway's page.
+    var stripMenuId by remember { mutableStateOf<Long?>(null) }
+    var stripHasFocus by remember { mutableStateOf(false) }
+    val runwayScroll = androidx.compose.foundation.rememberScrollState()
+    remember { tv.own.owntv.glcn.StripDismissed.ensure(context) }
     val showStrip = stripMovies.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
     val stripOffset = if (showStrip && !runway) 1 else 0
     suspend fun scrollToIndex(i: Int) {
@@ -538,7 +544,7 @@ fun MoviesScreen(
         val idx = movies.itemSnapshotList.items.indexOfFirst { it.id == id }
         if (idx >= 0) runwayAt = idx
     }
-    val openMenu: (MovieEntity, Int) -> Unit = { movie, index -> contextMovie = movie; contextMovieId = movie.id; contextMovieIndex = index }
+    val openMenu: (MovieEntity, Int) -> Unit = { movie, index -> if (index >= 0) stripMenuId = null; contextMovie = movie; contextMovieId = movie.id; contextMovieIndex = index }
     val onMovieFocus: (MovieEntity) -> Unit = { movie ->
         vm.onMovieFocused(movie)
         if (rememberMovies) perCategoryMovieIds[selectedKey] = movie.id
@@ -556,10 +562,10 @@ fun MoviesScreen(
         tv.own.owntv.glcn.ContinueStrip(
             stripCards, start, end,
             onFocus = { i -> stripMovies.getOrNull(i)?.let { vm.onMovieFocused(it) } },
-            // OK plays it on from where it stopped; hold OK opens its page.
+            // OK plays it on from where it stopped; hold OK opens its menu (seen, out of Keep watching…).
             onClick = { i -> stripMovies.getOrNull(i)?.let { playMovieNow(it) } },
-            onLongClick = { i -> stripMovies.getOrNull(i)?.let { titleMovie = it } },
-            modifier = Modifier.padding(bottom = 18.mpx),
+            onLongClick = { i -> stripMovies.getOrNull(i)?.let { stripMenuId = it.id; openMenu(it, -1) } },
+            modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus },
         )
     }
     val posterOf: (MovieEntity) -> String? = {
@@ -745,6 +751,8 @@ fun MoviesScreen(
                         val glide = remember(effectiveGridState) { tv.own.owntv.glcn.GlideScroller(effectiveGridState, glideScope) }
                         if (runway) {
                             Spacer(Modifier.height(10.mpx))
+                            tv.own.owntv.glcn.RunwayPageFollow(runwayScroll, showStrip && stripHasFocus)
+                            Column(Modifier.weight(1f).fillMaxWidth().runwayPage(runwayScroll)) {
                             if (showStrip) continueStrip(fx(84), fx(64))
                             tv.own.owntv.glcn.PosterRunway(
                                 count = movies.itemCount,
@@ -787,6 +795,7 @@ fun MoviesScreen(
                                         )
                                     }
                                 }
+                            }
                             }
                         } else
                         CompositionLocalProvider(LocalBringIntoViewSpec provides tv.own.owntv.glcn.NoBringIntoViewSpec) {
@@ -1096,7 +1105,12 @@ fun MoviesScreen(
         val trailerKey = if (metadataMode.enrich) cacheForM?.trailerKey else null
         val inHistory by androidx.compose.runtime.produceState(selectedKey == LiveKey.History, m.id) { value = vm.isInHistory(m) }
         val canMove = selectedKey is LiveKey.Folder || selectedKey is LiveKey.Custom || selectedKey == LiveKey.Favorites
+        val fromStrip = stripMenuId == m.id
         val actions = buildList {
+            // glcn: from a card of Keep watching — out of the strip for good ("seen" is further down, as on any film).
+            if (fromStrip) add(MenuAction("strip_remove", stringResource(R.string.glcn_remove_from_continue), OwnTVIcon.EYE_OFF, group = VodGroupWatch) {
+                vm.dismissFromStrip(context, m); contextMovie = null
+            })
             // glcn: the trailer playing behind the page — its sound, for remotes without Play/Pause.
             if (tv.own.owntv.features.home.CinemaTrailer.playing != null) add(MenuAction(
                 "trailer_sound",
@@ -1178,7 +1192,7 @@ fun MoviesScreen(
                 "tmdb_details".takeIf { !(metadataMode.enrich && cacheForM != null) },
                 "delete_subtitles".takeIf { contextMovieSubs.isEmpty() },
             ),
-            firstFocusKey = if (tv.own.owntv.features.home.CinemaTrailer.playing != null) "trailer_sound" else "favourite",
+            firstFocusKey = if (fromStrip) "strip_remove" else if (tv.own.owntv.features.home.CinemaTrailer.playing != null) "trailer_sound" else "favourite",
             onDismiss = { contextMovie = null },
         )
     }
