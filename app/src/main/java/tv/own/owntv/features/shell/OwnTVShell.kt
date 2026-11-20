@@ -213,6 +213,9 @@ fun OwnTVShell(
     // The saved view may have been switched off in Settings; show the next enabled one instead.
     val glcnZapPanel = tv.own.owntv.core.settings.ZapViews.effective(glcnZapPanelSaved, glcnZapViews)
     // glcn: accessible mode keeps motion calm, whatever the style.
+    // glcn: Animations Off reaches the scroll and focus springs too — the channel list kept its bounce with them off.
+    val animsOn = tv.own.owntv.ui.theme.animationsOn
+    androidx.compose.runtime.SideEffect { tv.own.owntv.ui.stage.GlcnMotion.off = !animsOn }
     LaunchedEffect(glcnAnimStyle, tv.own.owntv.glcn.Accessible.on) { tv.own.owntv.ui.stage.GlcnMotion.subtle = glcnAnimStyle == 1 || tv.own.owntv.glcn.Accessible.on }
     val glcnLogoPlate by settingsRepo.logoPlate.collectAsStateWithLifecycle(initialValue = 0)
     LaunchedEffect(glcnLogoPlate) { tv.own.owntv.ui.components.LogoPlate.mode = glcnLogoPlate }

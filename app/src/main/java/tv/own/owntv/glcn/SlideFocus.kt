@@ -179,7 +179,9 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
                 if (rect != Rect.Zero) st.live = rect
                 scope.launch(start = CoroutineStart.UNDISPATCHED) {
                     st.glide.snapTo(1f)
-                    st.glide.animateTo(0f, spring(dampingRatio = st.damping, stiffness = st.stiffness))
+                    // glcn: Animations Off — the box is simply there; Subtle — it slides and stops, without give.
+                    if (anim) st.glide.animateTo(0f, spring(dampingRatio = if (tv.own.owntv.ui.stage.GlcnMotion.subtle) 1f else st.damping, stiffness = st.stiffness))
+                    else st.glide.snapTo(0f)
                 }
                 // glcn: the card's pop — from rest, a little past [pop] and back (none with animations off).
                 scope.launch(start = CoroutineStart.UNDISPATCHED) {
