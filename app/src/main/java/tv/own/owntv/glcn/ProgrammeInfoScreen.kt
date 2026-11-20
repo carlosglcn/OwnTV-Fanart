@@ -560,7 +560,7 @@ fun ProgrammeInfoScreen(
             Text(stringResource(R.string.content_media_cast), style = stageText(18, 800), color = accentInk, maxLines = 1)
             val castRows = if (again.isNotEmpty()) 1 else 2
             cast.take(CAST_PER_ROW * castRows).chunked(CAST_PER_ROW).forEach { row ->
-                CastFaces(row, face = 72.mpx, max = CAST_PER_ROW, ink = Ink)
+                CastFaces(row, face = 72.mpx, max = CAST_PER_ROW, ink = Ink, columns = CAST_PER_ROW)
             }
         }
 

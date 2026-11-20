@@ -5,6 +5,7 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -48,10 +49,19 @@ fun CastFaces(
     ink: Color = Color.White,
     onPick: ((Int) -> Unit)? = null,
     firstFocus: FocusRequester? = null,
+    /**
+     * glcn: share the width given in this many equal columns, instead of each face taking its own fixed width — for a
+     * card narrower than the faces ask for, where the last one was squeezed and cut (the programme info page).
+     */
+    columns: Int? = null,
 ) {
-    Row(modifier.then(if (onPick != null) Modifier.focusGroup() else Modifier), horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
-        people.take(max).forEachIndexed { i, p ->
-            Column(Modifier.width(face + 24.mpx), horizontalAlignment = Alignment.CenterHorizontally) {
+    Row(
+        modifier.then(if (columns != null) Modifier.fillMaxWidth() else Modifier).then(if (onPick != null) Modifier.focusGroup() else Modifier),
+        horizontalArrangement = Arrangement.spacedBy(if (columns != null) 6.mpx else 14.mpx),
+    ) {
+        val shown = people.take(columns ?: max)
+        shown.forEachIndexed { i, p ->
+            Column(if (columns != null) Modifier.weight(1f) else Modifier.width(face + 24.mpx), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (onPick != null) {
                     StageSurface(
                         onClick = { onPick(i) }, radius = face / 2, focusStyle = StageFocus.PRIMARY,
@@ -67,6 +77,8 @@ fun CastFaces(
                 )
             }
         }
+        // A short row keeps its columns' width: the faces stay under those of the row above.
+        if (columns != null) repeat(columns - shown.size) { androidx.compose.foundation.layout.Spacer(Modifier.weight(1f)) }
     }
 }
 
