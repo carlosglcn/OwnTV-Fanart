@@ -169,4 +169,8 @@
     <string name="glcn_guide_type_title">Type</string>
     <string name="glcn_guide_type_hint">Only the channels showing it now</string>
     <string name="glcn_guide_type_all">Everything</string>
+    <string name="glcn_tennis_clay">Clay</string>
+    <string name="glcn_tennis_grass">Grass</string>
+    <string name="glcn_tennis_hard">Hard court</string>
+    <string name="glcn_tennis_indoor">Indoor hard court</string>
 </resources>

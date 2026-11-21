@@ -171,4 +171,8 @@
     <string name="glcn_guide_type_title">Tipo</string>
     <string name="glcn_guide_type_hint">Solo los canales que lo emiten ahora</string>
     <string name="glcn_guide_type_all">Todo</string>
+    <string name="glcn_tennis_clay">Tierra batida</string>
+    <string name="glcn_tennis_grass">Hierba</string>
+    <string name="glcn_tennis_hard">Pista dura</string>
+    <string name="glcn_tennis_indoor">Pista dura cubierta</string>
 </resources>

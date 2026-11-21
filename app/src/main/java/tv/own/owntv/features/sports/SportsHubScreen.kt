@@ -39,6 +39,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -497,10 +498,13 @@ internal fun MatchCard(
     val sides = if (m.sport.isRace) emptyList() else listOfNotNull(m.home?.team, m.away?.team).filter { !it.isAthlete }
     val homeTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(0)?.logoUrl)
     val awayTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(1)?.logoUrl)
-    val homeColor = if (lightCard) homeTone?.vivid else homeTone?.darkCard()
-    val awayColor = if (lightCard) awayTone?.vivid else awayTone?.darkCard()
+    // The side's own colour when its feed gives one (its shirt's, which is what people know it by); the crest's
+    // strongest colour only stands in where there is none — a crest's colours are not always the shirt's.
+    val surface = if (m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) tv.own.owntv.glcn.TennisSurface.of(m.leagueName) else null
+    val homeColor = surface?.let { sideTone(it.tone, lightCard) } ?: sides.getOrNull(0)?.let { ownColor(it, lightCard) } ?: if (lightCard) homeTone?.vivid else homeTone?.darkCard()
+    val awayColor = surface?.let { sideTone(it.tone, lightCard, deeper = true) } ?: sides.getOrNull(1)?.let { ownColor(it, lightCard) } ?: if (lightCard) awayTone?.vivid else awayTone?.darkCard()
     val tintAlpha = if (lightCard) TEAM_TINT_LIGHT else TEAM_TINT
-    val tinted = sides.size == 2 && (homeColor != null || awayColor != null)
+    val tinted = surface != null || (sides.size == 2 && (homeColor != null || awayColor != null))
     val plain = StageColors.Ink.copy(alpha = 0.045f)
     StageSurface(
         onClick = onClick,
@@ -545,7 +549,8 @@ internal fun MatchCard(
             // League line · minute (red while live) or kick-off.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val day = if (m.isLive) null else dayOf(m.startMs, locale)
-                val league = listOfNotNull(leagueName(m), m.subtitle?.takeIf { featured && !m.sport.isRace }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
+                // glcn: tennis — what the tournament is played on, after its name.
+                val league = listOfNotNull(leagueName(m), surface?.let { stringResource(it.label) }, m.subtitle?.takeIf { featured && !m.sport.isRace }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
                 Text(league, style = stageText(16.5f, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 val right = when {
                     m.off -> m.statusText
@@ -701,6 +706,49 @@ private fun FollowRemindMenu(
 /** A side's name on a card: the short name, unless ESPN gives only a code ("GHA" in cricket), then the full name. */
 internal fun teamLabel(t: tv.own.owntv.core.sports.model.Team): String =
     if (t.shortName.length <= 4 && t.shortName == t.shortName.uppercase() && t.name.length > t.shortName.length) t.name else t.shortName
+
+/**
+ * glcn: a side's own colour for its card, from the feed's two ("004d98"). The first unless it is black, white or grey
+ * and the second is a colour; then toned for the card — deep under a dark style's light text, as it is under a light
+ * style (where it is laid on thin).
+ */
+private fun ownColor(team: tv.own.owntv.core.sports.model.Team, light: Boolean): Color? {
+    fun parse(hex: String?): Color? = hex?.let { runCatching { Color(android.graphics.Color.parseColor(HEX_MARK + it)) }.getOrNull() }
+    fun sat(c: Color): Float = FloatArray(3).also { android.graphics.Color.colorToHSV(c.toArgb(), it) }[1]
+    val first = parse(team.color)
+    val second = parse(team.altColor)
+    val pick = when {
+        first == null -> second
+        second != null && sat(first) < GREY_SAT && sat(second) >= GREY_SAT -> second
+        else -> first
+    } ?: return null
+    return sideTone(pick, light)
+}
+
+/** glcn: [c] as a card's tone: its hue kept, darkened for a dark style ([deeper] for a card's second end). */
+private fun sideTone(c: Color, light: Boolean, deeper: Boolean = false): Color {
+    if (light) return c
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(c.toArgb(), hsv)
+    val grey = hsv[1] < GREY_SAT
+    hsv[1] = if (grey) hsv[1] else hsv[1].coerceIn(SIDE_SAT_MIN, SIDE_SAT_MAX)
+    // A white side reads as silver, a black one as near black; a colour sits between, dark enough for white text.
+    hsv[2] = when {
+        grey && hsv[2] > 0.5f -> SIDE_SILVER
+        grey -> SIDE_BLACK
+        deeper -> SIDE_VALUE * 0.6f
+        else -> SIDE_VALUE
+    }
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
+
+private const val HEX_MARK = "#"
+private const val GREY_SAT = 0.18f
+private const val SIDE_SAT_MIN = 0.55f
+private const val SIDE_SAT_MAX = 0.85f
+private const val SIDE_VALUE = 0.46f
+private const val SIDE_SILVER = 0.4f
+private const val SIDE_BLACK = 0.12f
 
 /** glcn: how strongly a card takes its sides' colours, and how dark its middle stays under the score. */
 private const val TEAM_TINT = 0.78f
