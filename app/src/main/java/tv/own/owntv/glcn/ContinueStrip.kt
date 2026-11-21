@@ -46,6 +46,7 @@ data class StripCard(
  * lower than the posters so they tell apart at a glance, each with its picture, its bar and where it stands. ▼ goes on
  * to the posters, ▲ to the toolbar; OK plays (a film) or opens the show at its episode, hold OK opens the page.
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun ContinueStrip(
     cards: List<StripCard>,
