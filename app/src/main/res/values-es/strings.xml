@@ -166,4 +166,6 @@
     <string name="glcn_rail_fade">Fundido</string>
     <string name="glcn_rail_column">Columna</string>
     <string name="glcn_rail_label">Etiqueta</string>
+    <string name="glcn_sports_in_minutes">en %1$d min</string>
+    <string name="glcn_sports_in_hours">en %1$d h %2$d min</string>
 </resources>

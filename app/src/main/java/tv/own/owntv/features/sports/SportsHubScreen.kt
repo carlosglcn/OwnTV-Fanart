@@ -261,6 +261,7 @@ fun SportsHubScreen(
                                     reminded = false,
                                     onClick = { onOpenMatch(m) }, onPlay = { onOpenMatch(m) }, onHold = { menuFor = m },
                                     modifier = (if (i == 0) Modifier.focusRequester(featuredFocus) else Modifier).focusRequester(focusOf(m.key)),
+                                    channel = cardChannel(vm, m),
                                 )
                             }
                         }
@@ -308,6 +309,7 @@ fun SportsHubScreen(
                                     reminded = SportsViewModel.reminderKey(m.startMs, MatchNotifications.pair(context, m)) in state.reminders,
                                     onClick = { onOpenMatch(m) }, onPlay = { onOpenMatch(m) }, onHold = { menuFor = m },
                                     modifier = Modifier.focusRequester(focusOf(m.key)),
+                                    channel = cardChannel(vm, m),
                                 )
                             }
                         }
@@ -484,9 +486,20 @@ internal fun MatchCard(
     onPlay: () -> Unit,
     onHold: () -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: a channel already found for it (its page was opened before), named at the card's foot. */
+    channel: String? = null,
 ) {
     val r = 20.mpx
     val locale = LocalConfiguration.current.locales[0]
+    // glcn: the card takes the two sides' colours, read from their crests — home's from the left, away's from the
+    // right. Dark styles only: the card's text is light.
+    val sides = if (m.sport.isRace || tv.own.owntv.ui.theme.LocalStagePalette.current.isLight) emptyList() else listOfNotNull(m.home?.team, m.away?.team).filter { !it.isAthlete }
+    val homeTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(0)?.logoUrl)
+    val awayTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(1)?.logoUrl)
+    val homeColor = homeTone?.darkCard()
+    val awayColor = awayTone?.darkCard()
+    val tinted = sides.size == 2 && (homeColor != null || awayColor != null)
+    val plain = StageColors.Ink.copy(alpha = 0.045f)
     StageSurface(
         onClick = onClick,
         onLongClick = onHold,
@@ -502,7 +515,16 @@ internal fun MatchCard(
                 playKey
             },
         idle = Modifier
-            .background(StageColors.Ink.copy(alpha = 0.045f), RoundedCornerShape(r))
+            .then(
+                if (tinted) Modifier.background(
+                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                        0f to (homeColor ?: plain).copy(alpha = if (homeColor != null) TEAM_TINT else plain.alpha),
+                        0.5f to Color.Black.copy(alpha = TEAM_TINT_MID),
+                        1f to (awayColor ?: plain).copy(alpha = if (awayColor != null) TEAM_TINT else plain.alpha),
+                    ),
+                    RoundedCornerShape(r),
+                ) else Modifier.background(plain, RoundedCornerShape(r)),
+            )
             .drawBehind { drawInnerRing(Color.White.copy(alpha = 0.05f), 1.mpx.toPx(), r.toPx()) },
     ) { _ ->
         // glcn: the two crests, large, grey and faint, half off the card's two edges — a ghost of who plays.
@@ -529,7 +551,14 @@ internal fun MatchCard(
                     else -> timeText(m.startMs)
                 }
                 // Live: the red dot and LIVE, so a live card stands out among ones still to come.
+                // glcn: about to start (the next three hours): how long is left, in the accent, before the hour.
+                val left = (m.startMs - now) / 60_000L
+                val soon = m.state == MatchState.PRE && !m.off && left in 1..COUNTDOWN_MINUTES
                 if (m.isLive) LiveMark(stringResource(R.string.player_live) + stringResource(R.string.content_epg_bits_separator) + clockText(m), 17f)
+                else if (soon) {
+                    val inText = if (left < 60) stringResource(R.string.glcn_sports_in_minutes, left.toInt()) else stringResource(R.string.glcn_sports_in_hours, (left / 60).toInt(), (left % 60).toInt())
+                    Text(inText + stringResource(R.string.content_epg_bits_separator) + right, style = stageText(17, 800), maxLines = 1, overflow = TextOverflow.Ellipsis, color = tv.own.owntv.ui.theme.stageAccent.ink)
+                }
                 else Text(right, style = stageText(17, 800), maxLines = 1, overflow = TextOverflow.Ellipsis, color = StageColors.Muted)
             }
             val spoiler = config.spoilerFree
@@ -537,7 +566,7 @@ internal fun MatchCard(
             if (featured && m.sport !in LINE_SCORE_SPORTS) FeaturedScore(m, spoiler) else Sides(m, spoiler)
             Spacer(Modifier.weight(1f))
             val followed = m.competitors.any { c -> config.teams.any { it.sport == m.sport && it.id == c.team.id } }
-            CardFooter(m.venue, reminded, followed)
+            CardFooter(m.venue, reminded, followed, channel)
         }
     }
 }
@@ -589,11 +618,13 @@ private fun FeaturedScore(m: Match, spoiler: Boolean) {
 
 /** `.ft`: the card's foot — the venue (ESPN's), then a Reminder tag or the star of a followed side. */
 @Composable
-private fun CardFooter(venue: String?, reminded: Boolean, followed: Boolean) {
+private fun CardFooter(venue: String?, reminded: Boolean, followed: Boolean, channel: String? = null) {
     Box(Modifier.fillMaxWidth().height(1.mpx).background(Color.White.copy(alpha = 0.07f)))
     Spacer(Modifier.height(12.mpx))
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.mpx)) {
-        Text(venue.orEmpty(), style = stageText(16, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        // glcn: where to watch it, when that is known, says more than the stadium.
+        if (channel != null) tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.LIVE_TV, StageColors.Body, Modifier.size(18.mpx))
+        Text(channel ?: venue.orEmpty(), style = stageText(16, if (channel != null) 700 else 500), color = if (channel != null) StageColors.Body else StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         if (reminded) StageTag(stringResource(R.string.sports_reminder_set))
         else if (followed) tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.STAR, Color(0xFFE7C56A), Modifier.size(20.mpx))
     }
@@ -668,6 +699,20 @@ private fun FollowRemindMenu(
 /** A side's name on a card: the short name, unless ESPN gives only a code ("GHA" in cricket), then the full name. */
 internal fun teamLabel(t: tv.own.owntv.core.sports.model.Team): String =
     if (t.shortName.length <= 4 && t.shortName == t.shortName.uppercase() && t.name.length > t.shortName.length) t.name else t.shortName
+
+/** glcn: how strongly a card takes its sides' colours, and how dark its middle stays under the score. */
+private const val TEAM_TINT = 0.78f
+private const val TEAM_TINT_MID = 0.22f
+private const val COUNTDOWN_MINUTES = 180L
+
+/** glcn: the channel a match was already found on — read from what its page found, never searched for here. */
+@Composable
+internal fun cardChannel(vm: SportsViewModel, m: Match): String? {
+    val name by androidx.compose.runtime.produceState<String?>(null, m.key) {
+        value = runCatching { vm.channelsFound(m).firstOrNull()?.channel?.name }.getOrNull()
+    }
+    return name
+}
 
 /** glcn: a match card's crest ghosts, each half off its edge. */
 private const val MATCH_GHOST = 190
