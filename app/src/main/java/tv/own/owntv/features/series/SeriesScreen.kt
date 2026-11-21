@@ -351,6 +351,7 @@ private fun SeriesGrid(
     val runwayScroll = androidx.compose.foundation.rememberScrollState()
     remember { tv.own.owntv.glcn.StripDismissed.ensure(context) }
     val showStrip = tv.own.owntv.glcn.StripPref.on && stripShows.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
+    val showStripNow by androidx.compose.runtime.rememberUpdatedState(showStrip)
     val stripOffset = if (showStrip && !runway) 1 else 0
     suspend fun scrollToIndex(i: Int) {
         if (runway) { runwayAt = i; return }
@@ -461,7 +462,15 @@ private fun SeriesGrid(
                 withFrameNanos { }
                 // Held for a moment: the card may still leave (seen, removed) and the focus stays on its place.
                 stripFocus.hold()
-                if (stripFocus.focus()) { contextSeriesIndex = -1; return@LaunchedEffect }
+                // The menu still holds the focus for some frames as it closes and refuses the first asks: keep asking
+                // until the strip has it — giving up at once sent the focus to the title's poster instead.
+                var got = false
+                for (attempt in 0 until STRIP_FOCUS_TRIES) {
+                    if (!showStripNow) break
+                    if (stripFocus.focus() || stripHasFocus) { got = true; break }
+                    withFrameNanos { }
+                }
+                if (got) { contextSeriesIndex = -1; return@LaunchedEffect }
             }
         }
         val targetId = contextSeriesId
@@ -2308,3 +2317,6 @@ private val SEASON_GHOST_START = 1260.mpx
 
 /** glcn: the Keep watching strip's key in the lists (never a show id). */
 private const val STRIP_KEY = "glcn_strip"
+
+/** glcn: frames the strip is asked for the focus after its menu closes (about half a second). */
+private const val STRIP_FOCUS_TRIES = 30
