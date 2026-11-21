@@ -62,6 +62,8 @@ OwnTV Fanart is free and made in spare time. If it makes your TV nicer, you can 
 - **Styles and wallpapers** — gradient styles, animated and photo wallpapers, and 3D profile avatars.
 - **Trakt** — sign in on the TV with a code; what you watch goes to your Trakt history, Trakt's watched films get their ✓ and your watchlist is a Home row.
 - **Smooth as a launcher** — springy lists, a focus that glides between rows and menus, cards that pop, and fast channel lists (hold ▲/▼ or type the number).
+- **Programme and cast pages** — a page for what is on that opens at once, with the match score or the cast as faces; a cast page with portraits, a Wikipedia summary and that person's films in your playlists.
+- **Keep watching** — a category in Films and Series and an optional strip above the posters, with mark-as-watched for a whole season or show.
 
 ## 📄 Licence and credits
 

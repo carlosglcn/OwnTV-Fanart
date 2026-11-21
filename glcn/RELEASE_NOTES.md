@@ -1,57 +1,55 @@
-## What's new — Trakt, a smoother app and a new player channel list
+## What's new — Programme info, cast pages and Keep watching
 
-### 🎞️ Trakt
-- 🎞️ **Trakt sign-in** (Settings › Sources): type a code at trakt.tv/activate; each profile can have its own account
-- ✅ Films and episodes you finish (or mark watched) go to your Trakt history — except Emby/Jellyfin titles, which the server's own Trakt plugin reports
-- 📋 Films watched on Trakt get their ✓ here, and a new Home row, **"My Trakt watchlist"**, shows the watchlist films in your playlists
-- ℹ️ OwnTV Fanart uses Trakt but is not endorsed or certified by Trakt
+### ℹ️ Programme info
+- ℹ️ **The programme page opens already filled** and no longer waits for the guide; ◀ ▶ and CH± walk the channels smoothly, and the page follows the clock when a programme ends
+- 🔘 **Real buttons** fixed at the foot (Watch, Record, Cast, Technical data); the synopsis uses all the room above them
+- ⚽ **A match shows both crests, the score and the minute** (hidden with spoiler-free on)
+- 🎭 **Cast as faces** when the guide names it, with a Cast button that opens the cast page
+- 🔴 **"LIVE" only for a real live broadcast**; anything else on now says "ON AIR" — in programme info, the guide, the player and the banners
 
-### 🌊 Smoother everywhere
-- ⚡ **Brisker:** menus, the focus glide, scrolling, popups and transitions run at 0.6× their old length; the slow backdrop drifts stay calm, and with Android's animations off they stay off
-- 🌊 **Lists glide on a spring** that keeps its speed: they set off gently, flow under a held key and slow down softly
-- 🎯 **The focus travels:** from the top bar to a row, or a menu to its page, the highlight glides over; in TV en directo and the Guide it slides between channels with a little give
-- 🃏 **Home cards pop** as they take focus, with a small bounce and a deeper shadow; a title chosen on Home grows into its page
-- ✂️ **No more cut-off cards on Home:** a row only partly on screen fades as a whole and comes back as it slides in
-- 🫧 Side menu icons hop as the focus reaches them; ✨ sections come in with a short fade and rise
-- 🚀 Smoother right after an update: the app's screens are compiled ahead, now including the player
+### 🎭 Cast pages
+- 👥 **OK on a film's cast opens a cast page:** large portraits, the Wikipedia summary in your language with a QR code, birth date and age, and that person's films in your playlists and servers
+- 🎭 The Cine pause screen and its Info tab show who is in the film or episode as faces
+
+### ▶️ Films and Series
+- ▶️ **New "Keep watching" category:** films not finished and shows with an episode half seen or the next one waiting
+- 🎛️ **Optional "Keep watching" strip above the posters** (Settings › Layout, off by default): wide cards with the time left or the next episode; hold OK to mark the whole series watched or remove it for good
+- ✅ **Mark a whole season or a whole show** as watched or unwatched (hold OK on an episode)
+- 💬 **The kind of subtitle you pick is remembered** with its language — "Spanish (full)" comes back on the next episode
+- 🏷️ **Quality badges** also show IMAX, the source (BluRay, WEB-DL) and the sound format (DTS:X, TrueHD…), and can be pictures from a badge pack (Elite Badges or another by its address)
+- 🎬 Dolby Vision shows its profile, and says "HDR10" when the device cannot decode it; an episode's synopsis is the richest there is
+- 🪟 Film and series pages grow out of the poster you pressed; posters still loading shimmer instead of leaving a gap
+- 🎞️ Trakt: anyone can sign in now (accounts connected before sign in again once); the watchlist row also finds films by name and year
 
 ### 📺 Live TV and the player
-- 🖼️ **New player channel list** (◀ while watching): the picture slides aside and keeps playing, the programme on air with time left and synopsis, and the next programmes as picture cards; ◀ opens the categories with their full names
-- ⏩ **Fast channel lists:** hold ▲/▼ to speed up (1, then 3, then 6 at a time), or type a channel number to jump to it
-- 🔁 **TV en directo, Cinema layout:** ▶ on the last channel goes round to the first (and ◀ on the first to the last, with the menu on top)
-- 🎮 New remote shortcut, **Programme info**; Cine and Ficha banners show the stream's facts and the programme's picture
-- 📡 Channels without a logo take the guide's picon; logos on a plain white square lose the backdrop
-- 🔒 A channel that won't open says why (locked category, profile not allowed)
-- ⏩ An empty stream from an overloaded server moves on to mpv after 2.5 s instead of 12 s
-- 🔈 Audio tracks your device can't play are marked and never forced on; a decoder that refuses a channel gives up after two tries
+- 🕰️ **A slim pill at the top** — time · date · weather — that adds the sleep timer, "Recording" and the score of a team you follow while it plays
+- 🗂️ **Player channel list:** the channel you are watching is marked with moving bars, the card takes the picture's colour, and ◀ ◀ ◀ opens a Playlists panel with each playlist's colour, contents and expiry (hold OK switches one off)
+- ⏩ Holding ▲ ▼ in the channel list speeds up sooner, with a rail that shows where you are; hold OK in Recently watched removes a channel
+- 🗓️ **Guide:** CH+ / CH− move a day forward or back, and search looks through every programme of every day
+- 📋 The Live TV playlist you pick is remembered after a restart
+- 🔊 FFmpeg audio for ExoPlayer is on by default: AC-3, E-AC-3, DTS and MP2 channels play their main audio
+- 📼 Channels the hardware decoder refuses (MPEG-2 on a SHIELD, some Amlogic boxes) go straight to software decoding; streams that end every half minute reopen at once
+- 🎬 Cine banner: long titles take two lines; Compact banner: a wider programme card, clear of the rewind buttons
 
-### 😴 Sleep timer
-- 😴 It keeps counting in the preview pane and Multiview; the last minute dims the picture (any button gives 15 more minutes), and at the end a black screen lets the TV's own sleep take over
+### 🎨 Look and motion
+- 🔤 Big titles use a display face (Oswald), so long names fit and read as headlines
+- 🎚️ **Channel lists settle softly:** the bounce at each step is a third of what it was, with a small give at the list's ends; with Animations off, lists and the focus are immediate
+- 🏷️ Light theme: white channel logos are shaded so they no longer vanish, and coloured logos keep their colours
+- 🎨 Pale or white accent colours stay readable everywhere
+- 🧊 Glass off means solid everywhere, the player's panels included; popups float with a soft shadow
+- 🌅 Empty pages show a small sunset drawing; messages use the app's own glass pill
+- 🧭 The open side menu shows a small picture of what waits in Live TV, Films and Series
 
-### 👻 Details
-- 👻 **Faint "ghosts":** the channel's logo in grey behind live cards, the Guide's programme panel and the focused channel row; the season ("T2") and a film's year huge and in outline; both teams' crests behind each match card
-- 🌅 **New launch screen:** the icon's sunset as a wide landscape with the logo
-- 🌫️ New wallpapers: Bruma azul, Bruma perla, Amanecer pastel and Arena
+### 🏀 Sports
+- 🏀 Three more basketball leagues: EuroCup, Primera FEB and Lega Basket Serie A, with calendar, results and table
 
-### 🗂️ Playlists and Settings
-- 🩺 **Playlist health at a glance:** a coloured dot, last update, days left before it expires and, after a failed update, the reason with Try again; ⏰ a notice a week before an Xtream subscription ends
-- ⏸️ Playlists can be **turned off** without deleting them, and each can have its own **colour and tag**
-- 🧭 **Simpler Settings:** everyday settings first, the rest behind "Show advanced settings"; Fanart settings also in their own group; NEW badges for what changed; the Settings cards show your current values
-
-### 🎬 Films, series and Home
-- ✅ Films you have already watched no longer appear in Recent films or Featured
-- 🎞️ Trailers in the title's own language when there is none in Spanish or English, with Spanish subtitles when the video has them
-- 🔑 Emby/Jellyfin keeps its sign-in across restarts; 🧹 a title taken out of Keep watching stays out
-- 📺 Recent channels on the TV's home show times, logo and fanart even in launchers without internet (such as Clean Your TV)
-
-### 🔧 Fixes
-- 🔔 White or light accents: the reminder bell, the watched check, the chosen mark, the scroll bubble and the Guide's focused times read clearly
-- 🏷️ Opening a channel shows its own name at once; 🛠️ fixed a crash in the channel list after changing group
-- 🧯 A preview starved of memory is let go instead of freezing the Guide
-- 🔕 "Rebuilding sports…" no longer pops up on every screen
+### 🌌 More
+- 🌌 Fanart screensaver: OK opens what is on screen, and Settings › App has a row to choose it as the TV's screensaver
+- 🗓️ Big playlists: the guide of groups hidden in every profile is no longer downloaded — the Guide, Home and the lists are lighter
+- 🧾 Playback report: the groups of each playlist, the start-up timeline and this session's diagnostics
 
 ### 🔄 From the original OwnTV
-- Merged OwnTV 5.2.2 — Settings lock with its own PIN and protected profiles, local auto-sync between paired devices, title art and 4K badge in the player, series title art, "Record every showing" stoppable from Recordings and better sports matching. Thank you, ahXN00 and contributors!
+- Merged the original app's latest (Nov 15–18): live tuning fixes, back by itself when the network returns, timeshift fixes, "Prefer SDR" on mpv, the Guide remembers its category, Favorites and Recent keep their own order. Thank you, ahXN00.
 
 ### 🙏 Thank you
-Thank you to everyone on Telegram and Discord who tests, reports and shares ideas — the smoother feel, the fast channel lists and Trakt in this version all come from your messages.
+Thank you to everyone on Telegram and Discord who tests, reports and shares ideas — the programme page, the softer lists and Keep watching in this version come from your messages.

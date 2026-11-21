@@ -71,6 +71,8 @@ Los problemas de **esta versión** van al grupo de Fanart; el otro es para la ap
 - **Estilos y fondos** — estilos degradados, fondos animados y de fotos, y avatares de perfil en 3D.
 - **Trakt** — inicia sesión en la TV con un código; lo que ves pasa a tu historial de Trakt, las películas vistas en Trakt salen con su ✓ y tu lista de pendientes es una fila de Inicio.
 - **Fluida como un launcher** — listas con efecto muelle, un foco que se desliza entre filas y menús, tarjetas que resaltan y listas de canales rápidas (mantén ▲/▼ o teclea el número).
+- **Fichas del programa y del reparto** — una ficha de lo que se emite que se abre al instante, con el marcador del partido o el reparto con caras; una página del reparto con retratos, resumen de Wikipedia y las películas de esa persona en tus listas.
+- **Seguir viendo** — una categoría en Películas y Series y una tira opcional encima de los pósters, con marcar como vista una temporada o una serie entera.
 
 ## ⚖️ Aviso legal
 
