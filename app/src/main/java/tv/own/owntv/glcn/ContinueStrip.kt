@@ -17,6 +17,7 @@ import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -68,7 +69,8 @@ fun ContinueStrip(
             state = rememberLazyListState(),
             horizontalArrangement = Arrangement.spacedBy(STRIP_GAP.mpx),
             contentPadding = PaddingValues(start = startPad, end = endPad, top = 10.mpx, bottom = 10.mpx),
-            modifier = Modifier.fillMaxWidth().then(if (focus != null) Modifier.focusRequester(focus) else Modifier),
+            // Asked for the focus, the row gives it to the card that had it last (or to the first).
+            modifier = Modifier.fillMaxWidth().then(if (focus != null) Modifier.focusRequester(focus).focusRestorer() else Modifier),
         ) {
             itemsIndexed(cards, key = { _, c -> c.key }) { i, c ->
                 StagePoster(

@@ -284,6 +284,7 @@ fun MoviesScreen(
     // glcn: the menu opened from a card of Keep watching (it adds "out of Keep watching"), and the Runway's page.
     var stripMenuId by remember { mutableStateOf<Long?>(null) }
     var stripHasFocus by remember { mutableStateOf(false) }
+    val stripFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val runwayScroll = androidx.compose.foundation.rememberScrollState()
     remember { tv.own.owntv.glcn.StripDismissed.ensure(context) }
     val showStrip = tv.own.owntv.glcn.StripPref.on && stripMovies.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
@@ -378,6 +379,14 @@ fun MoviesScreen(
         // this effect re-runs when the whole flow closes and restores the row below.
         if (moveItem != null || creatingCategory || moveState != null) return@LaunchedEffect
 
+        // glcn: a menu opened from Keep watching gives the focus back to the strip, not to the film's poster further down.
+        if (stripMenuId != null) {
+            stripMenuId = null
+            if (showStrip) {
+                withFrameNanos { }
+                if (runCatching { stripFocus.requestFocus() }.getOrDefault(false)) { contextMovieIndex = -1; return@LaunchedEffect }
+            }
+        }
         val targetId = contextMovieId
         if (targetId == null) { contextMovieIndex = -1; return@LaunchedEffect }
         val items = movies.itemSnapshotList.items
@@ -559,7 +568,6 @@ fun MoviesScreen(
         )
     }
     // glcn: ▲ from the first row of posters goes to Keep watching — scrolled away, the grid's own search did not find it.
-    val stripFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     val toStrip: () -> Boolean = {
         if (!showStrip || runway) false else {
             scope.launch {
