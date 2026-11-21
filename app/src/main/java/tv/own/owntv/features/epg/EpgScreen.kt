@@ -618,12 +618,7 @@ fun EpgScreen(
         )
         // … and the programme under the cursor, with what it can do.
         Box(Modifier.weight(1f).fillMaxHeight()) {
-            // glcn: the channel's logo, large, grey and faint, behind the programme's words on the right (Ghosts).
-            tv.own.owntv.glcn.GhostLogo(
-                topChannel?.displayLogoUrl,
-                Modifier.align(Alignment.CenterEnd).padding(end = 24.mpx, top = 20.mpx).size(width = GUIDE_GHOST_W, height = GUIDE_GHOST_H),
-                alpha = tv.own.owntv.glcn.Ghosts.ALPHA,
-            )
+            // glcn: no faint channel logo behind the programme's words here — in the Guide it read as a watermark.
             if (topChannel != null) {
                 val chName = ProviderTags.displayName(topChannel.name)
                 GuideProgrammeBlock(

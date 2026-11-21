@@ -275,9 +275,31 @@ private const val INK_DARK_MIN = 0.06f
 fun stageText(size: Number, weight: Int, letterSpacing: TextUnit = TextUnit.Unspecified) = TextStyle(
     fontFamily = LocalMainFontFamily.current,
     fontSize = size.mpxSp,
-    fontWeight = FontWeight(weight),
+    fontWeight = FontWeight(crispWeight(size.toFloat(), weight)),
     letterSpacing = letterSpacing,
 )
+
+/**
+ * glcn: on a screen the app is drawn at 720p (many budget TVs), small heavy type has too few pixels for its strokes
+ * and comes out jagged; a step lighter it draws clean. Big type, and every 1080p and 4K screen, keep the design.
+ */
+private fun crispWeight(size: Float, weight: Int): Int =
+    if (LowResScreen.on && size <= CRISP_MAX_SIZE && weight > CRISP_WEIGHT) CRISP_WEIGHT else weight
+
+/** glcn: whether the app's window is 720p-class — set once at start from the display's height. */
+object LowResScreen {
+    var on: Boolean = false
+        private set
+
+    fun detect(context: android.content.Context) {
+        val m = context.resources.displayMetrics
+        on = minOf(m.widthPixels, m.heightPixels) in 1..LOW_RES_MAX_PX
+    }
+}
+
+private const val CRISP_MAX_SIZE = 22f
+private const val CRISP_WEIGHT = 600
+private const val LOW_RES_MAX_PX = 800
 
 
 /**
