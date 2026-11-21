@@ -492,12 +492,14 @@ internal fun MatchCard(
     val r = 20.mpx
     val locale = LocalConfiguration.current.locales[0]
     // glcn: the card takes the two sides' colours, read from their crests — home's from the left, away's from the
-    // right. Dark styles only: the card's text is light.
-    val sides = if (m.sport.isRace || tv.own.owntv.ui.theme.LocalStagePalette.current.isLight) emptyList() else listOfNotNull(m.home?.team, m.away?.team).filter { !it.isAthlete }
+    // right. Deep tones under a dark style's light text; under a light style, a pale wash of the colour itself.
+    val lightCard = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    val sides = if (m.sport.isRace) emptyList() else listOfNotNull(m.home?.team, m.away?.team).filter { !it.isAthlete }
     val homeTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(0)?.logoUrl)
     val awayTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(1)?.logoUrl)
-    val homeColor = homeTone?.darkCard()
-    val awayColor = awayTone?.darkCard()
+    val homeColor = if (lightCard) homeTone?.vivid else homeTone?.darkCard()
+    val awayColor = if (lightCard) awayTone?.vivid else awayTone?.darkCard()
+    val tintAlpha = if (lightCard) TEAM_TINT_LIGHT else TEAM_TINT
     val tinted = sides.size == 2 && (homeColor != null || awayColor != null)
     val plain = StageColors.Ink.copy(alpha = 0.045f)
     StageSurface(
@@ -518,9 +520,9 @@ internal fun MatchCard(
             .then(
                 if (tinted) Modifier.background(
                     androidx.compose.ui.graphics.Brush.horizontalGradient(
-                        0f to (homeColor ?: plain).copy(alpha = if (homeColor != null) TEAM_TINT else plain.alpha),
-                        0.5f to Color.Black.copy(alpha = TEAM_TINT_MID),
-                        1f to (awayColor ?: plain).copy(alpha = if (awayColor != null) TEAM_TINT else plain.alpha),
+                        0f to (homeColor ?: plain).copy(alpha = if (homeColor != null) tintAlpha else plain.alpha),
+                        0.5f to if (lightCard) plain else Color.Black.copy(alpha = TEAM_TINT_MID),
+                        1f to (awayColor ?: plain).copy(alpha = if (awayColor != null) tintAlpha else plain.alpha),
                     ),
                     RoundedCornerShape(r),
                 ) else Modifier.background(plain, RoundedCornerShape(r)),
@@ -702,6 +704,7 @@ internal fun teamLabel(t: tv.own.owntv.core.sports.model.Team): String =
 
 /** glcn: how strongly a card takes its sides' colours, and how dark its middle stays under the score. */
 private const val TEAM_TINT = 0.78f
+private const val TEAM_TINT_LIGHT = 0.3f
 private const val TEAM_TINT_MID = 0.22f
 private const val COUNTDOWN_MINUTES = 180L
 
