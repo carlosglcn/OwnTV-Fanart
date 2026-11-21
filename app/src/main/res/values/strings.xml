@@ -166,4 +166,7 @@
     <string name="glcn_rail_label">Label</string>
     <string name="glcn_sports_in_minutes">in %1$d min</string>
     <string name="glcn_sports_in_hours">in %1$d h %2$d min</string>
+    <string name="glcn_guide_type_title">Type</string>
+    <string name="glcn_guide_type_hint">Only the channels showing it now</string>
+    <string name="glcn_guide_type_all">Everything</string>
 </resources>

@@ -462,6 +462,11 @@ fun EpgScreen(
     var matchingChannel by remember { mutableStateOf<ChannelEntity?>(null) }
     var offsetChannel by remember { mutableStateOf<ChannelEntity?>(null) }
     var orderOpen by remember { mutableStateOf(false) }
+    // glcn: the Type filter (films, sport, series… on now).
+    var typeOpen by remember { mutableStateOf(false) }
+    val typeTool = remember { FocusRequester() }
+    val typeFilter by vm.typeFilter.collectAsStateWithLifecycle()
+    val typeCounts by vm.typeCounts.collectAsStateWithLifecycle()
     var dayOpen by remember { mutableStateOf(false) }
     var sheetOpen by remember { mutableStateOf(false) }
     var sheetHadFocus by remember { mutableStateOf(false) }
@@ -471,7 +476,7 @@ fun EpgScreen(
     // Where focus goes back to when an overlay closes: the control or button that opened it.
     var returnTo by remember { mutableStateOf<(() -> Unit)?>(null) }
     val anyOverlay = menuFor != null || detailsFor != null || channelMenuFor != null || recordMenuFor != null || askPlayerFor != null || matchingChannel != null ||
-        offsetChannel != null || orderOpen || dayOpen || review.isNotEmpty()
+        offsetChannel != null || orderOpen || dayOpen || typeOpen || review.isNotEmpty()
     var hadOverlay by remember { mutableStateOf(false) }
     LaunchedEffect(anyOverlay) {
         if (anyOverlay) { hadOverlay = true; return@LaunchedEffect }
@@ -661,6 +666,11 @@ fun EpgScreen(
                 text = null, icon = OwnTVIcon.LIST, value = categoryLabel, valueAccent = true, trailingIcon = OwnTVIcon.CHEVRON_DOWN,
                 onClick = { sheetOpen = true },
                 modifier = Modifier.focusRequester(categoryTool).widthIn(max = 380.mpx),
+            )
+            StageTool(
+                text = null, icon = OwnTVIcon.MOVIES, value = stringResource(typeFilter?.displayLabelRes ?: R.string.glcn_guide_type_title), valueAccent = typeFilter != null, trailingIcon = OwnTVIcon.CHEVRON_DOWN,
+                onClick = { returnTo = { runCatching { typeTool.requestFocus() } }; typeOpen = true },
+                modifier = Modifier.focusRequester(typeTool),
             )
             StageTool(
                 text = null, icon = OwnTVIcon.SORT, value = guideSortLabel(sortGuide), trailingIcon = OwnTVIcon.CHEVRON_DOWN,
@@ -984,6 +994,7 @@ fun EpgScreen(
             onDismiss = { askPlayerFor = null },
         )
     }
+    if (typeOpen) GuideTypeMenu(current = typeFilter, counts = typeCounts, onPick = vm::setTypeFilter, onDismiss = { typeOpen = false })
     if (orderOpen) {
         val showEmpty by vm.showEmpty.collectAsStateWithLifecycle()
         GuideOrderMenu(

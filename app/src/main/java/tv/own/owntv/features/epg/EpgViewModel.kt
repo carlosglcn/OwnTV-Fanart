@@ -266,6 +266,16 @@ class EpgViewModel(
         settings.setLastGuideCategory(it.serialize())
     }
 
+    /** glcn: the Guide's Type filter (null = everything) and how many channels show each kind now. */
+    private val _typeFilter = MutableStateFlow<tv.own.owntv.ui.components.ChannelGenre?>(null)
+    val typeFilter: StateFlow<tv.own.owntv.ui.components.ChannelGenre?> = _typeFilter.asStateFlow()
+    private val _typeCounts = MutableStateFlow<Map<tv.own.owntv.ui.components.ChannelGenre, Int>>(emptyMap())
+    val typeCounts: StateFlow<Map<tv.own.owntv.ui.components.ChannelGenre, Int>> = _typeCounts.asStateFlow()
+    fun setTypeFilter(type: tv.own.owntv.ui.components.ChannelGenre?) {
+        _typeFilter.value = type
+        load()
+    }
+
     /** A category picked in the Guide: shown and remembered. */
     fun selectCategoryFilter(key: tv.own.owntv.core.live.LiveKey?) {
         categoryMemory.picked(key ?: tv.own.owntv.core.live.LiveKey.All)
@@ -1192,6 +1202,30 @@ class EpgViewModel(
         // without guide" on. Only for a picked category — "All" stays as the setting says.
         if (channels.isEmpty() && !showEmpty && q.isEmpty() && filter != null && filter != tv.own.owntv.core.live.LiveKey.All) {
             channels = buildChannels(channelDao.channelsForGuide(playlistIds, q, MAX_CHANNELS))
+        }
+        // glcn: the Type filter — what each channel shows now, by kind. Counted for the menu, and with a kind
+        // chosen only its channels stay. A kind nothing shows any more (the films ended) lets go by itself.
+        if (channels.isNotEmpty()) {
+            val keyOf = { ch: ChannelEntity -> ch.epgChannelId?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } }
+            val nowMs = System.currentTimeMillis()
+            val kinds = runCatching {
+                withContext(Dispatchers.IO) {
+                    channels.mapNotNull(keyOf).distinct().chunked(QUERY_CHUNK)
+                        .flatMap { epgDao.nowKinds(it, nowMs - tv.own.owntv.glcn.GuideTypes.BACK_MS, nowMs) }
+                }
+            }.getOrNull()
+            if (kinds != null) {
+                val byKey = HashMap<String, tv.own.owntv.ui.components.ChannelGenre>()
+                kinds.forEach { r ->
+                    tv.own.owntv.glcn.GuideTypes.of(r.categories, r.year, r.lengthMin, r.episode, r.startMs, r.stopMs)?.let { byKey.putIfAbsent(r.epgChannelId, it) }
+                }
+                _typeCounts.value = channels.mapNotNull { ch -> keyOf(ch)?.let { byKey[it] } }.groupingBy { it }.eachCount()
+                val type = _typeFilter.value
+                if (type != null) {
+                    val only = channels.filter { ch -> keyOf(ch)?.let { byKey[it] } == type }
+                    if (only.isEmpty()) _typeFilter.value = null else channels = only
+                }
+            }
         }
         val stored = epgDao.countForSources(ids)
 

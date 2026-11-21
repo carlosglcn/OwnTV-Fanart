@@ -643,6 +643,34 @@ internal fun GuideDayMenu(days: List<Long>, currentDay: Long, onPick: (Long) -> 
     }
 }
 
+/** glcn: the Type filter's menu — everything, or one kind with how many channels show it now; kinds nothing shows are left out. */
+@Composable
+internal fun GuideTypeMenu(
+    current: tv.own.owntv.ui.components.ChannelGenre?,
+    counts: Map<tv.own.owntv.ui.components.ChannelGenre, Int>,
+    onPick: (tv.own.owntv.ui.components.ChannelGenre?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    GuideMenuHost(x = 720f, top = 520.mpx, width = 430.mpx, onDismiss = onDismiss) {
+        StageMenuHeader(title = stringResource(R.string.glcn_guide_type_title), subtitle = stringResource(R.string.glcn_guide_type_hint))
+        StageMenuItem(
+            text = stringResource(R.string.glcn_guide_type_all), icon = OwnTVIcon.EPG, checked = current == null,
+            onClick = { onPick(null); onDismiss() },
+            modifier = if (current == null) Modifier.focusRequester(focus) else Modifier,
+        )
+        tv.own.owntv.glcn.GuideTypes.all.forEach { type ->
+            val n = counts[type] ?: 0
+            if (n > 0 || type == current) StageMenuItem(
+                text = stringResource(type.displayLabelRes), value = n.toString(), checked = type == current,
+                onClick = { onPick(type); onDismiss() },
+                modifier = if (type == current) Modifier.focusRequester(focus) else Modifier,
+            )
+        }
+    }
+}
+
 /** "Today", "Tomorrow", "Yesterday", else the weekday and date ("Thu 2 Oct"). [day] is local midnight. */
 @Composable
 internal fun guideDayLabel(day: Long): String {
