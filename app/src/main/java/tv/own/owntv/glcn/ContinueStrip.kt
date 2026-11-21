@@ -57,11 +57,17 @@ fun ContinueStrip(
     modifier: Modifier = Modifier,
     /** glcn: to send the focus here (▲ from the first row of posters, back from a card's menu) — see [StripFocus]. */
     focus: StripFocus? = null,
+    /** glcn: the row's name when it is a shelf (best rated, recent…); Keep watching's own when null. */
+    title: String? = null,
+    /** glcn: a shelf whose titles have no wide picture shows their posters, upright. */
+    upright: Boolean = false,
 ) {
     if (cards.isEmpty()) return
+    val cardW = if (upright) SHELF_POSTER_W else STRIP_W
+    val cardH = if (upright) SHELF_POSTER_H else STRIP_H
     Column(modifier.fillMaxWidth()) {
         Text(
-            stringResource(R.string.home_row_keep_watching).uppercase(),
+            (title ?: stringResource(R.string.home_row_keep_watching)).uppercase(),
             style = tv.own.owntv.features.home.rowLabelStyle(), color = stageAccent.ink,
             modifier = Modifier.padding(start = startPad, bottom = 8.mpx),
         )
@@ -80,7 +86,11 @@ fun ContinueStrip(
                     androidx.compose.runtime.withFrameNanos { }
                     runCatching { requesters[i]?.requestFocus() ?: false }.getOrDefault(false)
                 }
-                onDispose { focus.request = null }
+                focus.requestNow = {
+                    val i = focus.index.coerceIn(0, (count.value - 1).coerceAtLeast(0))
+                    runCatching { requesters[i]?.requestFocus() ?: false }.getOrDefault(false)
+                }
+                onDispose { focus.request = null; focus.requestNow = null }
             }
             // A card left the strip (seen, removed) while the strip was being used: the focus stays here, on its place.
             val keys = cards.map { it.key }
@@ -97,7 +107,7 @@ fun ContinueStrip(
             itemsIndexed(cards, key = { _, c -> c.key }) { i, c ->
                 StagePoster(
                     title = c.title, line = c.line,
-                    width = STRIP_W.mpx, height = STRIP_H.mpx,
+                    width = cardW.mpx, height = cardH.mpx,
                     progress = c.progress?.takeIf { it in 0.001f..0.999f },
                     onClick = { onClick(i) }, onLongClick = { onLongClick(i) },
                     modifier = Modifier.focusRequester(requesters.getOrPut(i) { androidx.compose.ui.focus.FocusRequester() })
@@ -124,6 +134,9 @@ class StripFocus {
     val holding: Boolean get() = android.os.SystemClock.uptimeMillis() < heldUntil
     fun hold() { heldUntil = android.os.SystemClock.uptimeMillis() + HOLD_MS }
     suspend fun focus(): Boolean = request?.invoke() ?: false
+    internal var requestNow: (() -> Boolean)? = null
+    /** Without waiting: the card as it stands, if it is there to take the focus. */
+    fun focusNow(): Boolean = requestNow?.invoke() ?: false
 
     private companion object { const val HOLD_MS = 4_000L }
 }
@@ -168,3 +181,5 @@ private const val RUNWAY_PAGE_STIFFNESS = 260f
 private const val STRIP_W = 300
 private const val STRIP_H = 169
 private const val STRIP_GAP = 24
+private const val SHELF_POSTER_W = 156
+private const val SHELF_POSTER_H = 234

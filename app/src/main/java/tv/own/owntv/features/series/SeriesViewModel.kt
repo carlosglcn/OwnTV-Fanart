@@ -613,6 +613,29 @@ class SeriesViewModel(
 
     private data class Args(val key: LiveKey, val ctx: Ctx, val query: String, val sort: SettingsRepository.SortMode)
 
+    /** glcn: the rows above All in the Shelves layout — only read while that layout shows them. */
+    val shelves: StateFlow<List<tv.own.owntv.glcn.Shelf<SeriesEntity>>> = combine(ctx, hiddenCategoryIds, sealedCategoryIds) { c, hidden, sealed -> c to (hidden + sealed).toList() }
+        .distinctUntilChanged()
+        .flatMapLatest { (c, out) ->
+            if (c.profileId < 0 || c.sourceIds.isEmpty()) flowOf(emptyList())
+            else {
+                val shelf = tv.own.owntv.glcn.VodShelves
+                val same: (SeriesEntity) -> Any = { (it.titleSignature.ifBlank { it.name.lowercase() }) to it.parsedYear }
+                combine(
+                    seriesDao.observeShelfRated(c.sourceIds, out, shelf.RATED_FLOOR, shelf.FETCH),
+                    seriesDao.observeShelfRecent(c.sourceIds, out, shelf.fromYear(), shelf.FETCH),
+                    seriesDao.observeShelfPopular(c.sourceIds, out, shelf.FETCH),
+                ) { rated, recent, popular ->
+                    listOfNotNull(
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.POPULAR, popular, same),
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.RECENT, recent, same),
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.RATED, rated, same),
+                    )
+                }.throttleLatest()
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val count: StateFlow<Int> = combine(_selected, ctx, hiddenCategoryIds, sealedCategoryIds) { key, c, hidden, sealed -> countFlow(key, c, hidden, sealed) }
         .flatMapLatest { it.throttleLatest() } // Cap live COUNT re-runs during bulk sync
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)

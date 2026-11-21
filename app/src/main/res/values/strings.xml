@@ -146,4 +146,9 @@
     <string name="glcn_style_keep_body">You can change the style at any time in Settings › Appearance.</string>
     <string name="glcn_style_keep_yes">Keep it</string>
     <string name="glcn_style_keep_back">Back to %1$s</string>
+    <string name="glcn_vod_layout_shelves">Shelves</string>
+    <string name="glcn_vod_layout_shelves_description">Cinematic, with rows above the posters of All: popular now, recent releases and the best rated.</string>
+    <string name="glcn_shelf_rated">Best rated</string>
+    <string name="glcn_shelf_recent">Recent releases</string>
+    <string name="glcn_shelf_popular">Popular now</string>
 </resources>

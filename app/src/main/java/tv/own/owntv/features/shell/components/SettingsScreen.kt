@@ -680,6 +680,7 @@ fun SettingsScreen(
                     4 -> R.string.glcn_ui_sound_style_soft
                     5 -> R.string.glcn_ui_sound_style_air
                     6 -> R.string.glcn_ui_sound_style_natural
+                    7 -> R.string.glcn_ui_sound_style_ember
                     else -> R.string.glcn_ui_sound_style_classic
                 },
             ),
@@ -2102,6 +2103,7 @@ private fun vodLayoutLabelRes(layout: tv.own.owntv.core.settings.SettingsReposit
     when (layout) {
         tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC -> R.string.settings_vod_layout_cinematic
         tv.own.owntv.core.settings.SettingsRepository.VodLayout.RUNWAY -> R.string.settings_vod_layout_runway
+        tv.own.owntv.core.settings.SettingsRepository.VodLayout.SHELVES -> R.string.glcn_vod_layout_shelves
         else -> R.string.settings_vod_layout_separate
     }
 
@@ -3056,7 +3058,7 @@ private fun stageRowExtras(
     val liveLayouts = tv.own.owntv.core.settings.SettingsRepository.LiveLayout.entries
     val liveViews = tv.own.owntv.core.settings.SettingsRepository.LiveView.entries
     // Cinematic first.
-    val vodLayouts = listOf(tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC, tv.own.owntv.core.settings.SettingsRepository.VodLayout.RUNWAY, tv.own.owntv.core.settings.SettingsRepository.VodLayout.SEPARATE)
+    val vodLayouts = listOf(tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC, tv.own.owntv.core.settings.SettingsRepository.VodLayout.RUNWAY, tv.own.owntv.core.settings.SettingsRepository.VodLayout.SHELVES, tv.own.owntv.core.settings.SettingsRepository.VodLayout.SEPARATE)
     val presets = tv.own.owntv.core.theme.AccentColor.entries
     val presetColors = presets.map { it.primary(true) }
     val current = tv.own.owntv.ui.theme.stageAccent.accent

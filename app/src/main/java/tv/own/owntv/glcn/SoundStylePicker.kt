@@ -31,7 +31,7 @@ import tv.own.owntv.ui.theme.stageText
 fun SoundStylePicker(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
     // glcn: (style, name) — Natural (6, recorded sounds) first, then the synthesised ones in their own order.
     val names = listOf(
-        6 to R.string.glcn_ui_sound_style_natural,
+        6 to R.string.glcn_ui_sound_style_natural, 7 to R.string.glcn_ui_sound_style_ember,
         0 to R.string.glcn_ui_sound_style_classic, 1 to R.string.glcn_ui_sound_style_crystal, 2 to R.string.glcn_ui_sound_style_wood,
         3 to R.string.glcn_ui_sound_style_bubble, 4 to R.string.glcn_ui_sound_style_soft, 5 to R.string.glcn_ui_sound_style_air,
     )

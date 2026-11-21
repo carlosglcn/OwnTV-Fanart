@@ -311,7 +311,9 @@ private fun SeriesGrid(
     val vodLayout by settingsVm.vodLayout.collectAsStateWithLifecycle()
     // Cinematic is the browse section's; More → Favourites / History pin the plain Separate list.
     val runway = vodLayout == SettingsRepository.VodLayout.RUNWAY && lockedKey == null
-    val cinematic = (vodLayout == SettingsRepository.VodLayout.CINEMATIC || runway) && lockedKey == null
+    // glcn: Shelves is Cinematic with rows above the posters of All.
+    val shelvesOn = vodLayout == SettingsRepository.VodLayout.SHELVES && lockedKey == null
+    val cinematic = (vodLayout == SettingsRepository.VodLayout.CINEMATIC || runway || shelvesOn) && lockedKey == null
     val cinematicDetailsPct by settingsVm.cinematicDetailsHeight(PanelSection.SERIES).collectAsStateWithLifecycle()
     // Cinematic is grid-only. The stored choice is deliberately not rewritten, so switching back to
     // Separate restores the user's List.
@@ -352,9 +354,33 @@ private fun SeriesGrid(
     remember { tv.own.owntv.glcn.StripDismissed.ensure(context) }
     val showStrip = tv.own.owntv.glcn.StripPref.on && stripShows.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
     val showStripNow by androidx.compose.runtime.rememberUpdatedState(showStrip)
-    val stripOffset = if (showStrip && !runway) 1 else 0
+    // glcn: the shelves (see VodShelves) — rows of the grid, after Keep watching and before the posters.
+    val shelfData by (if (shelvesOn) vm.shelves else remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList<tv.own.owntv.glcn.Shelf<tv.own.owntv.core.database.entity.SeriesEntity>>()) })
+        .collectAsStateWithLifecycle()
+    val shelves = if (shelvesOn && selectedKey == LiveKey.All && searchQuery.isBlank()) shelfData else emptyList()
+    val shelfFocus = remember { List(tv.own.owntv.glcn.ShelfKind.entries.size) { tv.own.owntv.glcn.StripFocus() } }
+    // The shelf the focus was on last (-1: on a poster). It opens on the first shelf, and coming back from a show's page
+    // it returns to its shelf — not to that show's poster, far down the list.
+    var shelfAt by androidx.compose.runtime.saveable.rememberSaveable(selectedKey, shelvesOn) { androidx.compose.runtime.mutableIntStateOf(if (shelvesOn && selectedKey == LiveKey.All) 0 else -1) }
+    var shelfMenu by remember { androidx.compose.runtime.mutableIntStateOf(-1) }
+    val shelfAsk = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
+    val stripRows = if (showStrip && !runway) 1 else 0
+    val stripOffset = stripRows + shelves.size
+    val shelvesNow by androidx.compose.runtime.rememberUpdatedState(shelves)
+    suspend fun toShelfRow(k: Int) {
+        runCatching {
+            if (tv.own.owntv.glcn.SmoothScroll.still) effectiveGridState.scrollToItem(stripRows + k) else effectiveGridState.animateScrollToItem(stripRows + k)
+        }
+    }
+    /** The shelf that had the focus takes it again; false when the focus was on a poster (or there are no shelves). */
+    fun shelfFocusNow(): Boolean {
+        val f = shelfFocus.getOrNull(shelfAt)?.takeIf { shelfAt in shelves.indices } ?: return false
+        if (!f.focusNow() && shelfAsk[0]?.isActive != true) { val k = shelfAt; shelfAsk[0] = scope.launch { runCatching { effectiveGridState.scrollToItem(stripRows + k) }; withFrameNanos { }; f.focus() } }
+        return true
+    }
     suspend fun scrollToIndex(i: Int) {
         if (runway) { runwayAt = i; return }
+        if (shelfAt in shelves.indices) { runCatching { effectiveGridState.scrollToItem(stripRows + shelfAt) }; return }
         runCatching { if (usesList) effectiveListState.scrollToItem(i + stripOffset) else effectiveGridState.scrollToItem(i + stripOffset) }
     }
     val stepper = remember { VodStepper(scope) { effectiveListState } }
@@ -370,6 +396,15 @@ private fun SeriesGrid(
     val catListState = androidx.compose.foundation.lazy.rememberLazyListState()
     var gridPaneFocused by remember { mutableStateOf(false) }
     var railPaneFocused by remember { mutableStateOf(false) }
+    // glcn: the shelves are read a moment after the posters: still at the top, the focus moves up to the first shelf.
+    LaunchedEffect(shelves.isNotEmpty()) {
+        if (shelves.isNotEmpty() && shelfAt >= 0 && effectiveGridState.firstVisibleItemIndex <= SHELF_TOP_REACH) {
+            val k = shelfAt.coerceAtMost(shelves.lastIndex)
+            runCatching { effectiveGridState.scrollToItem(stripRows + k) }
+            withFrameNanos { }
+            if (gridPaneFocused) shelfFocus[k].focus()
+        }
+    }
     // Tiles the provider gave no artwork for: ask for the TMDB poster already cached from an earlier
     // focus, so the placeholder is only shown when nothing at all is known (mirrors Movies).
     val cachedPosters by vm.cachedPosters.collectAsStateWithLifecycle()
@@ -391,6 +426,15 @@ private fun SeriesGrid(
     LaunchedEffect(restoreShowId, series.itemCount) {
         val showId = restoreShowId ?: return@LaunchedEffect
         if (series.itemCount == 0) return@LaunchedEffect
+        // glcn: opened from a shelf: back to that shelf.
+        if (shelfAt in shelves.indices) {
+            scrollToIndex(0)
+            withFrameNanos { }
+            shelfFocus[shelfAt].focus()
+            repeat(SHELF_BACK_FRAMES) { withFrameNanos { }; if (!gridPaneFocused) shelfFocusNow() }
+            onRestoredSelected()
+            return@LaunchedEffect
+        }
         // By position, placeholders included: `items` drops pages not loaded yet and shifts the index.
         var idx = series.itemSnapshotList.indexOfFirst { it?.id == showId }
         if (idx < 0 && restoreShowIndex in 0 until series.itemCount) {
@@ -454,6 +498,21 @@ private fun SeriesGrid(
         // this effect re-runs when the whole flow closes and restores the row below.
         if (moveItem != null || creatingCategory || moveState != null) return@LaunchedEffect
 
+        // glcn: a menu opened from a shelf gives the focus back to that shelf.
+        if (shelfMenu >= 0) {
+            val f = shelfFocus.getOrNull(shelfMenu)
+            shelfMenu = -1
+            if (f != null && shelvesNow.isNotEmpty()) {
+                withFrameNanos { }
+                var got = false
+                for (attempt in 0 until STRIP_FOCUS_TRIES) {
+                    if (shelvesNow.isEmpty()) break
+                    if (f.focus()) { got = true; break }
+                    withFrameNanos { }
+                }
+                if (got) { contextSeriesIndex = -1; return@LaunchedEffect }
+            }
+        }
         // glcn: a menu opened from Keep watching gives the focus back to the strip (the card it was on, or the first
         // when that one left) — it went to the show's poster further down the row, a long way from the start.
         if (stripMenu != null) {
@@ -501,6 +560,7 @@ private fun SeriesGrid(
     // The show the cursor was on: after a long-press it carries contextFocus instead of gridSelFocus
     // (gridFocusTarget prefers it), so both are tried before the first show (fix playbook 6).
     fun focusCurrentTitleNow(): Boolean =
+        shelfFocusNow() ||
         runCatching { gridSelFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { contextFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
@@ -531,7 +591,7 @@ private fun SeriesGrid(
                 // 0.7 s and take focus back whenever the titles lost it.
                 repeat(40) {
                     if (!gridPaneFocused) {
-                        if (!(targetId != null && focusCurrentTitle())) runCatching { firstItemFocus.requestFocus() }
+                        if (!shelfFocusNow() && !(targetId != null && focusCurrentTitle())) runCatching { firstItemFocus.requestFocus() }
                     }
                     withFrameNanos { }
                 }
@@ -652,7 +712,12 @@ private fun SeriesGrid(
         if (!showStrip && stripFocus.holding) { withFrameNanos { }; focusCurrentTitleNow() }
     }
     val toStrip: () -> Boolean = {
-        if (!showStrip || runway) false else {
+        // glcn: with shelves, ▲ from the first posters goes to the last of them.
+        if (shelves.isNotEmpty()) {
+            val k = shelves.lastIndex
+            scope.launch { toShelfRow(k); withFrameNanos { }; shelfFocus[k].focus() }
+            true
+        } else if (!showStrip || runway) false else {
             scope.launch {
                 runCatching {
                     if (tv.own.owntv.glcn.SmoothScroll.still) { if (usesList) effectiveListState.scrollToItem(0) else effectiveGridState.scrollToItem(0) }
@@ -667,7 +732,11 @@ private fun SeriesGrid(
     val continueStrip: @Composable (androidx.compose.ui.unit.Dp, androidx.compose.ui.unit.Dp) -> Unit = { start, end ->
         tv.own.owntv.glcn.ContinueStrip(
             stripCards, start, end,
-            onFocus = { i -> stripShows.getOrNull(i)?.let { vm.onSeriesFocused(it.series) } },
+            onFocus = { i ->
+                stripShows.getOrNull(i)?.let { vm.onSeriesFocused(it.series) }
+                // glcn: above the shelves the strip is scrolled away: it comes back into view with the focus.
+                if (shelves.isNotEmpty()) scope.launch { runCatching { if (tv.own.owntv.glcn.SmoothScroll.still) effectiveGridState.scrollToItem(0) else effectiveGridState.animateScrollToItem(0) } }
+            },
             // OK opens the show's page, where Play goes on with the episode it stands at.
             onClick = { i -> stripShows.getOrNull(i)?.let { vm.openSeries(it.series) } },
             onLongClick = { i -> stripShows.getOrNull(i)?.let { stripMenu = it; openMenu(it.series, -1) } },
@@ -709,6 +778,7 @@ private fun SeriesGrid(
                 // (gridFocusTarget keys on selectedSeries.id), and request focus after one frame.
                 scope.launch {
                     val item = series.itemSnapshotList.items.getOrNull(idx)
+                    shelfAt = -1
                     scrollToIndex(idx)
                     withFrameNanos { }
                     if (item != null) {
@@ -724,7 +794,7 @@ private fun SeriesGrid(
         )
         .focusProperties {
             onEnter = {
-                val landed = (targetSeriesId != null && focusCurrentTitle()) || runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
+                val landed = shelfFocusNow() || (targetSeriesId != null && focusCurrentTitle()) || runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
                 // Landed on a title: stop the default entry, which would go on to the search field.
                 if (landed) cancelFocusChange()
             }
@@ -879,6 +949,39 @@ private fun SeriesGrid(
                                             layout(c.maxWidth, pl.height) { pl.place(-fx(84).roundToPx(), 0) }
                                         }) { continueStrip(fx(84), fx(64)) }
                                     }
+                                    shelves.forEachIndexed { k, shelf ->
+                                        item(key = SHELF_KEY + shelf.kind.name, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }, contentType = STRIP_KEY) {
+                                            val upright = remember(shelf) { tv.own.owntv.glcn.VodShelves.upright(shelf.items) { it.backdropUrl } }
+                                            val cards = shelf.items.map { m ->
+                                                tv.own.owntv.glcn.StripCard(
+                                                    key = m.id, title = m.name,
+                                                    image = if (upright) posterOf(m) else m.backdropUrl ?: runwayBackdrops[m.id] ?: posterOf(m),
+                                                    line = listOfNotNull(m.rating?.takeIf { it > 0 }?.let { SHELF_STAR + vodRating(it) }, (m.year ?: m.parsedYear)?.toString()).joinToString(SHELF_DOT).ifBlank { null },
+                                                    progress = seriesProgress[m.id],
+                                                )
+                                            }
+                                            Box(Modifier.layout { m, c ->
+                                                val bleed = (fx(84) + fx(64)).roundToPx()
+                                                val pl = m.measure(c.copy(minWidth = c.maxWidth + bleed, maxWidth = c.maxWidth + bleed))
+                                                layout(c.maxWidth, pl.height) { pl.place(-fx(84).roundToPx(), 0) }
+                                            }) {
+                                                tv.own.owntv.glcn.ContinueStrip(
+                                                    cards, fx(84), fx(64),
+                                                    onFocus = { i ->
+                                                        shelfAt = k
+                                                        shelf.items.getOrNull(i)?.let { vm.onSeriesFocused(it) }
+                                                        scope.launch { toShelfRow(k) }
+                                                    },
+                                                    onClick = { i -> shelf.items.getOrNull(i)?.let { vm.openSeries(it) } },
+                                                    onLongClick = { i -> shelf.items.getOrNull(i)?.let { shelfMenu = k; openMenu(it, -1) } },
+                                                    modifier = Modifier.padding(bottom = 18.mpx),
+                                                    focus = shelfFocus[k],
+                                                    title = stringResource(shelf.kind.title),
+                                                    upright = upright,
+                                                )
+                                            }
+                                        }
+                                    }
                                     items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
                                         // glcn: a poster still on its way shows its shape, shimmering, instead of a gap.
                                         val show = series[index] ?: run { tv.own.owntv.glcn.SkeletonPoster(); return@items }
@@ -899,7 +1002,7 @@ private fun SeriesGrid(
                                                     selectedId = targetSeriesId, selectedFocus = gridSelFocus,
                                                     firstItemFocus = firstItemFocus,
                                                 )
-                                                .onFocusChanged { if (it.isFocused) { onShowFocus(show); glide.focused(index + stripOffset) } }
+                                                .onFocusChanged { if (it.isFocused) { if (shelves.isNotEmpty()) shelfAt = -1; onShowFocus(show); glide.focused(index + stripOffset) } }
                                                 .onPreviewKeyEvent { e ->
                                                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                     when (e.key) {
@@ -2317,6 +2420,11 @@ private val SEASON_GHOST_START = 1260.mpx
 
 /** glcn: the Keep watching strip's key in the lists (never a show id). */
 private const val STRIP_KEY = "glcn_strip"
+private const val SHELF_KEY = "glcn_shelf_"
+private const val SHELF_STAR = "★ "
+private const val SHELF_DOT = " · "
+private const val SHELF_TOP_REACH = 12
+private const val SHELF_BACK_FRAMES = 20
 
 /** glcn: frames the strip is asked for the focus after its menu closes (about half a second). */
 private const val STRIP_FOCUS_TRIES = 30

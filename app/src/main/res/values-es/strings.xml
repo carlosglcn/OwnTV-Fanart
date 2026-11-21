@@ -148,4 +148,9 @@
     <string name="glcn_style_keep_body">Puedes cambiar el estilo cuando quieras en Ajustes › Apariencia.</string>
     <string name="glcn_style_keep_yes">Me lo quedo</string>
     <string name="glcn_style_keep_back">Volver a %1$s</string>
+    <string name="glcn_vod_layout_shelves">Estanterías</string>
+    <string name="glcn_vod_layout_shelves_description">Cinematográfico, con filas encima de los carteles de Todas: populares ahora, estrenos recientes y las mejor valoradas.</string>
+    <string name="glcn_shelf_rated">Mejor valoradas</string>
+    <string name="glcn_shelf_recent">Estrenos recientes</string>
+    <string name="glcn_shelf_popular">Populares ahora</string>
 </resources>
