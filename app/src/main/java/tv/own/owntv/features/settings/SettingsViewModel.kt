@@ -43,6 +43,7 @@ import tv.own.owntv.core.util.classifySyncFailure
 import tv.own.owntv.core.sync.work.CatalogSyncState
 import tv.own.owntv.core.sync.work.CatalogSyncScheduler
 import tv.own.owntv.core.database.dao.resolveExistingProfileId
+import tv.own.owntv.core.database.entity.nameKeyOf
 import tv.own.owntv.core.launcher.LauncherIntegrationRepository
 import tv.own.owntv.core.settings.ChNavLimits
 import tv.own.owntv.core.settings.EpgRefresh
@@ -679,7 +680,7 @@ class SettingsViewModel(
             customizations.hiddenCategories,
             isKids,
         )
-        return channelDao.searchList(query.trim(), sourceIds, 500)
+        return channelDao.searchList(nameKeyOf(query.trim()), sourceIds, 500)
             .asSequence()
             .filter { tv.own.owntv.core.customize.CustomizeKeys.channel(it) !in customizations.hiddenItems }
             .filter { it.categoryId == null || it.categoryId !in hiddenCategoryIds }
@@ -1215,6 +1216,7 @@ class SettingsViewModel(
         syncMovies: Boolean = true,
         syncSeries: Boolean = true,
         preferHls: Boolean = false,
+        catchupPreferHls: Boolean = false,
         httpReferer: String = "",
     ) {
         viewModelScope.launch {
@@ -1241,6 +1243,7 @@ class SettingsViewModel(
                 syncMovies = syncMovies,
                 syncSeries = syncSeries,
                 preferHls = preferHls,
+                catchupPreferHls = catchupPreferHls,
             )
             sourceEditor.save(existing, updated)
             settings.setPlaylistAutoRefresh(id, autoRefresh)
@@ -1314,13 +1317,14 @@ class SettingsViewModel(
         series: SyncScopeChoice = SyncScopeChoice.Now,
         isDefault: Boolean = false,
         preferHls: Boolean = false,
+        catchupPreferHls: Boolean = false,
         httpReferer: String = "",
     ) = runImport {
         importer.xtream(
             name = name, server = server, username = user, password = pass,
             userAgent = userAgent, epgUrl = epgUrl, autoRefresh = autoRefresh,
             live = live, movies = movies, series = series,
-            preferHls = preferHls, makeDefault = isDefault, httpReferer = httpReferer,
+            preferHls = preferHls, catchupPreferHls = catchupPreferHls, makeDefault = isDefault, httpReferer = httpReferer,
         )
     }
 

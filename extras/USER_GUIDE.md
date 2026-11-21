@@ -26,9 +26,9 @@ Welcome  →  Display  →  Disclaimer  →  Set up OwnTV  →  Profile
 Every step has the same frame: step dots at the top, **Back** / **Next** at the bottom, and the keys
 for that step shown in the corner.
 
-1. **Welcome** — the language picker is on this screen: one of 26, or keep **System default**.
+1. **Welcome** — the language picker is on this screen: one of 28, or keep **System default**.
    Press **Get started**.
-2. **Display** — step UI Zoom and Font size while a sample row resizes, so you judge it from your
+2. **Display** — step UI Zoom and Font size (each profile can change its own later) while a sample row resizes, so you judge it from your
    sofa, and pick the **App icon**. Changeable later in Settings → Appearance and Settings → App.
 3. **Disclaimer** — OwnTV is a player; you bring the sources.
 4. **Set up OwnTV** — three ways to begin: **New profile**, **Restore a backup**, or
@@ -212,6 +212,12 @@ for the playlist chosen (or all of them).
 **Where:** Add/Edit playlist
 Ask the panel for HLS instead of MPEG-TS. Try it if live channels are unstable. **Test HLS support**
 just above it checks whether your provider really serves it.
+
+### 📼 Prefer HLS for catch-up (Xtream only)
+**Where:** Add/Edit playlist, under Prefer HLS for Live TV
+Ask for catch-up programmes as HLS instead of MPEG-TS. Off by default: many providers only serve
+catch-up as MPEG-TS. A programme that will not open as HLS is asked for as MPEG-TS by itself, and a
+long programme can take a few seconds more to start, because the provider builds its HLS list first.
 
 ### 📡 Stalker portals
 **Where:** Add source → Stalker (MAC)
@@ -495,7 +501,10 @@ chosen shows everything. The choice stays across the tabs until you close the ap
 of the top row rebuilds the sports data now; the bottom status pill says **Rebuilding sports…** while
 it runs.
 **Scores** rows: **Live now** (red LIVE mark), **Sport on your channels now** (from your guide) and
-**Starting soon**. **OK** on a match opens its page; **hold OK** offers Follow, Remind me (once Find
+**Starting soon** (today's games; tomorrow's when today has none). Tables show the columns each sport
+uses — points for football, OTL for hockey, PCT and GB for basketball and baseball — and outside
+football the tabs read **Standings** and **Games**. College teams are found in **My teams**, labelled
+with their league. **OK** on a match opens its page; **hold OK** offers Follow, Remind me (once Find
 channels has found a channel), each side's team page and the match page.
 
 ### 📅 Calendar
@@ -690,7 +699,8 @@ results; a film or show shows its poster panel.
 — where play, download and every option live; **Back** returns to Search with your query kept.
 **TV Shows** lists programmes from the stored guide whose title matches, on now or within the next 12
 hours, with the channel and time; **OK** goes to that channel. With
-the box empty: **Jump to**, your recent searches, and Continue watching.
+the box empty: **Jump to**, your recent searches (each profile has its own), and Continue watching.
+Search and A–Z ignore letter case in every alphabet: "один" finds "Один".
 **Voice search:** the 🎤 button right of the box listens through your TV's speech recogniser and
 searches what you say. It only appears where the device has one (most Google TV and Android TV
 devices do; many Fire TV and generic boxes don't).
@@ -833,6 +843,13 @@ Needs a free [opensubtitles.com](https://www.opensubtitles.com) account. Sign in
 ### 📁 Use a file you already have
 **Where:** player → Subtitles → **Select local subtitle file**
 No account, no internet. Browses USB and internal storage.
+
+### 📂 Find in folder
+**Where:** player → Subtitles → **Find in folder**
+Choose a folder once (USB or internal storage); after that it lists the subtitle files there, best
+match for the film or episode first, with a search box. **Load matching subtitle automatically**
+loads the one file whose name matches a film or episode that has no subtitle yet — when two match
+(an English and a German one), it loads neither. **Change folder** picks another.
 
 ### ⏱️ Fix subtitle timing
 **Where:** player → Subtitles → the **Subtitle timing** row

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -38,6 +39,7 @@ import org.koin.android.ext.android.get
 import org.koin.android.ext.android.inject
 import org.koin.androidx.compose.koinViewModel
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import tv.own.owntv.core.database.DatabaseUpgrade
 import tv.own.owntv.core.util.Perf
 import tv.own.owntv.core.launcher.LauncherDeepLink
 import tv.own.owntv.features.profiles.ProfileGate
@@ -355,6 +357,14 @@ open class MainActivity : ComponentActivity() {
             @Suppress("RememberReturnType")
             remember { Perf.stamp("first-composition"); Unit }
 
+            // Only a migration still running after a second gets the screen, so a quick one does not flash it.
+            val migrating by DatabaseUpgrade.running.collectAsState()
+            val showMigration by produceState(false, migrating) { value = false; if (migrating) { kotlinx.coroutines.delay(1_000); value = true } }
+            if (migrating && showMigration) {
+                tv.own.owntv.features.recovery.DatabaseMigrationScreen()
+                return@setContent
+            }
+
             // Hold the screen on while video is actually playing, so the TV screensaver doesn't
             // start mid-channel/episode; released when paused/stopped (then the screensaver is fine).
             // Buffering counts as playing: the screensaver timer runs from the last remote press, so
@@ -661,7 +671,9 @@ open class MainActivity : ComponentActivity() {
             var curtainTimedOut by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) { kotlinx.coroutines.delay(SPLASH_TIMEOUT_MS); if (!contentReady) curtainTimedOut = true }
             LaunchedEffect(contentReady) { if (contentReady) { kotlinx.coroutines.delay(STARTUP_SETTLE_TIMEOUT_MS); curtainTimedOut = true } }
-            val curtainUp = !curtainTimedOut && !(contentReady && startupSettled)
+            // glcn: a database migration can run for a minute or more and has its own screen: the curtain steps aside for it.
+            val curtainMigrating by DatabaseUpgrade.running.collectAsState()
+            val curtainUp = !curtainMigrating && !curtainTimedOut && !(contentReady && startupSettled)
             tv.own.owntv.glcn.LaunchCurtain(visible = curtainUp)
             tv.own.owntv.glcn.SleepWatch.Overlay(org.koin.compose.koinInject())
             tv.own.owntv.ui.components.InAppToast(tv.own.owntv.ui.components.AppToast.state)
