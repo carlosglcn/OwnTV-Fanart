@@ -207,7 +207,7 @@ fun Modifier.slidePop(st: SlideFocusState?, focused: Boolean): Modifier =
 
 /** glcn: the channel lists' highlight (TV en directo): brisk, clearly springy — it passes the row by about an eighth and settles back, like a launcher's tiles. */
 const val CHANNEL_FOCUS_STIFFNESS = 760f
-const val CHANNEL_FOCUS_DAMPING = 1f
+const val CHANNEL_FOCUS_DAMPING = 0.76f
 
 /** glcn: a launcher-like pop — a small overshoot (about 6 % past the step), settled in a quarter of a second. */
 private const val POP_DAMPING = 0.55f
