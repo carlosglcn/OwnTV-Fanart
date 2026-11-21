@@ -883,6 +883,7 @@ fun HomeScreen(
                                             vm.refresh()
                                         }
                                     },
+                                    onLongClick = { item -> contextTrendingItem = item },
                                     onFocus = onNonHeroFocused,
                                     firstItemFocusRequester = firstItemFocusRequester,
                                     track = track,

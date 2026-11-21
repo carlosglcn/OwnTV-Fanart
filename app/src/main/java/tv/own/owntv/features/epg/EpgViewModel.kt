@@ -579,8 +579,8 @@ class EpgViewModel(
             SilentEpgMatch.done += fresh
             val outcome = autoMatcher.run(customize.observe(pid, MediaType.LIVE).first(), playlistIds)
             if (outcome.hadCandidates && outcome.applied.isNotEmpty()) {
-                saveEpgMatches(pid, outcome.applied)
-                fillMatchedInBackground(outcome.applied.map { it.second })
+                // Through core's one entry point: it saves the matches and fetches what the cache cannot give.
+                runCatching { guideMatches.match(pid, outcome.applied.toMap()) }
                 load()
                 return
             }
@@ -638,7 +638,7 @@ class EpgViewModel(
      * days kept, not only the channels named so. The grid still narrows to channels by name; these are listed above it.
      */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
-    val guideMatches: StateFlow<List<tv.own.owntv.core.content.ProgrammeSearchResult>> = _query
+    val guideFinds: StateFlow<List<tv.own.owntv.core.content.ProgrammeSearchResult>> = _query
         .debounce(GUIDE_SEARCH_DEBOUNCE_MS)
         .distinctUntilChanged()
         .mapLatest { q ->
@@ -850,8 +850,12 @@ class EpgViewModel(
 
     private suspend fun refreshAllEpgFromNetwork() {
         val pid = settings.activeProfileId.first()
-        if (pid >= 0) sourceRepository.observeSources(pid).first().forEach { runCatching { epgRepository.refresh(it) } }
-        epgSourceStore.getAll().forEach { runCatching { epgRepository.refreshUrl(it.id, it.url, it.userAgent) } }
+        // glcn: the two repositories left this view model's constructor upstream; this one action asks for them itself.
+        val koin = org.koin.core.context.GlobalContext.get()
+        val sources = koin.get<tv.own.owntv.core.repository.SourceRepository>()
+        val guides = koin.get<tv.own.owntv.core.repository.EpgRepository>()
+        if (pid >= 0) sources.observeSources(pid).first().forEach { runCatching { guides.refresh(it) } }
+        epgSourceStore.getAll().forEach { runCatching { guides.refreshUrl(it.id, it.url, it.userAgent) } }
     }
 
     // ---- Smart EPG matching: scan channels with no working guide and match them by name ----

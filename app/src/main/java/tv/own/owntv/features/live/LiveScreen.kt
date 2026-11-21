@@ -1789,6 +1789,7 @@ fun PlayerChannelOptions(vm: LiveViewModel, channel: ChannelEntity, onDismiss: (
         onMatchEpg = { menu = false; matching = true },
         onEpgOffset = { menu = false; offsetting = true },
         onCatchup = { menu = false; catchup = true },
+        hasGuide = false, // glcn: over the player the menu opens the catch-up list, not the Archive page
         isRecording = ch.id in recordingChannelIds,
         onRecord = { if (ch.id in recordingChannelIds) vm.stopRecordingOn(ch) else vm.recordNow(ch); done() },
         onScheduleRecord = { menu = false; scheduling = true },

@@ -701,7 +701,7 @@ fun EpgScreen(
 
         // glcn: the search also looks through every programme of every day kept — listed here, above the grid; OK on
         // one takes the guide to it (its channel, its day and its hour).
-        val guideMatches by vm.guideMatches.collectAsStateWithLifecycle()
+        val guideMatches by vm.guideFinds.collectAsStateWithLifecycle()
         if (query.isNotBlank() && guideMatches.isNotEmpty()) {
             val dayFmt = remember {
                 java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(), DAY_TIME_SKELETON), java.util.Locale.getDefault())
