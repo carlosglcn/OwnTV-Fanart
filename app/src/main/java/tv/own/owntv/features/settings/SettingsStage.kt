@@ -697,7 +697,7 @@ fun StageSettingRow(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                     Text(title, style = stageText(21, 700), color = if (enabled) StageColors.Text else StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (pinned) Box(Modifier.size(7.mpx).background(a.accent, CircleShape))
-                    badges.forEach { (text, filled) -> StageRowBadge(text, filled, focused) }
+                    badges.forEach { (text, filled) -> StageRowBadge(text, filled, tv.own.owntv.ui.stage.stageLit(focused)) }
                 }
                 if (!desc.isNullOrBlank()) {
                     Text(
@@ -709,7 +709,7 @@ fun StageSettingRow(
                 }
             }
             // A disabled row's "−" / "+" must not change it either.
-            if (value != null) androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.stage.LocalStageLit provides focused) { SettingValueView(value, onStep.takeIf { enabled }) }
+            if (value != null) androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.stage.LocalStageLit provides tv.own.owntv.ui.stage.stageLit(focused)) { SettingValueView(value, onStep.takeIf { enabled }) }
         }
     }
 }

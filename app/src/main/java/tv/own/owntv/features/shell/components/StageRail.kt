@@ -493,6 +493,7 @@ private fun RailItem(
         if (onLabel != null) androidx.compose.runtime.LaunchedEffect(focused, bounds, label, labelNote) {
             if (focused && bounds != androidx.compose.ui.geometry.Rect.Zero) onLabel(RailLabel(label, labelNote, bounds))
         }
+        if (onLabel != null) androidx.compose.runtime.DisposableEffect(focused) { onDispose { if (focused) onLabel(null) } }
         // Fade: what waits there comes once the focus rests on the row, not while it passes by.
         var rested by remember { mutableStateOf(false) }
         androidx.compose.runtime.LaunchedEffect(focused) {

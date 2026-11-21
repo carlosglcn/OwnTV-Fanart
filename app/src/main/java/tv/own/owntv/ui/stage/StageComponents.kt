@@ -878,7 +878,7 @@ fun StageSheetItem(
                 }
             }
             if (count != null) Text(count, style = stageText(16, 600), color = on ?: StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            androidx.compose.runtime.CompositionLocalProvider(LocalStageLit provides focused) { trailing?.invoke(this, focused) }
+            androidx.compose.runtime.CompositionLocalProvider(LocalStageLit provides stageLit(focused)) { trailing?.invoke(this, focused) }
         }
     }
 }
@@ -1392,6 +1392,13 @@ fun StageStepper(value: String, onStep: ((Int) -> Unit)? = null) {
         }
     }
 }
+
+/**
+ * glcn: whether a focused row is "lit" — filled with the accent, so what sits on it turns to the accent's ink. A style
+ * that outlines its focused rows (Brasa, Alba) leaves them dark: there the values keep their idle colours, or they
+ * vanished into the row.
+ */
+fun stageLit(focused: Boolean): Boolean = focused && !tv.own.owntv.glcn.EmberFocus.on
 
 /** glcn: true inside a focused (accent-filled) row: what sits on it draws in the accent's own ink, not in the accent. */
 val LocalStageLit = androidx.compose.runtime.compositionLocalOf { false }
