@@ -134,6 +134,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // glcn: the diary's file from the start of the process — it was only opened when a preview engine was first built,
         // and what was logged before that never reached it (a report then showed the day before).
         tv.own.owntv.player.LiveDiagnosticsLog.init(this)
+        tv.own.owntv.glcn.StripPref.init(this)
         // This app's own releases, which the in-app updater asks about. Core defaults to exactly
         // this value, so the line changes nothing today — it is here so the television names its own
         // repository instead of relying on core to guess it, the same as the phone app does. A

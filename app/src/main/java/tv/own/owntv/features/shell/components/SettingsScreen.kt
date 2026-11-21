@@ -881,6 +881,15 @@ fun SettingsScreen(
             focus = vodLayoutRowFocus,
             onClick = { saveScroll(); dialogReturn = vodLayoutRowFocus; showVodLayout = true },
         ),
+        // glcn: the "Keep watching" strip above the posters of Films and Series — off until asked for.
+        RootRow(
+            "glcn_keep_watching_strip", TileTone.PRIMARY, OwnTVIcon.PLAY_CIRCLE,
+            title = stringResource(R.string.glcn_strip_setting_title),
+            desc = stringResource(R.string.glcn_strip_setting_desc),
+            chip = stringResource(if (tv.own.owntv.glcn.StripPref.on) R.string.common_on else R.string.common_off),
+            chipTone = if (tv.own.owntv.glcn.StripPref.on) TileTone.PRIMARY else TileTone.SECONDARY,
+            onClick = { tv.own.owntv.glcn.StripPref.set(!tv.own.owntv.glcn.StripPref.on) },
+        ),
         RootRow(
             tabRowKey(SettingsTab.PANEL_WIDTH), TileTone.PRIMARY, OwnTVIcon.PANEL_WIDTH,
             title = stringResource(R.string.settings_panel_width),

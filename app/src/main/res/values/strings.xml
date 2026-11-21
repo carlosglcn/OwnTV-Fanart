@@ -132,4 +132,6 @@
     <string name="glcn_mark_season_unwatched">Mark season %1$d as unwatched</string>
     <string name="glcn_mark_series_watched">Mark the whole show as watched</string>
     <string name="glcn_mark_series_unwatched">Mark the whole show as unwatched</string>
+    <string name="glcn_strip_setting_title">"Keep watching" in Films and Series</string>
+    <string name="glcn_strip_setting_desc">A row of what you are watching above the posters, in All. Hold OK on a card to mark it watched or remove it.</string>
 </resources>

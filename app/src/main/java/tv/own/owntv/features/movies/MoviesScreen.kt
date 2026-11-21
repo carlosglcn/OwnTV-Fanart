@@ -286,7 +286,7 @@ fun MoviesScreen(
     var stripHasFocus by remember { mutableStateOf(false) }
     val runwayScroll = androidx.compose.foundation.rememberScrollState()
     remember { tv.own.owntv.glcn.StripDismissed.ensure(context) }
-    val showStrip = stripMovies.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
+    val showStrip = tv.own.owntv.glcn.StripPref.on && stripMovies.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
     val stripOffset = if (showStrip && !runway) 1 else 0
     suspend fun scrollToIndex(i: Int) {
         if (runway) { runwayAt = i; return }
