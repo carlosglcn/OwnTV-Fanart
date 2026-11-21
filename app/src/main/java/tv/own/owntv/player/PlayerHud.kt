@@ -989,7 +989,11 @@ fun PlayerHud(
                         }
                     }
                 }
-                CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp), buffering = buffering) // glcn: clear of the now/next card's top edge
+                CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center)
+                    // glcn: clear of the now/next card's top edge. On a channel that can be rewound the bar below is taller
+                    // (the timeline and the "on air now" line) and the programme card, wider since the Compact banner
+                    // grew, came up over the transport: there it sits well above the card.
+                    .offset(y = if (isLive && onRewindLive != null) REWIND_TRANSPORT_LIFT.dp else (-48).dp), buffering = buffering)
 
                 val reportDuration = duration.takeIf { it > 0 }?.let { formatTime(it) }
                 val reportSavedMessage = stringResource(R.string.player_report_saved)
@@ -1368,3 +1372,6 @@ private fun FichaChannelLine(player: PlaybackEngine, chips: List<String>) {
         StreamChipRow(chips, tv.own.owntv.ui.theme.hudInk, Modifier.padding(start = 6.dp), size = 14)
     }
 }
+
+/** glcn: how far above the centre the transport sits on a live channel with an archive (see its call). */
+private const val REWIND_TRANSPORT_LIFT = -176

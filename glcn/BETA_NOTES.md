@@ -137,3 +137,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎛️ The "Keep watching" strip above the posters of Films and Series is now a switch — Settings › Layout › "Keep watching" in Films and Series — and off by default. The "Keep watching" category is always there.
 - 🎯 Keep watching: closing the menu opened from a card (mark watched, remove…) leaves the focus on the strip — it jumped to that title's poster further down the row.
 - ➡️ Keep watching (Films and Series): moving right along the strip now scrolls it — the cards past the edge took the focus without coming into view.
+- ⏪ Player, channels that can be rewound: the programme card no longer covers the rewind / pause / forward buttons and the "behind live" line — they sit higher, clear of the card.
