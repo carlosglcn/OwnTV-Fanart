@@ -77,7 +77,7 @@ private fun VoiceSearchButton(onQuery: (String) -> Unit, modifier: Modifier = Mo
     val asked = VoiceTrigger.pending.intValue
     LaunchedEffect(asked) {
         if (VoiceTrigger.consume()) {
-            try { launcher.launch(VoiceSearch.intent(prompt, language)) } catch (_: ActivityNotFoundException) { available = false }
+            try { launcher.launch(VoiceSearch.intent(context, prompt, language)) } catch (_: ActivityNotFoundException) { available = false }
         }
     }
     StageTool(
