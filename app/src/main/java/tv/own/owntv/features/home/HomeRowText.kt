@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.tv.material3.Text
 import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.mpx
+import tv.own.owntv.ui.theme.mpxSp
 import tv.own.owntv.ui.theme.stageText
 import tv.own.owntv.R
 import tv.own.owntv.core.model.HomeLiveRowMode
@@ -84,14 +85,23 @@ fun timeLeftText(minutes: Long): String = stringResource(R.string.home_time_left
  * `.rowh`: a Home row's title in 26/800 (27 under the full hero), with an optional dim 17/700 word
  * after it — the count ("Keep watching 5") or "On now". Cards start 46 below its top (48 under the hero).
  */
+/** glcn: the small spaced capitals of a row's label (Home's rows, the Keep watching strip). */
+@Composable
+fun rowLabelStyle(big: Boolean = false) = stageText(if (big) 20 else 19, 700, letterSpacing = ROW_LABEL_TRACKING.mpxSp)
+
+private const val ROW_LABEL_TRACKING = 2.4f
+const val ROW_LABEL_ALPHA = 0.86f
+
 @Composable
 fun HomeRowHeader(title: String, small: String?, start: Dp, big: Boolean = false) {
     Row(
         Modifier.padding(start = start).height((if (big) 48 else 46).mpx),
         horizontalArrangement = Arrangement.spacedBy(14.mpx),
     ) {
+        // glcn: a small spaced label in capitals instead of a heavy title — the rows read as an ordered page and the
+        // pictures keep the weight. The box keeps its height, so nothing below moves.
         Text(
-            title, style = stageText(if (big) 27 else 26, 800), color = StageColors.Text, maxLines = 1,
+            title.uppercase(), style = rowLabelStyle(big), color = StageColors.Text.copy(alpha = ROW_LABEL_ALPHA), maxLines = 1,
             overflow = TextOverflow.Ellipsis, modifier = Modifier.alignByBaseline(),
         )
         if (small != null) {

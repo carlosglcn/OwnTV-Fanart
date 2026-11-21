@@ -61,8 +61,8 @@ fun ContinueStrip(
     if (cards.isEmpty()) return
     Column(modifier.fillMaxWidth()) {
         Text(
-            stringResource(R.string.home_row_keep_watching),
-            style = stageText(20, 800), color = stageAccent.ink,
+            stringResource(R.string.home_row_keep_watching).uppercase(),
+            style = tv.own.owntv.features.home.rowLabelStyle(), color = stageAccent.ink,
             modifier = Modifier.padding(start = startPad, bottom = 8.mpx),
         )
         // glcn: the row scrolls with its focus by the app's own rule — inside the posters' grid, which switches that off

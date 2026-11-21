@@ -9,3 +9,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎨 **Posters and backdrops in full colour:** pictures were kept with fewer colours to save memory, which showed as grain and banding in dark posters; now only low-RAM boxes and Light mode keep the saving
 - 🔤 **Crisper small type on 720p screens:** many budget TVs draw apps at 720p, where small bold text came out jagged; there it is drawn a step lighter
 - 🧹 **No channel watermark in the Guide:** the faint channel logo behind the programme's words is gone
+- 🔥 **A new style, Brasa:** warm graphite, an accent that runs from amber to coral, and an outlined focus — a focused row, card or poster is framed in the gradient instead of filled, so the picture under it still shows; buttons and menu items fill with the gradient. First in the style list, so a new install opens on it; who already has the app is offered it once ("Try it"), with a second question to keep it or go back.
+- 🔠 Home's row labels (and "Keep watching" in Films and Series) are small spaced capitals instead of heavy titles: the page reads more ordered and the pictures keep the weight. In every style.

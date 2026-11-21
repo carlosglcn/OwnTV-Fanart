@@ -140,4 +140,12 @@
     <string name="glcn_deck_search">Buscar canal</string>
     <string name="glcn_fixed_focus_title">Lista de canales con foco fijo</string>
     <string name="glcn_fixed_focus_desc">En TV en directo el recuadro se queda a una altura y los canales pasan por debajo, en vez de bajar el recuadro por la lista.</string>
+    <string name="glcn_style_invite_eyebrow">Nuevo</string>
+    <string name="glcn_style_invite_title">Un estilo nuevo: Brasa</string>
+    <string name="glcn_style_invite_body">Grafito cálido, un acento de ámbar a coral y un foco con contorno que deja ver la imagen. Pruébalo ahora: puedes volver atrás con una pulsación.</string>
+    <string name="glcn_style_invite_try">Probar</string>
+    <string name="glcn_style_keep_title">¿Te quedas con Brasa?</string>
+    <string name="glcn_style_keep_body">Puedes cambiar el estilo cuando quieras en Ajustes › Apariencia.</string>
+    <string name="glcn_style_keep_yes">Me lo quedo</string>
+    <string name="glcn_style_keep_back">Volver a %1$s</string>
 </resources>

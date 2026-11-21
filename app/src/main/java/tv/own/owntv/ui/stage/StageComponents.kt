@@ -162,6 +162,28 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocusInner
         )
         return
     }
+    // glcn: a style with a second accent (Brasa) — see EmberFocus.
+    tv.own.owntv.glcn.EmberFocus.second?.let { second ->
+        val sweep = Brush.horizontalGradient(listOf(a.accent, second))
+        when (style) {
+            StageFocus.FX -> {
+                drawBoxShadow(a.accent.copy(alpha = 0.18f), 30 * px, r, dy = 6 * px)
+                drawRoundRect(Brush.horizontalGradient(listOf(a.accent.copy(alpha = 0.16f), second.copy(alpha = 0.06f))), cornerRadius = CornerRadius(r))
+                drawEmberRing(sweep, EMBER_RING * px, r)
+            }
+            StageFocus.FILLED, StageFocus.PRIMARY -> {
+                drawBoxShadow(second.copy(alpha = if (style == StageFocus.PRIMARY) 0.42f else 0.3f), 32 * px, r, dy = 10 * px)
+                drawRoundRect(sweep, cornerRadius = CornerRadius(r))
+            }
+            StageFocus.POSTER -> {
+                drawBoxShadow(a.accent.copy(alpha = 0.3f), 50 * px, r, dy = 20 * px)
+                // Set off from the picture by a page-coloured gap, as a frame.
+                drawOuterRing(palette.page, 3 * px, r)
+                drawEmberRing(sweep, 3.5f * px, r, outset = 3 * px + 1.75f * px)
+            }
+        }
+        return
+    }
     if (palette.isLight) {
         // `.mine.light`: the accent is the ring, set off from the item by a page-coloured gap.
         when (style) {
@@ -214,6 +236,19 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocusInner
         }
     }
 }
+
+/** glcn: a ring in the accent's gradient — inside the bounds, or [outset] px outside them (a poster's frame). */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawEmberRing(brush: Brush, width: Float, radius: Float, outset: Float = -width / 2f) {
+    drawRoundRect(
+        brush,
+        topLeft = androidx.compose.ui.geometry.Offset(-outset, -outset),
+        size = androidx.compose.ui.geometry.Size(size.width + 2 * outset, size.height + 2 * outset),
+        cornerRadius = CornerRadius((radius + outset).coerceAtLeast(0f)),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(width),
+    )
+}
+
+private const val EMBER_RING = 3f
 
 /**
  * The focusable base every Stage control is built on: D-pad focus and click wiring (a held OK calls

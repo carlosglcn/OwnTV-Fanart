@@ -3052,6 +3052,8 @@ fun OwnTVShell(
         val restoreSettings = koinInject<tv.own.owntv.core.settings.SettingsRepository>()
     val incompleteRestore by restoreSettings.restoreInProgress.collectAsStateWithLifecycle(initialValue = null)
     var restoreNoticeDismissed by remember { mutableStateOf(false) }
+    // glcn: the new style, offered once to who already had the app — never over the player.
+    if (incompleteRestore == null) tv.own.owntv.glcn.StyleInviteOffer(restoreSettings, quiet = playerMode != PlayerMode.FULLSCREEN)
     incompleteRestore?.takeIf { !restoreNoticeDismissed }?.let { description ->
         val dismissRestoreNotice: () -> Unit = {
             restoreNoticeDismissed = true
