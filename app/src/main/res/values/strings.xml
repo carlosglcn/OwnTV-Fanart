@@ -136,4 +136,6 @@
     <string name="glcn_strip_setting_desc">A row of what you are watching above the posters, in All. Hold OK on a card to mark it watched or remove it.</string>
     <string name="glcn_sync_queued">Queued</string>
     <string name="glcn_deck_search">Search channel</string>
+    <string name="glcn_fixed_focus_title">Channel list with fixed focus</string>
+    <string name="glcn_fixed_focus_desc">In Live TV the highlight stays at one height and the channels pass under it, instead of the highlight walking down the list.</string>
 </resources>

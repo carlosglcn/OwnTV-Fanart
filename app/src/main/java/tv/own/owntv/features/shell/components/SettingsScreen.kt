@@ -882,6 +882,7 @@ fun SettingsScreen(
             onClick = { saveScroll(); dialogReturn = vodLayoutRowFocus; showVodLayout = true },
         ),
         keepWatchingStripRow(),
+        fixedFocusRow(),
         RootRow(
             tabRowKey(SettingsTab.PANEL_WIDTH), TileTone.PRIMARY, OwnTVIcon.PANEL_WIDTH,
             title = stringResource(R.string.settings_panel_width),
@@ -3405,4 +3406,15 @@ private fun keepWatchingStripRow(): RootRow = RootRow(
     chip = stringResource(if (tv.own.owntv.glcn.StripPref.on) R.string.common_on else R.string.common_off),
     chipTone = if (tv.own.owntv.glcn.StripPref.on) TileTone.PRIMARY else TileTone.SECONDARY,
     onClick = { tv.own.owntv.glcn.StripPref.set(!tv.own.owntv.glcn.StripPref.on) },
+)
+
+/** glcn: Live TV's channel list with the highlight fixed and the channels passing under it. */
+@Composable
+private fun fixedFocusRow(): RootRow = RootRow(
+    "glcn_fixed_focus", TileTone.PRIMARY, OwnTVIcon.LIVE_TV,
+    title = stringResource(R.string.glcn_fixed_focus_title),
+    desc = stringResource(R.string.glcn_fixed_focus_desc),
+    chip = stringResource(if (tv.own.owntv.glcn.ListFocusPref.fixed) R.string.common_on else R.string.common_off),
+    chipTone = if (tv.own.owntv.glcn.ListFocusPref.fixed) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = { tv.own.owntv.glcn.ListFocusPref.set(!tv.own.owntv.glcn.ListFocusPref.fixed) },
 )

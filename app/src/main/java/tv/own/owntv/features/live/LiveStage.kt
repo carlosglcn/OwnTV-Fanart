@@ -604,6 +604,30 @@ private fun LiveScheduleItem(
 private const val LATER_ART_SETTLE_MS = 350L
 private const val LATER_CARD_RATIO = 2.1f
 
+/**
+ * glcn: fixed focus — every step scrolls the list so the focused channel comes back to one height
+ * ([tv.own.owntv.glcn.FIXED_FOCUS_PIVOT]); the highlight, sliding with the same spring, stays put while the channels
+ * pass under it. At the list's ends there is nothing to scroll and the highlight walks to the first and last rows.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+internal val fixedFocusSpec = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
+    override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float>
+        get() = if (tv.own.owntv.glcn.SmoothScroll.still) androidx.compose.animation.core.snap()
+        else androidx.compose.animation.core.spring(
+            dampingRatio = if (tv.own.owntv.ui.stage.GlcnMotion.subtle) 1f else tv.own.owntv.glcn.FIXED_FOCUS_DAMPING,
+            stiffness = tv.own.owntv.glcn.FIXED_FOCUS_STIFFNESS,
+        )
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        if (tv.own.owntv.glcn.ListWheel.active) return 0f
+        return offset - (containerSize - size).coerceAtLeast(0f) * tv.own.owntv.glcn.FIXED_FOCUS_PIVOT
+    }
+}
+
+/** glcn: Live TV's channel list — fixed focus when asked for (Settings › Layout), else scrolling at its edges. */
+internal val channelListSpec: androidx.compose.foundation.gestures.BringIntoViewSpec
+    @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+    get() = if (tv.own.owntv.glcn.ListFocusPref.fixed) fixedFocusSpec else edgeScrollSpec
+
 /** Scroll only as far as the focused item, plus one row of room, needs (the TV default pins it a third down). */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 internal val edgeScrollSpec = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
@@ -951,8 +975,13 @@ internal fun LiveCategories(
             }
         }
         // Edge-only scrolling, as the channel list (no double step on ▼).
-        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
-        tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f).edgeGive()) {
+        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides channelListSpec) {
+        val fixedFocus = tv.own.owntv.glcn.ListFocusPref.fixed
+        tv.own.owntv.glcn.SlideFocusHost(
+            Modifier.fillMaxWidth().weight(1f).edgeGive(),
+            stiffness = if (fixedFocus) tv.own.owntv.glcn.FIXED_FOCUS_STIFFNESS else 700f,
+            damping = if (fixedFocus) tv.own.owntv.glcn.FIXED_FOCUS_DAMPING else 1f,
+        ) {
         LazyColumn(
             state = listState,
             modifier = Modifier

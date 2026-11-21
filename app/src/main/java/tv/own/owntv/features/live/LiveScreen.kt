@@ -1121,11 +1121,11 @@ fun LiveScreen(
                     val lensAccent = tv.own.owntv.ui.theme.stageAccent
                     val lensPalette = tv.own.owntv.ui.theme.LocalStagePalette.current
                     androidx.compose.runtime.CompositionLocalProvider(
-                        androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec,
+                        androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides channelListSpec,
                         tv.own.owntv.glcn.LocalQuietFocus provides wheel.turning,
                     ) {
                     // glcn: the channel highlight slides from row to row with a little give, instead of jumping.
-                    tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f).edgeGive(), stiffness = tv.own.owntv.glcn.CHANNEL_FOCUS_STIFFNESS, damping = tv.own.owntv.glcn.CHANNEL_FOCUS_DAMPING) {
+                    tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f).edgeGive(), stiffness = if (tv.own.owntv.glcn.ListFocusPref.fixed) tv.own.owntv.glcn.FIXED_FOCUS_STIFFNESS else tv.own.owntv.glcn.CHANNEL_FOCUS_STIFFNESS, damping = if (tv.own.owntv.glcn.ListFocusPref.fixed) tv.own.owntv.glcn.FIXED_FOCUS_DAMPING else tv.own.owntv.glcn.CHANNEL_FOCUS_DAMPING) {
                     LazyColumn(
                         state = effectiveListState,
                         verticalArrangement = Arrangement.spacedBy(8.mpx),

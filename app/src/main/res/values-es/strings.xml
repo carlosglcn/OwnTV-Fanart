@@ -138,4 +138,6 @@
     <string name="glcn_strip_setting_desc">Una fila con lo que tienes a medias encima de los pósters, en Todas. Mantén OK sobre una tarjeta para marcarla como vista o quitarla.</string>
     <string name="glcn_sync_queued">En cola</string>
     <string name="glcn_deck_search">Buscar canal</string>
+    <string name="glcn_fixed_focus_title">Lista de canales con foco fijo</string>
+    <string name="glcn_fixed_focus_desc">En TV en directo el recuadro se queda a una altura y los canales pasan por debajo, en vez de bajar el recuadro por la lista.</string>
 </resources>
