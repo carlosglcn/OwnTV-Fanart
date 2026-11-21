@@ -2,6 +2,7 @@
 
 package tv.own.owntv.features.movies
 
+import tv.own.owntv.glcn.runwayPage
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,6 +18,7 @@ import tv.own.owntv.ui.components.onDpadLeft
 import tv.own.owntv.features.categorylock.focusListAfterSheet
 import tv.own.owntv.features.live.LiveCategories
 import tv.own.owntv.core.live.ProviderTags
+import tv.own.owntv.core.live.hasFixedOrder
 import tv.own.owntv.features.live.edgeScrollSpec
 import tv.own.owntv.features.shell.components.VodCinematicBackdrop
 import tv.own.owntv.features.shell.components.VodDetailsCard
@@ -31,6 +33,7 @@ import tv.own.owntv.features.shell.components.VodOptionsMenu
 import tv.own.owntv.features.shell.components.VodPosterArt
 import tv.own.owntv.features.shell.components.VodSortMenu
 import tv.own.owntv.features.shell.components.VodSortTool
+import tv.own.owntv.features.shell.components.VodFixedSortTool
 import tv.own.owntv.features.shell.components.VodStepper
 import tv.own.owntv.features.shell.components.VodTitleInfo
 import tv.own.owntv.features.shell.components.cinematicQualityBadges
@@ -38,6 +41,7 @@ import tv.own.owntv.features.shell.components.vodCategoryEntries
 import tv.own.owntv.features.shell.components.vodCount
 import tv.own.owntv.features.shell.components.vodLine
 import tv.own.owntv.features.shell.components.vodRating
+import tv.own.owntv.features.shell.components.vodRuntime
 import tv.own.owntv.features.shell.components.vodSortLabel
 import tv.own.owntv.ui.stage.StageKeyHints
 import tv.own.owntv.ui.stage.StagePoster
@@ -85,6 +89,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
@@ -274,9 +279,20 @@ fun MoviesScreen(
     var runwayAt by androidx.compose.runtime.saveable.rememberSaveable(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
     var runwayWindow by remember { mutableStateOf(0..0) }
     val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
+    // glcn: "Keep watching" above the posters, in All, while something is under way (the strip is the lists' first item).
+    val stripMovies by vm.continueStrip.collectAsStateWithLifecycle()
+    // glcn: the menu opened from a card of Keep watching (it adds "out of Keep watching"), and the Runway's page.
+    var stripMenuId by remember { mutableStateOf<Long?>(null) }
+    var stripHasFocus by remember { mutableStateOf(false) }
+    val stripFocus = remember { tv.own.owntv.glcn.StripFocus() }
+    val runwayScroll = androidx.compose.foundation.rememberScrollState()
+    remember { tv.own.owntv.glcn.StripDismissed.ensure(context) }
+    val showStrip = tv.own.owntv.glcn.StripPref.on && stripMovies.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
+    val showStripNow by androidx.compose.runtime.rememberUpdatedState(showStrip)
+    val stripOffset = if (showStrip && !runway) 1 else 0
     suspend fun scrollToIndex(i: Int) {
         if (runway) { runwayAt = i; return }
-        runCatching { if (usesList) effectiveListState.scrollToItem(i) else effectiveGridState.scrollToItem(i) }
+        runCatching { if (usesList) effectiveListState.scrollToItem(i + stripOffset) else effectiveGridState.scrollToItem(i + stripOffset) }
     }
     val stepper = remember { VodStepper(scope) { effectiveListState } }
     val playlistMarks by vm.playlistMarks.collectAsStateWithLifecycle()
@@ -364,6 +380,24 @@ fun MoviesScreen(
         // this effect re-runs when the whole flow closes and restores the row below.
         if (moveItem != null || creatingCategory || moveState != null) return@LaunchedEffect
 
+        // glcn: a menu opened from Keep watching gives the focus back to the strip, not to the film's poster further down.
+        if (stripMenuId != null) {
+            stripMenuId = null
+            if (showStrip) {
+                withFrameNanos { }
+                // Held for a moment: the card may still leave (seen, removed) and the focus stays on its place.
+                stripFocus.hold()
+                // The menu still holds the focus for some frames as it closes and refuses the first asks: keep asking
+                // until the strip has it — giving up at once sent the focus to the title's poster instead.
+                var got = false
+                for (attempt in 0 until STRIP_FOCUS_TRIES) {
+                    if (!showStripNow) break
+                    if (stripFocus.focus() || stripHasFocus) { got = true; break }
+                    withFrameNanos { }
+                }
+                if (got) { contextMovieIndex = -1; return@LaunchedEffect }
+            }
+        }
         val targetId = contextMovieId
         if (targetId == null) { contextMovieIndex = -1; return@LaunchedEffect }
         val items = movies.itemSnapshotList.items
@@ -530,10 +564,48 @@ fun MoviesScreen(
         val idx = movies.itemSnapshotList.items.indexOfFirst { it.id == id }
         if (idx >= 0) runwayAt = idx
     }
-    val openMenu: (MovieEntity, Int) -> Unit = { movie, index -> contextMovie = movie; contextMovieId = movie.id; contextMovieIndex = index }
+    val openMenu: (MovieEntity, Int) -> Unit = { movie, index -> if (index >= 0) stripMenuId = null; contextMovie = movie; contextMovieId = movie.id; contextMovieIndex = index }
     val onMovieFocus: (MovieEntity) -> Unit = { movie ->
         vm.onMovieFocused(movie)
         if (rememberMovies) perCategoryMovieIds[selectedKey] = movie.id
+    }
+    val stripCards = stripMovies.map { m ->
+        val prog = movieProgress[m.id]
+        val left = prog?.takeIf { it.durationMs > 0 }?.let { ((it.durationMs - it.positionMs) / 1000).toInt().coerceAtLeast(60) }
+        tv.own.owntv.glcn.StripCard(
+            key = m.id, title = m.name, image = m.backdropUrl ?: runwayBackdrops[m.id] ?: m.posterUrl,
+            line = left?.let { stringResource(R.string.home_time_left, vodRuntime(it)) },
+            progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
+        )
+    }
+    // glcn: ▲ from the first row of posters goes to Keep watching — scrolled away, the grid's own search did not find it.
+    // glcn: the last card left the strip while it had the focus: the posters take it.
+    LaunchedEffect(showStrip) {
+        if (!showStrip && stripFocus.holding) { withFrameNanos { }; focusCurrentTitleNow() }
+    }
+    val toStrip: () -> Boolean = {
+        if (!showStrip || runway) false else {
+            scope.launch {
+                runCatching {
+                    if (tv.own.owntv.glcn.SmoothScroll.still) { if (usesList) effectiveListState.scrollToItem(0) else effectiveGridState.scrollToItem(0) }
+                    else if (usesList) effectiveListState.animateScrollToItem(0) else effectiveGridState.animateScrollToItem(0)
+                }
+                withFrameNanos { }
+                stripFocus.focus()
+            }
+            true
+        }
+    }
+    val continueStrip: @Composable (Dp, Dp) -> Unit = { start, end ->
+        tv.own.owntv.glcn.ContinueStrip(
+            stripCards, start, end,
+            onFocus = { i -> stripMovies.getOrNull(i)?.let { vm.onMovieFocused(it) } },
+            // OK plays it on from where it stopped; hold OK opens its menu (seen, out of Keep watching…).
+            onClick = { i -> stripMovies.getOrNull(i)?.let { playMovieNow(it) } },
+            onLongClick = { i -> stripMovies.getOrNull(i)?.let { stripMenuId = it.id; openMenu(it, -1) } },
+            modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus },
+            focus = stripFocus,
+        )
     }
     val posterOf: (MovieEntity) -> String? = {
         val own = it.posterUrl?.takeIf { u -> u.isNotBlank() }
@@ -614,6 +686,7 @@ fun MoviesScreen(
     val favIds by vm.favoriteIds.collectAsStateWithLifecycle()
     val titlePage: @Composable (MovieEntity, Boolean) -> Unit = { m, inPlace ->
         val metaHere = selectedMovieMeta?.takeIf { it.movieId == m.id }?.cache
+        androidx.compose.runtime.key(m.id) { tv.own.owntv.glcn.TitleZoomBox(Modifier.fillMaxSize()) {
         MovieTitlePage(
             movie = m,
             meta = metaHere,
@@ -629,6 +702,7 @@ fun MoviesScreen(
             onOpenRelated = { r -> titleMovie = r },
             inPlace = inPlace,
         )
+        } }
     }
     val inPlaceTitle = cinematic && titleMovie != null && titleMovie?.id == selectedMovie?.id
     // Back from the page drawn here: the focus goes back to the film it was opened from. glcn: while the page is open
@@ -697,7 +771,7 @@ fun MoviesScreen(
                             modifier = Modifier.width(440.mpx).focusRequester(listSearchFocus).then(searchLeft),
                             onEditingChange = { searchEditing = it },
                         )
-                        VodSortTool(sortMode, Modifier.focusRequester(sortFocus)) { sortOpen = true }
+                        VodSortTool(sortMode, selectedKey.hasFixedOrder, Modifier.focusRequester(sortFocus)) { sortOpen = true }
                         StageTool(text = stringResource(R.string.content_category_browser_title), icon = OwnTVIcon.LIST, onClick = { categoriesOpen = true })
                         Spacer(Modifier.weight(1f))
                         StageKeyHints(listOf(playHint, optionsHint))
@@ -716,6 +790,9 @@ fun MoviesScreen(
                         val glide = remember(effectiveGridState) { tv.own.owntv.glcn.GlideScroller(effectiveGridState, glideScope) }
                         if (runway) {
                             Spacer(Modifier.height(10.mpx))
+                            tv.own.owntv.glcn.RunwayPageFollow(runwayScroll, showStrip && stripHasFocus)
+                            Column(Modifier.weight(1f).fillMaxWidth().runwayPage(runwayScroll)) {
+                            if (showStrip) continueStrip(fx(84), fx(64))
                             tv.own.owntv.glcn.PosterRunway(
                                 count = movies.itemCount,
                                 focusedAt = runwayAt.coerceIn(0, (movies.itemCount - 1).coerceAtLeast(0)),
@@ -746,7 +823,8 @@ fun MoviesScreen(
                                             )
                                             .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); runwayAt = index } }
                                             .onPreviewKeyEvent { e ->
-                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true } else false
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true }
+                                                else e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && index < columns && toStrip()
                                             },
                                     ) {
                                         VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES)
@@ -757,6 +835,7 @@ fun MoviesScreen(
                                         )
                                     }
                                 }
+                            }
                             }
                         } else
                         CompositionLocalProvider(LocalBringIntoViewSpec provides tv.own.owntv.glcn.NoBringIntoViewSpec) {
@@ -769,8 +848,17 @@ fun MoviesScreen(
                                     contentPadding = PaddingValues(start = fx(84), end = fx(64), top = 14.mpx, bottom = glowRoom),
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
+                                    if (showStrip) item(key = STRIP_KEY, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }, contentType = STRIP_KEY) {
+                                        // The strip spans the row, bleeding to the grid's edges.
+                                        Box(Modifier.layout { m, c ->
+                                            val bleed = (fx(84) + fx(64)).roundToPx()
+                                            val pl = m.measure(c.copy(minWidth = c.maxWidth + bleed, maxWidth = c.maxWidth + bleed))
+                                            layout(c.maxWidth, pl.height) { pl.place(-fx(84).roundToPx(), 0) }
+                                        }) { continueStrip(fx(84), fx(64)) }
+                                    }
                                     items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
-                                        val movie = movies[index] ?: return@items
+                                        // glcn: a poster still on its way shows its shape, shimmering, instead of a gap.
+                                        val movie = movies[index] ?: run { tv.own.owntv.glcn.SkeletonPoster(); return@items }
                                         val prog = movieProgress[movie.id]
                                         val done = prog?.let { vm.isMovieCompleted(it) } == true
                                         StagePoster(
@@ -790,11 +878,12 @@ fun MoviesScreen(
                                                     selectedId = targetMovieId, selectedFocus = selFocus,
                                                     firstItemFocus = firstItemFocus,
                                                 )
-                                                .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); glide.focused(index) } }
+                                                .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); glide.focused(index + stripOffset) } }
                                                 .onPreviewKeyEvent { e ->
                                                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                     when (e.key) {
                                                         Key.Menu -> { openMenu(movie, index); true }
+                                                        Key.DirectionUp -> index < columns && toStrip()
                                                         // ◀ from the first column goes to the menu; categories open from their button or a shortcut.
                                                         else -> false
                                                     }
@@ -860,7 +949,11 @@ fun MoviesScreen(
                         modifier = Modifier.weight(1f).focusRequester(listSearchFocus).then(searchLeft),
                         onEditingChange = { searchEditing = it },
                     )
-                    StageTool(text = null, icon = OwnTVIcon.SORT, value = vodSortLabel(sortMode), trailingIcon = OwnTVIcon.CHEVRON_DOWN, onClick = { sortOpen = true }, modifier = Modifier.focusRequester(sortFocus))
+                    if (selectedKey.hasFixedOrder) {
+                        VodFixedSortTool(Modifier.focusRequester(sortFocus))
+                    } else {
+                        StageTool(text = null, icon = OwnTVIcon.SORT, value = vodSortLabel(sortMode), trailingIcon = OwnTVIcon.CHEVRON_DOWN, onClick = { sortOpen = true }, modifier = Modifier.focusRequester(sortFocus))
+                    }
                     StageSegmented(
                         options = listOf(stringResource(R.string.settings_view_grid), stringResource(R.string.settings_view_list)),
                         selected = if (viewMode == SettingsRepository.VodViewMode.LIST) 1 else 0,
@@ -889,6 +982,7 @@ fun MoviesScreen(
                             contentPadding = PaddingValues(start = glowRoom, end = glowRoom, bottom = 16.mpx),
                             modifier = Modifier.fillMaxWidth().weight(1f).then(glowWide),
                         ) {
+                            if (showStrip) item(key = STRIP_KEY, contentType = STRIP_KEY) { continueStrip(0.mpx, 0.mpx) }
                             items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
                                 val movie = movies[index] ?: return@items
                                 val prog = movieProgress[movie.id]
@@ -918,7 +1012,7 @@ fun MoviesScreen(
                                                 Key.DirectionLeft -> !locked && run { runCatching { railFocus.requestFocus() }; true }
                                                 // Step by row number: a held key outran the paged list and stopped (playbook 2).
                                                 Key.DirectionDown -> (stepper.target ?: index).let { from -> from + 1 < movies.itemCount && run { stepper.stepTo(from + 1); true } }
-                                                Key.DirectionUp -> (stepper.target ?: index).let { from -> from > 0 && run { stepper.stepTo(from - 1); true } }
+                                                Key.DirectionUp -> (stepper.target ?: index).let { from -> if (from > 0) { stepper.stepTo(from - 1); true } else toStrip() }
                                                 else -> false
                                             }
                                         },
@@ -942,6 +1036,9 @@ fun MoviesScreen(
                                 contentPadding = PaddingValues(start = glowRoom, end = glowRoom, top = 12.mpx, bottom = 24.mpx),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
+                                if (showStrip) item(key = STRIP_KEY, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }, contentType = STRIP_KEY) {
+                                    continueStrip(0.mpx, 0.mpx)
+                                }
                                 items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
                                     val movie = movies[index] ?: return@items
                                     val prog = movieProgress[movie.id]
@@ -966,7 +1063,8 @@ fun MoviesScreen(
                                             )
                                             .onFocusChanged { if (it.isFocused) onMovieFocus(movie) }
                                             .onPreviewKeyEvent { e ->
-                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true } else false
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true }
+                                                else e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && index < columns && toStrip()
                                             },
                                     ) { VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES) }
                                 }
@@ -1049,7 +1147,12 @@ fun MoviesScreen(
         val trailerKey = if (metadataMode.enrich) cacheForM?.trailerKey else null
         val inHistory by androidx.compose.runtime.produceState(selectedKey == LiveKey.History, m.id) { value = vm.isInHistory(m) }
         val canMove = selectedKey is LiveKey.Folder || selectedKey is LiveKey.Custom || selectedKey == LiveKey.Favorites
+        val fromStrip = stripMenuId == m.id
         val actions = buildList {
+            // glcn: from a card of Keep watching — out of the strip for good ("seen" is further down, as on any film).
+            if (fromStrip) add(MenuAction("strip_remove", stringResource(R.string.glcn_remove_from_continue), OwnTVIcon.EYE_OFF, group = VodGroupWatch) {
+                vm.dismissFromStrip(context, m); contextMovie = null
+            })
             // glcn: the trailer playing behind the page — its sound, for remotes without Play/Pause.
             if (tv.own.owntv.features.home.CinemaTrailer.playing != null) add(MenuAction(
                 "trailer_sound",
@@ -1131,7 +1234,7 @@ fun MoviesScreen(
                 "tmdb_details".takeIf { !(metadataMode.enrich && cacheForM != null) },
                 "delete_subtitles".takeIf { contextMovieSubs.isEmpty() },
             ),
-            firstFocusKey = if (tv.own.owntv.features.home.CinemaTrailer.playing != null) "trailer_sound" else "favourite",
+            firstFocusKey = if (fromStrip) "strip_remove" else if (tv.own.owntv.features.home.CinemaTrailer.playing != null) "trailer_sound" else "favourite",
             onDismiss = { contextMovie = null },
         )
     }
@@ -1412,3 +1515,9 @@ internal fun movieTitleInfo(
         tmdbId = meta?.tmdbId,
     )
 }
+
+/** glcn: the Keep watching strip's key in the lists (never a film id). */
+private const val STRIP_KEY = "glcn_strip"
+
+/** glcn: frames the strip is asked for the focus after its menu closes (about half a second). */
+private const val STRIP_FOCUS_TRIES = 30

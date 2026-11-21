@@ -1,5 +1,6 @@
 package tv.own.owntv.features.live
 
+import tv.own.owntv.glcn.edgeGive
 import tv.own.owntv.glcn.groupGlyph
 import tv.own.owntv.ui.theme.stageTone
 import tv.own.owntv.ui.theme.stageShadow
@@ -122,7 +123,7 @@ internal fun LiveHeader(category: String, count: Int?, showChevron: Boolean, mod
         ) {
             if (showChevron) OwnTVIcon(OwnTVIcon.CHEVRON_LEFT, StageColors.Muted, Modifier.size(20.mpx))
             Text(
-                category, style = stageText(20, 700), color = stageAccent.accent,
+                category, style = stageText(20, 700), color = stageAccent.ink,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
             )
             if (count != null) Text(
@@ -155,12 +156,15 @@ internal fun LiveStageRow(
     trailing: (@Composable () -> Unit)? = null,
     /** glcn: what follows on this channel — shown under the programme on the focused row only. */
     next: XtEpgEntry? = null,
+    /** glcn: the logo on its glass tile (TV en directo's page); the lists over the video draw it bare. */
+    logoTile: Boolean = true,
 ) {
     val formatTime = rememberSystemTimeFormatter()
     StageRow(
         onClick = onClick,
         onLongClick = onLongClick,
-        height = 82.mpx,
+        // glcn: the row grows with a larger text size (Settings › Fonts), so its three lines still fit.
+        height = 82.mpx * tv.own.owntv.ui.theme.LocalUiFontScaleFactor.current.coerceAtLeast(1f),
         modifier = modifier.fillMaxWidth().onFocusChanged { if (it.hasFocus) onFocus() },
     ) { focused ->
         if (showNumber) {
@@ -174,7 +178,8 @@ internal fun LiveStageRow(
             )
         }
         // glcn: every logo on the same rounded glass tile, one size — "1" and "2" no longer tower over the others.
-        LivePlate(channel.displayLogoUrl, 80.mpx, 56.mpx, radius = 14.mpx)
+        // glcn: on the focused row the logo knows the row's fill from the surface (LocalLogoInk).
+        LivePlate(channel.displayLogoUrl, 80.mpx, 56.mpx, radius = 14.mpx, tile = logoTile)
         Box(Modifier.weight(1f)) {
         // glcn: on the focused row, the channel's logo peeks in faint and grey on the right, behind the words (Ghosts).
         if (focused) tv.own.owntv.glcn.GhostLogo(
@@ -182,7 +187,9 @@ internal fun LiveStageRow(
             Modifier.align(Alignment.CenterEnd).offset(x = LIVE_GHOST_W * 0.25f).size(LIVE_GHOST_W, 76.mpx),
             alpha = tv.own.owntv.glcn.Ghosts.ALPHA_STRONG,
         )
-        Column(Modifier.fillMaxWidth()) {
+        // glcn: the lines that fit the row, centred; a line that would be cut (a large font or a bigger interface
+        // size) is left out — "what's next" first — instead of drawn half off the row.
+        FitLines(Modifier.fillMaxWidth().align(Alignment.CenterStart)) {
             Text(name.name, style = stageText(20, 700), color = if (focused) StageColors.FxText else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val title = now?.title ?: nowTitle
             if (title != null) {
@@ -211,10 +218,30 @@ internal fun LiveStageRow(
         else Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
             name.tags.forEach { StageTag(it) }
             if (channel.catchup) OwnTVIcon(OwnTVIcon.REWIND, StageColors.Dim, Modifier.size(22.mpx))
-            if (isFavorite) OwnTVIcon(OwnTVIcon.FAVORITE, stageAccent.accent, Modifier.size(22.mpx), filled = true)
+            if (isFavorite) OwnTVIcon(OwnTVIcon.FAVORITE, stageAccent.ink, Modifier.size(22.mpx), filled = true)
             mark?.let { StagePlaylistMark(it) }
             // glcn: how much is left as a small ring with the minutes in it, instead of a cut-off "quedan …" and a thin line.
             if (now != null) TimeLeftRing(progressOf(now), minutesLeft(now), focused)
+        }
+    }
+}
+
+/**
+ * glcn: a column that keeps only the children that fit its height whole, in order (a later one that would be cut is
+ * dropped with all after it), and centres those it keeps.
+ */
+@Composable
+private fun FitLines(modifier: Modifier, content: @Composable () -> Unit) {
+    androidx.compose.ui.layout.Layout(content, modifier) { measurables, c ->
+        val loose = c.copy(minHeight = 0, maxHeight = androidx.compose.ui.unit.Constraints.Infinity)
+        val placeables = measurables.map { it.measure(loose) }
+        var used = 0
+        val kept = placeables.takeWhile { p -> (used + p.height <= c.maxHeight).also { if (it) used += p.height } }
+        val w = c.maxWidth.takeIf { it != androidx.compose.ui.unit.Constraints.Infinity } ?: (kept.maxOfOrNull { it.width } ?: 0)
+        val h = used.coerceIn(c.minHeight, c.maxHeight)
+        layout(w, h) {
+            var y = (h - used) / 2
+            kept.forEach { it.placeRelative(0, y); y += it.height }
         }
     }
 }
@@ -249,17 +276,22 @@ internal fun LivePlate(
     width: androidx.compose.ui.unit.Dp,
     height: androidx.compose.ui.unit.Dp,
     radius: androidx.compose.ui.unit.Dp = StageRadii.Plate,
+    tile: Boolean = true,
+    /** glcn: the brightness of what is behind the logo when it is not the page (the focused row's accent fill). */
+    behind: Float? = null,
 ) {
     // glcn: a visible glass tile with the logo set inside it (room on every side), so every channel's logo reads the same
     // size — a bare "1" or "2" filled its whole box and towered over the others.
     val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
     Box(
-        Modifier.size(width, height).clip(RoundedCornerShape(radius))
-            .background(if (light) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.07f))
-            .border(1.mpx, if (light) Color.Black.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.08f), RoundedCornerShape(radius)),
+        Modifier.size(width, height).then(
+            if (!tile) Modifier else Modifier.clip(RoundedCornerShape(radius))
+                .background(if (light) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.07f))
+                .border(1.mpx, if (light) Color.Black.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.08f), RoundedCornerShape(radius)),
+        ),
         contentAlignment = Alignment.Center,
     ) {
-        ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize().padding(horizontal = width * 0.16f, vertical = height * 0.18f), fill = Color.Transparent, surfaceLuminance = if (light) 0.9f else 0.02f) {
+        ChannelLogoTile(logoUrl = logoUrl, modifier = Modifier.fillMaxSize().padding(horizontal = width * 0.16f, vertical = height * 0.18f), fill = Color.Transparent, surfaceLuminance = behind ?: if (light) 0.9f else 0.02f) {
             OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.align(Alignment.Center).size(height * 0.5f))
         }
     }
@@ -368,7 +400,7 @@ internal fun LiveStagePane(
                 ChannelLogoTile(
                     logoUrl = channel.displayLogoUrl,
                     modifier = (if (ficha) Modifier.align(Alignment.Center).fillMaxWidth(0.34f).fillMaxHeight(0.34f) else Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f)).graphicsLayer { alpha = if (ficha) 0.5f else 0.34f },
-                    fill = Color.Transparent,
+                    fill = Color.Transparent, surfaceLuminance = 0.02f,
                 ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(56.mpx)) }
                 Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.5f to Color.Transparent)))
             }
@@ -395,7 +427,7 @@ internal fun LiveStagePane(
                     horizontalArrangement = Arrangement.spacedBy(14.mpx),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    channel.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.let { Text(it.toString(), style = stageText(30, 800), color = stageAccent.accent, maxLines = 1) }
+                    channel.number?.takeIf { tv.own.owntv.glcn.LocalShowChannelNumbers.current }?.let { Text(it.toString(), style = stageText(30, 800), color = stageAccent.ink, maxLines = 1) }
                     Text(channelName.orEmpty(), style = stageText(24, 700), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -709,6 +741,8 @@ internal fun LiveCategories(
     showPlaylists: Boolean = false,
     /** glcn: the share of glass a sheet draws (below 1 over the player, so the picture shows through). */
     sheetGlass: Float = 1f,
+    /** glcn: each change opens the quick playlist picker (◀ once more from the player's categories). */
+    pickerRequest: Int = 0,
 ) {
     var localQuery by remember { mutableStateOf("") }
     val query = searchQuery ?: localQuery
@@ -752,7 +786,7 @@ internal fun LiveCategories(
         val k = entry.item.key.toString()
         if (k in hideable) {
             tv.own.owntv.glcn.HiddenCategories.hide(appCtx, k)
-            android.widget.Toast.makeText(appCtx, R.string.glcn_category_hidden_toast, android.widget.Toast.LENGTH_SHORT).show()
+            tv.own.owntv.ui.components.AppToast.show(appCtx, R.string.glcn_category_hidden_toast)
         } else onLongSelect(index)
     }
     // CH+/− in the categories changes the selection; the highlight follows it there.
@@ -764,6 +798,7 @@ internal fun LiveCategories(
     // the rows below, and the cursor must not be dragged down with them.
     var lastChipId by remember { mutableStateOf<Long?>(null) }
     var pickerOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(pickerRequest) { if (pickerRequest > 0) pickerOpen = true }
     // glcn: keyed by the chips' ids, not the list instance — switching list rebuilds the rows but the chips are the
     // same, and new focus requesters on them dropped the cursor for a frame (the highlight blinked).
     val chipIds = if (playlistRows.isEmpty()) emptyList() else listOf(PICKER_CHIP)
@@ -786,6 +821,7 @@ internal fun LiveCategories(
     // Where the fixed entries end and the provider groups begin (the "GROUPS · DE" heading).
     val firstGroup = entries.indexOfFirst { !it.item.nested && (it.item.key is tv.own.owntv.core.live.LiveKey.Folder || it.item.key is tv.own.owntv.core.live.LiveKey.Custom) }
     var stepTarget by remember { mutableStateOf<Int?>(null) }
+    var lastStepAt by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
     var stepJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     // glcn: the headings over the groups, by row position — one ("GROUPS · DE"), or one per section.
     val headingAt: Map<Int, String> = remember(visible, query, firstGroup, groupsHeading, sectionOf, sectionTitles) {
@@ -806,6 +842,12 @@ internal fun LiveCategories(
     fun stepTo(pos: Int) {
         stepTarget = pos
         stepJob?.cancel()
+        // glcn: a held ▲▼ (steps closer than a key repeat and a half): the list moves with the row at once instead
+        // of starting a glide every step — each glide was cancelled by the next press, so on a long list the
+        // highlight ran ahead of rows not drawn yet and showed empty.
+        val now = android.os.SystemClock.uptimeMillis()
+        val fast = now - lastStepAt < FAST_STEP_MS
+        lastStepAt = now
         stepJob = scope.launch {
             val li = lazyIndexOf(pos)
             val info = listState.layoutInfo
@@ -819,9 +861,14 @@ internal fun LiveCategories(
             }
             if (row != null) {
                 // glcn: the row is already composed — the highlight moves at once and the list glides under it.
-                runCatching { rowFocusers[pos].requestFocus() }
-                if (delta != 0f) runCatching {
-                    listState.animateScrollBy(delta, androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                if (fast) {
+                    if (delta != 0f) runCatching { listState.scrollBy(delta) }
+                    runCatching { rowFocusers[pos].requestFocus() }
+                } else {
+                    runCatching { rowFocusers[pos].requestFocus() }
+                    if (delta != 0f) runCatching {
+                        listState.animateScrollBy(delta, androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.LinearOutSlowInEasing))
+                    }
                 }
             } else {
                 if (delta != 0f) runCatching { listState.scrollBy(delta) }
@@ -880,7 +927,7 @@ internal fun LiveCategories(
                             selected = id == activePlaylist,
                             onLongClick = if (id > 0L && id != activePlaylist) ({
                                 tv.own.owntv.glcn.HiddenCategories.hide(appCtx, tv.own.owntv.glcn.HiddenCategories.playlistKey(id))
-                                android.widget.Toast.makeText(appCtx, R.string.glcn_category_hidden_toast, android.widget.Toast.LENGTH_SHORT).show()
+                                tv.own.owntv.ui.components.AppToast.show(appCtx, R.string.glcn_category_hidden_toast)
                             }) else null,
                             modifier = if (id == activePlaylist || (activePlaylist <= 0L && id == -1L)) Modifier.focusRequester(first) else Modifier,
                         )
@@ -905,7 +952,7 @@ internal fun LiveCategories(
         }
         // Edge-only scrolling, as the channel list (no double step on ▼).
         androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
-        tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f)) {
+        tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f).edgeGive()) {
         LazyColumn(
             state = listState,
             modifier = Modifier
@@ -1037,6 +1084,9 @@ internal fun LiveCategories(
 }
 
 private const val PICKER_CHIP = -2L
+
+/** glcn: steps closer than this are a held key — the category list follows at once, without a glide. */
+private const val FAST_STEP_MS = 120L
 
 /**
  * `.fcat` (the Separate column): 52 high, radius 15, 18.5/600, gap 12, 2 px between rows; the

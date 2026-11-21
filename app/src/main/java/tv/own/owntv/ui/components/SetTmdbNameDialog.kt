@@ -86,7 +86,7 @@ fun SetTmdbNameDialog(
                     .padding(horizontal = 36.mpx, vertical = 32.mpx),
             ) {
                 Text(
-                    "TMDB", style = stageText(14, 800, 0.12.em), color = stageAccent.accent,
+                    "TMDB", style = stageText(14, 800, 0.12.em), color = stageAccent.ink,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
                 Text(

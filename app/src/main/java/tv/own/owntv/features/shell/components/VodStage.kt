@@ -196,7 +196,7 @@ internal fun VodHeader(section: String, category: String, count: String?, showCh
         ) {
             if (showChevron) OwnTVIcon(OwnTVIcon.CHEVRON_LEFT, StageColors.Muted, Modifier.size(20.mpx))
             Text(
-                category, style = stageText(20, 700), color = stageAccent.accent,
+                category, style = stageText(20, 700), color = stageAccent.ink,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
             )
             if (count != null) Text("· $count", style = stageText(20, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -435,7 +435,7 @@ internal fun VodHeroTitle(title: String, modifier: Modifier = Modifier) {
     BasicText(
         HeadlineTitle.of(title),
         modifier,
-        style = stageText(92, 800, (-2.5f / 92f).em).copy(lineHeight = 1.02.em, color = StageColors.Text),
+        style = tv.own.owntv.ui.theme.stageDisplay(96).copy(lineHeight = 1.05.em, color = StageColors.Text),
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
         autoSize = TextAutoSize.StepBased(minFontSize = 48.mpxSp, maxFontSize = 92.mpxSp, stepSize = 4.mpxSp),
@@ -593,7 +593,7 @@ internal fun VodDetailsCard(info: VodTitleInfo?, hints: List<Pair<String, String
                     VodMeta(listOfNotNull(info.year?.toString(), info.runtimeSecs?.let { vodRuntime(it) }), info.rating, info.tags, 17)
                     if (info.genres.isNotEmpty()) {
                         Text(
-                            info.genres.joinToString(" · "), style = stageText(16, 700), color = stageAccent.accent,
+                            info.genres.joinToString(" · "), style = stageText(16, 700), color = stageAccent.ink,
                             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.mpx),
                         )
                     }
@@ -685,9 +685,16 @@ private val VodSorts = listOf(
 @Composable
 internal fun vodSortLabel(mode: SortMode): String = stringResource(VodSorts.first { it.first == mode }.second)
 
-/** Cinematic's "Sort: **Date added** ▾" (the label from "Sort: %1$s", the order in full colour). */
+/**
+ * Cinematic's "Sort: **Date added** ▾" (the label from "Sort: %1$s", the order in full colour). With
+ * [fixedOrder] (Favorites, History) it reads "Newest first", dim and out of D-pad reach.
+ */
 @Composable
-internal fun VodSortTool(mode: SortMode, modifier: Modifier = Modifier, onClick: () -> Unit) {
+internal fun VodSortTool(mode: SortMode, fixedOrder: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    if (fixedOrder) {
+        VodFixedSortTool(modifier)
+        return
+    }
     val label = vodSortLabel(mode)
     val full = stringResource(R.string.content_epg_sort_button, label)
     // Bold only the order when the language puts it last ("Sort: A–Z"); otherwise the whole phrase.
@@ -695,6 +702,15 @@ internal fun VodSortTool(mode: SortMode, modifier: Modifier = Modifier, onClick:
     tv.own.owntv.ui.stage.StageTool(
         text = prefix, icon = OwnTVIcon.SORT, value = if (prefix != null) label else full,
         trailingIcon = OwnTVIcon.CHEVRON_DOWN, onClick = onClick, modifier = modifier,
+    )
+}
+
+/** The sort tool on Favorites and History, whose order is their own: "Newest first", dim, not focusable. */
+@Composable
+internal fun VodFixedSortTool(modifier: Modifier = Modifier) {
+    tv.own.owntv.ui.stage.StageTool(
+        text = null, icon = OwnTVIcon.SORT, value = stringResource(R.string.content_newest_first),
+        onClick = {}, modifier = modifier, enabled = false,
     )
 }
 
@@ -807,6 +823,7 @@ internal fun vodCategoryEntries(
             icon = when (item.key) {
                 LiveKey.Favorites -> OwnTVIcon.FAVORITE
                 LiveKey.History -> OwnTVIcon.HISTORY
+                LiveKey.Continue -> OwnTVIcon.PLAY_CIRCLE
                 LiveKey.All -> if (series) OwnTVIcon.SERIES else OwnTVIcon.MOVIES
                 else -> if (item.locked) OwnTVIcon.LOCK else null
             },

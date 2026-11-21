@@ -322,7 +322,7 @@ internal fun ChannelOsdCard(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Box(
-                        Modifier.size(width = 64.dp, height = 44.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.14f)).padding(5.dp),
+                        Modifier.size(width = 50.dp, height = 34.dp).clip(RoundedCornerShape(8.dp)).padding(3.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (!logoUrl.isNullOrBlank()) AsyncImage(model = logoUrl, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.fillMaxSize())
@@ -507,7 +507,8 @@ internal fun BottomBar(
         val toolFocus = androidx.compose.runtime.remember { ToolFocusState() }
         val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
         // glcn: the tool's name above the row; on the Ficha banner under it (above, it left an empty band at the top).
-        if (!toolsUp) ToolLabelLine(toolFocus)
+        // glcn: with the programme card above (live), the tool's name line is the compact one — less gap to the buttons.
+        if (!toolsUp) ToolLabelLine(toolFocus, compact = isLive && side != null)
         androidx.compose.runtime.CompositionLocalProvider(LocalToolFocus provides toolFocus) {
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().onGloballyPositioned { toolFocus.origin = it.positionInWindow() }) {
         val toolsMaxWidth = maxWidth * 0.62f
@@ -608,8 +609,16 @@ internal fun BottomBar(
                     CtrlButton(OwnTVIcon.EPG, label = stringResource(R.string.common_nav_guide)) { onGuide() }
                 }
             }
+            // glcn: with the programme card above, the live badge and the tools take the card's own width — the badge
+            // under the card's start, the tools to the edge — so card and buttons read as one column.
+            val underCard = isLive && side != null && onScrubLive == null && !toolsUp
+            Row(
+                if (underCard) Modifier.fillMaxWidth(SIDE_CARD_FRACTION) else Modifier,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (underCard) Arrangement.SpaceBetween else Arrangement.Start,
+            ) {
             if (isLive && side != null && onScrubLive == null) {
-                Spacer(Modifier.width(8.dp))
+                if (!underCard) Spacer(Modifier.width(8.dp))
                 LiveStateBadge(timeshiftOffsetSec)
                 Spacer(Modifier.width(8.dp))
             }
@@ -712,6 +721,7 @@ internal fun BottomBar(
                     }
                 }
             }
+            }
         }
         }
         }
@@ -732,11 +742,15 @@ internal fun BottomBar(
                 // glcn: the programme beside never takes more than about half the row, so the channel's name and its
                 // facts keep room (on a narrower screen or a bigger zoom they were cut through).
                 androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
-                    val sideMax = minOf(540.dp, maxWidth * 0.46f)
+                    // glcn: one fixed width, so the picture and the lines always start at the same place whatever the
+                    // programme's title, and the channel's name keeps the rest.
+                    // glcn: a little over half the row (the channel's name keeps the rest — some 30 letters), so the
+                    // programme's title and synopsis have room; the badge and tools below take the same width.
+                    val sideW = maxWidth * SIDE_CARD_FRACTION
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.weight(1f)) { header() }
                         Spacer(Modifier.width(18.dp))
-                        Box(Modifier.widthIn(max = sideMax)) { side() }
+                        Box(Modifier.width(sideW).padding(end = 12.dp)) { side() }
                     }
                 }
             } else header()
@@ -865,3 +879,6 @@ internal fun NextEpisodeCard(
     }
 }
 
+
+/** glcn: the share of the bar the programme card (and, under it, the live badge and the tools) takes, beside the channel. */
+private const val SIDE_CARD_FRACTION = 0.55f

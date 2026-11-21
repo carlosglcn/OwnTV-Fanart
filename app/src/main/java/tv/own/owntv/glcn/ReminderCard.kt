@@ -95,7 +95,7 @@ fun ReminderCard(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
                 OwnTVIcon(OwnTVIcon.BELL, a.accent, Modifier.size(15.mpx))
-                Text(eyebrow, style = stageText(14, 700, 0.02.em), color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(eyebrow, style = stageText(14, 700, 0.02.em), color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Text(
                 reminder.title, style = stageText(21, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis,
@@ -107,7 +107,7 @@ fun ReminderCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(stringResource(R.string.content_epg_watch_channel), style = stageText(15, 700), color = StageColors.Text)
-                Text(keyHint, style = stageText(14, 700), color = a.accent)
+                Text(keyHint, style = stageText(14, 700), color = a.ink)
             }
             Box(
                 Modifier.padding(top = 12.mpx).fillMaxWidth().height(3.mpx).clip(RoundedCornerShape(2.mpx))

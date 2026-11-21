@@ -1,5 +1,6 @@
 package tv.own.owntv.features.epg
 
+import tv.own.owntv.glcn.edgeGive
 import androidx.compose.foundation.background
 import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.ui.stage.backdropLeftWash
@@ -84,6 +85,9 @@ import tv.own.owntv.features.live.edgeScrollSpec
 import tv.own.owntv.features.live.liveCategoryEntries
 import tv.own.owntv.features.live.liveEpgShiftLabel
 import tv.own.owntv.ui.components.OwnTVIcon
+import tv.own.owntv.glcn.skeleton
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import tv.own.owntv.ui.components.OwnTVSpinner
 import tv.own.owntv.ui.stage.StageButton
 import tv.own.owntv.ui.stage.shownColor
@@ -203,7 +207,7 @@ fun EpgScreen(
     /** Required: every live tune in the app goes through the one shared path in LiveViewModel, so a
      *  channel gets the same Prefer HLS handling, ExoPlayer→mpv ladder, per-channel engine pin and
      *  external-player routing however the user reached it. */
-    onPlayChannel: (channel: ChannelEntity, channels: List<ChannelEntity>) -> Unit,
+    onPlayChannel: (channel: ChannelEntity, channels: List<ChannelEntity>, key: LiveKey) -> Unit,
     /** "Watch from start" on a catch-up programme. Required for the same reason, and additionally so the
      *  archive is tracked as catch-up playback (which decides what engine toggle the player HUD offers). */
     onPlayCatchup: (channel: ChannelEntity, programme: EpgProgrammeEntity) -> Unit,
@@ -243,16 +247,20 @@ fun EpgScreen(
     val previewArmed by liveVm.previewArmed.collectAsStateWithLifecycle()
     val guidePreview by vm.guidePreview.collectAsStateWithLifecycle()
 
-    // Live TV's Guide view shows Live TV's own category; the TV Guide keeps its own choice. With "TV Guide
-    // follows Live TV" on, a fresh open starts on Live TV's remembered category, set before the first load
-    // so the guide does not load every channel's programmes first. A return (from the player, Settings,
-    // or a startup that already chose the category) keeps the one it has, and Live TV moving its focus
-    // never changes it.
+    // Live TV's Guide view shows Live TV's own category; the TV Guide keeps its own choice, remembered
+    // per profile. With "TV Guide follows Live TV" on, a fresh open starts on Live TV's remembered
+    // category instead, set before the first load so the guide does not load every channel's programmes
+    // first. A return (from the player, Settings, or a startup that already chose the category) keeps
+    // the one it has, and Live TV moving its focus never changes it.
     val categoryKey: LiveKey? = if (liveMode) liveSelected.takeUnless { it == LiveKey.All } else categoryFilter
     val followsLive by liveVm.guideFollowsLive.collectAsStateWithLifecycle()
-    LaunchedEffect(liveMode, liveSelected) { if (liveMode) vm.setCategoryFilter(liveSelected) }
+    LaunchedEffect(liveMode, liveSelected) { if (liveMode) vm.placeCategoryFilter(liveSelected) }
     LaunchedEffect(Unit) {
-        if (!liveMode && !restoreFocus) liveVm.guideOpeningKey()?.let(vm::setCategoryFilter)
+        // The opening category, before the first load: Live TV's when the Guide follows it, otherwise
+        // the Guide's own — restored against the complete rail so a deleted folder falls back to All.
+        if (!liveMode && !restoreFocus) {
+            vm.placeOpeningCategory({ liveVm.guideOpeningKey() }, { liveVm.completeRail() })
+        }
         vm.load() // reload from DB each time the guide is opened
     }
 
@@ -304,6 +312,7 @@ fun EpgScreen(
     var focusedRow by remember { mutableIntStateOf(0) }
     var gridHasFocus by remember { mutableStateOf(false) }
     var cursorTime by remember { mutableStateOf(0L) }
+    var pendingJump by remember { mutableStateOf<tv.own.owntv.core.content.ProgrammeSearchResult?>(null) }
     // Row stage (false): ▲ ▼ move between channels, ◀ leaves for the menu. Cell stage (true): ◀ ▶ go
     // through the programmes. Without it, reaching the channel list meant ◀ past every programme.
     var inCellMode by remember { mutableStateOf(false) }
@@ -412,18 +421,24 @@ fun EpgScreen(
     // The playing channel's category is opened once; if the channel is still not listed, the old target is used.
     var categoryOpenedFor by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(restoreFocus, state.loading, state.channels) {
-        if (!restoreFocus || state.loading || state.channels.isEmpty()) return@LaunchedEffect
-        val playing = previewChannel.takeIf { vm.playerClosed && previewEnabled }
+        if (!restoreFocus || state.loading) return@LaunchedEffect
+        // Nothing to focus in an empty grid: drop the mark rather than carry it into the next mount,
+        // where it would open a category for a channel this screen never showed.
+        if (state.channels.isEmpty()) {
+            vm.focusPlayingOnLoad = false
+            return@LaunchedEffect
+        }
+        val playing = previewChannel.takeIf { vm.focusPlayingOnLoad && previewEnabled }
         val playingIdx = playing?.let { ch -> state.channels.indexOfFirst { it.id == ch.id } } ?: -1
         if (playing != null && playingIdx < 0 && categoryOpenedFor != playing.id) {
             categoryOpenedFor = playing.id
             val key = liveVm.railKeyOf(playing)
             if (key != (categoryKey ?: LiveKey.All)) {
-                if (liveMode) liveVm.show(key) else vm.setCategoryFilter(key) // the playing channel's, not a pick
+                if (liveMode) liveVm.show(key) else vm.placeCategoryFilter(key) // the playing channel's, not a pick
                 return@LaunchedEffect // runs again when that category has loaded
             }
         }
-        vm.playerClosed = false
+        vm.focusPlayingOnLoad = false
         categoryOpenedFor = null
         val idx = if (playing != null && playingIdx >= 0) {
             vm.noteChannelTuned(playing)
@@ -473,7 +488,12 @@ fun EpgScreen(
     }
 
     val channelsNow = state.channels
-    val watch: (ChannelEntity) -> Unit = { ch -> vm.noteChannelTuned(ch); onPlayChannel(ch, channelsNow) }
+    val watch: (ChannelEntity) -> Unit = { ch ->
+        vm.noteChannelTuned(ch)
+        // The Guide's visible list travels with the channel: it is the zap context, as it is for a row
+        // in Live TV (see LiveViewModel.watchFromGuide).
+        onPlayChannel(ch, channelsNow, categoryKey ?: LiveKey.All)
+    }
     val playFromStart: (ChannelEntity, EpgProgrammeEntity) -> Unit = { ch, p ->
         when (catchupPlayer) {
             SettingsRepository.CatchupPlayer.ASK -> askPlayerFor = ch to p
@@ -684,6 +704,60 @@ fun EpgScreen(
             }
         }
 
+        // glcn: the search also looks through every programme of every day kept — listed here, above the grid; OK on
+        // one takes the guide to it (its channel, its day and its hour).
+        val guideMatches by vm.guideMatches.collectAsStateWithLifecycle()
+        if (query.isNotBlank() && guideMatches.isNotEmpty()) {
+            val dayFmt = remember {
+                java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(), DAY_TIME_SKELETON), java.util.Locale.getDefault())
+            }
+            Text(
+                stringResource(R.string.glcn_guide_matches, guideMatches.size), style = stageText(17, 700), color = StageColors.Muted,
+                modifier = Modifier.padding(start = fx(48) + 16.mpx, top = 14.mpx, bottom = 6.mpx),
+            )
+            androidx.compose.foundation.lazy.LazyRow(
+                contentPadding = PaddingValues(horizontal = fx(48) + 8.mpx, vertical = 8.mpx),
+                horizontalArrangement = Arrangement.spacedBy(14.mpx),
+            ) {
+                items(guideMatches.size) { i ->
+                    val m = guideMatches[i]
+                    val onNow = System.currentTimeMillis() in m.programme.startMs until m.programme.stopMs
+                    tv.own.owntv.ui.stage.StageSurface(
+                        onClick = { pendingJump = m; vm.setQuery(""); searchOpen = false },
+                        radius = 14.mpx,
+                        modifier = Modifier.width(380.mpx).height(104.mpx),
+                    ) { focused ->
+                        Column(Modifier.fillMaxSize().padding(horizontal = 16.mpx, vertical = 12.mpx)) {
+                            Text(
+                                if (onNow) stringResource(R.string.glcn_on_air_badge) else dayFmt.format(java.util.Date(m.programme.startMs)).replaceFirstChar { it.uppercase() },
+                                style = stageText(14, 800), color = if (focused) stageAccent.onAccent else stageAccent.ink, maxLines = 1,
+                            )
+                            Text(
+                                tv.own.owntv.core.live.SportsNow.displayTitle(m.programme.title), style = stageText(18, 700),
+                                color = if (focused) stageAccent.onAccent else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = 2.mpx),
+                            )
+                            Text(
+                                m.channel.name, style = stageText(15, 500), color = if (focused) stageAccent.onAccent.copy(alpha = 0.8f) else StageColors.Muted,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        // glcn: a programme picked in the search results — once the grid has its channel again, go there.
+        LaunchedEffect(state.channels, pendingJump) {
+            val pj = pendingJump ?: return@LaunchedEffect
+            val idx = state.channels.indexOfFirst { it.id == pj.channel.id }
+            if (idx < 0) return@LaunchedEffect
+            pendingJump = null
+            showTime(pj.programme.startMs)
+            cursorTime = pj.programme.startMs
+            inCellMode = true
+            stepTo(idx)
+        }
+
         // The grid: ruler at 518, rows from 566.
         Box(Modifier.fillMaxWidth().weight(1f).padding(top = 18.mpx)) {
             when {
@@ -746,6 +820,7 @@ fun EpgScreen(
                             modifier = Modifier
                                 .padding(start = fx(48), end = fx(64), top = 48.mpx)
                                 .fillMaxSize()
+                                .edgeGive()
                                 .onFocusChanged { gridHasFocus = it.hasFocus }
                                 .focusProperties { onEnter = { runCatching { rowFocus(focusedRow.coerceIn(0, state.channels.size - 1)).requestFocus() } } }
                                 .focusGroup(),
@@ -793,6 +868,12 @@ fun EpgScreen(
                                         if (!effectivePreview || !previewOnOk) liveVm.onChannelFocused(channel)
                                     },
                                     onCursor = { cursorTime = it },
+                                    onDay = { d ->
+                                        val base = if (cursorTime > 0L) cursorTime else timeAt(scrollTarget + timelinePx * 3f / 8f)
+                                        val t = (base + d * GUIDE_DAY_MS).coerceIn(state.windowStart, state.windowEnd - 1)
+                                        cursorTime = t
+                                        showTime(t)
+                                    },
                                     onShow = { p -> selected = channel to p },
                                     onStep = { delta ->
                                         val from = stepTarget ?: index
@@ -850,7 +931,7 @@ fun EpgScreen(
                         if (liveMode) {
                             liveVm.select(key)
                         } else {
-                            vm.setCategoryFilter(key)
+                            vm.selectCategoryFilter(key)
                             if (followsLive) liveVm.select(key) // one remembered category for both
                         }
                     }
@@ -1017,6 +1098,7 @@ private fun GuideRow(
     reminderStarts: Set<Long>,
     onFocused: () -> Unit,
     onCursor: (Long) -> Unit,
+    onDay: (Int) -> Unit = {},
     onShow: (EpgProgrammeEntity?) -> Unit,
     onStep: (Int) -> Boolean,
     onOk: (EpgProgrammeEntity?) -> Unit,
@@ -1076,6 +1158,9 @@ private fun GuideRow(
                             else if (down) onCursor(cursorStep(progs, cursorTime, +1, windowStart, windowEnd))
                             true
                         }
+                        // glcn: CH± turns the guide a day forward / back, at the same time of day.
+                        Key.ChannelUp -> { if (down && e.nativeKeyEvent.repeatCount == 0) onDay(+1); true }
+                        Key.ChannelDown -> { if (down && e.nativeKeyEvent.repeatCount == 0) onDay(-1); true }
                         Key.DirectionUp -> if (down) onStep(-1) else true
                         Key.DirectionDown -> if (down) onStep(+1) else true
                         else -> false
@@ -1098,6 +1183,15 @@ private fun GuideRow(
                     cursor = cursor,
                     rowIndex = rowIndex,
                 )
+            } ?: run {
+                // glcn: the row's programmes still on their way: two cells' shapes, shimmering, instead of an empty row.
+                androidx.compose.foundation.layout.Row(
+                    Modifier.fillMaxSize().padding(vertical = 6.mpx),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.mpx),
+                ) {
+                    Box(Modifier.weight(0.42f).fillMaxHeight().clip(RoundedCornerShape(10.mpx)).skeleton())
+                    Box(Modifier.weight(0.58f).fillMaxHeight().clip(RoundedCornerShape(10.mpx)).skeleton())
+                }
             }
         }
     }
@@ -1108,6 +1202,7 @@ private fun GuideRow(
 private fun GuideEmpty(title: String, body: String? = null, action: String? = null, actionIcon: OwnTVIcon = OwnTVIcon.ADD, onAction: () -> Unit = {}) {
     Box(Modifier.fillMaxSize().padding(bottom = 80.mpx), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            tv.own.owntv.glcn.EmptyArt(OwnTVIcon.EPG, Modifier.padding(bottom = 20.mpx))
             Text(title, style = stageText(24, 700), color = StageColors.Text, textAlign = TextAlign.Center, modifier = Modifier.widthIn(max = 900.mpx))
             if (body != null) {
                 Text(body, style = stageText(19, 400), color = StageColors.Muted, textAlign = TextAlign.Center, modifier = Modifier.widthIn(max = 900.mpx).padding(top = 8.mpx))
@@ -1202,3 +1297,7 @@ private inline fun androidx.compose.ui.graphics.drawscope.DrawScope.withLayerAlp
 /** glcn: the faint logo behind the guide's programme panel. */
 private val GUIDE_GHOST_W = 440.mpx
 private val GUIDE_GHOST_H = 260.mpx
+private const val GUIDE_DAY_MS = 24L * 60 * 60 * 1000
+
+/** glcn: a search result's day and hour ("sáb 15, 21:30"), in the device's own order. */
+private const val DAY_TIME_SKELETON = "EEEdHHmm"

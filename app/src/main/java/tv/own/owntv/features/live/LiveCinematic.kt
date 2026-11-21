@@ -340,7 +340,7 @@ private fun SimilarCard(
                 ChannelLogoTile(
                     logoUrl = entry.channel.displayLogoUrl,
                     modifier = Modifier.align(Alignment.Center).size(110.mpx, 70.mpx),
-                    fill = Color.Transparent,
+                    fill = Color.Transparent, surfaceLuminance = ON_DARK_CARD,
                 ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(34.mpx)) }
             }
             Box(
@@ -384,6 +384,7 @@ private fun LiveCinematicHero(
                 previewEngine = previewEngine,
                 showVideo = showVideo,
                 singleSessionBlocked = singleSessionBlocked,
+                nowTitle = nowNext?.now?.title,
                 modifier = Modifier.size(560.mpx, 315.mpx),
             )
         }
@@ -460,6 +461,7 @@ private fun LiveCinematicVideo(
     previewEngine: tv.own.owntv.player.LivePreviewEngine,
     showVideo: Boolean,
     singleSessionBlocked: Boolean,
+    nowTitle: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val state by previewEngine.state.collectAsStateWithLifecycle()
@@ -477,14 +479,14 @@ private fun LiveCinematicVideo(
                 tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxSize())
             } else if (channel != null) {
                 if (loading) Box(Modifier.fillMaxSize().background(Color.Black))
-                ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.size(220.mpx), fill = Color.Transparent) {
+                ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.size(220.mpx), fill = Color.Transparent, surfaceLuminance = ON_DARK_CARD) {
                     OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(56.mpx))
                 }
             }
         }
         if (loading) OwnTVSpinner(sizeDp = 28)
         if (channel != null) {
-            Box(Modifier.align(Alignment.TopStart).padding(start = 18.mpx, top = 16.mpx)) { StageLiveBadge(stringResource(R.string.player_live)) }
+            Box(Modifier.align(Alignment.TopStart).padding(start = 18.mpx, top = 16.mpx)) { StageLiveBadge(tv.own.owntv.glcn.onAirLabel(nowTitle)) }
         }
         if (singleSessionBlocked && !playing) {
             Text(
@@ -524,7 +526,7 @@ internal fun LiveChannelCard(
                 ChannelLogoTile(
                     logoUrl = channel.displayLogoUrl,
                     modifier = Modifier.align(Alignment.Center).size(150.mpx, 100.mpx),
-                    fill = Color.Transparent,
+                    fill = Color.Transparent, surfaceLuminance = ON_DARK_CARD,
                 ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(44.mpx)) }
             }
             // Bottom shade so the text reads on any picture.
@@ -535,7 +537,7 @@ internal fun LiveChannelCard(
             )
             // glcn: the focused card's picture is the backdrop already — its logo steps forward instead.
             Box(Modifier.align(Alignment.TopStart).padding(12.mpx)) {
-                if (focused) LivePlate(channel.displayLogoUrl, 96.mpx, 66.mpx) else LivePlate(channel.displayLogoUrl, 64.mpx, 44.mpx)
+                if (focused) LivePlate(channel.displayLogoUrl, 96.mpx, 66.mpx, behind = ON_DARK_CARD) else LivePlate(channel.displayLogoUrl, 64.mpx, 44.mpx, behind = ON_DARK_CARD)
             }
             // glcn: every channel here is on air; the badge is kept for real live events (a match, a gala).
             if (programme != null && tv.own.owntv.core.live.SportsNow.isLive(programme)) {
@@ -657,3 +659,6 @@ internal fun SportsNowDialog(
         }
     }
 }
+
+/** glcn: these cards are dark (a picture under a black shade) in either theme: white logos stay white on them. */
+private const val ON_DARK_CARD = 0.02f

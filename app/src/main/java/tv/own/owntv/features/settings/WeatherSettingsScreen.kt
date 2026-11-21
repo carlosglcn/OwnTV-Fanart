@@ -135,7 +135,7 @@ fun WeatherSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                 value = SettingValue.Custom {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(30.mpx).background(swatch, RoundedCornerShape(9.mpx)))
-                        Text(label, style = stageText(18, 700), color = stageAccent.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(label, style = stageText(18, 700), color = stageAccent.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         OwnTVIcon(OwnTVIcon.CHEVRON, StageColors.Muted, Modifier.size(20.mpx))
                     }
                 },

@@ -193,8 +193,10 @@ internal fun StageActionRow(
 
 /** What a page says when its list is empty. */
 @Composable
-private fun EmptyNote(title: String, body: String? = null) {
+private fun EmptyNote(title: String, body: String? = null, icon: OwnTVIcon? = null) {
     Column(Modifier.padding(top = 34.mpx)) {
+        // glcn: a small sunset over the words, with the page's own icon.
+        if (icon != null) tv.own.owntv.glcn.EmptyArt(icon, Modifier.padding(bottom = 18.mpx))
         Text(title, style = stageText(24, 800), color = StageColors.Text)
         if (body != null) Text(body, style = stageText(18, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
     }
@@ -361,7 +363,7 @@ internal fun FavouritesPage(
                 modifier = Modifier.focusRequester(segFocus),
             )
             Spacer(Modifier.weight(1f))
-            if (counts.total > 0) StageTool(stringResource(R.string.glcn_clear_favorites), onClick = { showClearFav = true }, icon = OwnTVIcon.TRASH, danger = true)
+            if (counts.total > 0) StageTool(stringResource(R.string.glcn_clear_favorites), onClick = { showClearFav = true }, boxed = true, icon = OwnTVIcon.TRASH, danger = true)
         }
         if (showClearFav) {
             ClearHistoryDialog(
@@ -375,7 +377,7 @@ internal fun FavouritesPage(
         }
         androidx.compose.runtime.SideEffect { setEntry { runCatching { firstTarget.requestFocus() }.getOrDefault(false) } }
         if (counts.total == 0) {
-            EmptyNote(stringResource(R.string.more_fav_empty_title), stringResource(R.string.more_fav_empty_body))
+            EmptyNote(stringResource(R.string.more_fav_empty_title), stringResource(R.string.more_fav_empty_body), OwnTVIcon.FAVORITE)
             return@Column
         }
         if (showLive && lists.live.isNotEmpty()) {
@@ -580,11 +582,11 @@ internal fun HistoryPage(
                 modifier = Modifier.focusRequester(segFocus),
             )
             Spacer(Modifier.weight(1f))
-            if (counts.total > 0) StageTool(stringResource(R.string.settings_clear_history), onClick = { showClear = true }, icon = OwnTVIcon.TRASH, danger = true, modifier = Modifier.focusRequester(clearFocus))
+            if (counts.total > 0) StageTool(stringResource(R.string.settings_clear_history), onClick = { showClear = true }, boxed = true, icon = OwnTVIcon.TRASH, danger = true, modifier = Modifier.focusRequester(clearFocus))
         }
         androidx.compose.runtime.SideEffect { setEntry { runCatching { (rows.firstOrNull()?.let { r -> focusOf(r.id) } ?: segFocus).requestFocus() }.getOrDefault(false) } }
         if (rows.isEmpty()) {
-            EmptyNote(stringResource(R.string.more_history_empty))
+            EmptyNote(stringResource(R.string.more_history_empty), icon = OwnTVIcon.HISTORY)
             return@Column
         }
         LazyColumn(Modifier.padding(top = 26.mpx).fillMaxSize(), contentPadding = PaddingValues(bottom = 40.mpx)) {
@@ -694,7 +696,7 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
             })
             // glcn: Share puts the report on the phone: a TV box rarely has an app to share with (the system sheet did
             // nothing on a SHIELD), so the TV serves it on the home Wi-Fi — scan the QR, type the PIN, read or save it.
-            StageTool(stringResource(R.string.glcn_share_log), icon = OwnTVIcon.SHARE, onClick = {
+            StageTool(stringResource(R.string.glcn_share_log), boxed = true, icon = OwnTVIcon.SHARE, onClick = {
                 scope.launch {
                     // glcn: the phone reads the report from the app's own cache — the exported copy sits in the public
                     // Download folder, which the app could not always read back, and the phone got an empty page.
@@ -710,7 +712,7 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
                     }
                 }
             })
-            if (!entries.isNullOrEmpty()) StageTool(stringResource(R.string.settings_clear_log), icon = OwnTVIcon.TRASH, danger = true, onClick = {
+            if (!entries.isNullOrEmpty()) StageTool(stringResource(R.string.settings_clear_log), boxed = true, icon = OwnTVIcon.TRASH, danger = true, onClick = {
                 PlaybackErrorLog.clear(context)
                 exportPath = null
                 exportFailed = false
@@ -721,7 +723,7 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
         }
         androidx.compose.runtime.SideEffect { setEntry { runCatching { (if (entries.isNullOrEmpty()) exportFocus else firstRow).requestFocus() }.getOrDefault(false) } }
         Text(stringResource(R.string.settings_playback_error_description_full), style = stageText(17, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 10.mpx))
-        exportPath?.let { Text(stringResource(R.string.settings_backup_saved_to, it), style = stageText(16, 500), color = stageAccent.accent, modifier = Modifier.padding(top = 8.mpx)) }
+        exportPath?.let { Text(stringResource(R.string.settings_backup_saved_to, it), style = stageText(16, 500), color = stageAccent.ink, modifier = Modifier.padding(top = 8.mpx)) }
         if (exportFailed) Text(stringResource(R.string.settings_backup_export_error), style = stageText(16, 500), color = StageColors.Danger, modifier = Modifier.padding(top = 8.mpx))
         // glcn (beta only): the live player's own diary — the last lines of what it did (tunes, rewinds,
         // "go live", the saved copy) — readable here, so a fault can be shown with a photo of the screen.
@@ -810,6 +812,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
     val sep = stringResource(R.string.content_epg_bits_separator)
     val accent = stageAccent.accent
 
+    val accentInk = stageAccent.ink
     Column(Modifier.fillMaxSize().focusGroup()) {
         Row(horizontalArrangement = Arrangement.spacedBy(40.mpx), verticalAlignment = Alignment.CenterVertically) {
             // The app's own icon (150) and the wordmark (300).
@@ -829,7 +832,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
                         else -> null
                     }
                     tag?.let {
-                        Text(it.uppercase(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]), style = stageText(13, 800, 0.05.em), color = accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        Text(it.uppercase(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]), style = stageText(13, 800, 0.05.em), color = accentInk, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.background(accent.copy(alpha = 0.2f), RoundedCornerShape(6.mpx)).padding(horizontal = 7.mpx, vertical = 3.mpx))
                     }
                 }
@@ -863,7 +866,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
                     )
                     Column {
                         Text(stringResource(R.string.glcn_about_community_fanart), style = stageText(20, 800), color = StageColors.Text)
-                        Text(GLCN_TELEGRAM_LINK, style = stageText(17, 500), color = accent, modifier = Modifier.padding(top = 4.mpx))
+                        Text(GLCN_TELEGRAM_LINK, style = stageText(17, 500), color = accentInk, modifier = Modifier.padding(top = 4.mpx))
                         Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
                     }
                 }
@@ -877,7 +880,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
                     )
                     Column {
                         Text(stringResource(R.string.glcn_about_community), style = stageText(20, 800), color = StageColors.Text)
-                        Text(TELEGRAM_LINK, style = stageText(17, 500), color = accent, modifier = Modifier.padding(top = 4.mpx))
+                        Text(TELEGRAM_LINK, style = stageText(17, 500), color = accentInk, modifier = Modifier.padding(top = 4.mpx))
                         Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
                     }
                 }

@@ -5,6 +5,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -227,15 +228,43 @@ object StageRadii {
 }
 
 /** The accent triple every Stage treatment is built from. */
-data class StageAccent(val accent: Color, val onAccent: Color, val focus: Color)
+data class StageAccent(
+    val accent: Color,
+    val onAccent: Color,
+    val focus: Color,
+    /**
+     * glcn: the accent as text or an icon on the page — the theme's own text colour instead when the accent would
+     * vanish there (a white or pale accent under the light theme, a near-black one under the dark).
+     */
+    val ink: Color = accent,
+)
 
 val stageAccent: StageAccent
     @Composable
     @ReadOnlyComposable
     // In light the pale focus colour vanishes on white, so every ring is the accent itself.
     get() = OwnTVTheme.colors.let {
-        StageAccent(it.primary, it.onPrimary, if (LocalStagePalette.current.isLight) it.primary else it.focusBorder)
+        val pal = LocalStagePalette.current
+        val l = it.primary.luminance()
+        val ink = if ((pal.isLight && l > INK_LIGHT_MAX) || (!pal.isLight && l < INK_DARK_MIN)) pal.text else it.primary
+        // glcn: text on the accent must read whatever the accent — a theme's own "on" colour is kept only while it
+        // stands out on it; otherwise near-black on a pale accent, white on a dark one.
+        val on = if (contrast(it.onPrimary, it.primary) >= ON_ACCENT_MIN_CONTRAST) it.onPrimary
+            else if (l > 0.4f) Color(0xFF111418) else Color.White
+        StageAccent(it.primary, on, if (pal.isLight) it.primary else it.focusBorder, ink)
     }
+
+private fun contrast(a: Color, b: Color): Float {
+    val la = a.luminance() + 0.05f
+    val lb = b.luminance() + 0.05f
+    return if (la > lb) la / lb else lb / la
+}
+
+private const val ON_ACCENT_MIN_CONTRAST = 3f
+
+/** glcn: past these the accent no longer reads as text on the light / dark page. */
+private const val INK_LIGHT_MAX = 0.55f
+private const val INK_DARK_MIN = 0.06f
 
 /**
  * Stage type: a design size and weight in the user's main font (Plus Jakarta Sans by default).
@@ -249,3 +278,27 @@ fun stageText(size: Number, weight: Int, letterSpacing: TextUnit = TextUnit.Unsp
     fontWeight = FontWeight(weight),
     letterSpacing = letterSpacing,
 )
+
+
+/**
+ * glcn: Stage display type — big titles only (a film's or programme's name when it has no title art, Home's
+ * featured title): the display face, tall and narrow, at [size]. With the user's own font choice other than the
+ * default, that font is kept, so a chosen look is never overridden.
+ */
+@Composable
+@ReadOnlyComposable
+fun stageDisplay(size: Number, weight: Int = 700) = TextStyle(
+    fontFamily = if (LocalMainFontFamily.current == DefaultMainFamily) DisplayFamily else LocalMainFontFamily.current,
+    fontSize = size.mpxSp,
+    fontWeight = FontWeight(weight),
+    lineHeight = (size.toFloat() * 1.12f).mpxSp,
+)
+
+/**
+ * glcn: the three heights of the Stage. The page lies flat; a card floats a little above it ([CARD]); what has the
+ * focus, or opens over the rest, floats higher ([RAISED]). Shadows are only used at these two heights.
+ */
+object StageElevation {
+    val CARD = 10.mpx
+    val RAISED = 24.mpx
+}

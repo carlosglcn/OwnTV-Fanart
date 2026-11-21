@@ -9,6 +9,7 @@ import androidx.compose.ui.res.stringResource
 import tv.own.owntv.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -36,6 +37,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -52,6 +54,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.text.style.TextOverflow
@@ -250,7 +253,17 @@ fun StageSurface(
             .then(if (focused && focusDecor && !sliding) Modifier.stageFocusDecor(focusStyle, radius, accent, palette) else if (focused) Modifier else idle)
             .stageClickable(interaction, enabled, onClick, onLongClick),
         contentAlignment = contentAlignment,
-    ) { content(focused) }
+    ) {
+        // glcn: a logo inside the focused item knows the text colour on its fill (ChannelLogoTile).
+        val ink = when {
+            !focused -> null
+            focusStyle == StageFocus.FX -> palette.fxText
+            focusStyle == StageFocus.FILLED || focusStyle == StageFocus.PRIMARY -> accent.onAccent
+            else -> null
+        }
+        if (ink == null) content(focused)
+        else androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.components.LocalLogoInk provides ink) { content(focused) }
+    }
 }
 
 /** The PRIMARY (1.04) and POSTER (1.08, from 50% 40%) lift; FX and FILLED stay put. An episode lifts 1.06 from 50% 30%. */
@@ -440,6 +453,8 @@ fun StageTool(
     danger: Boolean = false,
     /** glcn: an icon-only pill whose [text] shows only while it is focused — a lighter toolbar. */
     labelOnFocus: Boolean = false,
+    /** Off: drawn dim and skipped by the D-pad (a sort that does not apply to the open list). */
+    enabled: Boolean = true,
 ) {
     val a = stageAccent
     val r = StageRadii.Tool
@@ -448,16 +463,17 @@ fun StageTool(
         radius = r,
         modifier = modifier.height(48.mpx),
         idle = if (boxed) Modifier.background(StageColors.ControlFill, RoundedCornerShape(r)) else Modifier,
+        enabled = enabled,
     ) { focused ->
         Row(
             Modifier.padding(horizontal = 16.mpx),
             horizontalArrangement = Arrangement.spacedBy(9.mpx),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val color = if (focused) a.onAccent else if (danger) StageColors.Danger else StageColors.Muted
+            val color = if (focused) a.onAccent else if (!enabled) StageColors.Dim else if (danger) StageColors.Danger else StageColors.Muted
             if (icon != null) StageIcon(icon, color, 20.mpx)
             if (text != null && (!labelOnFocus || focused || icon == null)) Text(text, style = stageText(18, 700), color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (value != null) Text(value, style = stageText(18, 700), color = if (focused) a.onAccent else if (valueAccent) a.accent else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (value != null) Text(value, style = stageText(18, 700), color = if (focused) a.onAccent else if (!enabled) StageColors.Dim else if (valueAccent) a.accent else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (trailingIcon != null) StageIcon(trailingIcon, color, 20.mpx)
         }
     }
@@ -557,6 +573,11 @@ fun StageSegmented(
 /** `.tag`: a provider or quality badge, 13/800 caps-spaced on white 8%. [onAccent] inside a focused item; [tint] for a coloured tag. */
 @Composable
 fun StageTag(text: String, onAccent: Color? = null, tint: Color? = null) {
+    // glcn: a quality mark the chosen badge pack has a picture for is shown as that picture.
+    if (onAccent == null && tint == null) tv.own.owntv.glcn.BadgePack.imageFor(text)?.let { url ->
+        tv.own.owntv.glcn.PackBadge(url, text, 30.mpx)
+        return
+    }
     Text(
         text,
         style = stageText(13, 800, 0.05.em),
@@ -1028,6 +1049,9 @@ fun StagePoster(
 private fun PosterQualityBadges(badges: List<String>, compact: Boolean, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(5.mpx)) {
         badges.forEach { b ->
+            // glcn: the chosen badge pack's picture, when it has one for this mark.
+            val packed = tv.own.owntv.glcn.BadgePack.imageFor(b)
+            if (packed != null) { tv.own.owntv.glcn.PackBadge(packed, b, if (compact) 20.mpx else 24.mpx, onPoster = true); return@forEach }
             val hdr = b.startsWith("HDR") || b == "DV"
             Text(
                 b,
@@ -1299,11 +1323,17 @@ fun StageRatingChip(rating: String, modifier: Modifier = Modifier, small: Boolea
 }
 
 /**
- * `.stp`: "− 90% +" inside a settings row. Display only: the row owns focus and ◀ ▶ change the value
- * ("controls inside the rows").
+ * `.stp`: "− 90% +" inside a settings row. The row owns focus and ◀ ▶ change the value ("controls
+ * inside the rows"). With [onStep], a touch or air-mouse tap on "−" / "+" steps that way: the buttons
+ * take no focus, so the D-pad still treats the row as one control, and the tap is consumed here, so
+ * the row's own click (which steps up) does not fire as well.
  */
 @Composable
-fun StageStepper(value: String) {
+fun StageStepper(value: String, onStep: ((Int) -> Unit)? = null) {
+    val step by rememberUpdatedState(onStep)
+    fun tap(dir: Int) = if (onStep == null) Modifier else Modifier.pointerInput(dir) {
+        detectTapGestures { step?.invoke(dir) }
+    }
     Row(
         Modifier
             .background(StageColors.ControlFill, RoundedCornerShape(13.mpx))
@@ -1311,7 +1341,7 @@ fun StageStepper(value: String) {
         horizontalArrangement = Arrangement.spacedBy(4.mpx),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(34.mpx), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(34.mpx).then(tap(-1)), contentAlignment = Alignment.Center) {
             Text("−", style = stageText(20, 700), color = StageColors.Muted)
         }
         Text(
@@ -1322,7 +1352,7 @@ fun StageStepper(value: String) {
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             modifier = Modifier.widthIn(min = 64.mpx),
         )
-        Box(Modifier.size(34.mpx), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(34.mpx).then(tap(1)), contentAlignment = Alignment.Center) {
             Text("+", style = stageText(20, 700), color = StageColors.Muted)
         }
     }

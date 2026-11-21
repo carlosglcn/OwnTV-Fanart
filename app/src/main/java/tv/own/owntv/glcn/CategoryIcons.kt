@@ -70,8 +70,16 @@ object CategoryIcons {
         tv.own.owntv.core.sync.PlatformLogos.logoFor(groupName)?.let { return Glyph.Logo(it) }
         // A choice from before the line icons (an emoji) is not a key any more: back to the automatic one.
         overrides[key(groupName)]?.let { if (it == NONE) return null; if (it in CategoryGlyphPaths.paths) return Glyph.Icon(it) }
-        return auto(groupName, tags, country)
+        // glcn: worked out once per group — every row of a long category list used to match it again on each draw.
+        val k = groupName + '\u0000' + tags.joinToString(TAG_SEP.toString()) + '\u0000' + country.orEmpty()
+        autoCache[k]?.let { return it.glyph }
+        return auto(groupName, tags, country).also { if (autoCache.size < AUTO_CACHE_MAX) autoCache[k] = Cached(it) }
     }
+
+    private class Cached(val glyph: Glyph?)
+    private val autoCache = java.util.concurrent.ConcurrentHashMap<String, Cached>()
+    private const val AUTO_CACHE_MAX = 4000
+    private const val TAG_SEP = '\u0001'
 
     /** Whether the group has a chosen icon (or none chosen) rather than the automatic one. */
     fun isChosen(groupName: String): Boolean = key(groupName) in overrides

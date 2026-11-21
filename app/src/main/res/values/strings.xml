@@ -91,4 +91,47 @@
     <string name="glcn_wall_petalos">Petals</string>
     <string name="glcn_recent_clear_all">Clear all recent channels</string>
     <string name="glcn_wall_option">App wallpapers</string>
+    <plurals name="glcn_deck_films">
+        <item quantity="one">%1$s film</item>
+        <item quantity="many">%1$d films</item>
+        <item quantity="other">%1$s films</item>
+    </plurals>
+    <plurals name="glcn_deck_channels">
+        <item quantity="one">%1$s channel</item>
+        <item quantity="other">%1$s channels</item>
+    </plurals>
+    <plurals name="glcn_deck_series">
+        <item quantity="one">%1$s series</item>
+        <item quantity="other">%1$s series</item>
+    </plurals>
+    <string name="glcn_deck_group_hidden">Group hidden. Show it again in Settings › Customize.</string>
+    <string name="glcn_deck_manage_title">Manage groups</string>
+    <string name="glcn_deck_manage_hint">OK shows or hides · Back returns</string>
+    <string name="glcn_guide_matches">In the guide: %1$d · OK takes you to the programme</string>
+    <string name="glcn_on_air_now">ON AIR NOW</string>
+    <string name="glcn_recent_forget_body">Clear the recently watched channels: just this one, or all of them. Films and series keep their own.</string>
+    <string name="glcn_recent_forget_one">Remove %1$s</string>
+    <string name="glcn_recent_forget_all">Clear all</string>
+    <string name="glcn_recent_forget_hint">Remove</string>
+    <string name="glcn_badges_title">Quality badges</string>
+    <string name="glcn_badges_text">Text</string>
+    <string name="glcn_badges_elite">Elite Badges (leonevz)</string>
+    <string name="glcn_badges_custom">Other pack (address)</string>
+    <string name="glcn_badges_loading">Downloading the badge pack…</string>
+    <string name="glcn_badges_failed">Couldn\'t load the badge pack — showing text badges</string>
+    <string name="glcn_badges_ready">Picture badges in use: %1$d</string>
+    <string name="glcn_badges_desc">4K, HDR, Atmos… as text, or as pictures from a badge pack</string>
+    <string name="glcn_badges_help">Show quality marks (4K, Dolby Vision, TrueHD, 5.1…) as the app\'s text badges, or as pictures from a badge pack. The app includes no pack: the one you pick is downloaded once from its author\'s page and kept. Elite Badges is made by leonevz. A mark the pack has no picture for stays as text.</string>
+    <string name="glcn_badges_url">Pack address (badges.json)</string>
+    <string name="glcn_dream_hint">OK · open it</string>
+    <string name="glcn_dream_title">Fanart screensaver</string>
+    <string name="glcn_dream_desc">When the TV rests: the pictures of what is on now and of your films and series. OK opens what is on screen. Pick it on Android\'s screensaver page.</string>
+    <string name="glcn_dream_on">In use</string>
+    <string name="glcn_dream_choose">Choose</string>
+    <string name="glcn_mark_season_watched">Mark season %1$d as watched</string>
+    <string name="glcn_mark_season_unwatched">Mark season %1$d as unwatched</string>
+    <string name="glcn_mark_series_watched">Mark the whole show as watched</string>
+    <string name="glcn_mark_series_unwatched">Mark the whole show as unwatched</string>
+    <string name="glcn_strip_setting_title">"Keep watching" in Films and Series</string>
+    <string name="glcn_strip_setting_desc">A row of what you are watching above the posters, in All. Hold OK on a card to mark it watched or remove it.</string>
 </resources>

@@ -4,6 +4,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.focus.focusRequester
@@ -106,7 +109,29 @@ fun CategoryBrowserOverlay(
     var peeked by remember { mutableStateOf<List<tv.own.owntv.core.database.entity.ChannelEntity>>(emptyList()) }
     var peekedNow by remember { mutableStateOf<Map<Long, tv.own.owntv.core.database.entity.EpgProgrammeEntity>>(emptyMap()) }
     val focusedKey = entries.getOrNull(focusedIndex)?.item?.key
-    val activePlaylistId = tv.own.owntv.features.live.LocalCategoryPlaylists.current?.activeId
+    val playlists = tv.own.owntv.features.live.LocalCategoryPlaylists.current
+    val activePlaylistId = playlists?.activeId
+    var pickerRequest by remember { mutableIntStateOf(0) }
+    // glcn: ◀ ◀ ◀ from the picture opens the playlists as a panel the size of the categories (each a card with its
+    // colour, initial, contents and state, as in the player's deck and TiviMate) — not a menu over the channels.
+    val deckLists = rememberDeckPlaylists(playlists)
+    var listsOpen by remember { mutableStateOf(false) }
+    var plIdx by remember { mutableIntStateOf(0) }
+    val listsFocus = remember { FocusRequester() }
+    LaunchedEffect(listsOpen) {
+        withFrameNanos { }
+        if (listsOpen) runCatching { listsFocus.requestFocus() } else runCatching { listFocus.requestFocus() }
+    }
+    BackHandler(enabled = listsOpen) { listsOpen = false }
+    fun pickList() {
+        val d = deckLists ?: return
+        d.panelLists.getOrNull(plIdx)?.let { (id, _) ->
+            // A switched-off playlist picked here is switched back on and shown.
+            if (id > 0L && id in d.offIds) tv.own.owntv.core.repository.SourceGlcnPrefs.setDisabled(id, false)
+            if (id != d.activeChip) playlists?.onSelect?.invoke(id)
+        }
+        listsOpen = false
+    }
     LaunchedEffect(focusedKey, activePlaylistId) {
         if (peekChannels == null || focusedKey == null) return@LaunchedEffect
         kotlinx.coroutines.delay(300)
@@ -136,7 +161,7 @@ fun CategoryBrowserOverlay(
             selectedIndex = selectedIndex,
             groupsHeading = groupsHeading,
             sheet = true,
-            sheetGlass = tv.own.owntv.glcn.PlayerGlass.share(tv.own.owntv.features.live.PLAYER_SHEET_GLASS),
+            sheetGlass = tv.own.owntv.glcn.PlayerGlass.shareNow(tv.own.owntv.features.live.PLAYER_SHEET_GLASS),
             listState = listState,
             onSelect = { onSelect(entries[it].item.key) },
             onLongSelect = {},
@@ -152,6 +177,7 @@ fun CategoryBrowserOverlay(
             onRowFocus = { focusedIndex = it },
             onSearchEditingChange = { typing = it },
             onChipsFocused = { onChips = it },
+            pickerRequest = pickerRequest,
             modifier = Modifier
                 .align(Alignment.CenterStart)
                 .padding(horizontal = 20.mpx, vertical = 22.mpx)
@@ -159,9 +185,15 @@ fun CategoryBrowserOverlay(
                 .fillMaxHeight()
                 .onFocusChanged { hasFocus = it.hasFocus }
                 .onPreviewKeyEvent { e ->
-                    // Pushing outward from logical Start returns to the channel list.
+                    // glcn: pushing outward once more (◀ ◀ ◀ from the picture) opens the quick playlist picker, as in
+                    // TiviMate, when there are several playlists; with one, it returns to the channel list as before.
                     if (!typing && !onChips && e.type == KeyEventType.KeyDown && e.key.horizontalDirection(layoutDirection) == HorizontalDirection.START) {
-                        onDismiss(); true
+                        when {
+                            deckLists != null -> { plIdx = deckLists.panelLists.indexOfFirst { it.first == deckLists.activeChip }.coerceAtLeast(0); listsOpen = true }
+                            playlists != null -> pickerRequest++
+                            else -> onDismiss()
+                        }
+                        true
                     } else false
                 }
                 .chNavPaging(
@@ -173,6 +205,45 @@ fun CategoryBrowserOverlay(
                     currentTargetIndex = { focusedIndex },
                     onJumpToIndex = { focusRow = it },
                 ),
+        )
+        if (deckLists != null) androidx.compose.animation.AnimatedVisibility(
+            visible = listsOpen,
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)) +
+                androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(240)) { -it / 8 },
+            exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(140)),
+            modifier = Modifier.align(Alignment.CenterStart).padding(horizontal = 20.mpx, vertical = 22.mpx).width(440.mpx).fillMaxHeight(),
+        ) {
+            val sheetShade = tv.own.owntv.ui.theme.stageTone(Color(8, 12, 14), Color(240, 244, 242))
+            Box(
+                Modifier.fillMaxSize()
+                    .focusRequester(listsFocus)
+                    .focusable()
+                    .onPreviewKeyEvent { e ->
+                        if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                        val n = deckLists.panelLists.size
+                        when (e.key) {
+                            androidx.compose.ui.input.key.Key.DirectionUp -> { plIdx = if (plIdx == 0) n - 1 else plIdx - 1; true }
+                            androidx.compose.ui.input.key.Key.DirectionDown -> { plIdx = if (plIdx >= n - 1) 0 else plIdx + 1; true }
+                            androidx.compose.ui.input.key.Key.DirectionCenter, androidx.compose.ui.input.key.Key.Enter,
+                            androidx.compose.ui.input.key.Key.NumPadEnter, androidx.compose.ui.input.key.Key.DirectionRight -> { pickList(); true }
+                            androidx.compose.ui.input.key.Key.DirectionLeft -> true
+                            else -> false
+                        }
+                    },
+            ) {
+                Box(Modifier.matchParentSize().clip(androidx.compose.foundation.shape.RoundedCornerShape(tv.own.owntv.ui.theme.StageRadii.Sheet)).background(sheetShade))
+                Box(Modifier.matchParentSize().stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true))
+                // A › on the right edge: ▶ (or OK) picks and goes back to the categories.
+                tv.own.owntv.glcn.EdgeTab(visible = true, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
+                androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 30.mpx, top = 20.mpx, bottom = 20.mpx)) {
+                    DeckPlaylistsPanel(deckLists.panelLists, deckLists.activeChip, deckLists.offIds, deckLists.marks, deckLists.shown, deckLists.allSources, plIdx, resetKey = deckLists.panelLists.size)
+                }
+            }
+        }
+        // glcn: a › tab on the categories' right edge while their channels sit beside them (▶ goes there).
+        if (peekChannels != null) tv.own.owntv.glcn.EdgeTab(
+            visible = hasFocus && peeked.isNotEmpty(), toRight = true,
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = (20 + 440 - 16).mpx),
         )
         if (peekChannels != null && peeked.isNotEmpty()) CategoryChannelsColumn(
             title = entries.getOrNull(focusedIndex)?.label.orEmpty(),
@@ -208,7 +279,7 @@ private fun CategoryChannelsColumn(
     val wrapScope = androidx.compose.runtime.rememberCoroutineScope()
     androidx.compose.foundation.layout.Column(
         modifier
-            .stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true, share = tv.own.owntv.glcn.PlayerGlass.share(tv.own.owntv.features.live.PLAYER_SHEET_GLASS))
+            .stageGlass(tv.own.owntv.ui.theme.StageRadii.Sheet, overContent = true, share = tv.own.owntv.glcn.PlayerGlass.shareNow(tv.own.owntv.features.live.PLAYER_SHEET_GLASS))
             .padding(horizontal = 16.mpx, vertical = 22.mpx)
             .onPreviewKeyEvent { e ->
                 if (e.type == KeyEventType.KeyDown && e.key == androidx.compose.ui.input.key.Key.DirectionLeft) { onBack(); true } else false

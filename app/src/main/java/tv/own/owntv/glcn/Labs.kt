@@ -50,11 +50,7 @@ object Labs {
             ensure(context)
             on = !on
             prefs(context).edit().putBoolean(KEY, on).apply()
-            android.widget.Toast.makeText(
-                context,
-                context.getString(if (on) tv.own.owntv.R.string.glcn_labs_on else tv.own.owntv.R.string.glcn_labs_off),
-                android.widget.Toast.LENGTH_SHORT,
-            ).show()
+            tv.own.owntv.ui.components.AppToast.show(context.getString(if (on) tv.own.owntv.R.string.glcn_labs_on else tv.own.owntv.R.string.glcn_labs_off))
         }
     }
 

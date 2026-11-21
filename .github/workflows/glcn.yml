@@ -93,14 +93,16 @@ jobs:
           mkdir -p dist && cp "$APK" dist/OwnTV-Fanart.apk
           ls -la dist
 
-      # glcn: the R8 mapping of every build, kept 90 days, so a crash report's obfuscated lines can be read back.
+      # glcn: the R8 mapping of every build, so a crash report's obfuscated lines can be read back. Stable (main)
+      # builds keep it 90 days; beta (dev) builds only 3, since ~10 beta builds a day at ~11 MB each filled the
+      # account's 0.5 GB Actions storage. The latest beta map also lives in the ci-mapping-<branch> git branch.
       - name: Keep R8 mapping
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: mapping-${{ env.VERSION_NAME }}
           path: app/build/outputs/mapping/**/mapping.txt
-          retention-days: 90
+          retention-days: ${{ github.ref_name == 'main' && 90 || 3 }}
           if-no-files-found: ignore
 
       # glcn: the same mapping, readable with git (artifact downloads are not reachable from every tool): branch

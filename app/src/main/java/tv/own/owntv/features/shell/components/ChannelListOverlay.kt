@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import tv.own.owntv.glcn.playingMark
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -105,7 +106,33 @@ fun ChannelListOverlay(
     loadSchedule: (suspend (ChannelEntity) -> List<EpgProgrammeEntity>)? = null,
     /** glcn: ▶ steps the view — picture, schedule, posters — remembered for next time. */
     onCyclePanel: (() -> Unit)? = null,
+    /** glcn: Recent only — held OK on a row offers to drop that channel from the list, or all of them. */
+    onForget: ((ChannelEntity) -> Unit)? = null,
+    onForgetAll: (() -> Unit)? = null,
 ) {
+    // glcn: the row held OK on in Recent; while set, the "drop it or all of them" popup is up.
+    var forgetFor by remember { mutableStateOf<ChannelEntity?>(null) }
+    forgetFor?.let { ch ->
+        val drop = remember { FocusRequester() }
+        androidx.compose.runtime.LaunchedEffect(ch.id) { kotlinx.coroutines.delay(FORGET_FOCUS_DELAY_MS); runCatching { drop.requestFocus() } }
+        tv.own.owntv.ui.stage.StagePopup(
+            onDismiss = { forgetFor = null },
+            title = stringResource(R.string.content_category_recently_watched),
+            body = stringResource(R.string.glcn_recent_forget_body),
+            width = 760.mpx,
+            buttons = {
+                tv.own.owntv.ui.stage.StageButton(
+                    stringResource(R.string.glcn_recent_forget_one, ProviderTags.parse(ch.name).name),
+                    onClick = { onForget?.invoke(ch); forgetFor = null }, height = 56.mpx, textSize = 19, modifier = Modifier.focusRequester(drop),
+                )
+                tv.own.owntv.ui.stage.StageButton(
+                    stringResource(R.string.glcn_recent_forget_all),
+                    onClick = { forgetFor = null; onForgetAll?.invoke() }, height = 56.mpx, textSize = 19,
+                )
+                tv.own.owntv.ui.stage.StageButton(stringResource(R.string.common_cancel), onClick = { forgetFor = null }, height = 56.mpx, textSize = 19)
+            },
+        )
+    }
     // glcn: what is on each channel, kept once read (the prefetch reads the rows around the cursor), so the panel
     // beside the list shows the picture at once instead of reading it again when the row is reached.
     val nowCache = remember { java.util.concurrent.ConcurrentHashMap<Long, Pair<EpgProgrammeEntity?, EpgProgrammeEntity?>>() }
@@ -129,6 +156,9 @@ fun ChannelListOverlay(
     var schedCount by remember { mutableIntStateOf(0) }
     androidx.compose.runtime.LaunchedEffect(focusedIndex) { schedPick = -1 }
     var listFocused by remember { mutableStateOf(false) }
+    // glcn: the panels beside the list follow the cursor once it rests a moment. With ▲▼ held, every step read the
+    // channel's programme, schedule and picture again — on a long list the box fell behind and rows came up empty.
+    val panelChannel = rememberSettled(channels.getOrNull(focusedIndex), PANEL_SETTLE_MS)
     val scope = rememberCoroutineScope()
     val settingsVm: SettingsViewModel = koinViewModel()
     val chNavEnabled by settingsVm.chNavEnabled.collectAsStateWithLifecycle()
@@ -243,11 +273,15 @@ fun ChannelListOverlay(
                 )
             }
             androidx.compose.runtime.DisposableEffect(Unit) { tv.own.owntv.glcn.GlassFocus.overVideo++; onDispose { tv.own.owntv.glcn.GlassFocus.overVideo-- } }
+            Box(Modifier.fillMaxWidth().weight(1f)) {
+            // glcn: a ‹ tab on the left edge when ◀ opens the categories.
+            val catTab = onOpenCategories != null && !alignEnd
+            if (catTab) tv.own.owntv.glcn.EdgeTab(visible = listFocused, modifier = Modifier.align(Alignment.CenterStart))
             LazyColumn(
                 state = listState,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
+                    .fillMaxSize()
+                    .padding(start = if (catTab) tv.own.owntv.glcn.EDGE_TAB_ROOM else 0.mpx)
                     .onFocusChanged { listFocused = it.hasFocus }
                     // glcn: wrap around, ▲ on the first channel goes to the last and ▼ on the last to the first.
                     .onPreviewKeyEvent { e ->
@@ -292,7 +326,8 @@ fun ChannelListOverlay(
                         mark = if (oneSource) null else playlistMarks[ch.sourceId],
                         onFocus = { focusedIndex = index },
                         onClick = { onSelect(ch) },
-                        onLongClick = {},
+                        onLongClick = { if (history && onForget != null) forgetFor = ch },
+                        logoTile = false,
                         trailing = watchedAt?.let { times ->
                             {
                                 Text(
@@ -306,10 +341,26 @@ fun ChannelListOverlay(
                             }
                         },
                         modifier = Modifier
-                            .then(if (isPlaying) Modifier.stageSelectedBar(accent, 22.mpx) else Modifier)
+                            .playingMark(isPlaying)
                             .then(if (index == targetIndex) Modifier.focusRequester(focusTarget) else Modifier),
                     )
                 }
+            }
+            // glcn: the watched channel scrolled out of sight: a pill at the edge it went past.
+            val watchSide by remember(listState, playingIndex) {
+                androidx.compose.runtime.derivedStateOf {
+                    val vis = listState.layoutInfo.visibleItemsInfo
+                    when {
+                        playingIndex < 0 || vis.isEmpty() -> 0
+                        playingIndex < vis.first().index -> 1
+                        playingIndex > vis.last().index -> 2
+                        else -> 0
+                    }
+                }
+            }
+            val watchName = channels.getOrNull(playingIndex)?.let { ProviderTags.parse(it.name).name }.orEmpty()
+            androidx.compose.animation.AnimatedVisibility(watchSide == 1, Modifier.align(Alignment.TopCenter).padding(top = 6.mpx), enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) { tv.own.owntv.glcn.WatchingPill(watchName, true) }
+            androidx.compose.animation.AnimatedVisibility(watchSide == 2, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.mpx), enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) { tv.own.owntv.glcn.WatchingPill(watchName, false) }
             }
             StageKeyHints(
                 listOfNotNull(
@@ -321,6 +372,7 @@ fun ChannelListOverlay(
                         else -> null
                     },
                     "CH±" to stringResource(R.string.content_key_page),
+                    if (history && onForget != null) stringResource(R.string.content_key_hold_ok) to stringResource(R.string.glcn_recent_forget_hint) else null,
                     when {
                         unified && loadSchedule != null && !alignEnd && schedPick < 0 && schedCount > 0 -> "▶" to stringResource(R.string.content_key_programmes)
                         onCyclePanel != null && !alignEnd -> "▶" to stringResource(R.string.glcn_zap_view_next)
@@ -344,7 +396,7 @@ fun ChannelListOverlay(
         }
         if (unified && loadSchedule != null) {
             ZapSchedulePanel(
-                channel = channels.getOrNull(focusedIndex),
+                channel = panelChannel,
                 loadSchedule = loadSchedule,
                 loadNow = cachedNow, peek = { nowCache[it.id] },
                 joined = true,
@@ -356,7 +408,7 @@ fun ChannelListOverlay(
         }
         if (loadSchedule != null && !unified) {
             ZapSchedulePanel(
-                channel = channels.getOrNull(focusedIndex),
+                channel = panelChannel,
                 loadSchedule = loadSchedule,
                 modifier = Modifier
                     .align(if (alignEnd) Alignment.CenterEnd else Alignment.CenterStart)
@@ -369,7 +421,7 @@ fun ChannelListOverlay(
         } else if (loadSchedule == null && loadNow != null) {
             // The joined schedule view carries its own programme card; a second one would double it.
             ZapPreviewPanel(
-                channel = channels.getOrNull(focusedIndex),
+                channel = panelChannel,
                 loadNow = cachedNow!!, peek = { nowCache[it.id] },
                 modifier = Modifier
                     .align(if (alignEnd) Alignment.CenterStart else Alignment.CenterEnd)
@@ -690,6 +742,9 @@ internal fun ChannelListPanel(
     var targetIndex by remember(channels, entryIndex) { mutableIntStateOf(entryIndex) }
     var focusedIndex by remember(channels, entryIndex) { mutableIntStateOf(entryIndex) }
     var listFocused by remember { mutableStateOf(false) }
+    // glcn: the panels beside the list follow the cursor once it rests a moment. With ▲▼ held, every step read the
+    // channel's programme, schedule and picture again — on a long list the box fell behind and rows came up empty.
+    val panelChannel = rememberSettled(channels.getOrNull(focusedIndex), PANEL_SETTLE_MS)
     val scope = rememberCoroutineScope()
     val settingsVm: SettingsViewModel = koinViewModel()
     val chNavEnabled by settingsVm.chNavEnabled.collectAsStateWithLifecycle()
@@ -751,11 +806,11 @@ internal fun ChannelListPanel(
                 modifier = Modifier.padding(start = 14.mpx, end = 14.mpx, top = 4.mpx, bottom = 12.mpx),
             )
         }
+        Box(Modifier.fillMaxWidth().weight(1f)) {
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
+                .fillMaxSize()
                 .onFocusChanged { listFocused = it.hasFocus }
                 .chNavPaging(
                     enabled = chNavEnabled,
@@ -787,6 +842,7 @@ internal fun ChannelListPanel(
                     onFocus = { focusedIndex = index; onFocusChannel(ch) },
                     onClick = { onSelect(ch) },
                     onLongClick = {},
+                    logoTile = false,
                     trailing = watchedAt?.let { times ->
                         {
                             Text(
@@ -800,10 +856,26 @@ internal fun ChannelListPanel(
                         }
                     },
                     modifier = Modifier
-                        .then(if (isPlaying) Modifier.stageSelectedBar(accent, 22.mpx) else Modifier)
+                        .playingMark(isPlaying)
                         .then(if (index == targetIndex) Modifier.focusRequester(focusTarget) else Modifier),
                 )
             }
+        }
+        // glcn: the watched channel scrolled out of sight: a pill at the edge it went past.
+        val watchSide by remember(listState, playingIndex) {
+            androidx.compose.runtime.derivedStateOf {
+                val vis = listState.layoutInfo.visibleItemsInfo
+                when {
+                    playingIndex < 0 || vis.isEmpty() -> 0
+                    playingIndex < vis.first().index -> 1
+                    playingIndex > vis.last().index -> 2
+                    else -> 0
+                }
+            }
+        }
+        val watchName = channels.getOrNull(playingIndex)?.let { ProviderTags.parse(it.name).name }.orEmpty()
+        androidx.compose.animation.AnimatedVisibility(watchSide == 1, Modifier.align(Alignment.TopCenter).padding(top = 6.mpx), enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) { tv.own.owntv.glcn.WatchingPill(watchName, true) }
+        androidx.compose.animation.AnimatedVisibility(watchSide == 2, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.mpx), enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) { tv.own.owntv.glcn.WatchingPill(watchName, false) }
         }
         StageKeyHints(
             listOfNotNull(
@@ -817,3 +889,21 @@ internal fun ChannelListPanel(
         )
     }
 }
+
+/** glcn: [value], once it has stayed the same for [delayMs] — the first one at once. */
+@Composable
+internal fun <T> rememberSettled(value: T, delayMs: Long): T {
+    var settled by remember { mutableStateOf(value) }
+    LaunchedEffect(value) {
+        if (value == settled) return@LaunchedEffect
+        kotlinx.coroutines.delay(delayMs)
+        settled = value
+    }
+    return settled
+}
+
+/** glcn: how long the cursor rests before the panels beside the channel list read the new channel. */
+private const val PANEL_SETTLE_MS = 140L
+
+/** glcn: the forget popup takes focus a beat after it opens — the held OK that opened it is still coming up. */
+private const val FORGET_FOCUS_DELAY_MS = 450L

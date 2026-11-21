@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -102,7 +103,8 @@ fun StageStatusCluster(
                     iconFilled = continuePill.iconFilled,
                     onClick = continuePill.onClick,
                     trailingIcon = if (continuePill.onDown != null) OwnTVIcon.CHEVRON_DOWN else null,
-                    modifier = (if (continueMaxWidth != null) Modifier.widthIn(max = continueMaxWidth) else Modifier)
+                    // Narrower than a pill's usual cap (upstream): a long channel name in a long language reached the header.
+                    modifier = Modifier.widthIn(max = continueMaxWidth?.let { minOf(it, 300.mpx) } ?: 300.mpx)
                         .focusProperties { canFocus = pillsFocusable }
                         .then(continuePill.onDown?.let { down ->
                             Modifier.onPreviewKeyEvent { e ->

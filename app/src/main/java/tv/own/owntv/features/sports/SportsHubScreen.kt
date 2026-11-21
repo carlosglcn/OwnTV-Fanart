@@ -342,6 +342,7 @@ fun SportsHubScreen(
 @Composable
 private fun HubSubtitle(today: List<Match>) {
     val accent = stageAccent.accent
+    val accentInk = stageAccent.ink
     val sep = stringResource(R.string.content_epg_bits_separator)
     val liveCount = today.count { it.isLive }
     val todayLabel = stringResource(R.string.content_epg_today)
@@ -351,7 +352,7 @@ private fun HubSubtitle(today: List<Match>) {
     val dim = StageColors.Dim
     Text(
         buildAnnotatedString {
-            withStyle(SpanStyle(color = accent, fontWeight = FontWeight.SemiBold)) { append(todayLabel) }
+            withStyle(SpanStyle(color = accentInk, fontWeight = FontWeight.SemiBold)) { append(todayLabel) }
             append(sep); append(liveText); append(sep); append(matchesText)
             append(sep)
             withStyle(SpanStyle(color = dim)) { append(credit) }

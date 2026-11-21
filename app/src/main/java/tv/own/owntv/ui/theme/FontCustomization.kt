@@ -52,6 +52,15 @@ private val PlusJakartaSansFamily = FontFamily(
     variableFont(R.font.plus_jakarta_sans_variable, FontWeight.ExtraBold),
 )
 
+/** glcn: the app's default main face (the display face stands in for it in big titles). */
+internal val DefaultMainFamily: FontFamily get() = PlusJakartaSansFamily
+
+/** glcn: the display face for big titles only (Oswald, SIL OFL 1.1): narrow and tall, so a long name fits. */
+internal val DisplayFamily = FontFamily(
+    variableFont(R.font.oswald_variable, FontWeight.SemiBold),
+    variableFont(R.font.oswald_variable, FontWeight.Bold),
+)
+
 private val PoppinsFamily = FontFamily(
     Font(R.font.poppins_regular, FontWeight.Normal),
     Font(R.font.poppins_medium, FontWeight.Medium),

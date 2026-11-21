@@ -298,7 +298,7 @@ fun AppsPickerGrid(onDismiss: () -> Unit) {
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
                     Text(stringResource(R.string.glcn_apps_pick_title), style = stageText(40, 800), color = Color.White)
                     val n = AppShortcuts.chosen.size
-                    Text(pluralStringResource(R.plurals.glcn_apps_added, n, n), style = stageText(22, 700), color = stageAccent.accent, modifier = Modifier.padding(bottom = 6.mpx))
+                    Text(pluralStringResource(R.plurals.glcn_apps_added, n, n), style = stageText(22, 700), color = stageAccent.ink, modifier = Modifier.padding(bottom = 6.mpx))
                 }
                 Text(stringResource(R.string.glcn_apps_hint), style = stageText(19, 500), color = Color.White.copy(alpha = 0.65f), modifier = Modifier.padding(top = 6.mpx, bottom = 22.mpx))
                 LazyVerticalGrid(

@@ -443,7 +443,9 @@ class MovieViewModel(
                 customize.observeVisible(c.profileId, MediaType.MOVIE),
                 sortMode,
                 profileDao.observeById(c.profileId),
-            ) { cats, cust, sort, profile ->
+                // glcn: "Keep watching" is in the list only while something is under way.
+                movieDao.countContinue(c.profileId, c.sourceIds.ifEmpty { listOf(-1L) }, listOf(Long.MIN_VALUE)).map { it > 0 }.distinctUntilChanged(),
+            ) { cats, cust, sort, profile, underWay ->
                 // The categories follow the sort chip too (A–Z by shown name, custom categories
                 // included); a category the user moved keeps its place in either sort. Custom categories
                 // ride the SAME customization keys, so renames/hides/reorders apply to them too.
@@ -454,7 +456,7 @@ class MovieViewModel(
                 )
                 val multiSourceNames = c.sourceNames.takeIf { it.size > 1 }.orEmpty()
                 val categoriesById = cats.associateBy { it.id }
-                defaultRail + folders.map { e ->
+                (if (underWay) defaultRail.take(2) + LiveRailItem(LiveKey.Continue, icon = OwnTVIcon.PLAY_CIRCLE) + defaultRail.drop(2) else defaultRail) + folders.map { e ->
                     LiveRailItem(
                         key = e.categoryId?.let { LiveKey.Folder(it) } ?: LiveKey.Custom(e.customId!!),
                         title = e.displayName, locked = e.locked, sealed = e.sealed,
@@ -537,6 +539,24 @@ class MovieViewModel(
 
     /** Resume/watched progress for the visible movies, keyed by movie id — drives the ✓ tick and the
      *  in-progress bar on posters/list rows. Only started/finished movies have a row, so this is small. */
+    /** glcn: the films under way, newest first — the "Keep watching" strip above the posters (in All). */
+    val continueStrip: StateFlow<List<MovieEntity>> = ctx
+        .flatMapLatest { c ->
+            if (c.profileId < 0 || c.sourceIds.isEmpty()) flowOf(emptyList())
+            else combine(
+                movieDao.observeContinue(c.profileId, c.sourceIds, STRIP_MAX),
+                progressDao.observeMovieProgress(c.profileId),
+                tv.own.owntv.glcn.StripDismissed.marks,
+            ) { films, progress, gone ->
+                // glcn: taken out for good — away while it stands at the minute it was left (see StripDismissed).
+                if (gone.isEmpty()) films else {
+                    val at = progress.associate { it.itemId to it.positionMs }
+                    films.filter { tv.own.owntv.glcn.StripDismissed.film(c.profileId, it.sourceId, it.name, at[it.id] ?: 0L) !in gone }
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val movieProgress: StateFlow<Map<Long, PlaybackProgressEntity>> = ctx
         .flatMapLatest { c -> if (c.profileId < 0) flowOf(emptyList()) else progressDao.observeMovieProgress(c.profileId) }
         .map { list -> list.associateBy { it.itemId } }
@@ -1040,7 +1060,7 @@ class MovieViewModel(
                 is LiveKey.Folder -> movieDao.snapshotByCategoryManual(key.id, pid, contextKey, alpha, 5000)
                 is LiveKey.Custom -> customCategoryDao.snapshotMovies(pid, key.id, ctx.value.sourceIds.ifEmpty { listOf(-1L) }, alpha, 5000)
                 LiveKey.Favorites -> movieDao.snapshotFavoritesManual(pid, contextKey, ctx.value.sourceIds.ifEmpty { listOf(-1L) }, 5000)
-                LiveKey.History, LiveKey.All -> return@launch
+                LiveKey.History, LiveKey.All, LiveKey.Continue -> return@launch
             }
             val idx = items.indexOfFirst { it.id == movie.id }
             if (idx < 0) return@launch
@@ -1086,6 +1106,17 @@ class MovieViewModel(
         }
     }
 
+    /** glcn: out of Keep watching, and not back when the list or the Emby library is loaded again. */
+    fun dismissFromStrip(context: android.content.Context, movie: MovieEntity) {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            val at = movieProgress.value[movie.id]?.positionMs ?: 0L
+            tv.own.owntv.glcn.StripDismissed.add(context, tv.own.owntv.glcn.StripDismissed.film(pid, movie.sourceId, movie.name, at))
+            userDataWriter.removeHistory(pid, MediaType.MOVIE, movie.id)
+            userDataWriter.clearProgress(pid, MediaType.MOVIE, movie.id)
+        }
+    }
+
     fun removeFromHistory(movieId: Long) {
         viewModelScope.launch {
             val pid = currentProfileId() ?: return@launch
@@ -1111,6 +1142,7 @@ class MovieViewModel(
             }
             LiveKey.Favorites -> movieDao.pagingFavoritesManual(c.profileId, ContentOrderEntity.FAV_CONTEXT, ids)
             LiveKey.History -> movieDao.pagingHistory(c.profileId, ids)
+            LiveKey.Continue -> movieDao.pagingContinue(c.profileId, ids)
             is LiveKey.Custom -> customCategoryDao.pagingMovies(c.profileId, key.id, ids, alpha = !playlist)
             is LiveKey.Folder -> {
                 val ctxKey = folderContextKeys.value[key.id] ?: ""
@@ -1129,6 +1161,7 @@ class MovieViewModel(
                 else movieDao.searchAll(query, ids)
             LiveKey.Favorites -> movieDao.searchFavorites(query, c.profileId, ids)
             LiveKey.History -> movieDao.searchHistory(query, c.profileId, ids)
+            LiveKey.Continue -> movieDao.searchContinue(query, c.profileId, ids)
             is LiveKey.Custom -> customCategoryDao.searchMovies(query, c.profileId, key.id, ids)
             is LiveKey.Folder ->
                 if (dateAdded) movieDao.searchInCategoryDateAdded(query, key.id)
@@ -1198,3 +1231,6 @@ class MovieViewModel(
             .map { tv.own.owntv.features.shell.components.RelatedUi(it.name, it.posterUrl, it.year ?: it.parsedYear) }
     }
 }
+
+/** glcn: how many titles the Keep watching strip shows at most (the category lists them all). */
+private const val STRIP_MAX = 20

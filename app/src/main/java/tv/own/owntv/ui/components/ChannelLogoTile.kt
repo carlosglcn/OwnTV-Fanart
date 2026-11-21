@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,6 +41,14 @@ import kotlin.math.max
  * they sit on. The artwork itself is never recoloured, and the tile never changes size, so a plate
  * appearing cannot shift the layout around it.
  */
+/**
+ * glcn: the colour of the text around a logo when it sits on something other than the page — a focused row's fill.
+ * Set by [tv.own.owntv.ui.stage.StageSurface] for its focused item (and by lists that draw their own focus), so a logo
+ * knows what it is on without every caller passing it: light text means a dark fill (a white logo stays white), dark
+ * text a light one (a white logo turns grey).
+ */
+val LocalLogoInk = androidx.compose.runtime.compositionLocalOf<Color?> { null }
+
 @Composable
 fun ChannelLogoTile(
     logoUrl: String?,
@@ -74,11 +83,16 @@ fun ChannelLogoTile(
     }
 
     // glcn: 0 classic (upstream), 1 none.
+    val around = LocalLogoInk.current
+    val behind = if (around == null) surfaceLuminance else if (around.luminance() > 0.5f) ON_DARK_FILL else ON_LIGHT_FILL
     val needsPlate = LogoPlate.mode == 0 && ink != LOGO_INK_NONE &&
-        contrastRatio(Color(ink).luminance(), surfaceLuminance) < MIN_CONTRAST
+        contrastRatio(Color(ink).luminance(), behind) < MIN_CONTRAST
+    // glcn: on a light page the logo's white parts on its transparent background turn grey (LogoOnLight) — its
+    // colours stay as they are; on a focused row it shows exactly as drawn, faded across as the cursor arrives.
+    val lightPage = surfaceLuminance >= 0.5f
     val background = when {
         !showLogo -> fill
-        needsPlate -> if (surfaceLuminance < 0.5f) LightPlate else DarkPlate
+        !lightPage && needsPlate && behind < 0.5f -> LightPlate
         else -> Color.Transparent
     }
 
@@ -88,14 +102,32 @@ fun ChannelLogoTile(
     val request = remember(logoUrl, platformContext) {
         ImageRequest.Builder(platformContext).data(logoUrl).allowHardware(false).transformations(LogoTrim).build()
     }
+    val onLightRequest = remember(logoUrl, platformContext, lightPage) {
+        if (!lightPage) null
+        else ImageRequest.Builder(platformContext).data(logoUrl).allowHardware(false).transformations(LogoTrim, LogoOnLight).build()
+    }
+    val asDrawn by androidx.compose.animation.core.animateFloatAsState(
+        if (onLightRequest == null || around != null) 1f else 0f, androidx.compose.animation.core.tween(160), label = "logoAsDrawn",
+    )
 
     Box(modifier.background(background), contentAlignment = Alignment.Center) {
         if (showLogo) {
-            AsyncImage(
+            if (onLightRequest != null && asDrawn < 1f) AsyncImage(
+                model = onLightRequest,
+                contentDescription = null,
+                contentScale = contentScale,
+                modifier = imageModifier.graphicsLayer { alpha = 1f - asDrawn },
+                onState = { state ->
+                    if (state is AsyncImagePainter.State.Success) loaded = true
+                    else if (state is AsyncImagePainter.State.Error) loaded = false
+                },
+            )
+            // glcn: on a light page the as-drawn copy is only there while it shows (focus) — one image per row, not two.
+            if (onLightRequest == null || asDrawn > 0f) AsyncImage(
                 model = request,
                 contentDescription = null,
                 contentScale = contentScale,
-                modifier = imageModifier,
+                modifier = imageModifier.graphicsLayer { alpha = asDrawn },
                 onState = { state ->
                     when (state) {
                         is AsyncImagePainter.State.Success -> {
@@ -116,6 +148,9 @@ fun ChannelLogoTile(
     }
 }
 
+private const val ON_DARK_FILL = 0.12f
+private const val ON_LIGHT_FILL = 0.9f
+
 /** Mean ink colour per logo URL, measured once per app run. [LOGO_INK_NONE] means "leave it alone". */
 private val logoInk = ConcurrentHashMap<String, Int>()
 
@@ -135,7 +170,6 @@ private const val MAX_MEASURED_LOGOS = 4096
 
 // Slightly off-white and off-black rather than pure: a pure-white plate glares on a TV in a dark room.
 private val LightPlate = Color(0xFFEDF1F5)
-private val DarkPlate = Color(0xFF161C24)
 
 /**
  * The logo's mean colour, weighted by alpha so the transparent surround does not drag every logo
@@ -177,6 +211,7 @@ private fun Bitmap.measureInk(): Int {
         (b / alphaSum).toInt().coerceIn(0, 255),
     )
 }
+
 
 /** WCAG contrast ratio between two relative luminances, 1.0 (identical) to 21.0 (black on white). */
 private fun contrastRatio(a: Float, b: Float): Float {

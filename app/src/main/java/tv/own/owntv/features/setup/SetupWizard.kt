@@ -389,7 +389,7 @@ private fun DisplaySizeStep(onNext: () -> Unit, onBack: () -> Unit) {
         ) {
             Text(stringResource(R.string.settings_panel_width_preview).uppercase(), style = stageText(13, 800, androidx.compose.ui.unit.TextUnit(0.13f, androidx.compose.ui.unit.TextUnitType.Em)), color = StageColors.Dim)
             Text(stringResource(R.string.home_row_now_trending), style = stageText(21, 700), color = StageColors.Text, modifier = Modifier.weight(1f))
-            Text(stringResource(R.string.common_on), style = stageText(18, 700), color = stageAccent.accent)
+            Text(stringResource(R.string.common_on), style = stageText(18, 700), color = stageAccent.ink)
         }
     }
 

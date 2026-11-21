@@ -231,7 +231,7 @@ fun ZapPosterOverlay(
 @Composable
 private fun ZapNextList(rows: List<EpgProgrammeEntity>, fmt: java.text.DateFormat) {
     Column(Modifier.fillMaxWidth().padding(start = 6.mpx, end = 6.mpx, top = 12.mpx), verticalArrangement = Arrangement.spacedBy(3.mpx)) {
-        Text(stringResource(R.string.content_live_next), style = stageText(15, 700), color = stageAccent.accent, maxLines = 1)
+        Text(stringResource(R.string.content_live_next), style = stageText(15, 700), color = stageAccent.ink, maxLines = 1)
         rows.forEachIndexed { ni, n ->
             Row(Modifier.staggerIn(ni * 50), horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
                 Text(fmt.format(java.util.Date(n.startMs)), style = stageText(16, 700), color = StageColors.Muted, maxLines = 1, modifier = Modifier.width(66.mpx))
@@ -287,6 +287,7 @@ private fun ZapPosterInfo(
     val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
     val logo = ch.displayLogoUrl?.takeIf { it.isNotBlank() }
     val accent = stageAccent.accent
+    val accentInk = stageAccent.ink
     // glcn: in the light theme the card's white glass over a bright picture left grey words unreadable — more glass
     // there, and the secondary words a step darker.
     val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
@@ -331,7 +332,7 @@ private fun ZapPosterInfo(
         (synopsis ?: lent?.overview)?.let { DriftingSynopsis(it, color = StageColors.Body) }
         if (next.isNotEmpty()) {
             Text(
-                stringResource(R.string.content_live_next), style = stageText(15, 700), color = accent,
+                stringResource(R.string.content_live_next), style = stageText(15, 700), color = accentInk,
                 modifier = Modifier.padding(top = 4.mpx),
             )
             next.forEach { n ->

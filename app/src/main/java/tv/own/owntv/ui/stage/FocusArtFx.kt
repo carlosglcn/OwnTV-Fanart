@@ -32,6 +32,10 @@ import kotlinx.coroutines.launch
  */
 object GlcnMotion {
     var subtle by androidx.compose.runtime.mutableStateOf(false)
+    /** glcn: Animations are Off in Settings — for the motion specs read outside composition (scrolling, the sliding focus). */
+    @Volatile var off = false
+    /** No give at the end of a move: with the Subtle style, or with animations Off. */
+    val calm: Boolean get() = subtle || off
 }
 
 /** glcn: the way the last arrow went (-1, 0, 1 across and down), set from the window's keys — the focused card leans from it. */

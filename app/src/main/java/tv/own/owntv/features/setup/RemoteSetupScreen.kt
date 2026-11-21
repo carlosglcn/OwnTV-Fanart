@@ -139,7 +139,7 @@ private fun RemotePanel(state: CompanionServerState) {
             }
             Row(Modifier.padding(top = 6.mpx), horizontalArrangement = Arrangement.spacedBy(8.mpx), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.local_sync_pin_label), style = stageText(17, 500), color = PanelText)
-                Text(listening.pin, style = stageText(30, 800, 0.4.em), color = stageAccent.accent)
+                Text(listening.pin, style = stageText(30, 800, 0.4.em), color = stageAccent.ink)
             }
         }
     }

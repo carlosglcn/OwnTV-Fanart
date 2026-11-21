@@ -40,8 +40,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.em
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
+import org.koin.androidx.compose.koinViewModel
 import tv.own.owntv.R
 import tv.own.owntv.core.database.entity.ChannelEntity
 import tv.own.owntv.core.database.entity.EpgProgrammeEntity
@@ -49,6 +51,8 @@ import tv.own.owntv.core.epg.displayLogoUrl
 import tv.own.owntv.core.live.ProviderTags
 import tv.own.owntv.core.parser.EpgDetails
 import tv.own.owntv.features.live.LivePlate
+import tv.own.owntv.features.settings.SettingsViewModel
+import tv.own.owntv.ui.components.chNavPaging
 import tv.own.owntv.ui.format.rememberSystemTimeFormatter
 import tv.own.owntv.ui.stage.StageProgress
 import tv.own.owntv.ui.stage.StageTag
@@ -155,10 +159,19 @@ internal fun ProgrammeDayPage(
         }
     }
     val listState = rememberLazyListState()
+    // A CH+ / CH− page or a jump to an end scrolls at once: animating a long way janks on low-end TVs.
+    var pagingJump by remember { mutableStateOf(false) }
     LaunchedEffect(index, lines) {
         val line = lines.indexOfFirst { it is PageLine.Programme && it.index == index }
-        if (line >= 0) runCatching { listState.animateScrollToItem((line - 2).coerceAtLeast(0)) }
+        if (line < 0) return@LaunchedEffect
+        val to = (line - 2).coerceAtLeast(0)
+        runCatching { if (pagingJump) listState.scrollToItem(to) else listState.animateScrollToItem(to) }
+        pagingJump = false
     }
+    val settingsVm: SettingsViewModel = koinViewModel()
+    val chNavEnabled by settingsVm.chNavEnabled.collectAsStateWithLifecycle()
+    val chNavUpSkip by settingsVm.chNavUpSkip.collectAsStateWithLifecycle()
+    val chNavDownSkip by settingsVm.chNavDownSkip.collectAsStateWithLifecycle()
 
     // The open programme's buttons, filled in by the open row (they read the guide's live state).
     var runAction by remember { mutableStateOf<(Int) -> Boolean>({ false }) }
@@ -213,6 +226,17 @@ internal fun ProgrammeDayPage(
                     }
                     true
                 }
+                // CH+ / CH− page the programmes as they page every list; the jump closes the open
+                // programme's buttons and the days, as ▲ ▼ do.
+                .chNavPaging(
+                    enabled = chNavEnabled,
+                    upSkip = chNavUpSkip,
+                    downSkip = chNavDownSkip,
+                    isFocused = { list.isNotEmpty() },
+                    lastIndex = { list.lastIndex },
+                    currentTargetIndex = { index },
+                    onJumpToIndex = { i -> pagingJump = true; inActions = false; onDays = false; index = i },
+                )
                 .focusable(),
         ) {
             Column(Modifier.fillMaxSize().padding(start = 120.mpx, end = 120.mpx, top = 56.mpx, bottom = 40.mpx)) {
@@ -315,7 +339,7 @@ private fun ProgrammeLine(p: EpgProgrammeEntity, now: Long, highlighted: Boolean
             }
             if (time == ProgrammeTime.NOW) StageProgress(progressOf(p, now), Modifier.width(340.mpx).padding(top = 8.mpx))
         }
-        if (time == ProgrammeTime.NOW) tv.own.owntv.ui.stage.StageLiveBadge(stringResource(R.string.player_live))
+        if (time == ProgrammeTime.NOW) tv.own.owntv.ui.stage.StageLiveBadge(tv.own.owntv.glcn.onAirLabel(p.title))
     }
 }
 
@@ -375,7 +399,7 @@ private fun OpenProgramme(
         horizontalArrangement = Arrangement.spacedBy(20.mpx),
     ) {
         Column(Modifier.width(110.mpx)) {
-            Text(formatTime(shown.startMs), style = stageText(18, 700), color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(formatTime(shown.startMs), style = stageText(18, 700), color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(formatTime(shown.stopMs), style = stageText(13, 600), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Column(Modifier.weight(1f)) {

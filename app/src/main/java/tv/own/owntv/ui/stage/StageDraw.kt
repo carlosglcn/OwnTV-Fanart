@@ -187,10 +187,12 @@ fun Modifier.stageGlass(radius: Dp, overContent: Boolean = false, share: Float =
     val fill0 = if (on) palette.glassTint.copy(alpha = if (overContent) 0.80f + 0.20f * config.alpha.coerceIn(0f, 1f) else flat) else palette.glassOff
     // glcn: [share] < 1 — a panel over the picture (the player's sheets) lets the video show through: a share of the
     // fill, no frosted slice behind it, a lighter shadow.
-    val fill = if (share < 1f) fill0.copy(alpha = fill0.alpha * share) else fill0
+    // glcn: glass off means solid everywhere — the player's panels too, whatever "Panels over the video" says.
+    val cut = if (on) share else 1f
+    val fill = if (cut < 1f) fill0.copy(alpha = fill0.alpha * cut) else fill0
     // `.mine.light .glass`: highlight white 90%, rim ink 7% (8% glass off), shadow rgb(20,40,32) 16% (14% off, 0 20 50).
     val shadow = (if (palette.isLight) Color(20, 40, 32).copy(alpha = if (on) 0.16f else 0.14f) else Color.Black.copy(alpha = if (on) 0.45f else 0.5f))
-        .let { if (share < 1f) it.copy(alpha = it.alpha * share * 0.6f) else it }
+        .let { if (cut < 1f) it.copy(alpha = it.alpha * cut * 0.6f) else it }
     val shadowBlur = if (palette.isLight && !on) 50 else 60
     val shadowDy = if (palette.isLight && !on) 20 else 24
     val highlight = Color.White.copy(alpha = if (palette.isLight) 0.9f else 0.10f)

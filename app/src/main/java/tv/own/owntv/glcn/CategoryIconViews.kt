@@ -176,3 +176,5 @@ private const val LOGO_SLOT_ALONE = 12f
 private const val LOGO_AREA_BESIDE = 2.0f
 private const val LOGO_MAX_H_BESIDE = 1.25f
 private const val LOGO_MAX_W_BESIDE = 2.8f
+/** glcn: the slot a list keeps for a logo beside a name, in line-icon sizes (as wide as the widest logo). */
+internal const val CATEGORY_LOGO_SLOT_BESIDE = LOGO_MAX_W_BESIDE

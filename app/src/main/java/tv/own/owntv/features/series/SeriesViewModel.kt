@@ -551,7 +551,9 @@ class SeriesViewModel(
                 customize.observeVisible(c.profileId, MediaType.SERIES),
                 sortMode,
                 profileDao.observeById(c.profileId),
-            ) { cats, cust, sort, profile ->
+                // glcn: "Keep watching" is in the list only while something is under way.
+                seriesDao.countContinue(c.profileId, c.sourceIds.ifEmpty { listOf(-1L) }, listOf(Long.MIN_VALUE)).map { it > 0 }.distinctUntilChanged(),
+            ) { cats, cust, sort, profile, underWay ->
                 // The categories follow the sort chip too (A–Z by shown name, custom categories
                 // included); a category the user moved keeps its place in either sort. Custom categories
                 // ride the SAME customization keys, so renames/hides/reorders apply to them too.
@@ -562,7 +564,7 @@ class SeriesViewModel(
                 )
                 val multiSourceNames = c.sourceNames.takeIf { it.size > 1 }.orEmpty()
                 val categoriesById = cats.associateBy { it.id }
-                defaultRail + folders.map { e ->
+                (if (underWay) defaultRail.take(2) + LiveRailItem(LiveKey.Continue, icon = OwnTVIcon.PLAY_CIRCLE) + defaultRail.drop(2) else defaultRail) + folders.map { e ->
                     LiveRailItem(
                         key = e.categoryId?.let { LiveKey.Folder(it) } ?: LiveKey.Custom(e.customId!!),
                         title = e.displayName, locked = e.locked, sealed = e.sealed,
@@ -666,6 +668,61 @@ class SeriesViewModel(
     /** Per-episode resume progress for the open series (keyed by episode id). Reactive so the UI's watched
      *  indicators, season counts, "Hide watched" filter, and "Next up" card update the instant a position
      *  is saved — no manual refresh needed. Re-seeds when the profile or open series changes. */
+    /** glcn: one card of the "Keep watching" strip: the show, the episode that is next and how far it is seen. */
+    data class StripShow(val series: SeriesEntity, val season: Int, val episode: Int, val progress: Float?, val episodeId: Long = 0L, val positionMs: Long = 0L)
+
+    /** glcn: the shows under way, newest first, each with the episode it stands at — the strip above the posters. */
+    val continueStrip: StateFlow<List<StripShow>> = ctx
+        .flatMapLatest { c ->
+            if (c.profileId < 0 || c.sourceIds.isEmpty()) flowOf(emptyList())
+            else combine(
+                seriesDao.observeContinue(c.profileId, c.sourceIds, STRIP_MAX).map { shows -> stripShows(c.profileId, shows) },
+                tv.own.owntv.glcn.StripDismissed.marks,
+            ) { shows, gone ->
+                // glcn: taken out for good — away while it stands where it was left (see StripDismissed).
+                if (gone.isEmpty()) shows else shows.filter { stripMark(c.profileId, it) !in gone }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private fun stripMark(profileId: Long, s: StripShow) =
+        tv.own.owntv.glcn.StripDismissed.show(profileId, s.series.sourceId, s.series.name, s.season, s.episode, s.positionMs)
+
+    /** glcn: out of Keep watching, and not back when the list or the Emby library is loaded again. */
+    fun dismissFromStrip(context: android.content.Context, show: StripShow) {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            tv.own.owntv.glcn.StripDismissed.add(context, stripMark(pid, show))
+            userDataWriter.removeSeriesHistory(pid, show.series.id)
+        }
+    }
+
+    /** glcn: the whole show seen, from its card in Keep watching. */
+    fun markShowWatched(show: SeriesEntity) {
+        viewModelScope.launch {
+            val all = runCatching { seriesDao.episodesBySeries(show.id).first() }.getOrDefault(emptyList())
+            if (all.isNotEmpty()) markEpisodesWatched(all, true)
+        }
+    }
+
+    private suspend fun stripShows(profileId: Long, shows: List<SeriesEntity>): List<StripShow> {
+        if (shows.isEmpty()) return emptyList()
+        val seen = runCatching { seriesDao.lastSeenEpisodes(profileId, shows.map { it.id }) }.getOrDefault(emptyList())
+            .groupBy { it.seriesId }.mapValues { it.value.first() }
+        return shows.map { show ->
+            val last = seen[show.id]
+            when {
+                last == null -> StripShow(show, 0, 0, null)
+                // Finished: the next one, from its start.
+                last.durationMs > 0 && last.positionMs >= last.durationMs * 0.95f -> {
+                    val nextEp = runCatching { seriesDao.episodeAfter(show.id, last.season, last.episode) }.getOrNull()
+                    if (nextEp != null) StripShow(show, nextEp.seasonNumber, nextEp.episodeNumber, null, nextEp.id) else StripShow(show, last.season, last.episode, 1f, last.episodeId)
+                }
+                else -> StripShow(show, last.season, last.episode, if (last.durationMs > 0) last.positionMs.toFloat() / last.durationMs else null, last.episodeId, last.positionMs)
+            }
+        }
+    }
+
     val episodeProgress: StateFlow<Map<Long, PlaybackProgressEntity>> =
         combine(ctx, _openedSeries) { c, s -> c to s }
             .flatMapLatest { (c, s) ->
@@ -730,6 +787,26 @@ class SeriesViewModel(
         val series = _selectedSeries.value?.takeIf { it.id == episode.seriesId }
             ?: runCatching { seriesDao.getSeriesById(episode.seriesId) }.getOrNull() ?: return
         tv.own.owntv.core.trakt.TraktSync.watchedEpisode(profileId, series, episode)
+    }
+
+    /**
+     * glcn: a season or a whole show marked seen (or unseen) at once, with the same sentinel as [markEpisodeWatched];
+     * episodes already seen keep their own record. Keep watching then moves on to the first unseen one, or drops the
+     * show. Trakt is told only of single episodes, not of a whole season in one go.
+     */
+    fun markEpisodesWatched(episodes: List<EpisodeEntity>, watched: Boolean) {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            val done = completedEpisodeIds.value
+            for (e in episodes) {
+                if (watched) {
+                    if (e.id in done) continue
+                    progressDao.save(PlaybackProgressEntity(profileId = pid, mediaType = MediaType.EPISODE, itemId = e.id, positionMs = 1L, durationMs = 1L))
+                } else {
+                    userDataWriter.clearProgress(pid, MediaType.EPISODE, e.id)
+                }
+            }
+        }
     }
 
     /** Mark an episode as unwatched — clears its resume position (removes the ✓ and any progress bar). */
@@ -999,6 +1076,15 @@ class SeriesViewModel(
     fun openSeriesById(seriesId: Long) {
         viewModelScope.launch {
             val show = seriesDao.getSeriesById(seriesId) ?: return@launch
+            openSeries(show)
+        }
+    }
+
+    /** glcn: Home's Keep watching cards carry the episode, not the show — the show's page from one of its episodes. */
+    fun openSeriesByEpisode(episodeId: Long) {
+        viewModelScope.launch {
+            val episode = seriesDao.getEpisodeById(episodeId) ?: return@launch
+            val show = seriesDao.getSeriesById(episode.seriesId) ?: return@launch
             openSeries(show)
         }
     }
@@ -1378,7 +1464,7 @@ class SeriesViewModel(
                 is LiveKey.Folder -> seriesDao.snapshotByCategoryManual(key.id, pid, contextKey, alpha, 5000)
                 is LiveKey.Custom -> customCategoryDao.snapshotSeries(pid, key.id, ctx.value.sourceIds.ifEmpty { listOf(-1L) }, alpha, 5000)
                 LiveKey.Favorites -> seriesDao.snapshotFavoritesManual(pid, contextKey, ctx.value.sourceIds.ifEmpty { listOf(-1L) }, 5000)
-                LiveKey.History, LiveKey.All -> return@launch
+                LiveKey.History, LiveKey.All, LiveKey.Continue -> return@launch
             }
             val idx = items.indexOfFirst { it.id == series.id }
             if (idx < 0) return@launch
@@ -1452,6 +1538,7 @@ class SeriesViewModel(
             }
             LiveKey.Favorites -> seriesDao.pagingFavoritesManual(c.profileId, ContentOrderEntity.FAV_CONTEXT, ids)
             LiveKey.History -> seriesDao.pagingHistory(c.profileId, ids)
+            LiveKey.Continue -> seriesDao.pagingContinue(c.profileId, ids)
             is LiveKey.Custom -> customCategoryDao.pagingSeries(c.profileId, key.id, ids, alpha = !playlist)
             is LiveKey.Folder -> {
                 val ctxKey = folderContextKeys.value[key.id] ?: ""
@@ -1470,6 +1557,7 @@ class SeriesViewModel(
                 else seriesDao.searchAll(query, ids)
             LiveKey.Favorites -> seriesDao.searchFavorites(query, c.profileId, ids)
             LiveKey.History -> seriesDao.searchHistory(query, c.profileId, ids)
+            LiveKey.Continue -> seriesDao.searchContinue(query, c.profileId, ids)
             is LiveKey.Custom -> customCategoryDao.searchSeries(query, c.profileId, key.id, ids)
             is LiveKey.Folder ->
                 if (dateAdded) seriesDao.searchInCategoryDateAdded(query, key.id)
@@ -1538,3 +1626,6 @@ class SeriesViewModel(
             .map { tv.own.owntv.features.shell.components.RelatedUi(it.name, it.posterUrl, it.year) }
     }
 }
+
+/** glcn: how many shows the Keep watching strip shows at most (the category lists them all). */
+private const val STRIP_MAX = 20

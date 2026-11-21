@@ -137,7 +137,7 @@ internal fun GuideVideo(
             ChannelLogoTile(
                 logoUrl = channel.displayLogoUrl,
                 modifier = Modifier.align(Alignment.CenterEnd).padding(end = 28.mpx).fillMaxWidth(0.62f).fillMaxHeight(0.62f).graphicsLayer { alpha = 0.34f },
-                fill = Color.Transparent,
+                fill = Color.Transparent, surfaceLuminance = 0.02f,
             ) { OwnTVIcon(OwnTVIcon.LIVE_TV, tint = StageColors.Dim, modifier = Modifier.size(48.mpx)) }
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.55f), 0.5f to Color.Transparent)))
         }
@@ -145,7 +145,7 @@ internal fun GuideVideo(
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.58f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.72f))))
         Box(Modifier.fillMaxSize().drawBehind { drawInnerRing(Color.White.copy(alpha = 0.08f), 1.mpx.toPx(), r.toPx()) })
         if (channel != null) {
-            Box(Modifier.align(Alignment.TopStart).padding(start = 20.mpx, top = 18.mpx)) { StageLiveBadge(stringResource(R.string.player_live)) }
+            Box(Modifier.align(Alignment.TopStart).padding(start = 20.mpx, top = 18.mpx)) { StageLiveBadge(tv.own.owntv.glcn.onAirLabel(nowTitle)) }
             Text(
                 buildAnnotatedString {
                     append(channelLine.orEmpty())
@@ -202,7 +202,7 @@ internal fun GuideProgrammeBlock(
         if (eyebrow != null) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                 OwnTVIcon(OwnTVIcon.CLOCK, a.accent, Modifier.size(18.mpx))
-                Text(eyebrow, style = stageText(18, 700, 0.02.em), color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(eyebrow, style = stageText(18, 700, 0.02.em), color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         if (title != null) {
@@ -727,7 +727,7 @@ internal fun GuideReviewPopup(
                             stringResource(R.string.content_epg_match_button),
                             matchedCount?.let { pluralStringResource(R.plurals.content_epg_channels_matched, it, it) },
                         ).joinToString(" · "),
-                        style = stageText(18, 700, 0.02.em), color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = stageText(18, 700, 0.02.em), color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Text(
@@ -874,7 +874,7 @@ internal fun ReminderPrompt(
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                     OwnTVIcon(OwnTVIcon.BELL, a.accent, Modifier.size(18.mpx))
-                    Text(eyebrow, style = stageText(18, 700, 0.02.em), color = a.accent, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(eyebrow, style = stageText(18, 700, 0.02.em), color = a.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
                 Text(
                     reminder.title, style = stageText(38, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis,

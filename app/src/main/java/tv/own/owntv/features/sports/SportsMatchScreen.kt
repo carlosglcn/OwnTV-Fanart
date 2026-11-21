@@ -159,7 +159,7 @@ fun SportsMatchScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
                         OwnTVIcon(OwnTVIcon.CHEVRON_LEFT, StageColors.Muted, Modifier.size(21.mpx))
                         Text(
-                            stringResource(R.string.sports_title), style = stageText(21, 600), color = stageAccent.accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            stringResource(R.string.sports_title), style = stageText(21, 600), color = stageAccent.ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                         Text(
                             sep + leagueName(m),
@@ -213,7 +213,7 @@ fun SportsMatchScreen(
                             m.sport.isRace && (state.ranking != null || liveOrder) -> {
                                 // glcn: a session running — its live order first, the season's standings under it.
                                 if (liveOrder) {
-                                    item { Text(stringResource(R.string.glcn_race_live_order), style = stageText(18, 700), color = stageAccent.accent, modifier = Modifier.padding(top = 18.mpx, bottom = 6.mpx)) }
+                                    item { Text(stringResource(R.string.glcn_race_live_order), style = stageText(18, 700), color = stageAccent.ink, modifier = Modifier.padding(top = 18.mpx, bottom = 6.mpx)) }
                                     itemsIndexed(m.competitors, key = { _, c -> "lo" + c.team.id }) { i, c -> LiveOrderLine(i + 1, c) }
                                 }
                                 state.ranking?.let { r -> item { RankingColumns(r, Modifier.padding(top = if (liveOrder) 24.mpx else 0.mpx)) } }
@@ -225,7 +225,7 @@ fun SportsMatchScreen(
                         null -> item { DrawNote(stringResource(R.string.glcn_sports_draw_loading)) }
                         else -> if (d.isEmpty()) item { DrawNote(stringResource(R.string.glcn_sports_draw_empty)) } else d.forEach { round ->
                             item(key = "dr" + round.name) {
-                                Text(round.name.ifBlank { leagueName(m) }, style = stageText(18, 700), color = stageAccent.accent, modifier = Modifier.padding(top = 21.mpx, bottom = 6.mpx))
+                                Text(round.name.ifBlank { leagueName(m) }, style = stageText(18, 700), color = stageAccent.ink, modifier = Modifier.padding(top = 21.mpx, bottom = 6.mpx))
                             }
                             items(round.matches, key = { "dm" + it.id }) { dm -> DrawMatchLine(dm) }
                         }
@@ -637,7 +637,7 @@ internal fun ChannelRow(o: WatchOption, m: Match, onClick: () -> Unit, onHold: (
                 Text(text, style = stageText(17, 600), color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        if (playing) OwnTVIcon(OwnTVIcon.CHECK, stageAccent.accent, Modifier.size(22.mpx))
+        if (playing) OwnTVIcon(OwnTVIcon.CHECK, stageAccent.ink, Modifier.size(22.mpx))
         else o.facets.country?.let { StageTag(it) }
     }
 }

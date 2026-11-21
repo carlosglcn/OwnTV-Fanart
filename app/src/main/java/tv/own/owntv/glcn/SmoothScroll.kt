@@ -14,6 +14,9 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalFoundationApi::class)
 object SmoothScroll {
+    /** glcn: no motion at all — light mode, or Animations Off in Settings (the lists kept gliding and bouncing with them off). */
+    internal val still: Boolean get() = LowRam.on || tv.own.owntv.ui.stage.GlcnMotion.off
+
     /**
      * glcn: the page's glide, everywhere — a spring that carries its speed ([FollowSpring]). Compose evaluates the
      * scroll's curve again on every frame from where the page is, handing it the speed it had: a tween ignores that
@@ -21,18 +24,18 @@ object SmoothScroll {
      * sets off gently, a new step bends its path instead of restarting it, and it lands softly. Instant in light mode.
      */
     val animation: AnimationSpec<Float>
-        get() = if (LowRam.on) snap<Float>() else FollowSpring(GLIDE_OMEGA)
+        get() = if (still) snap<Float>() else FollowSpring(GLIDE_OMEGA)
 
     /** glcn: Home's page, row to row — a softer spring, so the page never sets off with a jolt. */
     val homeAnimation: AnimationSpec<Float>
-        get() = if (LowRam.on) snap<Float>() else FollowSpring(HOME_OMEGA)
+        get() = if (still) snap<Float>() else FollowSpring(HOME_OMEGA)
 
     /**
      * glcn: a menu's list (Settings) — brisker, so a quick run of ▼ never leaves the highlight off the screen; the
      * highlight slides at the same pace ([SETTINGS_FOCUS_STIFFNESS]).
      */
     val listAnimation: AnimationSpec<Float>
-        get() = if (LowRam.on) snap<Float>() else FollowSpring(LIST_OMEGA)
+        get() = if (still) snap<Float>() else FollowSpring(LIST_OMEGA)
 
     /**
      * glcn: the channel lists (TV en directo, the Guide) — a spring a touch short of critical damping, so a step
@@ -40,7 +43,14 @@ object SmoothScroll {
      * flows. Instant in light mode.
      */
     val elasticAnimation: AnimationSpec<Float>
-        get() = if (LowRam.on) snap<Float>() else androidx.compose.animation.core.spring(dampingRatio = ELASTIC_DAMPING, stiffness = ELASTIC_STIFFNESS)
+        get() = when {
+            still -> snap<Float>()
+            // glcn: no give with the Subtle style — the list glides and stops.
+            tv.own.owntv.ui.stage.GlcnMotion.subtle -> FollowSpring(GLIDE_OMEGA)
+            // A small give at the end of each step: about a third of what it was (it passed its place by 8 %, now
+            // under 3 %), so the list still feels alive without reading as a bounce.
+            else -> androidx.compose.animation.core.spring(dampingRatio = ELASTIC_DAMPING, stiffness = ELASTIC_STIFFNESS)
+        }
 
     /** The app-wide default: scroll only as far as the focused item needs, eased. */
     val spec = object : BringIntoViewSpec {
@@ -92,7 +102,7 @@ class GlideScroller(private val state: androidx.compose.foundation.lazy.grid.Laz
     }
 
     private fun add(delta: Float) {
-        if (LowRam.on) { scope.launch { state.scrollBy(delta) }; return }
+        if (SmoothScroll.still) { scope.launch { state.scrollBy(delta) }; return }
         pending += delta
         if (job?.isActive == true) return
         job = scope.launch {
@@ -125,11 +135,9 @@ val NoBringIntoViewSpec = object : BringIntoViewSpec {
 }
 
 /** glcn: the springs' pace (their angular frequency, 1/s): a single row's step lands in about 4.7 / ω seconds. */
-private const val GLIDE_OMEGA = 13f
+private const val GLIDE_OMEGA = 16f
 private const val HOME_OMEGA = 10f
-private const val LIST_OMEGA = 18f
-private const val ELASTIC_DAMPING = 0.62f
-private const val ELASTIC_STIFFNESS = 220f
+private const val LIST_OMEGA = 22f
 /** glcn: the settings highlight's slide, in step with [SmoothScroll.listAnimation]. */
 const val SETTINGS_FOCUS_STIFFNESS = 900f
 
@@ -205,3 +213,5 @@ class FollowSpring(private val omega: Float) : androidx.compose.animation.core.F
         }
     }
 }
+private const val ELASTIC_DAMPING = 0.76f
+private const val ELASTIC_STIFFNESS = 220f

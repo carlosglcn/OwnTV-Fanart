@@ -351,7 +351,7 @@ internal fun ArtLiveCard(
                     model = logo,
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
-                    colorFilter = CAPTION_LOGO_GREY,
+                    colorFilter = tv.own.owntv.glcn.rememberGhostFilter(logo),
                     alpha = if (focused) CAPTION_LOGO_ALPHA_FOCUSED else CAPTION_LOGO_ALPHA,
                     modifier = Modifier.align(Alignment.CenterEnd).offset(x = CAPTION_LOGO_W * 0.3f).size(CAPTION_LOGO_W, CAPTION_HEIGHT * 1.1f),
                 )
@@ -380,7 +380,6 @@ internal fun ArtLiveCard(
 }
 
 /** glcn: the faint channel logo behind a live card's words — greyscale, see [ArtLiveCard]. */
-private val CAPTION_LOGO_GREY = androidx.compose.ui.graphics.ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) })
 private const val CAPTION_LOGO_ALPHA = 0.08f
 private const val CAPTION_LOGO_ALPHA_FOCUSED = 0.14f
 private val CAPTION_LOGO_W = 170.mpx
@@ -598,8 +597,8 @@ internal fun FeaturedBillboard(
                         ChannelPlate(item.channel, Modifier.size(60.mpx, 40.mpx))
                         Text(item.channel.name, style = stageText(18, 700), color = Color.White.copy(alpha = 0.85f), maxLines = 1)
                     }
-                    is FeaturedItem.Movie -> Text(stringResource(R.string.glcn_recent_movies).uppercase(), style = stageText(15, 800), color = a.accent)
-                    is FeaturedItem.Series -> Text(stringResource(R.string.glcn_recent_series).uppercase(), style = stageText(15, 800), color = a.accent)
+                    is FeaturedItem.Movie -> Text(stringResource(R.string.glcn_recent_movies).uppercase(), style = stageText(15, 800), color = a.ink)
+                    is FeaturedItem.Series -> Text(stringResource(R.string.glcn_recent_series).uppercase(), style = stageText(15, 800), color = a.ink)
                 }
             }
             Text(
@@ -608,7 +607,7 @@ internal fun FeaturedBillboard(
                     is FeaturedItem.Movie -> item.movie.name
                     is FeaturedItem.Series -> item.series.name
                 },
-                style = stageText(52, 800), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                style = tv.own.owntv.ui.theme.stageDisplay(56), color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             val line = when (item) {
                 is FeaturedItem.Live -> listOfNotNull(

@@ -154,7 +154,7 @@ fun MediaDetailsScreen(details: MediaDetailsUi, onExit: () -> Unit, modifier: Mo
                     }
                     Column(Modifier.weight(1f)) {
                         if (!details.subtitle.isNullOrBlank()) {
-                            Text(details.subtitle, style = stageText(18, 800, 0.08.em), color = stageAccent.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(details.subtitle, style = stageText(18, 800, 0.08.em), color = stageAccent.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         // glcn: the title's own logo, when TMDB has one; the words otherwise.
                         var logoFailed by remember(details.logoUrl) { mutableStateOf(false) }

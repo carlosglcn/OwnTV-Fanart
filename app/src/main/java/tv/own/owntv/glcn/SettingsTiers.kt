@@ -63,6 +63,7 @@ object SettingsTiers {
         "glcn_zap_views" to "group_live",
         "glcn_auto_skip_intro" to "group_watching",
         "glcn_habits" to "group_watching",
+        "glcn_dream" to "group_app",
     )
 
     /** This cycle's new or changed settings, with the group each sits in. */
@@ -71,6 +72,7 @@ object SettingsTiers {
         "tab_GLASS_EFFECT" to "group_appearance",
         "glcn_home_bg" to "group_layout",
         "glcn_trakt" to "group_sources",
+        "glcn_dream" to "group_fanart",
     )
 
     /** Bumped on every change, so rows and cards reading it recompose. */

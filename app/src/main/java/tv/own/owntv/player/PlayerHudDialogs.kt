@@ -306,7 +306,7 @@ private fun ScreenOffRow(screenOff: ScreenOff = koinInject()) {
                 allowed = false
             } else {
                 runCatching { tv.own.owntv.features.pip.startAsHandOff(screenOff.requestIntent()) { ask.launch(it) } }.onFailure {
-                    android.widget.Toast.makeText(context, R.string.player_sleep_timer_screen_off_unavailable, android.widget.Toast.LENGTH_LONG).show()
+                    tv.own.owntv.ui.components.AppToast.show(context, R.string.player_sleep_timer_screen_off_unavailable, long = true)
                 }
             }
         },
@@ -411,7 +411,7 @@ internal fun VolumeDialog(player: PlaybackEngine, onDismiss: () -> Unit) {
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.mpx, Alignment.CenterHorizontally)) {
             StepButton(stringResource(R.string.common_minus), enabled = volume > 0, modifier = Modifier.focusRequester(steppers.minus)) { player.adjustVolumeByUser(-5) }
-            Text(stringResource(R.string.player_percent, volume), style = stageText(44, 800), color = stageAccent.accent, modifier = Modifier.width(160.mpx), textAlign = TextAlign.Center)
+            Text(stringResource(R.string.player_percent, volume), style = stageText(44, 800), color = stageAccent.ink, modifier = Modifier.width(160.mpx), textAlign = TextAlign.Center)
             StepButton(stringResource(R.string.common_plus), enabled = volume < 150, modifier = Modifier.focusRequester(steppers.plus)) { player.adjustVolumeByUser(5) }
         }
     }

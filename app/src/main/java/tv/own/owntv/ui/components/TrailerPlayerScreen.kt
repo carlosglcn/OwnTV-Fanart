@@ -254,7 +254,7 @@ private fun TrailerPlayerContent(videoKey: String, title: String?, onExit: () ->
                 Column(Modifier.padding(start = fx(84), top = 56.mpx, end = fx(84))) {
                     Text(
                         stringResource(R.string.home_trending_trailer).uppercase(androidx.compose.ui.text.intl.Locale.current.platformLocale),
-                        style = stageText(15, 800, 0.12.em), color = stageAccent.accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = stageText(15, 800, 0.12.em), color = stageAccent.ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                     if (!title.isNullOrBlank()) {
                         Text(
@@ -331,7 +331,7 @@ private fun TrailerBlockedDialog(onOpen: () -> Unit, onCancel: () -> Unit) {
             Column(Modifier.width(720.mpx).stageGlass(30.mpx, overContent = true).padding(horizontal = 36.mpx, vertical = 32.mpx)) {
                 Text(
                     stringResource(R.string.home_trending_trailer).uppercase(androidx.compose.ui.text.intl.Locale.current.platformLocale),
-                    style = stageText(14, 800, 0.12.em), color = stageAccent.accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = stageText(14, 800, 0.12.em), color = stageAccent.ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     stringResource(R.string.player_trailer_blocked_title), style = stageText(30, 800, (-0.5).mpxSp), color = StageColors.Text,

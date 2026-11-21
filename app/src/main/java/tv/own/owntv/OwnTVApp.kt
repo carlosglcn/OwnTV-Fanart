@@ -94,6 +94,10 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         if (tv.own.owntv.glcn.CrashScreen.isCrashProcess(this)) { super.onCreate(); return }
         // glcn: the app's Trakt keys (from the build; blank in a build without them, and then no Trakt row shows).
         tv.own.owntv.core.trakt.Trakt.configure(this, BuildConfig.TRAKT_CLIENT_ID, BuildConfig.TRAKT_CLIENT_SECRET)
+        // glcn: the report also tells how the live groups are filled (GroupsReport).
+        tv.own.owntv.player.PlaybackErrorLog.extraSection = {
+            listOfNotNull(tv.own.owntv.core.util.Perf.report(), tv.own.owntv.glcn.GroupsReport.build()).joinToString("\n\n")
+        }
         // glcn: the app went down last time — open the report first, in that separate process, so it shows
         // even when what broke is the start-up below.
         if (tv.own.owntv.glcn.CrashScreen.pending(this)) runCatching {
@@ -127,6 +131,10 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // glcn: the beta keeps the live player's diary, for the error-log page to show.
         tv.own.owntv.core.CoreBuildInfo.diagnosticBuild = BuildConfig.DIAGNOSTIC_BUILD || BuildConfig.GLCN_BETA
         if (BuildConfig.GLCN_BETA) tv.own.owntv.player.LiveDiagnosticsLog.enabled = true
+        // glcn: the diary's file from the start of the process — it was only opened when a preview engine was first built,
+        // and what was logged before that never reached it (a report then showed the day before).
+        tv.own.owntv.player.LiveDiagnosticsLog.init(this)
+        tv.own.owntv.glcn.StripPref.init(this)
         // This app's own releases, which the in-app updater asks about. Core defaults to exactly
         // this value, so the line changes nothing today — it is here so the television names its own
         // repository instead of relying on core to guess it, the same as the phone app does. A
@@ -144,9 +152,11 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         tv.own.owntv.glcn.MemoryWatch.start(this) // glcn: memory diary, stall watch and memory brake (one sleeping thread)
         tv.own.owntv.glcn.LiveBanner.ensure(this) // glcn: the live banner's style
         tv.own.owntv.glcn.PlayerGlass.ensure(this) // glcn: see-through level of the panels over the video
+        tv.own.owntv.glcn.BadgePack.init(this) // glcn: quality badges as pictures, when a pack was chosen
         tv.own.owntv.glcn.DeckWidths.ensure(this) // glcn: widths of the player's channel list
         tv.own.owntv.glcn.Labs.ensure(this) // glcn: test features (switched on with a key sequence in Settings)
         tv.own.owntv.glcn.AppShortcuts.ensure(this)
+        tv.own.owntv.glcn.LiveListFilter.init(this) // glcn: the Live TV playlist picked in the category sheet
         tv.own.owntv.glcn.EmbyGroupsPref.load(this) // glcn: how Emby / Jellyfin libraries are split into categories
         // First thing after the context exists: a crash from here on leaves a trace on disk that the
         // user can export from Settings, instead of being lost with the process.
@@ -159,6 +169,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // the id rather than owning the assets (see SubtitleFontAssets).
         tv.own.owntv.player.SubtitleFontAssets.resourceOf = { it.subtitleFontResource }
         tv.own.owntv.glcn.DeviceClass.detect(this) // glcn: a modest box skips purely decorative motion
+        Perf.stamp("prefs-loaded")
         startKoin {
             androidLogger(if (BuildConfig.DEBUG) Level.ERROR else Level.NONE)
             androidContext(this@OwnTVApp)

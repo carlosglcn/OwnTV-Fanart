@@ -1,5 +1,7 @@
 package tv.own.owntv.features.shell.components
 
+import tv.own.owntv.ui.stage.StageFocus
+import tv.own.owntv.ui.stage.drawStageFocus
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.ui.zIndex
@@ -10,6 +12,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import tv.own.owntv.glcn.groupGlyph
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -40,6 +43,8 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -48,11 +53,13 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -79,6 +86,7 @@ import tv.own.owntv.ui.components.ChannelLogoTile
 import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.stage.StageKeyHints
 import tv.own.owntv.ui.stage.stageGlass
+import tv.own.owntv.ui.stage.shownColor
 import tv.own.owntv.ui.theme.StageColors
 import tv.own.owntv.ui.theme.StageRadii
 import tv.own.owntv.ui.theme.gradientWash
@@ -119,6 +127,8 @@ fun ZapDeck(
     /** Makes [key] the list the player zaps in (a channel tuned from another group). */
     onArmCategory: (LiveKey) -> Unit,
     onTune: (ChannelEntity) -> Unit,
+    /** glcn: OK held on a group hides it (undone in Settings › Customize); null = not offered. */
+    onHideCategory: ((LiveKey) -> Unit)? = null,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -215,7 +225,61 @@ fun ZapDeck(
 
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-    BackHandler { onDismiss() }
+    // glcn: ◀ ◀ ◀ — the playlists panel (column -2), in the categories' place and at their width. It lists every
+    // playlist of the profile, the switched-off ones too (dimmed), so one can be switched back on from here.
+    var plIdx by remember { mutableIntStateOf(0) }
+    var okPending by remember { mutableStateOf(false) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val offIds by tv.own.owntv.core.repository.SourceGlcnPrefs.disabled.collectAsState()
+    val allSources by androidx.compose.runtime.produceState<List<tv.own.owntv.core.database.entity.SourceEntity>>(emptyList()) {
+        runCatching {
+            val k = org.koin.core.context.GlobalContext.get()
+            val pid = k.get<tv.own.owntv.core.settings.SettingsRepository>().activeProfileId.first()
+            k.get<tv.own.owntv.core.database.dao.SourceDao>().observeForProfile(pid).collect { value = it }
+        }
+    }
+    val panelLists = remember(chips, allSources, offIds) {
+        if (chips.isEmpty()) chips
+        else chips + allSources.filter { it.id in offIds && chips.none { c -> c.first == it.id } }.map { it.id to it.name }
+    }
+    // glcn: "Manage groups" (column -3): every group of the playlist(s) shown, hidden ones too, each shown or hidden.
+    var manageIdx by remember { mutableIntStateOf(0) }
+    val deckScope = androidx.compose.runtime.rememberCoroutineScope()
+    val manageRows by androidx.compose.runtime.produceState<List<ManagedGroup>>(emptyList(), activeChip, offIds) {
+        runCatching {
+            val k = org.koin.core.context.GlobalContext.get()
+            val pid = k.get<tv.own.owntv.core.settings.SettingsRepository>().activeProfileId.first()
+            val sourceIds = if (activeChip > 0L) listOf(activeChip)
+                else k.get<tv.own.owntv.core.database.dao.SourceDao>().observeForProfile(pid).first().map { it.id }.filterNot { it in offIds }
+            kotlinx.coroutines.flow.combine(
+                k.get<tv.own.owntv.core.database.dao.CategoryDao>().observe(sourceIds, tv.own.owntv.core.model.MediaType.LIVE),
+                k.get<tv.own.owntv.core.customize.CustomizationStore>().observe(pid, tv.own.owntv.core.model.MediaType.LIVE),
+            ) { cats, cust ->
+                cats.map { c ->
+                    val key = tv.own.owntv.core.customize.CustomizeKeys.category(c)
+                    ManagedGroup(c.id, c.sourceId, tv.own.owntv.features.live.cleanGroupLabel(c.name), key, key in cust.hiddenCategories)
+                }
+            }.collect { value = it }
+        }
+    }
+    val toggleGroup: (ManagedGroup) -> Unit = { g ->
+        deckScope.launch {
+            runCatching {
+                val k = org.koin.core.context.GlobalContext.get()
+                val pid = k.get<tv.own.owntv.core.settings.SettingsRepository>().activeProfileId.first()
+                k.get<tv.own.owntv.core.customize.CustomizationStore>().setCategoryHidden(pid, tv.own.owntv.core.model.MediaType.LIVE, g.key, !g.hidden)
+            }
+        }
+    }
+    val pickPlaylist: () -> Unit = {
+        panelLists.getOrNull(plIdx)?.let { (id, _) ->
+            // A switched-off playlist picked here is switched back on and shown.
+            if (id > 0L && id in offIds) tv.own.owntv.core.repository.SourceGlcnPrefs.setDisabled(id, false)
+            if (id != activeChip) { playlists?.onSelect?.invoke(id); groupIdx = 0 }
+        }
+        column = 0
+    }
+    BackHandler { if (column == -2 || column == -3) column = 0 else onDismiss() }
 
     // Slides in.
     val enter = remember { Animatable(0f) }
@@ -234,7 +298,6 @@ fun ZapDeck(
     // glcn: the widths chosen in Settings → Layout → Panel widths; while the channels or the schedule have the
     // cursor the groups fold to their icons and the programme column takes the room they leave.
     val widths = tv.own.owntv.glcn.DeckWidths.shares
-    val groupsOpenSet = tv.own.owntv.glcn.DeckWidths.width(widths.groups)
     val foldTarget = if (column == 1 || column == 2) 1f else 0f
     val fold by androidx.compose.animation.core.animateFloatAsState(
         foldTarget,
@@ -277,6 +340,8 @@ fun ZapDeck(
     val wheelList = androidx.compose.runtime.rememberUpdatedState(list)
     var wheelHeld by remember { mutableStateOf(false) }
     var wheelTurning by remember { mutableStateOf(false) }
+    // glcn: a held ▲ ▼ that has sped up — the list shows where it is (FastRunRail) until the key comes up.
+    var fastRun by remember { mutableStateOf(false) }
     var wheelJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     fun turnWheel(dir: Int) {
         wheelHeld = true
@@ -339,7 +404,37 @@ fun ZapDeck(
             .onPreviewKeyEvent { e ->
                 // glcn: the key comes up — the wheel coasts and stops.
                 if (e.type == KeyEventType.KeyUp && (e.key == Key.DirectionUp || e.key == Key.DirectionDown) && wheelTurning) {
-                    wheelTurning = false; return@onPreviewKeyEvent true
+                    wheelTurning = false; fastRun = false; return@onPreviewKeyEvent true
+                }
+                // glcn: on the groups and the playlists OK acts when it comes up, so holding it can mean something else:
+                // held on a group it hides the group, held on a playlist it switches the playlist off (or on).
+                val okKey = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
+                if (okKey && (column == 0 || column == -2)) {
+                    when {
+                        e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0 -> okPending = true
+                        e.type == KeyEventType.KeyDown && okPending && e.nativeKeyEvent.repeatCount >= OK_HOLD_REPEATS -> {
+                            okPending = false
+                            // Held on a group: the groups to show or hide, with the cursor on that one (as TiviMate's
+                            // "Manage groups"); nothing is hidden without a second, deliberate OK.
+                            if (column == 0) {
+                                val key = entries.getOrNull(groupIdx)?.item?.key
+                                manageIdx = (key as? LiveKey.Folder)?.let { k -> manageRows.indexOfFirst { it.id == k.id } }?.takeIf { it >= 0 } ?: 0
+                                column = -3
+                            } else panelLists.getOrNull(plIdx)?.let { (id, _) ->
+                                if (id > 0L) {
+                                    val off = !tv.own.owntv.core.repository.SourceGlcnPrefs.isDisabled(id)
+                                    tv.own.owntv.core.repository.SourceGlcnPrefs.setDisabled(id, off)
+                                    if (off && id == activeChip) playlists?.onSelect?.invoke(-1L)
+                                }
+                            }
+                        }
+                        e.type == KeyEventType.KeyUp && okPending -> {
+                            okPending = false
+                            if (column == 0) { if (list.isNotEmpty() && entries.getOrNull(groupIdx)?.item?.key == shownKey) column = 1 }
+                            else pickPlaylist()
+                        }
+                    }
+                    return@onPreviewKeyEvent true
                 }
                 if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 val first = e.nativeKeyEvent.repeatCount == 0
@@ -361,15 +456,19 @@ fun ZapDeck(
                                     held < ZAP_ACCEL_2_MS -> ZAP_ACCEL_1_STEP
                                     else -> ZAP_ACCEL_2_STEP
                                 }
+                                fastRun = step > 1
                                 chIdx = if (step == 1) (if (up) (if (chIdx == 0) list.lastIndex else chIdx - 1) else (if (chIdx == list.lastIndex) 0 else chIdx + 1))
                                     else (chIdx + if (up) -step else step).coerceIn(0, list.lastIndex)
                             }
                             0 -> when {
                                 up && groupIdx == 0 && chips.isNotEmpty() -> { column = -1; chipIdx = chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0) }
-                                up -> groupIdx = (groupIdx - 1).coerceAtLeast(0)
-                                else -> groupIdx = (groupIdx + 1).coerceAtMost(entries.lastIndex.coerceAtLeast(0))
+                                // glcn: the groups go round — ▲ on the first reaches the last, ▼ on the last the first.
+                                up -> groupIdx = if (groupIdx == 0) entries.lastIndex.coerceAtLeast(0) else groupIdx - 1
+                                else -> groupIdx = if (groupIdx >= entries.lastIndex) 0 else groupIdx + 1
                             }
                             -1 -> if (!up) column = 0
+                            -3 -> if (manageRows.isNotEmpty()) manageIdx = if (up) (if (manageIdx == 0) manageRows.lastIndex else manageIdx - 1) else (if (manageIdx >= manageRows.lastIndex) 0 else manageIdx + 1)
+                            -2 -> plIdx = if (up) (if (plIdx == 0) panelLists.lastIndex else plIdx - 1) else (if (plIdx >= panelLists.lastIndex) 0 else plIdx + 1)
                         }
                         true
                     }
@@ -397,6 +496,9 @@ fun ZapDeck(
                         when (column) {
                             2 -> column = 1
                             1 -> { column = 0; groupIdx = entries.indexOfFirst { it.item.key == shownKey }.takeIf { it >= 0 } ?: groupIdx }
+                            -3 -> column = 0
+                            // glcn: ◀ ◀ ◀ from the picture — the quick playlist picker (as TiviMate, and as in Live TV).
+                            0 -> if (chips.isNotEmpty()) { column = -2; plIdx = chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0) }
                             -1 -> chipIdx = (chipIdx - 1).coerceAtLeast(0)
                         }
                         true
@@ -411,6 +513,8 @@ fun ZapDeck(
                                 else onDismiss()
                             }
                             -1 -> chipIdx = (chipIdx + 1).coerceAtMost(chips.lastIndex)
+                            -2 -> pickPlaylist()
+                            -3 -> column = 0
                         }
                         true
                     }
@@ -419,6 +523,8 @@ fun ZapDeck(
                             1, 2 -> tuneFocused()
                             0 -> if (list.isNotEmpty() && entries.getOrNull(groupIdx)?.item?.key == shownKey) column = 1
                             -1 -> chips.getOrNull(chipIdx)?.let { (id, _) -> playlists?.onSelect?.invoke(id); column = 0; groupIdx = 0 }
+                            -2 -> pickPlaylist()
+                            -3 -> manageRows.getOrNull(manageIdx)?.let { toggleGroup(it) }
                         }
                         true
                     }
@@ -459,20 +565,75 @@ fun ZapDeck(
             // glcn: both parts on a share of the same glass, so the picture shows through everywhere, both solid
             // enough for their words to read over a bright picture or its subtitles.
             Box(Modifier.fillMaxHeight()) {
-            Box(Modifier.matchParentSize().graphicsLayer { alpha = tv.own.owntv.glcn.PlayerGlass.share(DECK_LIST_GLASS) }.stageGlass(StageRadii.Sheet, overContent = true))
-            Row(Modifier.fillMaxHeight().padding(vertical = 20.mpx)) {
+            // glcn: glass off makes it solid, as every player panel.
+            val deckShare = tv.own.owntv.glcn.PlayerGlass.shareNow(DECK_LIST_GLASS)
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = deckShare }.stageGlass(StageRadii.Sheet, overContent = true))
+            Row(Modifier.fillMaxHeight().padding(vertical = DECK_SHEET_INSET)) {
             // ---- Groups (and the playlists above them).
             // glcn: as TiviMate does — folded, the groups are not there at all (no column of initials); ◀ opens them
             // over the channels, which dim behind them, with their whole names, counts and playlist tags.
             // glcn: wide enough for the categories' whole names (the panel covers the channels, so it can take their room).
-            val groupsOpen = groupsOpenSet.coerceAtLeast(GROUPS_PANEL_MIN).coerceAtMost(chW + 20.mpx)
+            // glcn: the categories cover the channel list exactly — the same width as the sheet under them.
+            val groupsOpen = chW + 20.mpx
             val slideGroupsPx = with(density) { 40.mpx.toPx() }
             Box(Modifier.width(0.mpx).fillMaxHeight().wrapContentWidth(Alignment.Start, unbounded = true).zIndex(1f)) {
-            if (fold < 0.999f) Box(Modifier.width(groupsOpen).fillMaxHeight().graphicsLayer { alpha = 1f - fold; translationX = -slideGroupsPx * fold }) {
+            // glcn: the panel reaches over the sheet's top and bottom margins, so its edge lies on the sheet's own —
+            // it stopped 20 short, and the two edges showed as a double line at the top.
+            if (fold < 0.999f) Box(
+                Modifier.width(groupsOpen).fillMaxHeight()
+                    .layout { m, c ->
+                        val bleed = DECK_SHEET_INSET.roundToPx()
+                        val h = c.maxHeight + 2 * bleed
+                        val p = m.measure(c.copy(minHeight = h, maxHeight = h))
+                        layout(p.width, c.maxHeight) { p.place(0, -bleed) }
+                    }
+                    .graphicsLayer { alpha = 1f - fold; translationX = -slideGroupsPx * fold },
+            ) {
             Box(Modifier.matchParentSize().clip(RoundedCornerShape(StageRadii.Sheet)).background(shade))
-            Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx)) {
+            // glcn: the same glass as the channel list on top of the solid page — groups and playlists look like the list
+            // they cover (glass on), while the words behind stay hidden.
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = deckShare }.stageGlass(StageRadii.Sheet, overContent = true))
+            // glcn: a tab on the panel's right edge with a › — ▶ goes back to the channels.
+            tv.own.owntv.glcn.EdgeTab(visible = column == 0 || column == -1 || column == -2 || column == -3, toRight = true, modifier = Modifier.align(Alignment.CenterEnd))
+            // glcn: ‹ on the left edge while on the categories: ◀ opens the playlists.
+            if (chips.isNotEmpty()) tv.own.owntv.glcn.EdgeTab(visible = column == 0, modifier = Modifier.align(Alignment.CenterStart))
+            if (column == -3) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM, top = DECK_SHEET_INSET, bottom = DECK_SHEET_INSET)) {
+                Text(
+                    stringResource(R.string.glcn_deck_manage_title), style = stageText(24, 800), color = StageColors.Text, maxLines = 1, softWrap = false,
+                    modifier = Modifier.padding(start = 14.mpx, top = 10.mpx),
+                )
+                Text(
+                    stringResource(R.string.glcn_deck_manage_hint), style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, softWrap = false,
+                    modifier = Modifier.padding(start = 14.mpx, top = 2.mpx, bottom = 10.mpx),
+                )
+                GlideColumn(
+                    count = manageRows.size,
+                    index = manageIdx,
+                    rowHeight = 60.mpx,
+                    active = true,
+                    resetKey = activeChip,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) { i, focused ->
+                    val g = manageRows.getOrNull(i) ?: return@GlideColumn
+                    val ink = if (focused) litInk() else StageColors.Text
+                    Row(
+                        Modifier.fillMaxSize().padding(horizontal = 14.mpx),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.mpx),
+                    ) {
+                        Text(
+                            g.name, style = stageText(18, 600), color = if (g.hidden && !focused) StageColors.Muted else ink,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false, modifier = Modifier.weight(1f),
+                        )
+                        if (activeChip == -1L) marks[g.sourceId]?.let { tv.own.owntv.ui.stage.StagePlaylistMark(it, onLight = focused) }
+                        DeckSwitch(on = !g.hidden, focused = focused)
+                    }
+                }
+            } else if (column == -2) Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM, top = DECK_SHEET_INSET, bottom = DECK_SHEET_INSET)) {
+                DeckPlaylistsPanel(panelLists, activeChip, offIds, marks, playlists?.playlists, allSources, plIdx, resetKey = chips.size)
+            } else Column(Modifier.fillMaxSize().padding(start = 14.mpx, end = 8.mpx + DECK_TAB_ROOM, top = DECK_SHEET_INSET, bottom = DECK_SHEET_INSET)) {
                 if (chips.isNotEmpty()) {
-                    DeckChips(chips, activeChip, if (column == -1) chipIdx else -1)
+                    DeckChips(chips, activeChip, if (column == -1) chipIdx else -1, colors = marks.mapValues { it.value.shownColor })
                     Spacer(Modifier.height(10.mpx))
                 }
                 Text(
@@ -480,6 +641,16 @@ fun ZapDeck(
                     style = stageText(17, 700), color = StageColors.Dim, maxLines = 1, softWrap = false,
                     modifier = Modifier.padding(start = 14.mpx, bottom = 8.mpx),
                 )
+                // glcn: the width of the pictures' slot, in line-icon sizes: a logo's when any group has one, an icon's when
+                // any has an icon, none otherwise.
+                val glyphSlot = remember(entries) {
+                    val glyphs = entries.map { (it.icon != null) to it.groupGlyph() }
+                    when {
+                        glyphs.any { it.second is tv.own.owntv.glcn.CategoryIcons.Glyph.Logo } -> tv.own.owntv.glcn.CATEGORY_LOGO_SLOT_BESIDE
+                        glyphs.any { it.first || it.second != null } -> 1f
+                        else -> 0f
+                    }
+                }
                 GlideColumn(
                     count = entries.size,
                     index = groupIdx,
@@ -491,9 +662,10 @@ fun ZapDeck(
                     val entry = entries.getOrNull(i) ?: return@GlideColumn
                     val shown = entry.item.key == shownKey
                     val lit = focused && column == 0
+                    val groupNf = remember { java.text.NumberFormat.getIntegerInstance() }
                     val tint by animateColorAsState(
                         when {
-                            lit -> stageAccent.onAccent
+                            lit -> litInk()
                             shown -> StageColors.Text
                             else -> StageColors.Muted
                         },
@@ -504,17 +676,26 @@ fun ZapDeck(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.mpx),
                     ) {
-                        entry.icon?.let { OwnTVIcon(it, tint, Modifier.size(20.mpx)) }
+                        // glcn: every name starts at the same place — the picture sits in a slot as wide as the list's
+                        // widest (none when no group has one), so a group without one is not further left.
                         val glyph = entry.groupGlyph()
-                        glyph?.let { tv.own.owntv.glcn.CategoryGlyphView(it, tint, size = 20.mpx, name = entry.label) }
-                        Text(
-                            if (tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) "" else entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
-                            modifier = Modifier.weight(1f),
-                        )
-                        // The playlist it comes from, when all playlists are listed together.
-                        if (activeChip == -1L) entry.item.sourceId?.let(marks::get)?.let { tv.own.owntv.ui.stage.StagePlaylistMark(it, onLight = lit) }
-                        entry.count?.let { Text(it.toString(), style = stageText(15, 500), color = tint.copy(alpha = 0.7f), maxLines = 1, softWrap = false) }
+                        if (glyphSlot > 0f) Box(Modifier.width(20.mpx * glyphSlot), contentAlignment = Alignment.CenterStart) {
+                            entry.icon?.let { OwnTVIcon(it, tint, Modifier.size(20.mpx)) }
+                            glyph?.let { tv.own.owntv.glcn.CategoryGlyphView(it, tint, size = 20.mpx, name = entry.label) }
+                        }
+                        // glcn: name, playlist tag and count in a row of their own height, centred on the row — on the big
+                        // row the baseline pair sat at its top, above the picture beside it.
+                        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
+                            Text(
+                                if (tv.own.owntv.glcn.CategoryIcons.hidesName(glyph)) "" else entry.label, style = stageText(19, if (shown) 800 else 600), color = tint,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
+                                modifier = Modifier.weight(1f).alignByBaseline(),
+                            )
+                            // The playlist it comes from, when all playlists are listed together.
+                            if (activeChip == -1L) entry.item.sourceId?.let(marks::get)?.let { tv.own.owntv.ui.stage.StagePlaylistMark(it, onLight = lit) }
+                            // glcn: the count on the name's line, with grouped thousands.
+                            entry.count?.let { Text(groupNf.format(it), style = stageText(15, 500), color = tint.copy(alpha = 0.7f), maxLines = 1, softWrap = false, modifier = Modifier.alignByBaseline()) }
+                        }
                     }
                 }
             }
@@ -538,13 +719,20 @@ fun ZapDeck(
                         style = stageText(17, 500), color = StageColors.Muted, maxLines = 1,
                     )
                 }
+                val playingIdx = remember(list, currentId) { list.indexOfFirst { it.id == currentId } }
+                val playingName = list.getOrNull(playingIdx)?.let { ProviderTags.displayName(it.name) }.orEmpty()
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                // glcn: a tab on the list's left edge says the categories are there; it nudges left as the list opens.
+                tv.own.owntv.glcn.EdgeTab(visible = column == 1, modifier = Modifier.align(Alignment.CenterStart))
                 GlideColumn(
                     count = list.size,
                     index = chIdx,
                     rowHeight = 84.mpx,
                     active = column == 1,
                     resetKey = listVersion,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize().padding(start = DECK_TAB_ROOM),
+                    pinIndex = playingIdx,
+                    pinned = { above -> tv.own.owntv.glcn.WatchingPill(playingName, above) },
                 ) { i, focused ->
                     val ch = list.getOrNull(i) ?: return@GlideColumn
                     DeckChannelRow(
@@ -554,6 +742,12 @@ fun ZapDeck(
                         lit = focused && column == 1,
                         showNumber = showNumbers,
                     )
+                }
+                FastRunRail(
+                    visible = fastRun && column == 1, index = chIdx, count = list.size,
+                    label = list.getOrNull(chIdx)?.let { c -> c.number?.toString() ?: ProviderTags.displayName(c.name).take(1).uppercase() }.orEmpty(),
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                )
                 }
                 StageKeyHints(
                     listOfNotNull(
@@ -573,7 +767,8 @@ fun ZapDeck(
         val panelHold = remember { arrayOfNulls<ChannelEntity>(1) }
         val focusedChannel = if (wheelTurning) panelHold[0] else list.getOrNull(chIdx).also { panelHold[0] = it }
         // glcn: over the programme's picture the text is light, as on a dark page.
-        val onArt = !tv.own.owntv.glcn.LowRam.on // the dark card is there, picture or not
+        // With the light theme the card is light too, so the text keeps the theme's own (dark) ink.
+        val onArt = !tv.own.owntv.glcn.LowRam.on && !tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
         if (pictureLocal.width > 0f) androidx.compose.runtime.CompositionLocalProvider(
             tv.own.owntv.ui.theme.LocalStagePalette provides if (onArt) tv.own.owntv.ui.theme.StagePalette.Dark else tv.own.owntv.ui.theme.LocalStagePalette.current,
         ) { with(density) {
@@ -611,15 +806,14 @@ fun ZapDeck(
     }
 }
 
-private const val ZAP_ACCEL_1_MS = 900L
-private const val ZAP_ACCEL_2_MS = 2_200L
+private const val ZAP_ACCEL_1_MS = 600L
+private const val ZAP_ACCEL_2_MS = 1_500L
 private const val ZAP_ACCEL_1_STEP = 3
-private const val ZAP_ACCEL_2_STEP = 6
+private const val ZAP_ACCEL_2_STEP = 8
 private const val ZAP_DIGITS_MAX = 4
 private const val ZAP_DIGIT_HOLD_MS = 1_500L
 
 /** glcn: the categories panel at least this wide, so their names read whole. */
-private val GROUPS_PANEL_MIN = 460.mpx
 
 /** glcn: the room kept under the picture for the programme and what follows it. */
 private val UNDER_PICTURE = 330.mpx
@@ -660,6 +854,18 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
     val radius = with(density) { 18.mpx.toPx() }
     val top = picture.bottom - radius // tucked under the picture's rounded foot
     val footGap = with(density) { DECK_FOOT.toPx() }
+    // glcn: the card follows the theme — light with the light theme; with the dark one, a deep tone taken from the
+    // programme's own picture (navy when it has no colour). The veil over the picture is as strong as its brightness
+    // needs for every word over it to read, and no stronger.
+    val palette = tv.own.owntv.ui.theme.LocalStagePalette.current
+    val light = palette.isLight
+    // glcn: with the light theme the card is the channel list's own glass colour, so both read as one sheet.
+    val lightCard = palette.glassTint.copy(alpha = 1f)
+    val tone by tv.own.owntv.glcn.ArtTone.of(url)
+    val card by animateColorAsState(
+        if (light) lightCard else tone?.darkCard() ?: DECK_CARD,
+        tween(600), label = "deckCard",
+    )
     Box(
         Modifier
             .fillMaxSize()
@@ -679,11 +885,13 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
                 layout(c.maxWidth, c.maxHeight) { pl.place(picture.left.toInt(), top.toInt()) }
             }
                 .clip(RoundedCornerShape(bottomStart = 18.mpx, bottomEnd = 18.mpx))
-                .background(DECK_CARD),
+                .drawBehind { drawRect(card) },
         ) {
             androidx.compose.animation.Crossfade(url, animationSpec = tween(600), label = "deckBackdrop") { u ->
                 if (u != null) androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
                     val artW = maxHeight * 16f / 9f
+                    val artTone by tv.own.owntv.glcn.ArtTone.of(u)
+                    val veil by androidx.compose.animation.core.animateFloatAsState(artTone?.veil(light) ?: VEIL_UNREAD, tween(300), label = "deckVeil")
                     Box(Modifier.align(Alignment.CenterEnd).width(artW).fillMaxHeight()) {
                         coil3.compose.AsyncImage(
                             model = u,
@@ -694,10 +902,10 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
                         Box(
                             Modifier.fillMaxSize().drawBehind {
                                 // Melts into the card on its left; a light veil over the rest, for the list that crosses it.
-                                drawRect(Color.Black.copy(alpha = 0.32f))
+                                drawRect(card.copy(alpha = veil))
                                 drawRect(
                                     androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                        0f to DECK_CARD, 0.45f to DECK_CARD.copy(alpha = 0.55f), 1f to DECK_CARD.copy(alpha = 0f),
+                                        0f to card, 0.45f to card.copy(alpha = 0.55f), 1f to card.copy(alpha = 0f),
                                     ),
                                 )
                             },
@@ -710,7 +918,10 @@ private fun DeckBackdrop(url: String?, shade: Color, picture: androidx.compose.u
 }
 
 /** glcn: the card under the picture, and the room left under it. */
-private val DECK_CARD = Color(0xFF0E1726)
+// glcn: a neutral graphite when the picture has no colour of its own (it was navy, so every grey picture read blue).
+private val DECK_CARD = Color(0xFF15191D)
+/** The veil until the picture has been read: strong, so text never shows unreadable for a moment. */
+private const val VEIL_UNREAD = 0.7f
 private val DECK_FOOT = 28.mpx
 
 /**
@@ -794,7 +1005,7 @@ private fun DeckInfoPanel(
                 Text(time, style = stageText(18, 500), color = StageColors.Muted, maxLines = 1)
                 if (genres.isNotEmpty()) Text(
                     genres.take(2).joinToString(" · "), style = stageText(14, 700), color = StageColors.Text, maxLines = 1,
-                    modifier = Modifier.clip(RoundedCornerShape(8.mpx)).background(Color.White.copy(alpha = 0.14f)).padding(horizontal = 10.mpx, vertical = 3.mpx),
+                    modifier = Modifier.clip(RoundedCornerShape(8.mpx)).background(StageColors.Ink.copy(alpha = 0.12f)).padding(horizontal = 10.mpx, vertical = 3.mpx),
                 )
             }
             if (live) {
@@ -812,13 +1023,15 @@ private fun DeckInfoPanel(
         val coming = rows.withIndex().filter { (i, r) -> i > 0 || r.startMs > nowMs }
         if (coming.isNotEmpty()) Column(Modifier.weight(1f).fillMaxHeight()) {
             Text(
-                stringResource(R.string.content_live_next).uppercase(), style = stageText(16, 800), color = stageAccent.accent,
+                stringResource(R.string.content_live_next).uppercase(), style = stageText(16, 800), color = deckAccentInk(),
                 maxLines = 1, modifier = Modifier.height(37.mpx).wrapContentHeight(Alignment.CenterVertically).padding(start = 12.mpx),
             )
             androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
                 val fit = (maxHeight / 50.mpx).toInt().coerceAtLeast(1)
                 val at = coming.indexOfFirst { it.index == selected }
                 val start = if (at >= fit) at - fit + 1 else 0
+                val schedAccent = stageAccent
+                val schedPalette = tv.own.owntv.ui.theme.LocalStagePalette.current
                 Column(verticalArrangement = Arrangement.spacedBy(2.mpx)) {
                     for ((i, r) in coming.drop(start).take(fit)) {
                         val lit = i == selected
@@ -827,17 +1040,23 @@ private fun DeckInfoPanel(
                                 .fillMaxWidth()
                                 .height(48.mpx)
                                 .clip(RoundedCornerShape(12.mpx))
-                                .background(if (lit) stageAccent.accent else Color.Transparent)
+                                // glcn: with glass on, the lit row is the glass focus (its words in the glass ink) — the
+                                // solid accent bar under glass-ink words read as a blank white bar.
+                                .then(
+                                    if (!lit) Modifier
+                                    else if (tv.own.owntv.glcn.GlassFocus.active) Modifier.drawBehind { drawStageFocus(StageFocus.FX, 12.mpx, schedAccent, schedPalette) }
+                                    else Modifier.background(stageAccent.accent),
+                                )
                                 .padding(horizontal = 12.mpx),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(16.mpx),
                         ) {
                             Text(
                                 fmt.format(java.util.Date(r.startMs)), style = stageText(19, 700),
-                                color = if (lit) stageAccent.onAccent else stageAccent.accent, maxLines = 1, modifier = Modifier.width(70.mpx),
+                                color = if (lit) litInk() else deckAccentInk(), maxLines = 1, modifier = Modifier.width(70.mpx),
                             )
                             Text(
-                                r.title, style = stageText(19, if (lit) 800 else 600), color = if (lit) stageAccent.onAccent else StageColors.Text,
+                                r.title, style = stageText(19, if (lit) 800 else 600), color = if (lit) litInk() else StageColors.Text,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
                         }
@@ -854,13 +1073,16 @@ private fun DeckInfoPanel(
  * so a held key runs smoothly instead of in steps. Not focusable itself — the deck moves [index].
  */
 @Composable
-private fun GlideColumn(
+internal fun GlideColumn(
     count: Int,
     index: Int,
     rowHeight: Dp,
     active: Boolean,
     resetKey: Any,
     modifier: Modifier = Modifier,
+    /** A row to keep in sight: when it is scrolled out, [pinned] is shown at the edge it went past (true = above). */
+    pinIndex: Int = -1,
+    pinned: (@Composable (Boolean) -> Unit)? = null,
     row: @Composable (Int, Boolean) -> Unit,
 ) {
     val density = LocalDensity.current
@@ -869,6 +1091,11 @@ private fun GlideColumn(
     val liveCount = androidx.compose.runtime.rememberUpdatedState(count)
     val accent = stageAccent.accent
     val fill by animateColorAsState(if (active) accent else accent.copy(alpha = 0.20f), tween(180), label = "deckFill")
+    // glcn: Glass on — the lit row is the app's glass focus (tinted wash, sheen, ring), not a solid bar.
+    val glassFocus = tv.own.owntv.glcn.GlassFocus.active
+    val focusAccent = stageAccent
+    val focusPalette = tv.own.owntv.ui.theme.LocalStagePalette.current
+    val glassAlpha by androidx.compose.animation.core.animateFloatAsState(if (active) 1f else GLASS_IDLE_ALPHA, tween(180), label = "deckGlassFocus")
     BoxWithConstraints(modifier.clipToBounds()) {
         val viewH = constraints.maxHeight.toFloat()
         val maxScroll = (count * h - viewH).coerceAtLeast(0f)
@@ -879,10 +1106,10 @@ private fun GlideColumn(
             androidx.compose.foundation.lazy.LazyListState((target / h).toInt(), (target - (target / h).toInt() * h).toInt())
         }
         LaunchedEffect(resetKey, target) {
-            scroll.animateTo(target, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 260f))
+            scroll.animateTo(target, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 380f))
         }
         LaunchedEffect(resetKey, index) {
-            glide.animateTo(index * h, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 520f))
+            glide.animateTo(index * h, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 760f))
         }
         // glcn: the list is laid out again only when the glide passes a whole row (it is placed on that row);
         // the part of a row in between is a translation of the drawn layer, read in drawing. Placing the list
@@ -897,9 +1124,11 @@ private fun GlideColumn(
                 Modifier
                     .fillMaxWidth()
                     .height(rowHeight)
-                    .graphicsLayer { translationY = glide.value - scroll.value }
-                    .clip(RoundedCornerShape(14.mpx))
-                    .background(fill),
+                    .graphicsLayer { translationY = glide.value - scroll.value; if (glassFocus) alpha = glassAlpha }
+                    .then(
+                        if (glassFocus) Modifier.drawBehind { drawStageFocus(StageFocus.FX, 14.mpx, focusAccent, focusPalette) }
+                        else Modifier.clip(RoundedCornerShape(14.mpx)).background(fill),
+                    ),
             )
         }
         LazyColumn(
@@ -925,22 +1154,47 @@ private fun GlideColumn(
             // Room below the last row, so the list can always be placed on the row the glide is in.
             item { Spacer(Modifier.fillMaxWidth().height(rowHeight)) }
         }
+        // glcn: the pinned row, when out of sight: a pill at the edge it went past. Only its side is read in composition.
+        if (pinned != null && pinIndex in 0 until count) {
+            val side by remember(resetKey, pinIndex) {
+                derivedStateOf {
+                    val mid = (pinIndex + 0.5f) * h - scroll.value
+                    when { mid < 0f -> 1; mid > viewH -> 2; else -> 0 }
+                }
+            }
+            val shownSide = remember { mutableIntStateOf(0) }
+            if (side != 0) shownSide.intValue = side
+            androidx.compose.animation.AnimatedVisibility(
+                visible = side == 1,
+                enter = androidx.compose.animation.fadeIn(tween(160)) + androidx.compose.animation.slideInVertically(tween(200)) { -it / 2 },
+                exit = androidx.compose.animation.fadeOut(tween(140)),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 6.mpx),
+            ) { pinned(true) }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = side == 2,
+                enter = androidx.compose.animation.fadeIn(tween(160)) + androidx.compose.animation.slideInVertically(tween(200)) { it / 2 },
+                exit = androidx.compose.animation.fadeOut(tween(140)),
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.mpx),
+            ) { pinned(false) }
+        }
     }
 }
+
+private const val PLAYING_WASH = 0.16f
 
 @Composable
 private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, playing: Boolean, lit: Boolean, showNumber: Boolean) {
     val accent = stageAccent.accent
-    val text by animateColorAsState(if (lit) stageAccent.onAccent else StageColors.Text, tween(140), label = "deckRowText")
-    val sub by animateColorAsState(if (lit) stageAccent.onAccent.copy(alpha = 0.8f) else StageColors.Muted, tween(140), label = "deckRowSub")
+    val text by animateColorAsState(if (lit) litInk() else StageColors.Text, tween(140), label = "deckRowText")
+    val sub by animateColorAsState(if (lit) litInk().copy(alpha = 0.8f) else StageColors.Muted, tween(140), label = "deckRowSub")
     Row(
         Modifier
             .fillMaxSize()
             .padding(horizontal = 12.mpx)
             .then(
+                // glcn: the playing channel — a soft accent wash over the whole row (the focus is the solid one).
                 if (playing && !lit) Modifier.drawBehind {
-                    val w = 4.mpx.toPx()
-                    drawRect(accent, Offset(0f, size.height * 0.24f), androidx.compose.ui.geometry.Size(w, size.height * 0.52f))
+                    drawRoundRect(accent.copy(alpha = PLAYING_WASH), cornerRadius = androidx.compose.ui.geometry.CornerRadius(14.mpx.toPx()))
                 } else Modifier,
             ),
         verticalAlignment = Alignment.CenterVertically,
@@ -949,15 +1203,21 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
         if (showNumber) {
             Text(channel.number?.toString().orEmpty(), style = stageText(17, 700), color = sub, maxLines = 1, modifier = Modifier.width(50.mpx))
         }
-        ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.width(72.mpx).height(48.mpx), fill = Color.Transparent) { }
+        // glcn: the lit row is the solid accent — the logo goes on it as on any focused fill.
+        androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.components.LocalLogoInk provides (if (lit) litInk() else null)) {
+            ChannelLogoTile(logoUrl = channel.displayLogoUrl, modifier = Modifier.width(72.mpx).height(48.mpx), fill = Color.Transparent) { }
+        }
         Column(Modifier.weight(1f)) {
-            Text(ProviderTags.displayName(channel.name), style = stageText(20, if (playing) 800 else 700), color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
+                if (playing) tv.own.owntv.glcn.EqualizerBars(if (lit) litInk() else accent, Modifier.size(18.mpx))
+                Text(ProviderTags.displayName(channel.name), style = stageText(20, if (playing) 800 else 700), color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             if (now != null) {
                 Text(now.title, style = stageText(16, 400), color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val span = (now.stopMs - now.startMs).coerceAtLeast(1L)
                 val f = ((System.currentTimeMillis() - now.startMs).toFloat() / span).coerceIn(0f, 1f)
                 Box(Modifier.padding(top = 5.mpx).fillMaxWidth(0.9f).height(3.mpx).clip(RoundedCornerShape(2.mpx)).background(sub.copy(alpha = 0.25f))) {
-                    Box(Modifier.fillMaxWidth(f).height(3.mpx).background(if (lit) stageAccent.onAccent else accent))
+                    Box(Modifier.fillMaxWidth(f).height(3.mpx).background(if (lit) litInk() else accent))
                 }
             }
         }
@@ -965,8 +1225,8 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
 }
 
 @Composable
-private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: Int) {
-    val accent = stageAccent.accent
+private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: Int, colors: Map<Long, Color> = emptyMap()) {
+    val appAccent = stageAccent.accent
     // Whole names on one row that slides to the chip under the cursor (or the active one).
     val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
     val target = if (cursor >= 0) cursor else chips.indexOfFirst { it.first == activeId }.coerceAtLeast(0)
@@ -982,6 +1242,9 @@ private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: I
             val (id, name) = chips.getOrNull(i) ?: return@items
             val focused = i == cursor
             val on = id == activeId
+            // glcn: a playlist's chip wears that playlist's own colour (its tag's); "All" the app's accent.
+            val accent = colors[id] ?: appAccent
+            val onChip = if (accent.luminance() > 0.55f) Color(0xFF111418) else Color.White
             val bg by animateColorAsState(
                 when {
                     focused -> accent
@@ -993,7 +1256,7 @@ private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: I
             Text(
                 name,
                 style = stageText(16, if (on) 800 else 600),
-                color = if (focused) stageAccent.onAccent else if (on) StageColors.Text else StageColors.Muted,
+                color = if (focused) onChip else if (on) StageColors.Text else StageColors.Muted,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .widthIn(max = 240.mpx)
@@ -1009,3 +1272,227 @@ private fun DeckChips(chips: List<Pair<Long, String>>, activeId: Long, cursor: I
 private const val DECK_LIST_GLASS = 0.74f
 // glcn: as solid as the list — at 0.5 the schedule mixed with the subtitles of the picture behind it.
 private const val DECK_DETAIL_GLASS = 0.74f
+
+/** glcn: the accent as text on the deck's card — the theme's ink instead when the accent would vanish on it (a white accent on the light card, a near-black one on the dark). */
+@Composable
+private fun deckAccentInk(): Color {
+    val a = stageAccent.accent
+    val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    val l = a.luminance()
+    return if ((light && l > 0.5f) || (!light && l < 0.06f)) StageColors.Text else a
+}
+
+/** glcn: room on the channel list's left for the categories tab. */
+private val DECK_TAB_ROOM = tv.own.owntv.glcn.EDGE_TAB_ROOM
+
+
+/** glcn: a playlist ending within this many days says so in days, in the warning colour (as in Playlists). */
+private const val PLAYLIST_SOON_DAYS = 15
+
+/** glcn: OK held this long (key repeats, about half a second) is a long press in the deck. */
+private const val OK_HOLD_REPEATS = 8
+
+/** glcn: a group in "Manage groups": its customization key and whether it is hidden. */
+private data class ManagedGroup(val id: Long, val sourceId: Long, val name: String, val key: String, val hidden: Boolean)
+
+/** glcn: a small on/off switch: a pill that fills with the accent when on, its knob sliding across. */
+@Composable
+private fun DeckSwitch(on: Boolean, focused: Boolean) {
+    val a = stageAccent
+    val x by androidx.compose.animation.core.animateFloatAsState(if (on) 1f else 0f, tween(160), label = "deckSwitch")
+    val track = when {
+        focused -> a.onAccent.copy(alpha = if (on) 0.9f else 0.35f)
+        on -> a.accent
+        else -> StageColors.Ink.copy(alpha = 0.18f)
+    }
+    val knob = if (focused && on) a.accent else Color.White
+    Box(Modifier.size(52.mpx, 30.mpx).clip(RoundedCornerShape(50)).background(track).padding(3.mpx)) {
+        Box(Modifier.graphicsLayer { translationX = x * 22.mpx.toPx() }.size(24.mpx).clip(RoundedCornerShape(50)).background(knob))
+    }
+}
+
+/**
+ * glcn: while a held ▲ ▼ runs fast through a long list, where it is: a rail down the list's right edge with a mark at
+ * the cursor's place, and beside the mark a bubble with the channel's number (or its initial). Gone when the key
+ * comes up.
+ */
+@Composable
+private fun FastRunRail(visible: Boolean, index: Int, count: Int, label: String, modifier: Modifier = Modifier) {
+    val shown by androidx.compose.animation.core.animateFloatAsState(if (visible) 1f else 0f, tween(if (visible) 120 else 380), label = "fastRun")
+    if (shown <= 0f || count < 2) return
+    val at = (index.toFloat() / (count - 1)).coerceIn(0f, 1f)
+    val place by androidx.compose.animation.core.animateFloatAsState(at, spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 900f), label = "fastRunAt")
+    val accent = stageAccent
+    BoxWithConstraints(modifier.fillMaxHeight().width(150.mpx).graphicsLayer { alpha = shown }) {
+        val railH = maxHeight - FAST_BUBBLE_H
+        Box(
+            Modifier.align(Alignment.TopEnd).padding(top = FAST_BUBBLE_H / 2, end = 6.mpx).width(6.mpx).height(railH)
+                .clip(RoundedCornerShape(3.mpx)).background(StageColors.Text.copy(alpha = 0.18f)),
+        )
+        Row(
+            Modifier.align(Alignment.TopEnd).graphicsLayer { translationY = railH.toPx() * place },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.height(FAST_BUBBLE_H).clip(RoundedCornerShape(FAST_BUBBLE_H / 2)).background(accent.accent).padding(horizontal = 18.mpx),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, style = stageText(26, 800), color = accent.onAccent, maxLines = 1)
+            }
+            Box(Modifier.padding(start = 8.mpx).width(10.mpx).height(34.mpx).clip(RoundedCornerShape(5.mpx)).background(accent.accent))
+        }
+    }
+}
+
+private val FAST_BUBBLE_H = 52.mpx
+
+/** glcn: words on the lit row — on the accent bar, the accent's own ink; on the glass focus (Glass on), the glass's. */
+@Composable
+internal fun litInk(): Color = if (tv.own.owntv.glcn.GlassFocus.active) tv.own.owntv.ui.theme.LocalStagePalette.current.fxText else stageAccent.onAccent
+
+/** glcn: the glass focus on a list that is not the one being moved through — still there, quieter. */
+private const val GLASS_IDLE_ALPHA = 0.35f
+
+/** glcn: the sheet's margin above and below the lists — the categories panel reaches over it. */
+private val DECK_SHEET_INSET = 20.mpx
+
+/**
+ * glcn: the playlists, each a card of its own — its colour and initial, its name, what is in it (channels, films, series)
+ * and how it stands (when it ends, when it was last updated). In the player's deck and the player's categories alike.
+ */
+@Composable
+internal fun androidx.compose.foundation.layout.ColumnScope.DeckPlaylistsPanel(
+    panelLists: List<Pair<Long, String>>,
+    activeChip: Long,
+    offIds: Set<Long>,
+    marks: Map<Long, tv.own.owntv.ui.stage.PlaylistMark>,
+    shownPlaylists: List<tv.own.owntv.core.database.entity.SourceEntity>?,
+    allSources: List<tv.own.owntv.core.database.entity.SourceEntity>,
+    plIdx: Int,
+    resetKey: Any,
+) {
+    // glcn: the playlists, each a card of its own: its colour and initial, its name, what is in it (channels,
+    // films, series) and how it stands (when it ends, when it was last updated).
+    val counts by androidx.compose.runtime.produceState<Map<Long, Triple<Int, Int, Int>>>(emptyMap(), panelLists) {
+        val k = org.koin.core.context.GlobalContext.get()
+        val ch = runCatching { k.get<tv.own.owntv.core.database.dao.ChannelDao>() }.getOrNull()
+        val mv = runCatching { k.get<tv.own.owntv.core.database.dao.MovieDao>() }.getOrNull()
+        val sr = runCatching { k.get<tv.own.owntv.core.database.dao.SeriesDao>() }.getOrNull()
+        value = panelLists.filter { it.first > 0L }.associate { (id, _) ->
+            id to Triple(
+                ch?.let { runCatching { it.countForSourceOnce(id) }.getOrNull() } ?: 0,
+                mv?.let { runCatching { it.countForSourceOnce(id) }.getOrNull() } ?: 0,
+                sr?.let { runCatching { it.countForSourceOnce(id) }.getOrNull() } ?: 0,
+            )
+        }
+    }
+    val sources = remember(shownPlaylists) { shownPlaylists?.associateBy { it.id }.orEmpty() }
+    Text(
+        stringResource(R.string.settings_playlists),
+        style = stageText(24, 800), color = StageColors.Text, maxLines = 1, softWrap = false,
+        modifier = Modifier.padding(start = 14.mpx, top = 10.mpx, bottom = 14.mpx),
+    )
+    GlideColumn(
+        count = panelLists.size,
+        index = plIdx,
+        rowHeight = 104.mpx,
+        active = true,
+        resetKey = resetKey,
+        modifier = Modifier.weight(1f).fillMaxWidth(),
+    ) { i, focused ->
+        val (id, name) = panelLists.getOrNull(i) ?: return@GlideColumn
+        val on = id == activeChip
+        val switchedOff = id in offIds
+        val tint by animateColorAsState(if (focused) litInk() else StageColors.Text, tween(140), label = "deckPlaylistText")
+        val sub by animateColorAsState(if (focused) litInk().copy(alpha = 0.8f) else StageColors.Muted, tween(140), label = "deckPlaylistSub")
+        val color = if (id > 0L) marks[id]?.shownColor ?: stageAccent.accent else stageAccent.accent
+        val sep = stringResource(R.string.content_epg_bits_separator)
+        // Grouped thousands ("14.734"), not a bare run of digits.
+        val nf = remember { java.text.NumberFormat.getIntegerInstance() }
+        val c = if (id > 0L) counts[id] else counts.filterKeys { it !in offIds }.values.takeIf { it.isNotEmpty() }?.let { v ->
+            Triple(v.sumOf { it.first }, v.sumOf { it.second }, v.sumOf { it.third })
+        }
+        val what = c?.let { (ch, mv, sr) ->
+            listOfNotNull(
+                ch.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.glcn_deck_channels, it, nf.format(it)) },
+                mv.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.glcn_deck_films, it, nf.format(it)) },
+                sr.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.glcn_deck_series, it, nf.format(it)) },
+            ).ifEmpty { listOf(pluralStringResource(R.plurals.glcn_deck_channels, 0, nf.format(0))) }.joinToString(sep)
+        }
+        // When it ends (soon is said in days, and in the warning colour) and when it was last updated.
+        val src = sources[id]
+        val expiryMs = if (id > 0L) remember(id) { tv.own.owntv.core.repository.SourceGlcnPrefs.expiry(id) } else null
+        val daysLeft = expiryMs?.let { kotlin.math.floor((it - System.currentTimeMillis()) / 86_400_000.0).toInt() }
+        val ends = when {
+            daysLeft == null -> null
+            daysLeft < 0 -> stringResource(R.string.glcn_src_expired)
+            daysLeft == 0 -> stringResource(R.string.glcn_src_expires_today)
+            daysLeft <= PLAYLIST_SOON_DAYS -> pluralStringResource(R.plurals.glcn_src_expires_days, daysLeft, daysLeft)
+            else -> stringResource(R.string.settings_sources_expiry, java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(expiryMs)))
+        }
+        val src2 = src ?: allSources.firstOrNull { it.id == id }
+        val synced = src2?.lastSyncAt?.let {
+            stringResource(R.string.glcn_src_synced_ago, android.text.format.DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString().replaceFirstChar { ch -> ch.lowercase() })
+        }
+        val warn = daysLeft != null && daysLeft <= PLAYLIST_SOON_DAYS
+        Row(
+            Modifier.fillMaxSize().graphicsLayer { alpha = if (switchedOff && !focused) 0.5f else 1f }.padding(horizontal = 14.mpx),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.mpx),
+        ) {
+            Box(
+                Modifier.size(52.mpx).clip(RoundedCornerShape(14.mpx))
+                    .background(if (focused) litInk().copy(alpha = 0.18f) else color.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (id > 0L) Text(name.trim().take(1).uppercase(), style = stageText(24, 800), color = if (focused) litInk() else color)
+                else OwnTVIcon(OwnTVIcon.LIVE_TV, if (focused) litInk() else color, Modifier.size(26.mpx))
+            }
+            Column(Modifier.weight(1f)) {
+                Text(name, style = stageText(20, if (on) 800 else 700), color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
+                if (what != null) Text(what, style = stageText(15, 600), color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
+                val state = listOfNotNull(if (switchedOff) stringResource(R.string.glcn_pl_off) else null, ends, synced).joinToString(sep)
+                if (state.isNotEmpty()) Text(
+                    state, style = stageText(14, if (warn) 700 else 500),
+                    color = if (warn && !focused) Color(0xFFD9822B) else sub, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
+                )
+            }
+            if (on) OwnTVIcon(OwnTVIcon.CHECK, tint, Modifier.size(22.mpx))
+        }
+    }
+}
+
+/** glcn: what the playlists panel needs, for a screen other than the deck (the player's categories). */
+internal class DeckPlaylists(
+    val shown: List<tv.own.owntv.core.database.entity.SourceEntity>,
+    /** "All" first, then each playlist shown, then those switched off (so they can be switched back on here). */
+    val panelLists: List<Pair<Long, String>>,
+    val activeChip: Long,
+    val offIds: Set<Long>,
+    val marks: Map<Long, tv.own.owntv.ui.stage.PlaylistMark>,
+    val allSources: List<tv.own.owntv.core.database.entity.SourceEntity>,
+)
+
+/** glcn: the playlists panel's data, or null with one playlist (nothing to pick). */
+@Composable
+internal fun rememberDeckPlaylists(playlists: tv.own.owntv.features.live.CategoryPlaylists?): DeckPlaylists? {
+    val many = playlists?.takeIf { it.playlists.size > 1 }
+    val allText = stringResource(R.string.content_all_playlists_short)
+    val offIds by tv.own.owntv.core.repository.SourceGlcnPrefs.disabled.collectAsState()
+    val allSources by androidx.compose.runtime.produceState<List<tv.own.owntv.core.database.entity.SourceEntity>>(emptyList()) {
+        runCatching {
+            val k = org.koin.core.context.GlobalContext.get()
+            val pid = k.get<tv.own.owntv.core.settings.SettingsRepository>().activeProfileId.first()
+            k.get<tv.own.owntv.core.database.dao.SourceDao>().observeForProfile(pid).collect { value = it }
+        }
+    }
+    many ?: return null
+    val chips = remember(many.playlists, allText) { listOf(-1L to allText) + many.playlists.map { p -> p.id to p.name } }
+    val marks = remember(many.playlists) {
+        many.playlists.withIndex().associate { (i, s) -> s.id to tv.own.owntv.ui.stage.PlaylistMark.forSource(s.id, s.name, i) }
+    }
+    val panelLists = remember(chips, allSources, offIds) {
+        chips + allSources.filter { it.id in offIds && chips.none { c -> c.first == it.id } }.map { it.id to it.name }
+    }
+    return DeckPlaylists(many.playlists, panelLists, many.activeId.takeIf { it > 0L } ?: -1L, offIds, marks, allSources)
+}

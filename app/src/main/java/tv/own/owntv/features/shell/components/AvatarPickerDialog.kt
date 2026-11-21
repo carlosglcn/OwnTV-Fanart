@@ -51,7 +51,7 @@ fun AvatarPickerDialog(
         Column(verticalArrangement = Arrangement.spacedBy(12.mpx)) {
             // Phase 7 — "no avatar" option showing the Rank 1 ProfileIcon (ID -1)
             AvatarTile(selected = selectedId == -1, onClick = { onSelect(-1); onDismiss() }, focus = selectedFocus.takeIf { selectedId == -1 }) {
-                ProfileIcon(color = stageAccent.accent, modifier = Modifier.size(56.mpx))
+                ProfileIcon(color = stageAccent.ink, modifier = Modifier.size(56.mpx))
             }
 
             // A picture of your own, alongside the drawn set. Same two ways in as the background

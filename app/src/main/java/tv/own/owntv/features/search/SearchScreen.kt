@@ -731,8 +731,8 @@ private fun RecentRow(term: String, onClick: () -> Unit) {
 private fun LauncherCard(modifier: Modifier = Modifier) {
     Column(modifier.stageGlass(30.mpx).padding(horizontal = 38.mpx, vertical = 34.mpx)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
-            OwnTVIcon(OwnTVIcon.SEARCH, stageAccent.accent, Modifier.size(20.mpx))
-            Text(stringResource(R.string.search_title), style = stageText(19, 700), color = stageAccent.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            OwnTVIcon(OwnTVIcon.SEARCH, stageAccent.ink, Modifier.size(20.mpx))
+            Text(stringResource(R.string.search_title), style = stageText(19, 700), color = stageAccent.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Text(
             stringResource(R.string.search_card_title), style = stageText(30, 800), color = StageColors.Text,

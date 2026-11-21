@@ -5,6 +5,7 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -93,6 +94,10 @@ internal data class CinemaTech(
     val dvLayer: DolbyVisionNow.Layer? = null,
     /** Dolby Vision turned off in Settings: the film plays as HDR10. */
     val dvOff: Boolean = false,
+    /** glcn: the Dolby Vision profile ("8.1"…), shown with it in the technical line. */
+    val dvProfile: String? = null,
+    /** glcn: Dolby Vision this device cannot decode, played from its base layer — what the TV gets ("HDR10"…). */
+    val dvBase: String? = null,
     val audioCodec: String? = null,
     val channels: Int? = null,
     val passthrough: Boolean? = null,
@@ -125,6 +130,7 @@ internal fun rememberCinemaTech(player: PlaybackEngine): CinemaTech {
     return t.copy(
         dolbyVision = onExo && dv.dolbyVision, dvConverted = onExo && dv.converted,
         dvLayer = if (onExo) dv.layer else null, dvOff = onExo && dv.turnedOff,
+        dvProfile = if (onExo) dv.profile else null, dvBase = if (onExo) dv.base else null,
     )
 }
 
@@ -143,7 +149,7 @@ internal fun cinemaBadges(t: CinemaTech, info: CinemaInfo?): List<CinemaBadge> {
         t.dolbyVision -> out += CinemaBadge(KEY_DV, LABEL_DV)
         t.hdr == StreamHdrMode.HDR10_PQ -> out += if ("hdr10+" in caps) CinemaBadge(KEY_HDR10P, LABEL_HDR10P) else CinemaBadge(KEY_HDR10, LABEL_HDR10)
         t.hdr == StreamHdrMode.HLG -> out += CinemaBadge(KEY_HLG, LABEL_HLG)
-        t.hdr == null && !t.dvOff && "dolby vision" in caps -> out += CinemaBadge(KEY_DV, LABEL_DV)
+        t.hdr == null && !t.dvOff && t.dvBase == null && "dolby vision" in caps -> out += CinemaBadge(KEY_DV, LABEL_DV)
         t.hdr == null && "hdr" in caps -> out += CinemaBadge(KEY_HDR10, LABEL_HDR10)
     }
     soundBadge(t.audioCodec, caps)?.let { out += it }
@@ -342,6 +348,8 @@ internal class CinemaActions(
     val onTechDetails: () -> Unit,
     val onSearchSubtitles: (() -> Unit)?,
     val onLocalSubtitle: (() -> Unit)?,
+    /** glcn: OK on a face in the Info tab — the cast page, on that person. */
+    val onCast: ((Int) -> Unit)? = null,
 )
 
 /** The side panel. The picture has slid to the left (the shell does that from [tv.own.owntv.glcn.CinemaStage]). */
@@ -375,7 +383,7 @@ internal fun CinemaPanel(
             Modifier.align(Alignment.CenterEnd).padding(top = 48.mpx, bottom = 48.mpx, end = 48.mpx)
                 .width(PANEL_WIDTH.mpx).fillMaxHeight()
                 .graphicsLayer { translationX = (1f - slide.value) * 120.mpx.toPx(); alpha = slide.value }
-                .clip(RoundedCornerShape(28.mpx)).background(Color(0xFF0E1113).copy(alpha = tv.own.owntv.glcn.PlayerGlass.share(0.85f)))
+                .clip(RoundedCornerShape(28.mpx)).background(Color(0xFF0E1113).copy(alpha = tv.own.owntv.glcn.PlayerGlass.shareNow(0.85f)))
                 .padding(28.mpx),
         ) {
             Row(Modifier.focusGroup(), horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
@@ -453,11 +461,16 @@ private fun InfoTab(info: CinemaInfo, tech: CinemaTech, actions: CinemaActions) 
         info.overview?.takeIf { it.isNotBlank() }?.let {
             Text(it, style = stageText(18, 400), color = Color.White.copy(alpha = 0.85f), maxLines = 6, overflow = TextOverflow.Ellipsis)
         }
-        if (info.cast.isNotEmpty()) {
-            Text(stringResource(R.string.glcn_cine_cast) + ": " + info.cast.take(5).joinToString(", "), style = stageText(16, 500), color = Color.White.copy(alpha = 0.6f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        val people = info.people.ifEmpty { info.cast.map { tv.own.owntv.core.metadata.CastMember(it) } }
+        if (people.isNotEmpty()) {
+            // glcn: who is in it, as faces — OK on one opens the cast page on that person.
+            Text(stringResource(R.string.glcn_cine_cast), style = stageText(16, 800), color = stageAccent.ink)
+            androidx.compose.foundation.layout.Box(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
+                tv.own.owntv.glcn.CastFaces(people, face = 78.mpx, max = CAST_FACES_PANEL, onPick = actions.onCast)
+            }
         }
         Spacer(Modifier.height(6.mpx))
-        Text(stringResource(R.string.glcn_cine_tech), style = stageText(16, 800), color = stageAccent.accent)
+        Text(stringResource(R.string.glcn_cine_tech), style = stageText(16, 800), color = stageAccent.ink)
         TechLine(stringResource(R.string.glcn_cine_tech_player), when (tech.engine) {
             StreamEngine.EXOPLAYER -> stringResource(R.string.player_engine_exo)
             StreamEngine.MPV -> stringResource(R.string.player_engine_mpv)
@@ -483,7 +496,8 @@ private fun TechLine(label: String, value: String?) {
 private fun pictureText(t: CinemaTech): String? {
     val parts = buildList {
         if ((t.width ?: 0) > 0 && (t.height ?: 0) > 0) add("${t.width}×${t.height}")
-        t.fps?.takeIf { it > 0 }?.let { f ->
+        // glcn: some streams say 1 fps (a container's placeholder) — a rate that low is not shown.
+        t.fps?.takeIf { it >= MIN_REAL_FPS }?.let { f ->
             val whole = kotlin.math.abs(f - Math.round(f)) < 0.01
             add(if (whole) String.format(java.util.Locale.ROOT, FPS_WHOLE, Math.round(f)) else String.format(java.util.Locale.ROOT, FPS_FORMAT, f))
         }
@@ -492,6 +506,9 @@ private fun pictureText(t: CinemaTech): String? {
             t.dvConverted && t.dvLayer == DolbyVisionNow.Layer.MEL -> add(stringResource(R.string.glcn_cine_dv_converted_mel))
             t.dvConverted -> add(stringResource(R.string.glcn_cine_dv_converted))
             t.dvOff -> add(stringResource(R.string.glcn_cine_dv_off))
+            // glcn: Dolby Vision this box has no decoder for: what really reaches the TV, and why.
+            t.dvBase != null -> add(stringResource(R.string.glcn_cine_dv_base_only, t.dvBase))
+            t.dolbyVision && t.dvProfile != null -> add(stringResource(R.string.glcn_cine_dv_profile, t.dvProfile))
             t.dolbyVision -> add(LABEL_DV)
             t.hdr == StreamHdrMode.HDR10_PQ -> add(LABEL_HDR10)
             t.hdr == StreamHdrMode.HLG -> add(LABEL_HLG)
@@ -696,6 +713,7 @@ private const val RANK_4K = 4
 private const val STAR = "★ "
 private const val FPS_FORMAT = "%.3f fps"
 private const val FPS_WHOLE = "%d fps"
+private const val MIN_REAL_FPS = 10.0
 private const val BADGE_PREFIX = "glcn_badge_"
 private const val KEY_4K = "4k"
 private const val KEY_HD = "hd"
@@ -765,12 +783,10 @@ internal fun CinemaPauseScreen(info: CinemaInfo, position: () -> Long, duration:
                     modifier = Modifier.padding(top = 20.mpx),
                 )
             }
-            if (info.cast.isNotEmpty()) {
-                Text(
-                    stringResource(R.string.glcn_cine_cast) + ": " + info.cast.take(4).joinToString(", "),
-                    style = stageText(19, 500), color = Color.White.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 16.mpx),
-                )
+            // glcn: who is in it, as faces (only shown here — any key brings the controls back; the Info tab has them to pick).
+            val people = info.people.ifEmpty { info.cast.map { tv.own.owntv.core.metadata.CastMember(it) } }
+            if (people.isNotEmpty()) {
+                tv.own.owntv.glcn.CastFaces(people, face = 92.mpx, max = CAST_FACES_PAUSE, modifier = Modifier.padding(top = 24.mpx))
             }
         }
     }
@@ -796,7 +812,7 @@ internal fun CinemaNextCard(
     val start = remember { seconds().coerceAtLeast(1) }
     Column(
         modifier.width(420.mpx).graphicsLayer { alpha = a.value; translationY = (1f - a.value) * 30f }
-            .clip(RoundedCornerShape(18.mpx)).background(Color(0xFF0E1113).copy(alpha = tv.own.owntv.glcn.PlayerGlass.share(0.9f))),
+            .clip(RoundedCornerShape(18.mpx)).background(Color(0xFF0E1113).copy(alpha = tv.own.owntv.glcn.PlayerGlass.shareNow(0.9f))),
     ) {
         Box(Modifier.fillMaxWidth().height(236.mpx)) {
             if (!art.isNullOrBlank()) {
@@ -846,3 +862,7 @@ private fun SeekThumb(src: tv.own.owntv.core.emby.EmbyTrickplay.Source, position
 }
 
 private const val SEEK_THUMB_STEP_MS = 1_000L
+
+/** glcn: faces in the Info tab (it scrolls sideways) and on the pause screen. */
+private const val CAST_FACES_PANEL = 12
+private const val CAST_FACES_PAUSE = 6

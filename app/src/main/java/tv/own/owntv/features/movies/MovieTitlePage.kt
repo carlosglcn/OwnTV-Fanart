@@ -107,6 +107,8 @@ internal fun MovieTitlePage(
     var fullTrailer by remember { mutableStateOf<String?>(null) }
     val playFocus = remember { FocusRequester() }
     val enter = remember { androidx.compose.animation.core.Animatable(if (tv.own.owntv.glcn.LowRam.on) 1f else 0f) }
+    // glcn: where the focus box last was — the card this page was opened from — for the page to grow out of it.
+    val growFrom = remember { tv.own.owntv.glcn.SlideFocusTrail.rect.takeIf { it.width > 0f && it.height > 0f } }
     val enterSpec = tv.own.owntv.ui.theme.ownTvTween<Float>(PAGE_ENTER_MS, androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f))
     LaunchedEffect(Unit) { enter.animateTo(1f, enterSpec) }
     LaunchedEffect(Unit) { androidx.compose.runtime.withFrameNanos { }; runCatching { playFocus.requestFocus() } }
@@ -155,8 +157,18 @@ internal fun MovieTitlePage(
             Modifier.fillMaxSize()
                 // glcn: opened over another screen, the page grows out of the card it came from (a short zoom).
                 .then(if (inPlace) Modifier else Modifier.graphicsLayer {
-                    val s = PAGE_ZOOM_FROM + (1f - PAGE_ZOOM_FROM) * enter.value
-                    scaleX = s; scaleY = s; alpha = (enter.value * 2f).coerceAtMost(1f)
+                    val t = enter.value
+                    val from = growFrom
+                    if (from != null && size.width > 0f) {
+                        // glcn: the page opens out of the card it came from — a window growing from the card's
+                        // place and shape to the whole screen, the page already there behind it.
+                        clip = true
+                        shape = tv.own.owntv.glcn.RevealShape(from, t)
+                        alpha = (t * 4f).coerceAtMost(1f)
+                    } else {
+                        val s = PAGE_ZOOM_FROM + (1f - PAGE_ZOOM_FROM) * t
+                        scaleX = s; scaleY = s; alpha = (t * 2f).coerceAtMost(1f)
+                    }
                 })
                 .then(if (inPlace) Modifier else Modifier.background(page)).trapAllFocusExit()
                 .onPreviewKeyEvent { e ->
@@ -192,14 +204,6 @@ internal fun MovieTitlePage(
                     .background(Brush.verticalGradient(0.4f to Color.Transparent, 0.75f to page.copy(alpha = 0.8f), 1f to page.copy(alpha = 0.95f))),
             )
             Box(Modifier.fillMaxSize().graphicsLayer { alpha = lowerAt }.background(page.copy(alpha = 0.86f)))
-            // glcn: the year, huge and in outline, behind the words on the right — a ghost, not a label.
-            shownInfo.year?.let { y ->
-                tv.own.owntv.glcn.GhostOutline(
-                    y.toString(), YEAR_GHOST_SIZE.mpxSp, Color.White,
-                    Modifier.align(Alignment.BottomEnd).padding(end = 72.mpx, bottom = 40.mpx).size(YEAR_GHOST_W.mpx, YEAR_GHOST_H.mpx)
-                        .graphicsLayer { alpha = enter.value * (1f - lowerAt) },
-                )
-            }
             // First part: the title, its facts and the buttons.
             androidx.compose.runtime.DisposableEffect(Unit) { onDispose { tv.own.owntv.glcn.TitleRoom.textTop = 0f } }
             Column(
@@ -278,17 +282,25 @@ internal fun MovieTitlePage(
                 // One focus stop for the reading part, so ▼ always has somewhere to land.
                 // glcn: it shows when it has the focus — an accent outline and heading — so you always know where you are.
                 var lowerFocused by remember { mutableStateOf(false) }
+                // glcn: OK on the cast opens the cast page (portraits, Wikipedia, their films in your playlists).
+                var castOpen by remember { mutableStateOf(false) }
                 Column(
-                    Modifier.focusRequester(lowerFocus).onFocusChanged { lowerFocused = it.isFocused }.focusable()
+                    Modifier.focusRequester(lowerFocus).onFocusChanged { lowerFocused = it.isFocused }
+                        .onKeyEvent { e ->
+                            val ok = e.key == androidx.compose.ui.input.key.Key.DirectionCenter || e.key == androidx.compose.ui.input.key.Key.Enter || e.key == androidx.compose.ui.input.key.Key.NumPadEnter
+                            if (ok && e.type == androidx.compose.ui.input.key.KeyEventType.KeyUp && info.cast.isNotEmpty()) { castOpen = true; true } else false
+                        }
+                        .focusable()
                         .then(Modifier.border(2.5.mpx, if (lowerFocused) stageAccent.accent else Color.Transparent, RoundedCornerShape(16.mpx)))
                         .padding(horizontal = 14.mpx, vertical = 10.mpx),
                     verticalArrangement = Arrangement.spacedBy(22.mpx),
                 ) {
                     if (info.cast.isNotEmpty()) {
-                        Text(stringResource(R.string.content_media_cast), style = stageText(20, 700), color = if (lowerFocused) stageAccent.accent else StageColors.Text)
+                        Text(stringResource(R.string.content_media_cast), style = stageText(20, 700), color = if (lowerFocused) stageAccent.ink else StageColors.Text)
                         tv.own.owntv.features.shell.components.VodCast(info.cast, 10)
                     }
                 }
+                if (castOpen) tv.own.owntv.glcn.CastPage(movie.name, info.backdropUrl, info.cast, movie.id, onOpen = { castOpen = false; onOpenRelated(it) }, onDismiss = { castOpen = false })
                 if (extras.isNotEmpty()) {
                     Text(stringResource(R.string.glcn_title_extras), style = stageText(20, 700), color = StageColors.Text)
                     Row(
@@ -429,6 +441,4 @@ internal fun versionBadges(m: MovieEntity): List<String> =
         .ifEmpty { tv.own.owntv.features.shell.components.cinematicQualityBadges(m.qualityRank, m.advertisedCapabilities) }
 
 /** glcn: the year's ghost behind the title page's words. */
-private const val YEAR_GHOST_SIZE = 300
-private const val YEAR_GHOST_W = 900
-private const val YEAR_GHOST_H = 380
+

@@ -238,6 +238,7 @@ open class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        tv.own.owntv.core.util.Perf.stamp("activity-create")
         // Must be installed BEFORE super.onCreate() per the library's contract. It also applies
         // postSplashScreenTheme (Theme.OwnTV), so the activity ends up in the same theme as before.
         val splash = installSplashScreen()
@@ -663,6 +664,7 @@ open class MainActivity : ComponentActivity() {
             val curtainUp = !curtainTimedOut && !(contentReady && startupSettled)
             tv.own.owntv.glcn.LaunchCurtain(visible = curtainUp)
             tv.own.owntv.glcn.SleepWatch.Overlay(org.koin.compose.koinInject())
+            tv.own.owntv.ui.components.InAppToast(tv.own.owntv.ui.components.AppToast.state)
             // glcn: the window wears the launch picture from the very start (the starting window and the frames
             // before Compose draws); once the curtain has gone it goes back to the plain colour (no big bitmap kept).
             LaunchedEffect(curtainUp) {

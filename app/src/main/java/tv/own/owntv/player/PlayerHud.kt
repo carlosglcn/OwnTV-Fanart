@@ -246,6 +246,8 @@ fun PlayerHud(
     onToastOk: (() -> Unit)? = null,
     /** glcn: films and episodes — the cinema chrome (banner + side panel). Null keeps the classic bar. */
     cinema: tv.own.owntv.glcn.CinemaInfo? = null,
+    /** glcn: a film picked on the cast page (from the Info tab's faces) — its page, out of the player. */
+    onOpenFilm: ((tv.own.owntv.core.database.entity.MovieEntity) -> Unit)? = null,
     /** glcn: the season playing (Episodes tab) and which one is on. */
     cinemaEpisodes: List<tv.own.owntv.glcn.CinemaEpisode> = emptyList(),
     cinemaEpisodeIndex: Int = -1,
@@ -338,6 +340,8 @@ fun PlayerHud(
     var wakeTick by remember { mutableIntStateOf(0) }
     // glcn: the cinema chrome — films and episodes only; its side panel, while open, keeps the controls up.
     val cinemaMode = !isLive && cinema != null
+    // glcn: the person picked among the Info tab's faces; while set, their cast page is up.
+    var castAt by remember { mutableStateOf<Int?>(null) }
     var cinemaTab by remember { mutableStateOf<CinemaTab?>(null) }
     val panelFocus = remember { FocusRequester() }
     androidx.compose.runtime.DisposableEffect(cinemaTab) {
@@ -784,6 +788,17 @@ fun PlayerHud(
             }
         },
     ) {
+        // glcn: the cast page, on the face picked in the Info tab (the film waits, paused).
+        val castInfo = cinema
+        castAt?.let { start ->
+            if (castInfo != null) {
+                val people = castInfo.people.ifEmpty { castInfo.cast.map { tv.own.owntv.core.metadata.CastMember(it) } }
+                tv.own.owntv.glcn.CastPage(
+                    film = castInfo.show ?: castInfo.title, backdrop = castInfo.backdropUrl, cast = people, currentId = castInfo.movieId ?: -1L,
+                    onOpen = { m -> castAt = null; onOpenFilm?.invoke(m) }, onDismiss = { castAt = null }, startAt = start,
+                )
+            }
+        }
         // glcn: the pause screen, a few seconds into a pause once the controls have gone (any key brings them back).
         if (pauseScreen && cinema != null && !showNextCard) {
             CinemaPauseScreen(cinema, position = { position.value }, duration = duration)
@@ -871,6 +886,7 @@ fun PlayerHud(
                         onTechDetails = { cinemaTab = null; showInfo = !showInfo },
                         onSearchSubtitles = onSearchSubtitles?.let { open -> { cinemaTab = null; open() } },
                         onLocalSubtitle = onSelectLocalSubtitle?.let { open -> { cinemaTab = null; open() } },
+                        onCast = { i -> if (player.isPlaying.value) player.togglePlayPause(); cinemaTab = null; castAt = i },
                     ),
                     focus = panelFocus,
                     chapters = chapters,
@@ -892,11 +908,13 @@ fun PlayerHud(
             // the inner edge. A pure gradient faded out exactly where the chips and the Now/Next text sit,
             // so those washed out on bright scenes; a hard-edged band would instead draw a visible seam
             // across the picture. The colour stops give the panel first, then the feather.
-            Box(Modifier.align(Alignment.TopStart).fillMaxWidth().height(210.dp)
+            // glcn: on live TV the top only carries the slim pill, which has its own shade — a short, light wash is
+            // enough there, so the picture is not veiled (in the light theme it looked like fog over the match).
+            Box(Modifier.align(Alignment.TopStart).fillMaxWidth().height(if (isLive) 120.dp else 210.dp)
                 .gradientWash(
                     vertical = true,
-                    0.0f to hudShade(0.8f),
-                    0.5f to hudShade(0.72f),
+                    0.0f to hudShade(if (isLive) 0.45f else 0.8f),
+                    0.5f to hudShade(if (isLive) 0.25f else 0.72f),
                     1.0f to Color.Transparent,
                 ))
             // glcn: live TV's bar has no panel of its own any more — this shade carries its text, a little deeper.
@@ -907,7 +925,8 @@ fun PlayerHud(
                 .gradientWash(
                     vertical = true,
                     0.0f to Color.Transparent,
-                    0.4f to hudShade(if (isLive) 0.74f else 0.68f),
+                    // glcn: the feather starts lower, so the shade covers the bar and its words, not the picture above.
+                    0.55f to hudShade(if (isLive) 0.74f else 0.68f),
                     1.0f to hudShade(if (isLive) 0.88f else 0.78f),
                 ))
             }
@@ -921,8 +940,10 @@ fun PlayerHud(
             if (isLive && error == null) {
                 // Side by side, card then clock, on one line along the top: stacked, the card reached down
                 // to the middle of the screen, where the play/pause controls sit.
+                // glcn: the status pill in the top centre — the corners are where channels put their logo (right)
+                // and their scoreboard (left).
                 Row(
-                    Modifier.align(Alignment.TopEnd).padding(top = 20.dp, end = 28.dp),
+                    Modifier.align(Alignment.TopCenter).padding(top = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
@@ -968,7 +989,11 @@ fun PlayerHud(
                         }
                     }
                 }
-                CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center).offset(y = (-48).dp), buffering = buffering) // glcn: clear of the now/next card's top edge
+                CenterControls(player, nav, isPlaying, isLive, onRewindLive, onForwardLive, timeshiftOffset, playFocus, modifier = Modifier.align(Alignment.Center)
+                    // glcn: clear of the now/next card's top edge. On a channel that can be rewound the bar below is taller
+                    // (the timeline and the "on air now" line) and the programme card, wider since the Compact banner
+                    // grew, came up over the transport: there it sits well above the card.
+                    .offset(y = if (isLive && onRewindLive != null) REWIND_TRANSPORT_LIFT.dp else (-48).dp), buffering = buffering)
 
                 val reportDuration = duration.takeIf { it > 0 }?.let { formatTime(it) }
                 val reportSavedMessage = stringResource(R.string.player_report_saved)
@@ -1347,3 +1372,6 @@ private fun FichaChannelLine(player: PlaybackEngine, chips: List<String>) {
         StreamChipRow(chips, tv.own.owntv.ui.theme.hudInk, Modifier.padding(start = 6.dp), size = 14)
     }
 }
+
+/** glcn: how far above the centre the transport sits on a live channel with an archive (see its call). */
+private const val REWIND_TRANSPORT_LIFT = -176

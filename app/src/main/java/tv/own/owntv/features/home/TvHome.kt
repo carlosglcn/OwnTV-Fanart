@@ -201,14 +201,14 @@ internal fun TvHome(
                     Column {
                         Text(
                             now?.takeIf { it.startMs > clock }?.let { timeFormat.format(java.util.Date(it.startMs)) } ?: stringResource(R.string.content_epg_now_short),
-                            style = stageText(16, 800), color = stageAccent.accent, maxLines = 1,
+                            style = stageText(16, 800), color = stageAccent.ink, maxLines = 1,
                         )
                         Text(ch.name, style = stageText(22, 700), color = StageColors.Text.copy(alpha = 0.9f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Text(
                     now?.title?.let(SportsNow::displayTitle) ?: ch.name,
-                    style = stageText(52, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    style = tv.own.owntv.ui.theme.stageDisplay(56), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
                 now?.let { p ->
                     val total = (p.stopMs - p.startMs).coerceAtLeast(1L)
@@ -240,7 +240,7 @@ internal fun TvHome(
                     }
                 }
                 now?.takeIf { it.startMs > clock }?.let {
-                    Text(stringResource(R.string.glcn_tvhome_remind_hint), style = stageText(17, 600), color = stageAccent.accent, maxLines = 1)
+                    Text(stringResource(R.string.glcn_tvhome_remind_hint), style = stageText(17, 600), color = stageAccent.ink, maxLines = 1)
                 }
                 next?.let { n ->
                     Text(

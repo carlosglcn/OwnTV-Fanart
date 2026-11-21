@@ -132,6 +132,8 @@ class LiveViewModel(
     private val recordings: tv.own.owntv.core.recording.RecordingManager,
     /** Keeps the preview pane off a one-stream playlist while a download is using it. */
     private val downloadWatchGuard: tv.own.owntv.core.download.DownloadWatchGuard,
+    /** Home and the screensaver reach the tuner through these, in the same call that frees the engines. */
+    private val engines: tv.own.owntv.player.PlaybackEngines,
 ) : ViewModel(), org.koin.core.component.KoinComponent {
 
     // glcn: the Cinematic layout's cards read a window of the stored guide for the channels on screen
@@ -171,9 +173,18 @@ class LiveViewModel(
         synchronized(scheduleCache) { scheduleCache[channel.id] }?.takeIf { now - it.first < 5 * 60_000L }?.let { (_, rows) ->
             return rows.filter { it.stopMs > now }
         }
-        val rows = guideReader.slice(listOf(channel), custom.value, epgOffset.value, now, now + 14 * 3_600_000L)[channel.id]
+        val stored = guideReader.slice(listOf(channel), custom.value, epgOffset.value, now, now + 14 * 3_600_000L)[channel.id]
             .orEmpty().filter { it.stopMs > now }.sortedBy { it.startMs }.take(12)
-        synchronized(scheduleCache) { scheduleCache[channel.id] = now to rows }
+        // glcn: nothing stored is not nothing on — the provider's own short guide answers for such a channel (it is
+        // what the banner shows), so the info page asks it too, for a moment at most.
+        val rows = stored.ifEmpty {
+            kotlinx.coroutines.withTimeoutOrNull(PROVIDER_GUIDE_WAIT_MS) {
+                guideReader.row(channel, custom.value, epgOffset.value, now, now + 14 * 3_600_000L, withText = true)
+            }.orEmpty().filter { it.stopMs > now }.sortedBy { it.startMs }.take(12)
+        }
+        // glcn: an empty answer is not kept — read while the guide was still loading, it hid the channel's programmes
+        // ("the guide has nothing") for five minutes.
+        if (rows.isNotEmpty()) synchronized(scheduleCache) { scheduleCache[channel.id] = now to rows }
         return rows
     }
 
@@ -184,7 +195,7 @@ class LiveViewModel(
         synchronized(weekCache) { weekCache[channel.id] }?.takeIf { now - it.first < 10 * 60_000L }?.let { return it.second }
         val rows = guideReader.slice(listOf(channel), custom.value, epgOffset.value, now, now + 7 * 24 * 3_600_000L)[channel.id]
             .orEmpty().filter { it.stopMs > now }.sortedBy { it.startMs }
-        synchronized(weekCache) { weekCache[channel.id] = now to rows }
+        if (rows.isNotEmpty()) synchronized(weekCache) { weekCache[channel.id] = now to rows }
         return rows
     }
 
@@ -1147,9 +1158,28 @@ class LiveViewModel(
     private suspend fun rememberedCategory(): String? =
         if (settings.rememberCategoryLive.first()) settings.lastLiveCategory.first() else null
 
+    /**
+     * The category the user last chose, checked against the rail built for [c] — null when it is
+     * forgotten, gone, or the rail is still being built after [RAIL_WAIT_MS]. Callers fall back to the
+     * channel's own folder then, which is what the app did before this was remembered at all.
+     */
+    private suspend fun rememberedKey(c: Ctx): LiveKey? {
+        val stored = rememberedCategory() ?: return null
+        val rail = kotlinx.coroutines.withTimeoutOrNull(RAIL_WAIT_MS) { completeRail(c) } ?: return null
+        return LiveCategoryMemory.restoreKey(stored, rail)
+    }
+
     /** The first category list built for [c]'s profile and playlists — not the one left from before a switch. */
     private suspend fun completeRail(c: Ctx): List<LiveRailItem> =
         railSnapshot.first { (built, _) -> built?.profileId == c.profileId && built.sourceIds == c.sourceIds }.second
+
+    /**
+     * [completeRail] for a caller outside this view model: the TV Guide's restored category is checked
+     * against the rail built for the active profile and its playlists, never against the placeholder
+     * rail the state flow starts on — there a folder that still exists would look gone and the Guide
+     * would fall back to All on every open.
+     */
+    suspend fun completeRail(): List<LiveRailItem> = completeRail(ctx.first { it.profileId >= 0 })
 
     /** "TV Guide follows Live TV" on: whether the TV Guide shares this screen's remembered category. */
     val guideFollowsLive: StateFlow<Boolean> = settings.guideFollowsLiveCategory
@@ -1250,12 +1280,18 @@ class LiveViewModel(
     private val _reveal = MutableStateFlow<tv.own.owntv.features.search.Reveal?>(null)
     val reveal: StateFlow<tv.own.owntv.features.search.Reveal?> = _reveal.asStateFlow()
 
-    /** Open [channel] where it lives: its own category, or the landing list (All channels while it is
-     *  shown) when that category is not in the rail or the channel is not in it. It becomes the
-     *  preview, as if the user had walked there. With All hidden and the channel's own category hidden
-     *  too, no list holds it: the list stays where it is and only the preview changes. The category is
-     *  shown, not remembered: it was the channel that was chosen ([show]). */
-    fun revealChannel(channel: ChannelEntity) {
+    /**
+     * Open [channel] where it lives: its own category, or the landing list (All channels while it is
+     * shown) when that category is not in the rail or the channel is not in it. It becomes the
+     * preview, as if the user had walked there. With All hidden and the channel's own category hidden
+     * too, no list holds it: the list stays where it is and only the preview changes. The category is
+     * shown, not saved: it was the channel that was chosen ([show]).
+     *
+     * [preferRemembered] is for the app opening a channel by itself at launch: the list the user last
+     * had Live TV on is tried first, so a restart does not replace Favorites with the channel's
+     * provider folder. Search keeps its own rule — a result is revealed in its own category.
+     */
+    fun revealChannel(channel: ChannelEntity, preferRemembered: Boolean = false) {
         _search.value = ""
         _previewArmed.value = true
         browseTo(channel)
@@ -1265,7 +1301,11 @@ class LiveViewModel(
             val folder = channel.categoryId?.let { LiveKey.Folder(it) }
             val inRail = folder != null &&
                 kotlinx.coroutines.withTimeoutOrNull(2_000) { railItems.first { list -> list.any { it.key == folder } } } != null
-            for (key in listOfNotNull(folder.takeIf { inRail }, fallbackKey(railItems.value)).distinct()) {
+            // The remembered list is only a candidate: `positionOf` below decides, and a list that does
+            // not hold the channel steps aside for its own folder.
+            val remembered = if (preferRemembered) rememberedKey(c) else null
+            val candidates = listOfNotNull(remembered, folder.takeIf { inRail }, fallbackKey(railItems.value)).distinct()
+            for (key in candidates) {
                 val position = pagingSource(key, c, "", sort).positionOf(channel.id, { it.id }) ?: continue
                 show(key)
                 _reveal.value = tv.own.owntv.features.search.Reveal(key, channel.id, position)
@@ -1282,6 +1322,23 @@ class LiveViewModel(
         val folder = channel.categoryId?.let { LiveKey.Folder(it) } ?: return fallbackKey(railItems.value)
         val inRail = kotlinx.coroutines.withTimeoutOrNull(2_000) { railItems.first { list -> list.any { it.key == folder } } } != null
         return if (inRail) folder else fallbackKey(railItems.value)
+    }
+
+    /**
+     * The list a channel the app opened by itself belongs in: the category the user last chose when it
+     * still holds the channel, otherwise the channel's own provider folder. Startup modes used this
+     * path's absence to replace Favorites with the channel's folder on every launch, which looked like
+     * the remembered category had been forgotten after a restart.
+     *
+     * All channels needs no check — every channel is in it — so a huge playlist is not scanned at boot.
+     */
+    suspend fun startupKeyOf(channel: ChannelEntity): LiveKey {
+        val c = ctx.first { it.profileId >= 0 }
+        val remembered = rememberedKey(c) ?: return railKeyOf(channel)
+        if (remembered == LiveKey.All) return remembered
+        val sort = settings.sortLive.first()
+        return if (pagingSource(remembered, c, "", sort).positionOf(channel.id, { it.id }) != null) remembered
+        else railKeyOf(channel)
     }
 
     // The in-pane preview only plays once the user has actually focused a channel — so restoring the last
@@ -1312,6 +1369,15 @@ class LiveViewModel(
             downloadHolds = downloadWatchGuard::holdsOnlyStream,
         ),
     )
+
+    init {
+        engines.liveTuner = live
+    }
+
+    override fun onCleared() {
+        if (engines.liveTuner === live) engines.liveTuner = null
+        super.onCleared()
+    }
 
     // True while the in-pane preview is suppressed because the provider allows one stream at a time and
     // that stream is already in use (full-screen playback). The pane says so instead of sitting silently
@@ -1450,7 +1516,7 @@ class LiveViewModel(
             when (key) {
                 is LiveKey.Folder -> channelsInCategory(key.id)
                 is LiveKey.Custom -> channelsInCustom(key)
-                LiveKey.Favorites, LiveKey.History, LiveKey.Catchup, LiveKey.All -> channelsInRail(key)
+                LiveKey.Favorites, LiveKey.History, LiveKey.Catchup, LiveKey.All, LiveKey.Continue -> channelsInRail(key)
             }
         }
     }
@@ -1483,7 +1549,7 @@ class LiveViewModel(
                 val title = browserCategories.value.firstOrNull { it.first == key }?.second.orEmpty()
                 zapList.armForKey(key, title, { channelsInCustom(key) }, close)
             }
-            LiveKey.Favorites, LiveKey.History, LiveKey.Catchup, LiveKey.All ->
+            LiveKey.Favorites, LiveKey.History, LiveKey.Catchup, LiveKey.All, LiveKey.Continue ->
                 zapList.armForKey(key, null, { channelsInRail(key) }, close)
         }
     }
@@ -1667,16 +1733,39 @@ class LiveViewModel(
         ensurePlaying(channel)
     }
 
-    /** Tune a channel picked outside the Live TV list — the Guide. Same as
-     *  [ensurePlaying] except history is written straight away: this is a deliberate one-shot pick (you
-     *  chose a channel, or "Watch channel" in a programme dialog), not the zap-through-a-category flow
-     *  the history debounce exists to filter, and such a channel was not reliably landing in History.
+    /**
+     * Tune a channel picked outside the Live TV list — the Guide — keeping the list it was picked from
+     * as the zap context, exactly as OK on a Live TV row does: CH+/CH− and the in-player channel list
+     * step through what the user was looking at. [channels] is the Guide's own visible rows (its
+     * category, sort and search included) and [key] the list they came from. This used to arm the
+     * channel's provider folder instead, so opening a favourite from Favorites zapped through its
+     * provider's category — the one navigation path in the app that dropped the browse list.
      *
-     *  Every live entry point funnels through here into [playChannel], so Prefer HLS, the
-     *  ExoPlayer→mpv ladder, compatibility-mode pins, learned stream quirks, the per-playlist
-     *  pre-buffer and the external-player toggle apply however the channel was found. */
-    fun watchFromGuide(channel: ChannelEntity) {
-        zapList.armFor(channel)
+     * Falls back to the channel's own category when the row is not in [channels] (a stale list, or a
+     * caller with no browse list behind it) and when that list holds nothing to step through — the
+     * Guide's rows are its category ∩ guide-matched channels ∩ search, so a thin guide could otherwise
+     * arm a list of one and leave CH± and the channel-list button dead.
+     *
+     * History is written straight away, unlike [ensurePlaying]: this is a deliberate one-shot pick (you
+     * chose a channel, or "Watch channel" in a programme dialog), not the zap-through-a-category flow
+     * the history debounce exists to filter, and such a channel was not reliably landing in History.
+     *
+     * Every live entry point funnels through [playChannel], so Prefer HLS, the ExoPlayer→mpv ladder,
+     * compatibility-mode pins, learned stream quirks, the per-playlist pre-buffer and the
+     * external-player toggle apply however the channel was found.
+     */
+    fun watchFromGuide(channel: ChannelEntity, channels: List<ChannelEntity>, key: LiveKey?) {
+        if (channels.size > 1 && channels.any { it.id == channel.id }) {
+            zapList.armFromBrowse(
+                channels = channels,
+                title = railItems.value.firstOrNull { it.key == key }?.title,
+                // Built-in rails (Favorites / History / All) carry no title — their labels are UI strings.
+                key = key,
+                categoryId = (key as? LiveKey.Folder)?.id,
+            )
+        } else {
+            zapList.armFor(channel)
+        }
         ensurePlaying(channel)
         recordLiveHistory(channel, immediate = true)
     }
@@ -1828,7 +1917,7 @@ class LiveViewModel(
             if (tuned.id == currentChannel.id) {
                 return tv.own.owntv.player.DirectTuneResult.Found(
                     tv.own.owntv.player.DirectTuneChannelInfo(
-                        tuned.number, tuned.name, tuned.logoUrl, restarted = false,
+                        tuned.number, tuned.name, tuned.displayLogoUrl, restarted = false,
                     ),
                 )
             }
@@ -1838,7 +1927,7 @@ class LiveViewModel(
 
             return tv.own.owntv.player.DirectTuneResult.Found(
                 tv.own.owntv.player.DirectTuneChannelInfo(
-                    tuned.number, tuned.name, tuned.logoUrl, restarted = true,
+                    tuned.number, tuned.name, tuned.displayLogoUrl, restarted = true,
                 ),
             )
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1983,7 +2072,7 @@ class LiveViewModel(
     private suspend fun tuneRefused(channel: ChannelEntity, why: String, message: Int?) {
         tv.own.owntv.player.LiveDiagnosticsLog.event("tune refused '${channel.name}': $why")
         if (message != null) withContext(Dispatchers.Main) {
-            android.widget.Toast.makeText(appContext, message, android.widget.Toast.LENGTH_LONG).show()
+            tv.own.owntv.ui.components.AppToast.show(appContext, message, long = true)
         }
     }
 
@@ -2726,7 +2815,7 @@ class LiveViewModel(
                 is LiveKey.Custom -> customCategoryDao.snapshotChannels(pid, key.id, ctx.value.sourceIds.ifEmpty { listOf(-1L) }, alpha, 5000)
                 LiveKey.Favorites -> channelDao.snapshotFavoritesManual(pid, contextKey, ctx.value.sourceIds.ifEmpty { listOf(-1L) }, 5000)
                 // Catch-up joins History/All as a computed view: it has no stored order to move within.
-                LiveKey.History, LiveKey.All, LiveKey.Catchup -> return@launch
+                LiveKey.History, LiveKey.All, LiveKey.Catchup, LiveKey.Continue -> return@launch
             }
             val idx = items.indexOfFirst { it.id == channel.id }
             if (idx < 0) return@launch
@@ -2776,6 +2865,14 @@ class LiveViewModel(
         }
     }
 
+    /** glcn: Recent emptied from the player's list — the live channels only; films and series keep theirs. */
+    fun clearLiveHistory() {
+        viewModelScope.launch {
+            val pid = currentProfileId() ?: return@launch
+            userDataWriter.clearHistory(pid, MediaType.LIVE)
+        }
+    }
+
     fun removeFromHistory(channelId: Long) {
         viewModelScope.launch {
             val pid = currentProfileId() ?: return@launch
@@ -2812,6 +2909,11 @@ class LiveViewModel(
         const val FILM_MIN_MINUTES = 75
         val FILM_WORDS = listOf("cine", "pelicula", "movie", "film")
         const val STRIP_ALL_LIMIT = 600
+        /** How long a remembered category may wait for the complete rail before the channel's own
+         *  folder is used instead — a startup must not hold the list on a slow, large playlist. */
+        private const val RAIL_WAIT_MS = 2_000L
+        /** glcn: how long the info page waits for the provider's short guide when nothing is stored. */
+        private const val PROVIDER_GUIDE_WAIT_MS = 3_000L
         val defaultRail = listOf(
             LiveRailItem(LiveKey.Favorites, icon = OwnTVIcon.FAVORITE),
             LiveRailItem(LiveKey.History, icon = OwnTVIcon.HISTORY),

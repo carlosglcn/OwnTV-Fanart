@@ -1095,6 +1095,7 @@ private fun TrendingBackdrop(item: TrendingHomeItem, folded: Boolean, modifier: 
 @Composable
 private fun TrendingEyebrow(item: TrendingHomeItem, withTag: Boolean) {
     val accent = stageAccent.accent
+    val accentInk = stageAccent.ink
     Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
         OwnTVIcon(OwnTVIcon.TREND, tint = accent, modifier = Modifier.size(18.mpx))
         Text(
@@ -1103,7 +1104,7 @@ private fun TrendingEyebrow(item: TrendingHomeItem, withTag: Boolean) {
                 item.snapshot.trendingRank,
                 stringResource(if (item is TrendingHomeItem.Movie) R.string.common_nav_movies else R.string.common_nav_series),
             ),
-            style = stageText(18, 700, 0.02f.em()), color = accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            style = stageText(18, 700, 0.02f.em()), color = accentInk, maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
         if (withTag) {
             Spacer(Modifier.width(6.mpx))
@@ -1431,9 +1432,16 @@ private fun KeepWatchingRow(
     val setArt = LocalHomeFocusArt.current
     val setInfo = LocalHomeFocusInfo.current
     val h = if (big) 216 else 189
+    // A keyed row keeps its scroll on the first card it showed. When what was just watched moves to the
+    // front, that left the new first card off-screen to the left and focus on the second: the channel the
+    // user came back from looked gone from the row. A new first card brings the row back to its start.
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val firstKey = items.firstOrNull()?.heroKey()
+    LaunchedEffect(firstKey) { if (listState.firstVisibleItemIndex != 0) listState.scrollToItem(0) }
     Column(modifier) {
         HomeRowHeader(title, small = if (big) null else items.size.toString(), start = start, big = big)
         HomeLazyRow(
+            state = listState,
             horizontalArrangement = Arrangement.spacedBy((if (big) 24 else 20).mpx),
             contentPadding = PaddingValues(start = start, end = 64.mpx),
             modifier = Modifier.focusRestorer().focusGroup(),

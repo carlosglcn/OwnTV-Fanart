@@ -1,9 +1,12 @@
 package tv.own.owntv.glcn
 
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.ensureActive
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -13,6 +16,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -54,7 +61,7 @@ import tv.own.owntv.player.PlaybackEngine
 import tv.own.owntv.ui.components.ChannelLogoTile
 import tv.own.owntv.ui.components.OwnTVIcon
 import tv.own.owntv.ui.components.ProgrammeArt
-import tv.own.owntv.ui.stage.StageTool
+import tv.own.owntv.ui.stage.StageButton
 import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.stageAccent
 import tv.own.owntv.ui.theme.stageText
@@ -62,7 +69,8 @@ import tv.own.owntv.ui.theme.stageText
 // glcn: the screen follows the theme — dark ink on the light page, light ink on the dark one.
 private val light: Boolean @androidx.compose.runtime.Composable get() = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
 private val Ink: Color @androidx.compose.runtime.Composable get() = if (light) Color(0xFF111A1C) else Color(0xFFF2F6F5)
-private val Soft: Color @androidx.compose.runtime.Composable get() = if (light) Color(0xFF2E3B3E) else Color(0xFFC9D4D2)
+// glcn: near the title's own black in the light theme — the synopsis read grey over a busy picture.
+private val Soft: Color @androidx.compose.runtime.Composable get() = if (light) Color(0xFF1C2729) else Color(0xFFC9D4D2)
 private val Dim: Color @androidx.compose.runtime.Composable get() = if (light) Color(0xFF5E6B6E) else Color(0xFF93A09E)
 /** The page behind the words, and the panels on it. */
 private val Page: Color @androidx.compose.runtime.Composable get() = tv.own.owntv.ui.theme.LocalStagePalette.current.page
@@ -89,6 +97,14 @@ fun ProgrammeInfoScreen(
     channels: List<ChannelEntity> = emptyList(),
     /** glcn: OK on another channel's page tunes it. */
     onTune: ((ChannelEntity) -> Unit)? = null,
+    /** glcn: a film picked on the cast page — its page, out of the player. */
+    onOpenFilm: ((tv.own.owntv.core.database.entity.MovieEntity) -> Unit)? = null,
+    /**
+     * glcn: what the player's banner already knows about [startChannel] (what is on, what follows) — see [infoSeed].
+     * The page opens on it at once, whatever the guide's own read takes, and keeps it when the stored guide has
+     * nothing for a channel whose programmes come from the provider.
+     */
+    seed: List<EpgProgrammeEntity> = emptyList(),
 ) {
     // glcn: the channel whose page is shown — the one playing at first; the window keeps playing that one throughout.
     var channel by remember { mutableStateOf(startChannel) }
@@ -96,21 +112,63 @@ fun ProgrammeInfoScreen(
     val swapScope = androidx.compose.runtime.rememberCoroutineScope()
     var lastSwapAt by remember { mutableStateOf(0L) }
     val swapAnimated = DeviceClass.richMotion && tv.own.owntv.ui.theme.animationsOn
+    // glcn: where ◀ ▶ are heading — counted from here, not from the page on screen, so quick presses all count
+    // (a press during the slide used to cancel the one before and the page stayed where it was).
+    var target by remember { mutableStateOf(startChannel) }
+    var swapJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    val swapContext = androidx.compose.ui.platform.LocalContext.current
+    // glcn: the frames this page draws are told apart in the report ("info", and "info·swap" while ◀ ▶ change page).
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        val before = FrameWatch.screen
+        FrameWatch.screen = "info"
+        onDispose { FrameWatch.screen = before }
+    }
+    // glcn: the page on screen (its channel's schedule, repeats, synopsis and TMDB details), and how to read one.
+    var page by remember { mutableStateOf<InfoPage?>(null) }
+    var pageLoader: (suspend (ChannelEntity) -> InfoPage)? = null
+    var baseLoader: (suspend (ChannelEntity) -> InfoPage)? = null
+    var extrasLoader: (suspend (ChannelEntity, InfoPage) -> InfoPage)? = null
+    // glcn: pages already read (this screen's channel and its neighbours), so ◀ ▶ usually find theirs whole.
+    // glcn: the clock moves while the screen is open. It was read once, on opening: walking the channels across the
+    // hour, the guide (asked at the real time) no longer gave the programme that had just ended, the page's own
+    // stopped clock was not yet at the next one, and a channel with a full guide said "nothing right now".
+    val nowMs by androidx.compose.runtime.produceState(System.currentTimeMillis()) {
+        while (true) { kotlinx.coroutines.delay(CLOCK_TICK_MS); value = System.currentTimeMillis() }
+    }
+    val pageCache = remember { java.util.concurrent.ConcurrentHashMap<Long, InfoPage>() }
     fun go(step: Int) {
         if (channels.size < 2) return
-        val at = channels.indexOfFirst { it.id == channel.id }.takeIf { it >= 0 } ?: return
+        val at = channels.indexOfFirst { it.id == target.id }.takeIf { it >= 0 } ?: return
         val next = channels[(at + step + channels.size) % channels.size]
+        target = next
         val now = android.os.SystemClock.uptimeMillis()
         // A held key gets shorter moves, so the pages keep up with it.
         val quick = now - lastSwapAt < QUICK_SWAP_MS
         lastSwapAt = now
         val calm = swapAnimated
-        swapScope.launch {
-            if (!calm) { channel = next; return@launch }
+        swapJob?.cancel()
+        swapJob = swapScope.launch {
+            if (!calm) { page = pageLoader?.invoke(next); channel = next; return@launch }
+            FrameWatch.screen = "info·swap"
+            // glcn: no waiting between the two halves — a pause there read as a catch. The next page is the one read
+            // ahead when there is one; else the guide's part is read while the old page leaves (it is on the device)
+            // and what TMDB and the pictures add comes in after, in one more change.
+            val cached = pageCache[next.id]?.takeIf { it.fresh(nowMs) }
+            val base = if (cached != null) null else async { baseLoader?.invoke(next) }
             swap.animateTo(-step.toFloat(), androidx.compose.animation.core.tween(if (quick) 70 else SWAP_OUT_MS, easing = androidx.compose.animation.core.FastOutLinearInEasing))
+            val first = cached ?: kotlinx.coroutines.withTimeoutOrNull(BASE_WAIT_MS) { base?.await() }
             channel = next
+            page = first ?: InfoPage(next.id, emptyList(), loading = true)
             swap.snapTo(step.toFloat())
             swap.animateTo(0f, androidx.compose.animation.core.tween(if (quick) 140 else SWAP_IN_MS, easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)))
+            if (first?.complete != true) {
+                val b = first ?: base?.await()
+                if (b != null && channel.id == next.id && page?.loading == true) page = b
+                val full = b?.let { extrasLoader?.invoke(next, it) }
+                if (full != null) { if (full.onAir(nowMs) != null) pageCache[next.id] = full; if (channel.id == next.id) page = full }
+            }
+            kotlinx.coroutines.delay(SWAP_SETTLE_MS)
+            if (FrameWatch.screen == "info·swap") FrameWatch.screen = "info"
         }
     }
     val slide = Modifier.graphicsLayer {
@@ -128,77 +186,134 @@ fun ProgrammeInfoScreen(
     val slideInRight = Modifier.graphicsLayer { translationX = (1f - enter.value) * PANEL_SHIFT.toPx(); alpha = enter.value }
     BackHandler { onDismiss() }
     val accent = stageAccent.accent
+    val accentInk = stageAccent.ink
     val resolver: ProgrammeArtResolver = org.koin.compose.koinInject()
     val timeFmt = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
     val dayFmt = remember { java.text.SimpleDateFormat("EEE d", java.util.Locale.getDefault()) }
-    val nowMs = remember { System.currentTimeMillis() }
 
-    // What is on, and what follows: from the cache the zap lists already filled, so it is there at once.
-    val schedule by produceState<List<EpgProgrammeEntity>?>(null, channel.id) {
-        value = runCatching { loadSchedule(channel) }.getOrDefault(emptyList())
+    // glcn: everything a page shows, read in one go away from the screen and put on screen at once — before, the
+    // schedule, the week, the synopsis and TMDB's film each landed on its own frame while a page slid in (the old
+    // film's picture behind the new title, names before their faces), and the slide stuttered under them.
+    val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
+    // Two steps: the guide's own part (what is on and what follows — from the device, at once) and everything else
+    // (the week's repeats, TMDB, the picture, the faces), each bounded in time.
+    //
+    // glcn: none of this runs on Dispatchers.Default. Right after the app starts, the guide's refresh and the channel
+    // matcher keep every one of that pool's threads busy for minutes, and a page read there simply waited its turn:
+    // the screen opened empty and filled in "much later". The guide and TMDB calls are safe to make from here (they
+    // move to their own threads); only the week's repeats are worked out aside, on the elastic IO pool.
+    suspend fun loadBase(ch: ChannelEntity): InfoPage {
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        val rows = quiet { loadSchedule(ch) }.orEmpty()
+        val onAir = rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
+        val synopsis = onAir?.description?.takeIf { it.isNotBlank() }
+            ?: onAir?.let { kotlinx.coroutines.withTimeoutOrNull(SYNOPSIS_WAIT_MS) { quiet { epgDao.programmeDescription(it.id) } } }?.takeIf { it.isNotBlank() }
+        val took = android.os.SystemClock.elapsedRealtime() - t0
+        if (took > SLOW_PAGE_MS) tv.own.owntv.player.LiveDiagnosticsLog.event("info page: guide part of channel ${ch.id} took $took ms (${rows.size} rows)")
+        return InfoPage(ch.id, rows, synopsis = synopsis, complete = onAir == null)
     }
+    // [warm]: also decode the picture and the faces ahead — for a page read before it is shown (the neighbours); a
+    // page already on screen gets its details as soon as they are known and lets its pictures load in place.
+    suspend fun loadExtras(ch: ChannelEntity, base: InfoPage, warm: Boolean): InfoPage {
+        val onAir = base.rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
+            ?: return base.copy(complete = true)
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        return kotlinx.coroutines.coroutineScope {
+            val again = async {
+                kotlinx.coroutines.withTimeoutOrNull(WEEK_WAIT_MS) {
+                    val week = quiet { loadWeek(ch) }.orEmpty()
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { airsAgain(onAir, week) }
+                }.orEmpty()
+            }
+            val synopsis = async {
+                base.synopsis ?: kotlinx.coroutines.withTimeoutOrNull(TMDB_WAIT_MS) { quiet { epgDao.programmeDescription(onAir.id) } }?.takeIf { it.isNotBlank() }
+            }
+            val lent = async { kotlinx.coroutines.withTimeoutOrNull(TMDB_WAIT_MS) { quiet { resolver.detailsFor(onAir.title, onAir.categories) } } }
+            val logo = async { kotlinx.coroutines.withTimeoutOrNull(TMDB_WAIT_MS) { quiet { resolver.logoFor(onAir.title, onAir.categories) } } }
+            val film = async { kotlinx.coroutines.withTimeoutOrNull(TMDB_WAIT_MS) { quiet { resolver.filmFor(onAir.title, onAir.categories) } } }
+            val f = film.await(); val l = lent.await(); val syn = synopsis.await()
+            if (warm) {
+                kotlinx.coroutines.withTimeoutOrNull(ART_WARM_MS) {
+                    pageArt(f, l, onAir)?.let { u -> quiet { tv.own.owntv.ui.components.warmProgrammeArt(swapContext, u) } }
+                }
+                val people = f?.cast.orEmpty().ifEmpty { guideCast(syn) }.take(CAST_WARM)
+                kotlinx.coroutines.withTimeoutOrNull(CAST_WARM_MS) {
+                    people.map { m -> async { quiet { warmCastFace(swapContext, m) } } }.forEach { it.await() }
+                }
+            }
+            val full = base.copy(again = again.await(), synopsis = syn, lent = l, titleLogo = logo.await(), film = f, complete = true, forStart = onAir.startMs)
+            val took = android.os.SystemClock.elapsedRealtime() - t0
+            if (took > SLOW_EXTRAS_MS) tv.own.owntv.player.LiveDiagnosticsLog.event("info page: details of channel ${base.channelId} took $took ms")
+            full
+        }
+    }
+    suspend fun loadPage(ch: ChannelEntity): InfoPage {
+        pageCache[ch.id]?.takeIf { it.fresh(nowMs) }?.let { return it }
+        val full = loadExtras(ch, loadBase(ch), warm = true)
+        // glcn: only a page that was read to its end, and that has something on, is kept — a read cut short (the
+        // screen moved on) came back as "nothing on" and was kept as the channel's page.
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        if (full.onAir(nowMs) != null) pageCache[ch.id] = full
+        return full
+    }
+    pageLoader = { ch -> loadPage(ch) }
+    baseLoader = { ch -> loadBase(ch) }
+    extrasLoader = { c, b -> loadExtras(c, b, warm = false) }
+    // glcn: the banner's own now/next for the channel playing, as a page — on screen from the first frame.
+    val seedPage = remember(seed) {
+        seed.takeIf { rows -> rows.any { nowMs in it.startMs until it.stopMs } }
+            ?.let { rows -> InfoPage(startChannel.id, rows, synopsis = rows.firstOrNull { nowMs in it.startMs until it.stopMs }?.description?.takeIf { d -> d.isNotBlank() }) }
+    }
+    LaunchedEffect(Unit) {
+        val read = loadBase(startChannel)
+        // The stored guide may have nothing for a channel the provider answers for: the banner's page stays then.
+        val base = if (read.onAir(nowMs) != null) read else seedPage ?: read
+        if (channel.id == startChannel.id) page = base
+        val full = loadExtras(startChannel, base, warm = false)
+        if (full.onAir(nowMs) != null) pageCache[startChannel.id] = full
+        if (channel.id == startChannel.id) page = full
+    }
+    val real = page?.takeIf { it.channelId == channel.id }
+    val shown = if (channel.id == startChannel.id && seedPage != null && (real == null || real.loading || real.onAir(nowMs) == null)) seedPage else real
+    val schedule = shown?.rows
     val rows = schedule.orEmpty()
     // glcn: with overlapping guides, the one that started last — as the banner, the lists and Home pick it.
     val cur = rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
+    // glcn: the programme changed while its page was on screen (or the page was read for the one before): read again,
+    // so the title, the picture and the cast are the new programme's, not the last one's under a new title.
+    LaunchedEffect(channel.id, cur?.startMs) {
+        val p = page?.takeIf { it.channelId == channel.id && it.complete } ?: return@LaunchedEffect
+        if (p.forStart == cur?.startMs) return@LaunchedEffect
+        val ch = channel
+        val base = loadBase(ch)
+        if (base.onAir(nowMs) == null) return@LaunchedEffect
+        if (channel.id == ch.id) page = base
+        val full = loadExtras(ch, base, warm = false)
+        if (full.onAir(nowMs) != null) pageCache[ch.id] = full
+        if (channel.id == ch.id) page = full
+    }
     // glcn: what follows — the rest of the evening, not two lines.
     val next = if (cur == null) emptyList() else rows.filter { it.startMs >= cur.stopMs }.take(NEXT_MAX)
-
-    // The week, read after the screen is up; the repeats are the same title again later.
-    val week by produceState<List<EpgProgrammeEntity>?>(null, channel.id) {
-        value = runCatching { loadWeek(channel) }.getOrDefault(emptyList())
-    }
-    // glcn: a daily show changes its title every night ("El hormiguero T21 · <guests>"), so a show is also
-    // found by its own name — the title without the episode, the season and what follows " · ". Never for
-    // sport (a league's name is the same for every match) nor for a name too short to tell shows apart:
-    // those still need the very same title.
-    val again = remember(cur?.title, week) {
-        if (cur == null) return@remember emptyList<Pair<EpgProgrammeEntity, String?>>()
-        val exact = ProgrammeArtResolver.fold(cur.title)
-        val show = ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(cur.title))
-        val byShow = show.length >= 4 && show != exact && !tv.own.owntv.core.live.SportsNow.isSport(cur)
-        week.orEmpty()
-            .filter { it.startMs >= cur.stopMs }
-            .mapNotNull { p ->
-                val t = ProgrammeArtResolver.fold(p.title)
-                when {
-                    t == exact -> p to null
-                    byShow && !tv.own.owntv.core.live.SportsNow.isSport(p) &&
-                        ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(p.title)) == show ->
-                        // Another night of the show: say which one (its guests, its episode).
-                        p to p.title.substringAfter(" · ", "").trim().takeIf { it.isNotBlank() }
-                    else -> null
-                }
-            }
-            .distinctBy { it.first.startMs }
-            .take(7)
-    }
-
-    // The zap cache keeps programmes without their synopsis (it is heavy); this one is read on demand.
-    val epgDao: tv.own.owntv.core.database.dao.EpgDao = org.koin.compose.koinInject()
-    val ownSynopsis by produceState<String?>(null, cur?.id) {
-        val c = cur ?: return@produceState
-        value = c.description?.takeIf { it.isNotBlank() }
-            ?: runCatching { epgDao.programmeDescription(c.id) }.getOrNull()?.takeIf { it.isNotBlank() }
-    }
-
+    val again = shown?.again.orEmpty()
+    val ownSynopsis = shown?.synopsis
+    // glcn: the names the guide gives after "Reparto:", for the cast panel and the Cast button.
+    val guidePeople = remember(ownSynopsis) { guideCast(ownSynopsis) }
+    var castOpen by remember(cur?.id) { mutableStateOf(false) }
     // TMDB lends the wide picture, the rating and a synopsis when the guide says little.
-    val lent by produceState<ProgrammeArtResolver.Info?>(null, cur?.title, cur?.categories) {
-        val c = cur ?: return@produceState
-        value = runCatching { resolver.detailsFor(c.title, c.categories) }.getOrNull()
-    }
-
+    val lent = shown?.lent
     // A film's own lettering, when TMDB has it, stands where its name would.
-    val titleLogo by produceState<String?>(null, cur?.title, cur?.categories) {
-        val c = cur ?: return@produceState
-        value = runCatching { resolver.logoFor(c.title, c.categories) }.getOrNull()
-    }
+    val titleLogo = shown?.titleLogo
     // glcn: a film on the channel, in full (TMDB): lettering, year, genres, rating, synopsis, cast and the wide picture.
-    // Warmed when the channel is tuned, so it is usually here at once.
-    val film by produceState<tv.own.owntv.core.metadata.MovieDetails?>(null, cur?.title, cur?.categories) {
-        val c = cur ?: return@produceState
-        value = runCatching { resolver.filmFor(c.title, c.categories) }.getOrNull()
-    }
+    val film = shown?.film
     val filmLogo = film?.logoPath?.let { tv.own.owntv.core.metadata.MetadataImages.logo(it) }
+    // glcn: who is in it — TMDB's cast for a film, else the guide's names; the Cast button opens the cast page on them.
+    val pageCast = film?.cast.orEmpty().ifEmpty { guidePeople }
+    if (castOpen && pageCast.isNotEmpty()) CastPage(
+        film = cur?.title.orEmpty(),
+        backdrop = film?.backdropPath?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w1280") } ?: cur?.imageUrl,
+        cast = pageCast, currentId = -1L,
+        onOpen = { m -> castOpen = false; onOpenFilm?.invoke(m) }, onDismiss = { castOpen = false },
+    )
     var logoFailed by remember(titleLogo, filmLogo) { mutableStateOf(false) }
 
     // glcn: the channels either side are read ahead (schedule, then TMDB for what they show), so a page is ready before ◀ ▶.
@@ -209,10 +324,8 @@ fun ProgrammeInfoScreen(
         for (d in listOf(1, -1, 2, -2)) {
             val n = channels[((at + d) % channels.size + channels.size) % channels.size]
             if (n.id == channel.id) continue
-            val rows = runCatching { loadSchedule(n) }.getOrNull().orEmpty()
-            val onAir = rows.filter { nowMs in it.startMs until it.stopMs }.maxByOrNull { it.startMs } ?: continue
-            runCatching { resolver.filmFor(onAir.title, onAir.categories) }
-            runCatching { resolver.detailsFor(onAir.title, onAir.categories) }
+            // glcn: the whole page, into the cache ◀ ▶ take from.
+            runCatching { loadPage(n) }
         }
     }
     var showTech by remember { mutableStateOf(false) }
@@ -255,39 +368,58 @@ fun ProgrammeInfoScreen(
         // glcn: the backdrop, with a window cut in it up on the right where the channel goes on playing.
         val windowRadius = 18.mpx
         var holeOrigin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+        val holePath = remember { androidx.compose.ui.graphics.Path() }
         Box(
             Modifier.fillMaxSize()
                 .onGloballyPositioned { holeOrigin = it.positionInWindow() }
-                .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
                 // glcn: the backdrop comes up as the picture shrinks, and the window follows the picture all the way —
                 // the TV seems to fold itself into its place on the right instead of jumping there.
                 .graphicsLayer { alpha = (InfoStage.progress * 1.4f).coerceAtMost(1f) }
+                // glcn: the window is left out of the drawing (a clip) instead of cleared from an offscreen copy of the whole
+                // screen — that copy was redrawn on every frame while a new page's picture, shade and tint came in.
                 .drawWithContent {
-                    drawContent()
                     val p = InfoStage.progress
                     val r = InfoStage.windowRect(size.width, size.height, holeOrigin)
                     val left = r.left * p
                     val top = r.top * p
                     val w = size.width + (r.width - size.width) * p
                     val h = size.height + (r.height - size.height) * p
-                    drawRoundRect(
-                        Color.Black, topLeft = androidx.compose.ui.geometry.Offset(left, top), size = androidx.compose.ui.geometry.Size(w, h),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(windowRadius.toPx() * p),
-                        blendMode = androidx.compose.ui.graphics.BlendMode.Clear,
+                    holePath.reset()
+                    holePath.addRoundRect(
+                        androidx.compose.ui.geometry.RoundRect(left, top, left + w, top + h, androidx.compose.ui.geometry.CornerRadius(windowRadius.toPx() * p)),
                     )
+                    clipPath(holePath, androidx.compose.ui.graphics.ClipOp.Difference) { this@drawWithContent.drawContent() }
                 },
         ) {
             Box(Modifier.fillMaxSize().background(Page))
-            val art = film?.backdropPath?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w1280") }
-                ?: lent?.backdropUrl ?: cur?.imageUrl?.takeIf { it.isNotBlank() }
+            // glcn: while a page is still being read, the last picture stays rather than fading to nothing and back.
+            val lastArt = remember { arrayOfNulls<String>(1) }
+            val art = pageArt(film, lent, cur).also { if (it != null) lastArt[0] = it } ?: lastArt[0].takeIf { shown?.loading == true }
             androidx.compose.animation.Crossfade(targetState = art, animationSpec = androidx.compose.animation.core.tween(SWAP_IN_MS), label = "infoArt") { url ->
                 if (url != null) ProgrammeArt(url = url, modifier = Modifier.fillMaxSize())
             }
             // The picture stays behind, never under the words: dark from the left and from the foot.
             // A deeper shade on the left, where the synopsis now runs long, so it reads over bright pictures too.
             val pg = Page
-            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to pg.copy(alpha = 0.96f), 0.62f to pg.copy(alpha = 0.82f), 1f to pg.copy(alpha = 0.3f))))
+            // glcn: as much shade as this picture needs for the words over it to read, and no more — a pale picture
+            // under the light theme (or a dark one under the dark theme) stays seen instead of washed out.
+            val tone by ArtTone.of(art)
+            val needState = androidx.compose.animation.core.animateFloatAsState(tone?.veil(light) ?: VEIL_UNREAD, androidx.compose.animation.core.tween(400), label = "infoVeil")
+            // glcn: read while drawing, not composing — the shade's change no longer rebuilds the page on every frame.
+            Box(
+                Modifier.fillMaxSize().drawBehind {
+                    val need = needState.value
+                    drawRect(
+                        Brush.horizontalGradient(
+                            0f to pg.copy(alpha = (need + 0.12f).coerceAtMost(0.96f)), 0.55f to pg.copy(alpha = need),
+                            0.75f to pg.copy(alpha = need * 0.55f), 1f to pg.copy(alpha = need * 0.3f),
+                        ),
+                    )
+                },
+            )
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to pg.copy(alpha = 0.9f))))
+            // glcn: the page takes a soft glow in the picture's own tone, as the film and series pages do.
+            tv.own.owntv.ui.components.ArtTint(art, Modifier.fillMaxSize(), strength = 0.5f, focusX = 0.15f, focusY = 0.85f)
         }
         // A fine frame round the window, and the word "Live" on it.
         Box(
@@ -306,7 +438,7 @@ fun ProgrammeInfoScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.mpx),
             ) {
                 Box(Modifier.size(8.mpx).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFFFF3B30)))
-                Text(stringResource(R.string.glcn_live_badge), style = stageText(13, 800), color = Color.White, maxLines = 1)
+                Text(onAirLabel(cur?.title), style = stageText(13, 800), color = Color.White, maxLines = 1)
             }
         }
 
@@ -315,7 +447,7 @@ fun ProgrammeInfoScreen(
                 val logo = channel.displayLogoUrl?.takeIf { it.isNotBlank() }
                 if (logo != null) ChannelLogoTile(logoUrl = logo, modifier = Modifier.size(132.mpx, 80.mpx), fill = Color.Transparent, surfaceLuminance = if (light) 0.95f else 0.02f) { }
                 Column {
-                    Text(stringResource(R.string.glcn_pi_on_air).uppercase(), style = stageText(15, 800), color = accent, maxLines = 1)
+                    Text(stringResource(R.string.glcn_pi_on_air).uppercase(), style = stageText(15, 800), color = accentInk, maxLines = 1)
                     Text(
                         tv.own.owntv.core.live.ProviderTags.parse(channel.name).name,
                         style = stageText(22, 700), color = Soft, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -325,7 +457,7 @@ fun ProgrammeInfoScreen(
             Spacer(Modifier.height(26.mpx))
             if (cur == null) {
                 Text(
-                    if (schedule == null) "" else stringResource(R.string.glcn_pi_no_guide),
+                    if (schedule == null || shown?.loading == true) "" else stringResource(R.string.glcn_pi_no_guide),
                     style = stageText(26, 600), color = Soft,
                 )
             } else {
@@ -337,7 +469,7 @@ fun ProgrammeInfoScreen(
                         onFailed = { logoFailed = true }, onDarkScreen = true,
                     )
                 } else {
-                    Text(cur.title, style = stageText(58f, 800), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.then(slideInLeft))
+                    Text(cur.title, style = tv.own.owntv.ui.theme.stageDisplay(62), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.then(slideInLeft))
                 }
                 val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
                 Text(
@@ -349,6 +481,10 @@ fun ProgrammeInfoScreen(
                 val f = ((nowMs - cur.startMs).toFloat() / span).coerceIn(0f, 1f)
                 Box(Modifier.then(slideInLeft).padding(top = 14.mpx).width(560.mpx).height(5.mpx).clip(RoundedCornerShape(3.mpx)).background(Ink.copy(alpha = 0.2f))) {
                     Box(Modifier.fillMaxWidth(f).height(5.mpx).background(accent))
+                }
+                // glcn: a match the sports board knows: both crests, the score and the minute.
+                tv.own.owntv.features.sports.rememberProgrammeMatch(cur.title, cur.startMs, cur.stopMs)?.let { m ->
+                    tv.own.owntv.features.sports.ProgrammeMatchStrip(m, Modifier.then(slideInLeft).padding(top = 22.mpx))
                 }
                 // glcn: the guide's synopsis without its tacked-on "(Genre, Genre)" and "País: …" (the genres become tags).
                 val (guideGenres, guideSynopsis) = remember(ownSynopsis) { tv.own.owntv.features.shell.components.cleanSynopsis(ownSynopsis) }
@@ -384,11 +520,28 @@ fun ProgrammeInfoScreen(
                     // without drifting.
                     // glcn: the cast sits on the right now, so the synopsis has the whole column down to the button.
                     // glcn: kept to the left half, so the picture's faces stay clear of it.
-                    DriftingSynopsis(it, modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W), style = stageText(21, 400), color = Soft, lines = SYNOPSIS_LINES, fade = true)
+                    // glcn: as many lines as fit between where it starts and the buttons fixed at the foot — a long synopsis
+                    // reads whole instead of drifting, a short one changes nothing.
+                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    val pageH = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height.toFloat()
+                    var synTop by remember(cur.id) { mutableStateOf(-1f) }
+                    val synStyle = stageText(21, if (light) 500 else 400)
+                    val fitLines = if (synTop < 0f || pageH <= 0f) SYNOPSIS_LINES else with(density) {
+                        val lineH = synStyle.fontSize.toPx() * SYNOPSIS_LINE_HEIGHT
+                        val room = pageH - synTop - (INFO_ACTIONS_BOTTOM + INFO_BUTTON_H + SYNOPSIS_CLEARANCE).toPx()
+                        (room / lineH).toInt().coerceIn(SYNOPSIS_LINES, SYNOPSIS_LINES_MAX)
+                    }
+                    DriftingSynopsis(
+                        it,
+                        modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W)
+                            .onGloballyPositioned { c -> if (synTop < 0f) synTop = c.positionInRoot().y },
+                        style = synStyle, color = Soft,
+                        lines = if (next.isNotEmpty() && NEXT_CARDS > 0) SYNOPSIS_LINES_WITH_CARDS else fitLines, fade = true,
+                    )
                 }
             }
-            // glcn: what can be done with it, right under the synopsis (no longer down at the foot past an empty page).
-            InfoActions(cur, channel, showTech, onToggleTech = { showTech = !showTech }, onStartOver, onRecord, onDismiss, focus, pageFocus)
+            // glcn: what follows on the channel, as picture cards in the room under the buttons (the first one wider).
+            if (NEXT_CARDS > 0 && next.isNotEmpty() && !showTech) NextCards(next.take(NEXT_CARDS), timeFmt, Modifier.then(slideInLeft).padding(top = 34.mpx))
         }
 
         // Right: when it airs again this week, and under it a film's cast.
@@ -399,10 +552,10 @@ fun ProgrammeInfoScreen(
         // glcn: only when it does air again — "no repeats this week" was a panel saying nothing.
         if (again.isNotEmpty()) Column(
             Modifier.then(slideInRight).fillMaxWidth()
-                .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
+                .shadow(tv.own.owntv.ui.theme.StageElevation.CARD, RoundedCornerShape(20.mpx), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f)).clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
-            Text(stringResource(R.string.glcn_pi_airs_again), style = stageText(18, 800), color = accent, maxLines = 2)
+            Text(stringResource(R.string.glcn_pi_airs_again), style = stageText(18, 800), color = accentInk, maxLines = 2)
             when {
                 else -> again.take(REPEATS_SHOWN).forEach { (a, episode) ->
                     Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
@@ -415,32 +568,33 @@ fun ProgrammeInfoScreen(
         }
         // glcn: a film's cast, in the room between the repeats and "Up next" — two rows of four, one when the repeats
         // run long (so it never reaches "Up next"); not while the technical data take that corner.
-        val cast = film?.cast.orEmpty()
+        // glcn: TMDB's cast for a film; otherwise the names the guide gives after "Reparto:" (Wikipedia lends their photos).
+        val cast = film?.cast.orEmpty().ifEmpty { guidePeople }
         if (cast.isNotEmpty() && !showTech) Column(
             Modifier.then(slideInRight).fillMaxWidth()
-                .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
+                .shadow(tv.own.owntv.ui.theme.StageElevation.CARD, RoundedCornerShape(20.mpx), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f)).clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(12.mpx),
         ) {
-            Text(stringResource(R.string.content_media_cast), style = stageText(18, 800), color = accent, maxLines = 1)
+            Text(stringResource(R.string.content_media_cast), style = stageText(18, 800), color = accentInk, maxLines = 1)
             val castRows = if (again.isNotEmpty()) 1 else 2
             cast.take(CAST_PER_ROW * castRows).chunked(CAST_PER_ROW).forEach { row ->
-                tv.own.owntv.features.shell.components.VodCast(row, CAST_PER_ROW, gap = 12.mpx)
+                CastFaces(row, face = 72.mpx, max = CAST_PER_ROW, ink = Ink, columns = CAST_PER_ROW)
             }
         }
 
         // glcn: what follows on the channel, in the same stack, right under the rest (no gap in the middle).
-        if (next.isNotEmpty() && !showTech) Column(
+        if (next.size > NEXT_CARDS && !showTech) Column(
             Modifier.then(slideInRight).fillMaxWidth()
-                .clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
+                .shadow(tv.own.owntv.ui.theme.StageElevation.CARD, RoundedCornerShape(20.mpx), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f)).clip(RoundedCornerShape(20.mpx)).background(PanelFill).padding(24.mpx),
             verticalArrangement = Arrangement.spacedBy(8.mpx),
         ) {
-            Text(stringResource(R.string.glcn_pi_next), style = stageText(18, 800), color = accent, maxLines = 1)
+            Text(stringResource(if (NEXT_CARDS == 0) R.string.glcn_pi_next else R.string.glcn_pi_later), style = stageText(18, 800), color = accentInk, maxLines = 1)
             val room = when {
                 again.isNotEmpty() && cast.isNotEmpty() -> 3
                 again.isNotEmpty() || cast.isNotEmpty() -> 4
                 else -> 7
             }
-            next.take(room).forEach { n ->
+            next.drop(NEXT_CARDS).take(room).forEach { n ->
                 Row(horizontalArrangement = Arrangement.spacedBy(14.mpx)) {
                     Text(timeFmt.format(java.util.Date(n.startMs)), style = stageText(19, 700), color = Ink, modifier = Modifier.width(84.mpx), maxLines = 1)
                     Text(n.title, style = stageText(18, 500), color = Soft, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -449,6 +603,14 @@ fun ProgrammeInfoScreen(
         }
         }
 
+        // glcn: what can be done with it — always in the same place, low on the page above the hint, wherever the
+        // synopsis ends; so ◀ ▶ through the channels never moves the buttons.
+        InfoActions(
+            cur, channel, showTech, onToggleTech = { showTech = !showTech }, onStartOver, onRecord, onDismiss, focus, pageFocus,
+            onCast = if (pageCast.isNotEmpty()) ({ castOpen = true }) else null,
+            onWatch = if (channel.id != startChannel.id && onTune != null) ({ onTune(channel) }) else null,
+            modifier = Modifier.align(Alignment.BottomStart).padding(start = 96.mpx, bottom = INFO_ACTIONS_BOTTOM).then(slide),
+        )
         if (channels.size > 1) Text(
             "◀ ▶  " + stringResource(R.string.glcn_pi_hint_channels) + "   ·   ▼  " + stringResource(R.string.glcn_pi_hint_options),
             style = stageText(15, 600), color = Dim, maxLines = 1,
@@ -470,9 +632,14 @@ private fun InfoActions(
     onDismiss: () -> Unit,
     focus: FocusRequester,
     pageFocus: FocusRequester,
+    /** Another channel's page: watch it. */
+    onWatch: (() -> Unit)? = null,
+    /** glcn: who is in it — the cast page. */
+    onCast: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        Modifier.padding(top = 30.mpx).onPreviewKeyEvent { e ->
+        modifier.onPreviewKeyEvent { e ->
             if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown && e.key == androidx.compose.ui.input.key.Key.DirectionUp) {
                 runCatching { pageFocus.requestFocus() }; true
             } else false
@@ -480,31 +647,105 @@ private fun InfoActions(
         horizontalArrangement = Arrangement.spacedBy(12.mpx),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (cur != null && onStartOver != null && channel.catchup) StageTool(
+        // glcn: real buttons (glass, the first one tinted), and ▼ lands on the first of them.
+        var first = true
+        fun lead(): Modifier = if (first) { first = false; Modifier.focusRequester(focus) } else Modifier
+        if (onWatch != null) StageButton(
+            text = stringResource(R.string.content_key_watch), onClick = onWatch, icon = OwnTVIcon.PLAY, iconFilled = true,
+            height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
+        )
+        if (cur != null && onStartOver != null && channel.catchup) StageButton(
             text = stringResource(R.string.glcn_pi_start_over), onClick = { onStartOver(channel, cur) }, icon = OwnTVIcon.REWIND,
+            height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
         )
-        if (cur != null && onRecord != null) StageTool(
+        if (cur != null && onRecord != null) StageButton(
             text = stringResource(R.string.recording_record), onClick = { onRecord(channel); onDismiss() }, icon = OwnTVIcon.REC,
+            height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
         )
-        StageTool(
+        if (onCast != null) StageButton(
+            text = stringResource(R.string.content_media_cast), onClick = onCast, icon = OwnTVIcon.PERSON,
+            height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT, modifier = lead(),
+        )
+        StageButton(
             text = stringResource(if (showTech) R.string.glcn_pi_hide_technical else R.string.glcn_pi_technical),
             onClick = onToggleTech,
             icon = OwnTVIcon.INFO,
-            modifier = Modifier.focusRequester(focus),
+            height = INFO_BUTTON_H, textSize = INFO_BUTTON_TEXT,
+            modifier = lead(),
         )
     }
 }
+
+/** glcn: the next programmes as picture cards: their picture (the guide's, or TMDB's), the time and the title. */
+@Composable
+private fun NextCards(items: List<EpgProgrammeEntity>, timeFmt: java.text.DateFormat, modifier: Modifier) {
+    Column(modifier) {
+        Text(stringResource(R.string.glcn_pi_next), style = stageText(18, 800), color = stageAccent.ink, maxLines = 1, modifier = Modifier.padding(bottom = 12.mpx))
+        Row(horizontalArrangement = Arrangement.spacedBy(18.mpx)) {
+            items.forEachIndexed { i, p ->
+                val w = if (i == 0) NEXT_CARD_FIRST_W else NEXT_CARD_W
+                Column(Modifier.width(w)) {
+                    Box(
+                        Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                            .shadow(tv.own.owntv.ui.theme.StageElevation.CARD, RoundedCornerShape(14.mpx), ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f))
+                            .clip(RoundedCornerShape(14.mpx)).background(PanelFill),
+                    ) {
+                        tv.own.owntv.ui.components.programmeArtOrTmdb(p)?.let { ProgrammeArt(url = it, modifier = Modifier.fillMaxSize()) }
+                    }
+                    Text(timeFmt.format(java.util.Date(p.startMs)), style = stageText(17, 800), color = Ink, maxLines = 1, modifier = Modifier.padding(top = 8.mpx))
+                    Text(p.title, style = stageText(17, 500), color = Soft, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+}
+
+/** glcn: how many of the next programmes show as cards, and their widths. */
+// glcn: no picture cards under the buttons — they took the synopsis's room and its first lines; what follows is the
+// right-hand list, headed "Up next".
+private const val NEXT_CARDS = 0
+private val NEXT_CARD_FIRST_W = 330.mpx
+private val NEXT_CARD_W = 250.mpx
 
 /** glcn: walking the channels — the old page leaving, the new one coming in, how far they slide, a held key's pace. */
 private const val SWAP_OUT_MS = 140
 private const val SWAP_IN_MS = 300
 private val SWAP_SHIFT = 90.mpx
 private const val QUICK_SWAP_MS = 350L
+/** glcn: how long a page change waits for the next page's picture and details before sliding in anyway. */
+private const val SWAP_READY_MS = 350L
+/** glcn: under a held key, how long a page change waits for its page (the neighbours are usually read ahead). */
+private const val QUICK_READY_MS = 120L
+/** glcn: how long a page change waits for the guide's part of the next page (read from the device). */
+private const val BASE_WAIT_MS = 120L
+/** glcn: how long a page's picture may take to come in ahead of it. */
+private const val ART_WARM_MS = 1500L
+/** glcn: how long the guide's part of a page waits for the synopsis (a single row; the details bring it later if not). */
+private const val SYNOPSIS_WAIT_MS = 250L
+/** glcn: how long a page's details wait for the week's repeats, and for each TMDB answer. */
+private const val WEEK_WAIT_MS = 4_000L
+private const val TMDB_WAIT_MS = 4_000L
+/** glcn: page reads slower than this are noted in the report. */
+private const val SLOW_PAGE_MS = 400L
+private const val SLOW_EXTRAS_MS = 3_000L
+/** glcn: faces read ahead with a page, and for how long at most. */
+private const val CAST_WARM = 8
+private const val CLOCK_TICK_MS = 15_000L
+private const val CAST_WARM_MS = 250L
+/** glcn: after a page has slid in, how long its picture, shade and tint still settle (counted as part of the swap). */
+private const val SWAP_SETTLE_MS = 700L
+private fun nowMsForSwap() = System.currentTimeMillis()
 /** glcn: how long a page rests before the channels either side are read ahead. */
 private const val PREFETCH_DELAY_MS = 250L
 
 /** glcn: the synopsis' lines, now that the cast is on the right. */
 private const val SYNOPSIS_LINES = 9
+/** glcn: the most a long synopsis may take, down to the buttons; the room left above them, and its line height. */
+private const val SYNOPSIS_LINES_MAX = 18
+private val SYNOPSIS_CLEARANCE = 30.mpx
+private const val SYNOPSIS_LINE_HEIGHT = 1.4f
+/** glcn: fewer, with the next programmes as cards under the buttons (the synopsis drifts to show the rest). */
+private const val SYNOPSIS_LINES_WITH_CARDS = 5
 private val SYNOPSIS_W = 860.mpx
 /** glcn: the cast panel on the right: four a row, two rows unless the repeats above take more than this many lines. */
 private const val CAST_PER_ROW = 4
@@ -514,6 +755,14 @@ private val WINDOW_W = 420.mpx
 private val WINDOW_H = 236.mpx
 /** glcn: repeats listed under the window, so the column never reaches "Up next". */
 private const val REPEATS_SHOWN = 3
+
+/** glcn: the page's buttons, as the guide's. */
+private val INFO_BUTTON_H = 56.mpx
+/** glcn: the buttons' fixed place, from the foot of the page (the hint line sits under them). */
+private val INFO_ACTIONS_BOTTOM = 76.mpx
+private const val INFO_BUTTON_TEXT = 19
+/** glcn: the shade until the picture has been read — the old fixed one. */
+private const val VEIL_UNREAD = 0.82f
 
 /** glcn: how many programmes "Up next" lists. */
 private const val NEXT_MAX = 6
@@ -547,4 +796,83 @@ object InfoStage {
         val top = 150f * sy
         return androidx.compose.ui.geometry.Rect(left, top, left + 420f * sx, top + 236f * sy)
     }
+}
+
+/** glcn: the page's backdrop — the film's wide picture, else TMDB's for the programme, else the guide's own. */
+private fun pageArt(
+    film: tv.own.owntv.core.metadata.MovieDetails?,
+    lent: ProgrammeArtResolver.Info?,
+    cur: EpgProgrammeEntity?,
+): String? = film?.backdropPath?.let { tv.own.owntv.core.metadata.MetadataImages.backdrop(it, "w1280") }
+    ?: lent?.backdropUrl ?: cur?.imageUrl?.takeIf { it.isNotBlank() }
+
+/** glcn: one page of the programme screen, read in one go — see ProgrammeInfoScreen's loadPage. */
+private data class InfoPage(
+    val channelId: Long,
+    val rows: List<EpgProgrammeEntity>,
+    val again: List<Pair<EpgProgrammeEntity, String?>> = emptyList(),
+    val synopsis: String? = null,
+    val lent: ProgrammeArtResolver.Info? = null,
+    val titleLogo: String? = null,
+    val film: tv.own.owntv.core.metadata.MovieDetails? = null,
+    val complete: Boolean = false,
+    /** The start of the programme the details (TMDB, repeats) were read for; null when nothing was on. */
+    val forStart: Long? = null,
+    /** Still being read (shown as an empty page, not as "no guide"). */
+    val loading: Boolean = false,
+) {
+    /** The programme on air at [at]: with overlapping guides, the one that started last. */
+    fun onAir(at: Long): EpgProgrammeEntity? = rows.filter { at in it.startMs until it.stopMs }.maxByOrNull { it.startMs }
+
+    /** Read whole, and for the programme that is on at [at] — not for the one before it. */
+    fun fresh(at: Long): Boolean = complete && forStart != null && onAir(at)?.startMs == forStart
+}
+
+/** glcn: [block]'s answer, or null when it fails — but never swallowing a cancellation, which must end the read. */
+private inline fun <T> quiet(block: () -> T): T? = try {
+    block()
+} catch (c: kotlinx.coroutines.CancellationException) {
+    throw c
+} catch (_: Throwable) {
+    null
+}
+
+/**
+ * glcn: the player banner's now/next as guide rows, for [ProgrammeInfoScreen]'s first frame: what is on (with its
+ * synopsis and the details the guide gave) and what follows. Empty when the banner knows nothing.
+ */
+fun infoSeed(epg: tv.own.owntv.core.live.EpgNowNext?): List<EpgProgrammeEntity> {
+    val now = epg?.now ?: return emptyList()
+    fun row(e: tv.own.owntv.core.parser.XtEpgEntry, d: tv.own.owntv.core.parser.EpgDetails? = null) = EpgProgrammeEntity(
+        id = e.programmeId, sourceId = 0L, epgChannelId = String(), startMs = e.startMs, stopMs = e.stopMs, title = e.title,
+        description = e.description, categories = d?.categories, year = d?.year, rating = d?.rating,
+        lengthMin = d?.lengthMin, episode = d?.episode, imageUrl = d?.imageUrl,
+    )
+    return (listOf(row(now, epg.nowDetails)) + (listOfNotNull(epg.next) + epg.upcoming).map { row(it) })
+        .distinctBy { it.startMs }.sortedBy { it.startMs }
+}
+
+/**
+ * glcn: when [cur] airs again this week. A daily show changes its title every night ("El hormiguero T21 · <guests>"),
+ * so a show is also found by its own name — the title without the episode, the season and what follows " · ". Never
+ * for sport (a league's name is the same for every match) nor for a name too short to tell shows apart.
+ */
+private fun airsAgain(cur: EpgProgrammeEntity, week: List<EpgProgrammeEntity>): List<Pair<EpgProgrammeEntity, String?>> {
+    val exact = ProgrammeArtResolver.fold(cur.title)
+    val show = ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(cur.title))
+    val byShow = show.length >= 4 && show != exact && !tv.own.owntv.core.live.SportsNow.isSport(cur)
+    return week
+        .filter { it.startMs >= cur.stopMs }
+        .mapNotNull { p ->
+            val t = ProgrammeArtResolver.fold(p.title)
+            when {
+                t == exact -> p to null
+                byShow && !tv.own.owntv.core.live.SportsNow.isSport(p) &&
+                    ProgrammeArtResolver.fold(ProgrammeArtResolver.clean(p.title)) == show ->
+                    p to p.title.substringAfter(" · ", "").trim().takeIf { it.isNotBlank() }
+                else -> null
+            }
+        }
+        .distinctBy { it.first.startMs }
+        .take(7)
 }

@@ -55,7 +55,7 @@ class SlideFocusState {
     var origin = Offset.Zero
     val alpha = Animatable(0f)
     /** How briskly the box glides (spring stiffness): menus snap, Home's rows take their time. */
-    var stiffness = 700f
+    var stiffness = 950f
     /** glcn: below 1 the box overshoots a touch and settles back — an elastic glide (Home's rows). */
     var damping = 1f
     /** glcn: the box stretches as it goes — its leading edge gets there first, the trailing one follows (menu bars). */
@@ -179,7 +179,9 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
                 if (rect != Rect.Zero) st.live = rect
                 scope.launch(start = CoroutineStart.UNDISPATCHED) {
                     st.glide.snapTo(1f)
-                    st.glide.animateTo(0f, spring(dampingRatio = st.damping, stiffness = st.stiffness))
+                    // glcn: Animations Off — the box is simply there; Subtle — it slides and stops, without give.
+                    if (anim) st.glide.animateTo(0f, spring(dampingRatio = if (tv.own.owntv.ui.stage.GlcnMotion.subtle) 1f else st.damping, stiffness = st.stiffness))
+                    else st.glide.snapTo(0f)
                 }
                 // glcn: the card's pop — from rest, a little past [pop] and back (none with animations off).
                 scope.launch(start = CoroutineStart.UNDISPATCHED) {
@@ -204,8 +206,8 @@ fun Modifier.slidePop(st: SlideFocusState?, focused: Boolean): Modifier =
     }
 
 /** glcn: the channel lists' highlight (TV en directo): brisk, clearly springy — it passes the row by about an eighth and settles back, like a launcher's tiles. */
-const val CHANNEL_FOCUS_STIFFNESS = 480f
-const val CHANNEL_FOCUS_DAMPING = 0.55f
+const val CHANNEL_FOCUS_STIFFNESS = 760f
+const val CHANNEL_FOCUS_DAMPING = 0.76f
 
 /** glcn: a launcher-like pop — a small overshoot (about 6 % past the step), settled in a quarter of a second. */
 private const val POP_DAMPING = 0.55f

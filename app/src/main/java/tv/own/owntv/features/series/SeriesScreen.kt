@@ -2,6 +2,7 @@
 
 package tv.own.owntv.features.series
 
+import tv.own.owntv.glcn.runwayPage
 import tv.own.owntv.ui.components.onDpadLeft
 import tv.own.owntv.ui.stage.backdropLeftWash
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -18,6 +19,7 @@ import androidx.compose.ui.layout.layout
 import tv.own.owntv.features.categorylock.focusListAfterSheet
 import tv.own.owntv.features.live.LiveCategories
 import tv.own.owntv.core.live.ProviderTags
+import tv.own.owntv.core.live.hasFixedOrder
 import tv.own.owntv.features.live.edgeScrollSpec
 import tv.own.owntv.features.shell.components.VodCinematicBackdrop
 import tv.own.owntv.features.shell.components.VodDetailsCard
@@ -32,6 +34,7 @@ import tv.own.owntv.features.shell.components.VodOptionsMenu
 import tv.own.owntv.features.shell.components.VodPosterArt
 import tv.own.owntv.features.shell.components.VodSortMenu
 import tv.own.owntv.features.shell.components.VodSortTool
+import tv.own.owntv.features.shell.components.VodFixedSortTool
 import tv.own.owntv.features.shell.components.VodStepper
 import tv.own.owntv.features.shell.components.VodTitleInfo
 import tv.own.owntv.features.shell.components.cinematicQualityBadges
@@ -194,7 +197,7 @@ fun SeriesScreen(
     // first page on the way back, so a show further down is found only after scrolling there again.
     var returnToIndex by remember { mutableIntStateOf(-1) }
 
-    if (openedSeries != null) {
+    if (openedSeries != null) androidx.compose.runtime.key(openedSeries!!.id) { tv.own.owntv.glcn.TitleZoomBox(modifier) {
         EpisodeView(
             series = openedSeries!!,
             vm = vm,
@@ -202,9 +205,9 @@ fun SeriesScreen(
             onChildFocused = onChildFocused,
             restoreFocus = restoreFocus,
             onRestored = onRestored,
-            modifier = modifier,
+            modifier = Modifier.fillMaxSize(),
         )
-    } else {
+    } } else {
         // Not in a show → nothing episode-specific to restore; clear the flag so it doesn't linger.
         if (restoreFocus) onRestored()
         SeriesGrid(
@@ -339,9 +342,20 @@ private fun SeriesGrid(
     var runwayAt by androidx.compose.runtime.saveable.rememberSaveable(selectedKey) { androidx.compose.runtime.mutableIntStateOf(0) }
     var runwayWindow by remember { mutableStateOf(0..0) }
     val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
+    // glcn: "Keep watching" above the posters, in All, while something is under way (the strip is the lists' first item).
+    val stripShows by vm.continueStrip.collectAsStateWithLifecycle()
+    // glcn: the menu opened from a card of Keep watching (it adds "seen" and "out of Keep watching"), and the Runway's page.
+    var stripMenu by remember { mutableStateOf<tv.own.owntv.features.series.SeriesViewModel.StripShow?>(null) }
+    var stripHasFocus by remember { mutableStateOf(false) }
+    val stripFocus = remember { tv.own.owntv.glcn.StripFocus() }
+    val runwayScroll = androidx.compose.foundation.rememberScrollState()
+    remember { tv.own.owntv.glcn.StripDismissed.ensure(context) }
+    val showStrip = tv.own.owntv.glcn.StripPref.on && stripShows.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
+    val showStripNow by androidx.compose.runtime.rememberUpdatedState(showStrip)
+    val stripOffset = if (showStrip && !runway) 1 else 0
     suspend fun scrollToIndex(i: Int) {
         if (runway) { runwayAt = i; return }
-        runCatching { if (usesList) effectiveListState.scrollToItem(i) else effectiveGridState.scrollToItem(i) }
+        runCatching { if (usesList) effectiveListState.scrollToItem(i + stripOffset) else effectiveGridState.scrollToItem(i + stripOffset) }
     }
     val stepper = remember { VodStepper(scope) { effectiveListState } }
     val playlistMarks by vm.playlistMarks.collectAsStateWithLifecycle()
@@ -440,6 +454,25 @@ private fun SeriesGrid(
         // this effect re-runs when the whole flow closes and restores the row below.
         if (moveItem != null || creatingCategory || moveState != null) return@LaunchedEffect
 
+        // glcn: a menu opened from Keep watching gives the focus back to the strip (the card it was on, or the first
+        // when that one left) — it went to the show's poster further down the row, a long way from the start.
+        if (stripMenu != null) {
+            stripMenu = null
+            if (showStrip) {
+                withFrameNanos { }
+                // Held for a moment: the card may still leave (seen, removed) and the focus stays on its place.
+                stripFocus.hold()
+                // The menu still holds the focus for some frames as it closes and refuses the first asks: keep asking
+                // until the strip has it — giving up at once sent the focus to the title's poster instead.
+                var got = false
+                for (attempt in 0 until STRIP_FOCUS_TRIES) {
+                    if (!showStripNow) break
+                    if (stripFocus.focus() || stripHasFocus) { got = true; break }
+                    withFrameNanos { }
+                }
+                if (got) { contextSeriesIndex = -1; return@LaunchedEffect }
+            }
+        }
         val targetId = contextSeriesId
         if (targetId == null) { contextSeriesIndex = -1; return@LaunchedEffect }
         val items = series.itemSnapshotList.items
@@ -601,10 +634,46 @@ private fun SeriesGrid(
         val idx = series.itemSnapshotList.items.indexOfFirst { it.id == id }
         if (idx >= 0) runwayAt = idx
     }
-    val openMenu: (tv.own.owntv.core.database.entity.SeriesEntity, Int) -> Unit = { show, index -> contextSeries = show; contextSeriesId = show.id; contextSeriesIndex = index }
+    val openMenu: (tv.own.owntv.core.database.entity.SeriesEntity, Int) -> Unit = { show, index -> if (index >= 0) stripMenu = null; contextSeries = show; contextSeriesId = show.id; contextSeriesIndex = index }
     val onShowFocus: (tv.own.owntv.core.database.entity.SeriesEntity) -> Unit = { show ->
         vm.onSeriesFocused(show)
         if (rememberSeries) perCategorySeriesIds[selectedKey] = show.id
+    }
+    val stripCards = stripShows.map { st ->
+        tv.own.owntv.glcn.StripCard(
+            key = st.series.id, title = st.series.name, image = st.series.backdropUrl ?: st.series.posterUrl,
+            line = if (st.season > 0 || st.episode > 0) stringResource(R.string.glcn_cine_episode_code, st.season, st.episode) else null,
+            progress = st.progress,
+        )
+    }
+    // glcn: ▲ from the first row of posters goes to Keep watching — scrolled away, the grid's own search did not find it.
+    // glcn: the last card left the strip while it had the focus: the posters take it.
+    LaunchedEffect(showStrip) {
+        if (!showStrip && stripFocus.holding) { withFrameNanos { }; focusCurrentTitleNow() }
+    }
+    val toStrip: () -> Boolean = {
+        if (!showStrip || runway) false else {
+            scope.launch {
+                runCatching {
+                    if (tv.own.owntv.glcn.SmoothScroll.still) { if (usesList) effectiveListState.scrollToItem(0) else effectiveGridState.scrollToItem(0) }
+                    else if (usesList) effectiveListState.animateScrollToItem(0) else effectiveGridState.animateScrollToItem(0)
+                }
+                withFrameNanos { }
+                stripFocus.focus()
+            }
+            true
+        }
+    }
+    val continueStrip: @Composable (androidx.compose.ui.unit.Dp, androidx.compose.ui.unit.Dp) -> Unit = { start, end ->
+        tv.own.owntv.glcn.ContinueStrip(
+            stripCards, start, end,
+            onFocus = { i -> stripShows.getOrNull(i)?.let { vm.onSeriesFocused(it.series) } },
+            // OK opens the show's page, where Play goes on with the episode it stands at.
+            onClick = { i -> stripShows.getOrNull(i)?.let { vm.openSeries(it.series) } },
+            onLongClick = { i -> stripShows.getOrNull(i)?.let { stripMenu = it; openMenu(it.series, -1) } },
+            modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus },
+            focus = stripFocus,
+        )
     }
     val posterOf: (tv.own.owntv.core.database.entity.SeriesEntity) -> String? = {
         val own = it.posterUrl?.takeIf { u -> u.isNotBlank() }
@@ -727,7 +796,7 @@ private fun SeriesGrid(
                             modifier = Modifier.width(440.mpx).focusRequester(listSearchFocus).then(searchLeft),
                             onEditingChange = { searchEditing = it },
                         )
-                        VodSortTool(sortMode, Modifier.focusRequester(sortFocus)) { sortOpen = true }
+                        VodSortTool(sortMode, selectedKey.hasFixedOrder, Modifier.focusRequester(sortFocus)) { sortOpen = true }
                         StageTool(text = stringResource(R.string.content_category_browser_title), icon = OwnTVIcon.LIST, onClick = { categoriesOpen = true })
                         Spacer(Modifier.weight(1f))
                         StageKeyHints(listOf(playHint, optionsHint))
@@ -746,6 +815,9 @@ private fun SeriesGrid(
                         val glide = remember(effectiveGridState) { tv.own.owntv.glcn.GlideScroller(effectiveGridState, glideScope) }
                         if (runway) {
                             Spacer(Modifier.height(10.mpx))
+                            tv.own.owntv.glcn.RunwayPageFollow(runwayScroll, showStrip && stripHasFocus)
+                            Column(Modifier.weight(1f).fillMaxWidth().runwayPage(runwayScroll)) {
+                            if (showStrip) continueStrip(fx(84), fx(64))
                             tv.own.owntv.glcn.PosterRunway(
                                 count = series.itemCount,
                                 focusedAt = runwayAt.coerceIn(0, (series.itemCount - 1).coerceAtLeast(0)),
@@ -774,7 +846,8 @@ private fun SeriesGrid(
                                             )
                                             .onFocusChanged { if (it.isFocused) { onShowFocus(show); runwayAt = index } }
                                             .onPreviewKeyEvent { e ->
-                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true } else false
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true }
+                                                else e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && index < columns && toStrip()
                                             },
                                     ) {
                                         VodPosterArt(posterOf(show), OwnTVIcon.SERIES)
@@ -785,6 +858,7 @@ private fun SeriesGrid(
                                         )
                                     }
                                 }
+                            }
                             }
                         } else
                         CompositionLocalProvider(LocalBringIntoViewSpec provides tv.own.owntv.glcn.NoBringIntoViewSpec) {
@@ -797,8 +871,17 @@ private fun SeriesGrid(
                                     contentPadding = PaddingValues(start = fx(84), end = fx(64), top = 14.mpx, bottom = glowRoom),
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
+                                    if (showStrip) item(key = STRIP_KEY, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }, contentType = STRIP_KEY) {
+                                        // The strip spans the row, bleeding to the grid's edges.
+                                        Box(Modifier.layout { m, c ->
+                                            val bleed = (fx(84) + fx(64)).roundToPx()
+                                            val pl = m.measure(c.copy(minWidth = c.maxWidth + bleed, maxWidth = c.maxWidth + bleed))
+                                            layout(c.maxWidth, pl.height) { pl.place(-fx(84).roundToPx(), 0) }
+                                        }) { continueStrip(fx(84), fx(64)) }
+                                    }
                                     items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
-                                        val show = series[index] ?: return@items
+                                        // glcn: a poster still on its way shows its shape, shimmering, instead of a gap.
+                                        val show = series[index] ?: run { tv.own.owntv.glcn.SkeletonPoster(); return@items }
                                         StagePoster(
                                             title = show.name,
                                             badges = androidx.compose.runtime.remember(show.name, show.qualityRank, show.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(show.name, show.qualityRank, show.advertisedCapabilities) },
@@ -816,11 +899,12 @@ private fun SeriesGrid(
                                                     selectedId = targetSeriesId, selectedFocus = gridSelFocus,
                                                     firstItemFocus = firstItemFocus,
                                                 )
-                                                .onFocusChanged { if (it.isFocused) { onShowFocus(show); glide.focused(index) } }
+                                                .onFocusChanged { if (it.isFocused) { onShowFocus(show); glide.focused(index + stripOffset) } }
                                                 .onPreviewKeyEvent { e ->
                                                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                     when (e.key) {
                                                         Key.Menu -> { openMenu(show, index); true }
+                                                        Key.DirectionUp -> index < columns && toStrip()
                                                         // ◀ from the first column goes to the menu; categories open from their button or a shortcut.
                                                         else -> false
                                                     }
@@ -886,7 +970,11 @@ private fun SeriesGrid(
                         modifier = Modifier.weight(1f).focusRequester(listSearchFocus).then(searchLeft),
                         onEditingChange = { searchEditing = it },
                     )
-                    StageTool(text = null, icon = OwnTVIcon.SORT, value = vodSortLabel(sortMode), trailingIcon = OwnTVIcon.CHEVRON_DOWN, onClick = { sortOpen = true }, modifier = Modifier.focusRequester(sortFocus))
+                    if (selectedKey.hasFixedOrder) {
+                        VodFixedSortTool(Modifier.focusRequester(sortFocus))
+                    } else {
+                        StageTool(text = null, icon = OwnTVIcon.SORT, value = vodSortLabel(sortMode), trailingIcon = OwnTVIcon.CHEVRON_DOWN, onClick = { sortOpen = true }, modifier = Modifier.focusRequester(sortFocus))
+                    }
                     StageSegmented(
                         options = listOf(stringResource(R.string.settings_view_grid), stringResource(R.string.settings_view_list)),
                         selected = if (viewMode == SettingsRepository.VodViewMode.LIST) 1 else 0,
@@ -915,6 +1003,7 @@ private fun SeriesGrid(
                             contentPadding = PaddingValues(start = glowRoom, end = glowRoom, bottom = 16.mpx),
                             modifier = Modifier.fillMaxWidth().weight(1f).then(glowWide),
                         ) {
+                            if (showStrip) item(key = STRIP_KEY, contentType = STRIP_KEY) { continueStrip(0.mpx, 0.mpx) }
                             items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
                                 val show = series[index] ?: return@items
                                 VodListRow(
@@ -942,7 +1031,7 @@ private fun SeriesGrid(
                                                 Key.DirectionLeft -> !locked && run { runCatching { railFocus.requestFocus() }; true }
                                                 // Step by row number: a held key outran the paged list and stopped (playbook 2).
                                                 Key.DirectionDown -> (stepper.target ?: index).let { from -> from + 1 < series.itemCount && run { stepper.stepTo(from + 1); true } }
-                                                Key.DirectionUp -> (stepper.target ?: index).let { from -> from > 0 && run { stepper.stepTo(from - 1); true } }
+                                                Key.DirectionUp -> (stepper.target ?: index).let { from -> if (from > 0) { stepper.stepTo(from - 1); true } else toStrip() }
                                                 else -> false
                                             }
                                         },
@@ -966,8 +1055,12 @@ private fun SeriesGrid(
                                 contentPadding = PaddingValues(start = glowRoom, end = glowRoom, top = 12.mpx, bottom = 24.mpx),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
+                                if (showStrip) item(key = STRIP_KEY, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }, contentType = STRIP_KEY) {
+                                    continueStrip(0.mpx, 0.mpx)
+                                }
                                 items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
-                                    val show = series[index] ?: return@items
+                                    // glcn: a poster still on its way shows its shape, shimmering, instead of a gap.
+                                    val show = series[index] ?: run { tv.own.owntv.glcn.SkeletonPoster(); return@items }
                                     StagePoster(
                                         title = show.name,
                                         badges = androidx.compose.runtime.remember(show.name, show.qualityRank, show.advertisedCapabilities) { tv.own.owntv.features.shell.components.posterQualityBadges(show.name, show.qualityRank, show.advertisedCapabilities) },
@@ -988,7 +1081,8 @@ private fun SeriesGrid(
                                             )
                                             .onFocusChanged { if (it.isFocused) onShowFocus(show) }
                                             .onPreviewKeyEvent { e ->
-                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true } else false
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true }
+                                                else e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && index < columns && toStrip()
                                             },
                                     ) { VodPosterArt(posterOf(show), OwnTVIcon.SERIES) }
                                 }
@@ -1054,7 +1148,17 @@ private fun SeriesGrid(
         val trailerKey = if (metadataMode.enrich) cacheForS?.trailerKey else null
         val inHistory by androidx.compose.runtime.produceState(selectedKey == LiveKey.History, s.id) { value = vm.isInHistory(s) }
         val canMove = selectedKey is LiveKey.Folder || selectedKey is LiveKey.Custom || selectedKey == LiveKey.Favorites
+        val fromStrip = stripMenu?.takeIf { it.series.id == s.id }
         val actions = buildList {
+            // glcn: from a card of Keep watching — the whole show seen, or out of the strip for good.
+            if (fromStrip != null) {
+                add(MenuAction("strip_watched", stringResource(R.string.glcn_mark_series_watched), OwnTVIcon.CHECK, group = VodGroupWatch) {
+                    vm.markShowWatched(s); contextSeries = null
+                })
+                add(MenuAction("strip_remove", stringResource(R.string.glcn_remove_from_continue), OwnTVIcon.EYE_OFF, group = VodGroupWatch) {
+                    vm.dismissFromStrip(context, fromStrip); contextSeries = null
+                })
+            }
             // glcn: the trailer playing behind the page — its sound, for remotes without Play/Pause.
             if (tv.own.owntv.features.home.CinemaTrailer.playing != null) add(MenuAction(
                 "trailer_sound",
@@ -1122,7 +1226,7 @@ private fun SeriesGrid(
                 "remove_history".takeIf { !inHistory },
                 "tmdb_details".takeIf { !(metadataMode.enrich && cacheForS != null) },
             ),
-            firstFocusKey = if (tv.own.owntv.features.home.CinemaTrailer.playing != null) "trailer_sound" else "favourite",
+            firstFocusKey = if (fromStrip != null) "strip_watched" else if (tv.own.owntv.features.home.CinemaTrailer.playing != null) "trailer_sound" else "favourite",
             onDismiss = { contextSeries = null },
         )
     }
@@ -1908,6 +2012,22 @@ private fun EpisodeView(
                 contextEpisode = null
                 if (watched) vm.markEpisodeUnwatched(ep) else vm.markEpisodeWatched(ep)
             })
+            // glcn: the whole season, and the whole show, at once — each toggles by whether all of it is seen.
+            val seasonEps = episodes.filter { it.seasonNumber == ep.seasonNumber }
+            if (seasonEps.size > 1) {
+                val seasonSeen = seasonEps.all { it.id in completedIds }
+                add(MenuAction("mark_season", stringResource(if (seasonSeen) R.string.glcn_mark_season_unwatched else R.string.glcn_mark_season_watched, ep.seasonNumber), OwnTVIcon.CHECK, group = VodGroupLibrary) {
+                    contextEpisode = null
+                    vm.markEpisodesWatched(seasonEps, !seasonSeen)
+                })
+            }
+            if (episodes.map { it.seasonNumber }.distinct().size > 1) {
+                val showSeen = episodes.all { it.id in completedIds }
+                add(MenuAction("mark_series", stringResource(if (showSeen) R.string.glcn_mark_series_unwatched else R.string.glcn_mark_series_watched), OwnTVIcon.CHECK, group = VodGroupLibrary) {
+                    contextEpisode = null
+                    vm.markEpisodesWatched(episodes, !showSeen)
+                })
+            }
             add(MenuAction("tmdb_details", stringResource(R.string.content_episode_details), OwnTVIcon.INFO, group = VodGroupDetails) {
                 if (metadataMode.enrich && cacheForEp != null) { contextEpisode = null; detailsEpisode = ep }
             })
@@ -2194,3 +2314,9 @@ private fun episodeLine(aired: String?, durationSecs: Int?, secondsLeft: Int?, w
 private val SEASON_GHOST_SIZE = 380.mpx
 private val SEASON_GHOST_TOP = 560.mpx
 private val SEASON_GHOST_START = 1260.mpx
+
+/** glcn: the Keep watching strip's key in the lists (never a show id). */
+private const val STRIP_KEY = "glcn_strip"
+
+/** glcn: frames the strip is asked for the focus after its menu closes (about half a second). */
+private const val STRIP_FOCUS_TRIES = 30

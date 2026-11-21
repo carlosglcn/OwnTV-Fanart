@@ -510,7 +510,7 @@ fun PanelStepper(
         ) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 22.mpx), verticalAlignment = Alignment.CenterVertically) {
                 OwnTVIcon(OwnTVIcon.CHEVRON, StageColors.Muted, Modifier.size(26.mpx).graphicsLayer { rotationZ = 180f })
-                Text(value, style = stageText(36, 800), color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.weight(1f))
+                Text(value, style = stageText(36, 800), color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.weight(1f))
                 OwnTVIcon(OwnTVIcon.CHEVRON, StageColors.Muted, Modifier.size(26.mpx))
             }
         }
@@ -568,7 +568,7 @@ fun PopupSizeSample(sizePercent: Int) {
                     Text(stringResource(R.string.common_cancel), style = stageText(19, 700), color = a.onAccent, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
                 Box(Modifier.height(56.mpx).background(a.accent.copy(alpha = 0.2f), RoundedCornerShape(StageRadii.Button)).padding(horizontal = 26.mpx), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.common_exit), style = stageText(19, 700), color = a.accent, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Text(stringResource(R.string.common_exit), style = stageText(19, 700), color = a.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
             }
         }
@@ -708,7 +708,8 @@ fun StageSettingRow(
                     )
                 }
             }
-            if (value != null) androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.stage.LocalStageLit provides focused) { SettingValueView(value) }
+            // A disabled row's "−" / "+" must not change it either.
+            if (value != null) androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.stage.LocalStageLit provides focused) { SettingValueView(value, onStep.takeIf { enabled }) }
         }
     }
 }
@@ -738,7 +739,7 @@ internal fun StageRowBadge(text: String, filled: Boolean, lit: Boolean = false) 
 }
 
 @Composable
-private fun SettingValueView(value: SettingValue) {
+private fun SettingValueView(value: SettingValue, onStep: ((Int) -> Unit)?) {
     val a = stageAccent
     val lit = tv.own.owntv.ui.stage.LocalStageLit.current
     val valueStyle = stageText(18, 700)
@@ -756,12 +757,12 @@ private fun SettingValueView(value: SettingValue) {
                 }
                 OwnTVIcon(OwnTVIcon.CHEVRON, if (lit) a.onAccent.copy(alpha = 0.8f) else StageColors.Muted, Modifier.size(20.mpx))
             }
-            is SettingValue.Stepper -> StageStepper(value.text)
+            is SettingValue.Stepper -> StageStepper(value.text, onStep)
             is SettingValue.Segmented -> SegmentedDisplay(value.options, value.selected)
             is SettingValue.Saved -> {
-                Text(value.text, style = valueStyle, color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(value.text, style = valueStyle, color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (value.any) {
-                    Text("·", style = valueStyle, color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.offset(x = (-4).mpx))
+                    Text("·", style = valueStyle, color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.offset(x = (-4).mpx))
                     Text(stringResource(R.string.common_reset), style = valueStyle, color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -1052,7 +1053,8 @@ fun StageFieldRow(
             if (password && lit && !editing && panel == null) {
                 Text("▶ " + stringResource(if (shown) R.string.common_hide else R.string.common_show), style = stageText(18, 700), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            if (lit && !editing) Text(stringResource(R.string.common_edit), style = stageText(18, 700), color = a.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // glcn: always there, quiet until the row is lit — a field that can be changed says so before it is reached.
+            if (!editing) Text(stringResource(R.string.common_edit), style = stageText(18, 700), color = if (lit) a.ink else StageColors.Muted.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
