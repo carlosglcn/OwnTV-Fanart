@@ -151,4 +151,11 @@
     <string name="glcn_shelf_rated">Best rated</string>
     <string name="glcn_shelf_recent">Recent releases</string>
     <string name="glcn_shelf_popular">Popular now</string>
+    <string name="glcn_top_bar_shape_title">Top bar shape</string>
+    <string name="glcn_top_bar_shape_desc">How the top bar is drawn (with Navigation set to Top bar). Each press moves on to the next: Capsule, Island, Tabs, Pills, Icons.</string>
+    <string name="glcn_top_bar_capsule">Capsule</string>
+    <string name="glcn_top_bar_island">Island</string>
+    <string name="glcn_top_bar_tabs">Tabs</string>
+    <string name="glcn_top_bar_pills">Pills</string>
+    <string name="glcn_top_bar_icons">Icons</string>
 </resources>

@@ -153,4 +153,11 @@
     <string name="glcn_shelf_rated">Mejor valoradas</string>
     <string name="glcn_shelf_recent">Estrenos recientes</string>
     <string name="glcn_shelf_popular">Populares ahora</string>
+    <string name="glcn_top_bar_shape_title">Forma de la barra superior</string>
+    <string name="glcn_top_bar_shape_desc">Cómo se dibuja la barra superior (con Navegación en Barra superior). Cada pulsación pasa a la siguiente: Cápsula, Isla, Pestañas, Píldoras, Iconos.</string>
+    <string name="glcn_top_bar_capsule">Cápsula</string>
+    <string name="glcn_top_bar_island">Isla</string>
+    <string name="glcn_top_bar_tabs">Pestañas</string>
+    <string name="glcn_top_bar_pills">Píldoras</string>
+    <string name="glcn_top_bar_icons">Iconos</string>
 </resources>

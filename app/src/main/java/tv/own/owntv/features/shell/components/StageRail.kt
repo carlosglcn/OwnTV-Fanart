@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.layout.onSizeChanged
+import tv.own.owntv.ui.theme.mpxSp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -579,9 +581,16 @@ fun StageTopBar(
     /** glcn: the bar's size (Compact = icons only, the open section keeps its name) and its Floating state. */
     size: NavSize = NavSize.NORMAL,
     hidden: Boolean = false,
+    /** glcn: where the free width ends on the right (the status pills' left edge, in the window), for a centred bar. */
+    freeRight: Float? = null,
 ) {
     val scope = rememberCoroutineScope()
     var hasFocus by remember { mutableStateOf(false) }
+    // glcn: how the bar is drawn (Settings › Layout › Top bar shape) — see TopBarShape.
+    val shape = tv.own.owntv.glcn.TopBarPref.shape
+    val capsule = shape == tv.own.owntv.glcn.TopBarShape.CAPSULE
+    var rootW by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var barW by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     val compact = size == NavSize.COMPACT
     // 1.0 at Normal; Wide and Extra wide grow the bar and its type.
     val k = when (size) { NavSize.WIDE -> 1.14f; NavSize.EXTRA_WIDE -> 1.28f; else -> 1f }
@@ -604,11 +613,41 @@ fun StageTopBar(
         }
         Unit
     }
-    Box(modifier.fillMaxSize()) {
-        Row(
+    val palette = tv.own.owntv.ui.theme.LocalStagePalette.current
+    // The island's glass comes with the focus; tabs and pills have none of their own.
+    val glassIn by androidx.compose.animation.core.animateFloatAsState(
+        when (shape) {
+            tv.own.owntv.glcn.TopBarShape.CAPSULE, tv.own.owntv.glcn.TopBarShape.ICONS -> 1f
+            tv.own.owntv.glcn.TopBarShape.ISLAND -> if (hasFocus) 1f else 0f
+            else -> 0f
+        },
+        label = "topBarGlass",
+    )
+    val edgePx = with(androidx.compose.ui.platform.LocalDensity.current) { 40.mpx.toPx() }
+    val topPx = with(androidx.compose.ui.platform.LocalDensity.current) { 34.mpx.toPx() }
+    val logoRoomPx = with(androidx.compose.ui.platform.LocalDensity.current) { (sc(44) + 20).mpx.toPx() }
+    Box(modifier.fillMaxSize().onSizeChanged { rootW = it.width }) {
+        // Tabs: bare names need something behind them over a bright picture — a veil that fades down from the top.
+        if (shape == tv.own.owntv.glcn.TopBarShape.TABS) Box(
+            Modifier.fillMaxWidth().height(TOP_BAR_VEIL.mpx).graphicsLayer { alpha = shown }
+                .background(Brush.verticalGradient(listOf(palette.page.copy(alpha = 0.74f), palette.page.copy(alpha = 0f)))),
+        )
+        if (shape.centred) BrandMark(
+            rememberAppliedIcon(), sc(44).mpx,
+            Modifier.align(Alignment.TopStart).offset(x = 40.mpx, y = (34 + (sc(68) - sc(44)) / 2).mpx).graphicsLayer { alpha = shown },
+        )
+        Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = 40.mpx, y = 34.mpx)
+                .offset {
+                    val x = if (!shape.centred) edgePx else {
+                        val left = edgePx + logoRoomPx
+                        val right = freeRight ?: (rootW - edgePx)
+                        ((left + right - barW) / 2f).coerceAtLeast(left)
+                    }
+                    androidx.compose.ui.unit.IntOffset(x.toInt(), topPx.toInt())
+                }
+                .onSizeChanged { barW = it.width }
                 .graphicsLayer { alpha = shown; translationY = -(1f - shown) * 60.dp.toPx() }
                 .height(sc(68).mpx)
                 .onGloballyPositioned { onBarBounds(it.boundsInWindow()) }
@@ -631,14 +670,48 @@ fun StageTopBar(
                     if (e.type == KeyEventType.KeyDown) toContent()
                     true
                 }
-                .focusGroup()
-                .stageGlass(34.mpx, overContent = true)
-                .padding(horizontal = 10.mpx),
-            horizontalArrangement = Arrangement.spacedBy(4.mpx),
-            verticalAlignment = Alignment.CenterVertically,
+                .focusGroup(),
         ) {
+            if (glassIn > 0.01f) Box(Modifier.matchParentSize().graphicsLayer { alpha = glassIn }.stageGlass(34.mpx, overContent = true))
+            Row(
+                modifier = Modifier.fillMaxHeight().padding(horizontal = if (shape == tv.own.owntv.glcn.TopBarShape.TABS || shape == tv.own.owntv.glcn.TopBarShape.PILLS) 0.mpx else 10.mpx),
+                horizontalArrangement = Arrangement.spacedBy(4.mpx),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
             // glcn: one focus pill for the whole bar, gliding (and stretching like a drop) from entry to entry.
             tv.own.owntv.glcn.SlideFocusHost(stiffness = TOP_BAR_GLIDE, stretch = true) {
+                if (!capsule) Row(
+                    horizontalArrangement = Arrangement.spacedBy((if (shape == tv.own.owntv.glcn.TopBarShape.PILLS) 10 else if (shape == tv.own.owntv.glcn.TopBarShape.TABS) 8 else 4).mpx),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val tabs = shape == tv.own.owntv.glcn.TopBarShape.TABS
+                    val lit = hasFocus || shape != tv.own.owntv.glcn.TopBarShape.ISLAND
+                    if (!shape.centred) BrandMark(rememberAppliedIcon(), sc(44).mpx, Modifier.padding(end = 14.mpx))
+                    val search: @Composable () -> Unit = {
+                        TopEntry(shape, null, OwnTVIcon.SEARCH, selected == MainSection.SEARCH, true, k, lit, { onSelect(MainSection.SEARCH) },
+                            if (focusSection == MainSection.SEARCH) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
+                    }
+                    if (!tabs) search()
+                    if (nowPlaying != null) TopEntry(shape, null, if (nowPlaying.audioMode) OwnTVIcon.EQ else OwnTVIcon.PLAY, false, true, k, lit, onNowPlaying, accentIcon = true)
+                    named.forEach { section ->
+                        val active = section == selected
+                        val focusMod = (if (section == focusSection) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
+                            .selectOnRest(section.opensOnRest() && !active) { onSelect(section) }
+                        TopEntry(shape, stringResource(section.labelRes), section.stageIcon, active, compact, k, lit, { onSelect(section) }, focusMod)
+                    }
+                    if (tabs) search()
+                    val family by org.koin.compose.koinInject<tv.own.owntv.core.nav.NavVisibility>().familyMode.collectAsStateWithLifecycle(false)
+                    if (!family) TopEntry(shape, null, OwnTVIcon.TILES, selected == MainSection.MORE || selected == MainSection.SETTINGS, true, k, lit, { onSelect(MainSection.MORE) },
+                        if (focusSection == MainSection.MORE) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
+                    StageSurface(
+                        onClick = onSwitchProfile,
+                        onLongClick = onPickAvatar,
+                        radius = sc(23).mpx,
+                        modifier = Modifier.padding(start = 6.mpx).size(sc(46).mpx),
+                        focusStyle = StageFocus.POSTER,
+                        contentAlignment = Alignment.Center,
+                    ) { RailAvatar(profileName.trim().take(1).uppercase().ifEmpty { "?" }, size = sc(46), avatarId = avatarId, imagePath = avatarPath) }
+                } else
                 Row(horizontalArrangement = Arrangement.spacedBy(4.mpx), verticalAlignment = Alignment.CenterVertically) {
                 BrandMark(rememberAppliedIcon(), sc(44).mpx, Modifier.padding(start = 6.mpx, end = 10.mpx))
                 TopIcon(OwnTVIcon.SEARCH, selected == MainSection.SEARCH, { onSelect(MainSection.SEARCH) },
@@ -689,9 +762,114 @@ fun StageTopBar(
                 ) { RailAvatar(profileName.trim().take(1).uppercase().ifEmpty { "?" }, size = sc(46), avatarId = avatarId, imagePath = avatarPath) }
                 }
             }
+            }
         }
     }
 }
+
+/**
+ * glcn: one entry of the top bar in the newer shapes (see TopBarShape). [label] null is an icon of the bar (Search,
+ * More, what plays); [lit] false is the island at rest, bare over the picture, where the names carry a soft shadow.
+ */
+@Composable
+private fun TopEntry(
+    shape: tv.own.owntv.glcn.TopBarShape,
+    label: String?,
+    icon: OwnTVIcon,
+    active: Boolean,
+    compact: Boolean,
+    k: Float,
+    lit: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    accentIcon: Boolean = false,
+) {
+    fun sc(v: Int) = (v * k).toInt()
+    val a = stageAccent
+    val palette = tv.own.owntv.ui.theme.LocalStagePalette.current
+    val second = tv.own.owntv.glcn.EmberFocus.second ?: a.accent
+    val tabs = shape == tv.own.owntv.glcn.TopBarShape.TABS
+    val pills = shape == tv.own.owntv.glcn.TopBarShape.PILLS
+    val icons = shape == tv.own.owntv.glcn.TopBarShape.ICONS
+    val h = sc(if (tabs) 56 else if (pills) 54 else 52)
+    val r = if (tabs) 10 else h / 2
+    val chip = if (pills) Modifier.stageGlass(r.mpx, overContent = true) else Modifier
+    val idle = when {
+        pills && active -> Modifier.background(palette.text.copy(alpha = 0.92f), RoundedCornerShape(r.mpx))
+        pills -> chip
+        icons && active -> Modifier.background(a.accent.copy(alpha = 0.16f), RoundedCornerShape(r.mpx))
+        else -> Modifier
+    }
+    StageSurface(
+        onClick = onClick,
+        radius = r.mpx,
+        modifier = modifier.height(h.mpx),
+        focusStyle = if (pills) StageFocus.FILLED else StageFocus.FX,
+        idle = idle,
+        focusDecor = !tabs,
+        contentAlignment = Alignment.Center,
+    ) { focused ->
+        val tint = when {
+            tabs -> if (focused) a.accent else if (active) palette.text else StageColors.NavText
+            pills -> if (focused) a.onAccent else if (active) palette.page else palette.text
+            icons -> if (focused) palette.fxText else if (active || accentIcon) a.accent else StageColors.NavText
+            else -> if (focused) palette.fxText else if (active) palette.text else if (accentIcon) a.accent else StageColors.NavText
+        }
+        // Which parts show: the island and the pills name every section and give the open one its icon; the icons
+        // name only the open and the focused one; the tabs are names alone.
+        val named = label != null && when {
+            icons -> active || focused
+            compact -> active
+            else -> true
+        }
+        val drawn = label == null || when {
+            tabs -> compact && !active
+            icons -> true
+            else -> active || compact
+        }
+        // The open section's line (and the tabs' focus): along the foot, in the accent's gradient.
+        val line = when {
+            label == null && !(tabs && focused) -> null
+            tabs && active -> Brush.horizontalGradient(listOf(a.accent, second))
+            tabs && focused -> androidx.compose.ui.graphics.SolidColor(palette.text.copy(alpha = 0.55f))
+            shape == tv.own.owntv.glcn.TopBarShape.ISLAND && active && !focused -> Brush.horizontalGradient(listOf(a.accent, second))
+            else -> null
+        }
+        Row(
+            Modifier
+                .padding(horizontal = sc(if (!named) 14 else if (tabs) 12 else 18).mpx)
+                .fillMaxHeight()
+                .drawBehind {
+                    if (line != null) {
+                        val th = TOP_BAR_LINE.mpx.toPx()
+                        drawRoundRect(line, topLeft = androidx.compose.ui.geometry.Offset(0f, size.height - th - TOP_BAR_LINE_LIFT.mpx.toPx()), size = androidx.compose.ui.geometry.Size(size.width, th), cornerRadius = androidx.compose.ui.geometry.CornerRadius(th / 2))
+                    }
+                },
+            horizontalArrangement = Arrangement.spacedBy(sc(9).mpx),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (drawn) OwnTVIcon(icon, tint, Modifier.size(sc(if (tabs) 28 else 25).mpx))
+            if (named && label != null) {
+                val base = if (tabs) stageText(sc(25), if (active || focused) 700 else 500)
+                else if (shape == tv.own.owntv.glcn.TopBarShape.ISLAND) stageText(sc(18), if (active || focused) 700 else 600, letterSpacing = 0.9.mpxSp)
+                else stageText(sc(20), if (active || focused) 700 else 600)
+                // Bare over the picture (tabs, the island at rest): a soft shadow keeps the names readable.
+                val bare = (tabs || !lit) && !palette.isLight
+                Text(
+                    if (shape == tv.own.owntv.glcn.TopBarShape.ISLAND) label.uppercase() else label,
+                    style = if (bare) base.copy(shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.6f), blurRadius = TOP_BAR_SHADOW)) else base,
+                    color = tint,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+private const val TOP_BAR_VEIL = 190
+private const val TOP_BAR_LINE = 4
+private const val TOP_BAR_LINE_LIFT = 2
+private const val TOP_BAR_SHADOW = 10f
 
 @Composable
 private fun TopIcon(icon: OwnTVIcon, active: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, accentIcon: Boolean = false, k: Float = 1f) {

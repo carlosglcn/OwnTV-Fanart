@@ -1,0 +1,57 @@
+package tv.own.owntv.glcn
+
+import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import tv.own.owntv.R
+
+/**
+ * glcn: how the top bar (Navigation = Top bar) is drawn. CAPSULE is the bar as it always was — a glass capsule at the
+ * top left; ISLAND sits in the middle with no background until the focus is on it; TABS is bare names over a veil,
+ * the open one underlined; PILLS gives every section its own chip; ICONS is a short capsule of icons that name
+ * themselves when open or focused.
+ */
+enum class TopBarShape(val label: Int) {
+    CAPSULE(R.string.glcn_top_bar_capsule),
+    ISLAND(R.string.glcn_top_bar_island),
+    TABS(R.string.glcn_top_bar_tabs),
+    PILLS(R.string.glcn_top_bar_pills),
+    ICONS(R.string.glcn_top_bar_icons),
+    ;
+
+    /** In the middle of the free width, the logo left outside it. */
+    val centred: Boolean get() = this == ISLAND || this == ICONS
+}
+
+/** glcn: the chosen [TopBarShape]. Who already had the app keeps the capsule; a new install opens on the island. */
+object TopBarPref {
+    var shape by mutableStateOf(TopBarShape.CAPSULE)
+        private set
+    private var app: Context? = null
+
+    fun init(context: Context) {
+        app = context.applicationContext
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val stored = prefs.getString(KEY, null)?.let { name -> TopBarShape.entries.firstOrNull { it.name == name } }
+        shape = stored ?: (if (freshInstall(context)) TopBarShape.ISLAND else TopBarShape.CAPSULE).also {
+            prefs.edit().putString(KEY, it.name).apply()
+        }
+    }
+
+    fun set(value: TopBarShape) {
+        shape = value
+        app?.getSharedPreferences(FILE, Context.MODE_PRIVATE)?.edit()?.putString(KEY, value.name)?.apply()
+    }
+
+    fun next() = set(TopBarShape.entries[(shape.ordinal + 1) % TopBarShape.entries.size])
+
+    /** Never updated: installed and not yet replaced by a newer build. */
+    private fun freshInstall(context: Context): Boolean = runCatching {
+        val info = context.packageManager.getPackageInfo(context.packageName, 0)
+        info.firstInstallTime == info.lastUpdateTime
+    }.getOrDefault(false)
+
+    private const val FILE = "glcn_top_bar"
+    private const val KEY = "shape"
+}

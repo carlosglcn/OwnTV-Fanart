@@ -2074,6 +2074,7 @@ fun OwnTVShell(
                 nowPlaying = nowPlayingRail,
                 onNowPlaying = enterNowPlaying,
                 onBarBounds = { topBarBounds = it },
+                freeRight = playlistPillBounds?.left?.minus(topGapPx),
                 size = if (topCompactForced) tv.own.owntv.core.settings.SettingsRepository.NavSize.COMPACT else topSize,
                 hidden = railIdleHidden,
             ) else tv.own.owntv.features.shell.components.StageRail(
