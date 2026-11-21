@@ -284,7 +284,7 @@ fun MoviesScreen(
     // glcn: the menu opened from a card of Keep watching (it adds "out of Keep watching"), and the Runway's page.
     var stripMenuId by remember { mutableStateOf<Long?>(null) }
     var stripHasFocus by remember { mutableStateOf(false) }
-    val stripFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val stripFocus = remember { tv.own.owntv.glcn.StripFocus() }
     val runwayScroll = androidx.compose.foundation.rememberScrollState()
     remember { tv.own.owntv.glcn.StripDismissed.ensure(context) }
     val showStrip = tv.own.owntv.glcn.StripPref.on && stripMovies.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
@@ -384,7 +384,9 @@ fun MoviesScreen(
             stripMenuId = null
             if (showStrip) {
                 withFrameNanos { }
-                if (runCatching { stripFocus.requestFocus() }.getOrDefault(false)) { contextMovieIndex = -1; return@LaunchedEffect }
+                // Held for a moment: the card may still leave (seen, removed) and the focus stays on its place.
+                stripFocus.hold()
+                if (stripFocus.focus()) { contextMovieIndex = -1; return@LaunchedEffect }
             }
         }
         val targetId = contextMovieId
@@ -568,6 +570,10 @@ fun MoviesScreen(
         )
     }
     // glcn: ▲ from the first row of posters goes to Keep watching — scrolled away, the grid's own search did not find it.
+    // glcn: the last card left the strip while it had the focus: the posters take it.
+    LaunchedEffect(showStrip) {
+        if (!showStrip && stripFocus.holding) { withFrameNanos { }; focusCurrentTitleNow() }
+    }
     val toStrip: () -> Boolean = {
         if (!showStrip || runway) false else {
             scope.launch {
@@ -576,7 +582,7 @@ fun MoviesScreen(
                     else if (usesList) effectiveListState.animateScrollToItem(0) else effectiveGridState.animateScrollToItem(0)
                 }
                 withFrameNanos { }
-                runCatching { stripFocus.requestFocus() }
+                stripFocus.focus()
             }
             true
         }

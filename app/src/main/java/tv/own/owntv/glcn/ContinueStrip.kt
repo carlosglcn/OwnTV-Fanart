@@ -17,7 +17,6 @@ import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -56,8 +55,8 @@ fun ContinueStrip(
     onClick: (Int) -> Unit,
     onLongClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    /** glcn: to send the focus here (▲ from the first row of posters, whose own search does not find a row scrolled away). */
-    focus: androidx.compose.ui.focus.FocusRequester? = null,
+    /** glcn: to send the focus here (▲ from the first row of posters, back from a card's menu) — see [StripFocus]. */
+    focus: StripFocus? = null,
 ) {
     if (cards.isEmpty()) return
     Column(modifier.fillMaxWidth()) {
@@ -69,12 +68,31 @@ fun ContinueStrip(
         // glcn: the row scrolls with its focus by the app's own rule — inside the posters' grid, which switches that off
         // for itself (it glides by hand), the cards past the edge were focused without ever coming into view.
         androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides SmoothScroll.spec) {
+        val rowState = rememberLazyListState()
+        val requesters = androidx.compose.runtime.remember { HashMap<Int, androidx.compose.ui.focus.FocusRequester>() }
+        val count = androidx.compose.runtime.rememberUpdatedState(cards.size)
+        if (focus != null) {
+            androidx.compose.runtime.DisposableEffect(focus) {
+                focus.request = {
+                    // The card that had the focus, or — when it has just left the strip — the one now in its place.
+                    val i = focus.index.coerceIn(0, (count.value - 1).coerceAtLeast(0))
+                    if (rowState.layoutInfo.visibleItemsInfo.none { it.index == i }) runCatching { rowState.scrollToItem(i) }
+                    androidx.compose.runtime.withFrameNanos { }
+                    runCatching { requesters[i]?.requestFocus() ?: false }.getOrDefault(false)
+                }
+                onDispose { focus.request = null }
+            }
+            // A card left the strip (seen, removed) while the strip was being used: the focus stays here, on its place.
+            val keys = cards.map { it.key }
+            androidx.compose.runtime.LaunchedEffect(keys) {
+                if (focus.holding && keys.isNotEmpty()) { androidx.compose.runtime.withFrameNanos { }; focus.focus() }
+            }
+        }
         LazyRow(
-            state = rememberLazyListState(),
+            state = rowState,
             horizontalArrangement = Arrangement.spacedBy(STRIP_GAP.mpx),
             contentPadding = PaddingValues(start = startPad, end = endPad, top = 10.mpx, bottom = 10.mpx),
-            // Asked for the focus, the row gives it to the card that had it last (or to the first).
-            modifier = Modifier.fillMaxWidth().then(if (focus != null) Modifier.focusRequester(focus).focusRestorer() else Modifier),
+            modifier = Modifier.fillMaxWidth(),
         ) {
             itemsIndexed(cards, key = { _, c -> c.key }) { i, c ->
                 StagePoster(
@@ -82,7 +100,8 @@ fun ContinueStrip(
                     width = STRIP_W.mpx, height = STRIP_H.mpx,
                     progress = c.progress?.takeIf { it in 0.001f..0.999f },
                     onClick = { onClick(i) }, onLongClick = { onLongClick(i) },
-                    modifier = Modifier.onFocusChanged { if (it.isFocused) onFocus(i) },
+                    modifier = Modifier.focusRequester(requesters.getOrPut(i) { androidx.compose.ui.focus.FocusRequester() })
+                        .onFocusChanged { if (it.isFocused) { focus?.index = i; onFocus(i) } },
                 ) {
                     if (c.image != null) AsyncImage(model = c.image, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }
@@ -90,6 +109,23 @@ fun ContinueStrip(
         }
         }
     }
+}
+
+/**
+ * glcn: the strip's focus, from outside it. [focus] puts it on the card that had it last — or, when that card has just
+ * left (marked seen, removed), on the one now in its place, the last one if it was the last. [hold] keeps it there for
+ * a moment while cards leave: a title marked seen drops out a little after its menu closes, and the focus, left on
+ * nothing, went wherever the screen put it (some cards to the left, or down to the posters).
+ */
+class StripFocus {
+    var index = 0
+    internal var request: (suspend () -> Boolean)? = null
+    private var heldUntil = 0L
+    val holding: Boolean get() = android.os.SystemClock.uptimeMillis() < heldUntil
+    fun hold() { heldUntil = android.os.SystemClock.uptimeMillis() + HOLD_MS }
+    suspend fun focus(): Boolean = request?.invoke() ?: false
+
+    private companion object { const val HOLD_MS = 4_000L }
 }
 
 /**

@@ -135,6 +135,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📝 Playback report: the diagnostics of the current session were missing when the diary file had not been opened yet (the report showed the day before). The file is opened when the app starts, and the report adds what this run holds in memory.
 - ⬆️ Films and Series (Cinematic, grid and list): ▲ from the first row of posters goes back to "Keep watching" — once the strip had scrolled away there was no way up to it.
 - 🎛️ The "Keep watching" strip above the posters of Films and Series is now a switch — Settings › Layout › "Keep watching" in Films and Series — and off by default. The "Keep watching" category is always there.
-- 🎯 Keep watching: closing the menu opened from a card (mark watched, remove…) leaves the focus on the strip — it jumped to that title's poster further down the row.
+- 🎯 Keep watching: after a card's menu (mark watched, remove…) the focus stays on the strip, on that card's place — the next title when the card has left, the last one if it was the last, and the posters only when the strip is empty. It jumped to the title's poster further down, or some cards to the left.
 - ➡️ Keep watching (Films and Series): moving right along the strip now scrolls it — the cards past the edge took the focus without coming into view.
 - ⏪ Player, channels that can be rewound: the programme card no longer covers the rewind / pause / forward buttons and the "behind live" line — they sit higher, clear of the card.
