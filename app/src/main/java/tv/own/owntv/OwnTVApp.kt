@@ -157,6 +157,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         tv.own.owntv.glcn.DeckWidths.ensure(this) // glcn: widths of the player's channel list
         tv.own.owntv.glcn.Labs.ensure(this) // glcn: test features (switched on with a key sequence in Settings)
         tv.own.owntv.glcn.AppShortcuts.ensure(this)
+        tv.own.owntv.ui.theme.LowResScreen.detect(this) // glcn: lighter small bold type on 720p screens
         tv.own.owntv.glcn.LiveListFilter.init(this) // glcn: the Live TV playlist picked in the category sheet
         tv.own.owntv.glcn.EmbyGroupsPref.load(this) // glcn: how Emby / Jellyfin libraries are split into categories
         // First thing after the context exists: a crash from here on leaves a trace on disk that the
@@ -271,9 +272,10 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
                     .maxSizeBytes(imageDiskCacheBytes())
                     .build()
             }
-            // Opaque poster art doesn't need an alpha channel; RGB_565 halves bitmap memory
-            // under the deliberately small memory cap.
-            .allowRgb565(true)
+            // glcn: full colour. RGB_565 halved bitmap memory but showed as grain and banding in dark posters and
+            // gradients; the cache is capped in bytes, so full colour only means fewer pictures kept. Boxes Android
+            // calls low-RAM, and Light mode, keep the saving.
+            .allowRgb565(lowRam || tv.own.owntv.glcn.LowRam.on)
             .crossfade(if (tv.own.owntv.glcn.LowRam.on || lowRam) 0 else if (tv.own.owntv.glcn.DeviceClass.modest) 120 else 220)
             .build()
     }
