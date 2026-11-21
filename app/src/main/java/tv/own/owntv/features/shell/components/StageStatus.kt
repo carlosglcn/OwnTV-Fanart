@@ -139,8 +139,16 @@ val LocalClockWeather = staticCompositionLocalOf<Pair<WeatherInfo?, Boolean>> { 
 fun clockColor(stored: String, default: Color): Color = when (stored) {
     "" -> default
     ClockColors.ACCENT -> stageAccent.accent
-    else -> parseAccentHex(stored) ?: default
+    // glcn: a colour picked by hand under one theme may not read under another (white on a light style, navy on a
+    // dark one). Where it would not, the theme's own colour stands in — the pick is kept, and shows again where it reads.
+    else -> parseAccentHex(stored)?.takeIf { c ->
+        val lum = 0.2126f * c.red + 0.7152f * c.green + 0.0722f * c.blue
+        if (LocalStagePalette.current.isLight) lum <= CLOCK_LIGHT_MAX_LUM else lum >= CLOCK_DARK_MIN_LUM
+    } ?: default
 }
+
+private const val CLOCK_LIGHT_MAX_LUM = 0.55f
+private const val CLOCK_DARK_MIN_LUM = 0.28f
 
 /**
  * `.status .clk` 40/700 tabular, and "Tue 29 Sep · ☀ 26° Düsseldorf" 17 px under it, right-aligned. Each
