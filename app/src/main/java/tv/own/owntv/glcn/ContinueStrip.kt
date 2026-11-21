@@ -65,6 +65,9 @@ fun ContinueStrip(
             style = stageText(20, 800), color = stageAccent.ink,
             modifier = Modifier.padding(start = startPad, bottom = 8.mpx),
         )
+        // glcn: the row scrolls with its focus by the app's own rule — inside the posters' grid, which switches that off
+        // for itself (it glides by hand), the cards past the edge were focused without ever coming into view.
+        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides SmoothScroll.spec) {
         LazyRow(
             state = rememberLazyListState(),
             horizontalArrangement = Arrangement.spacedBy(STRIP_GAP.mpx),
@@ -83,6 +86,7 @@ fun ContinueStrip(
                     if (c.image != null) AsyncImage(model = c.image, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }
             }
+        }
         }
     }
 }

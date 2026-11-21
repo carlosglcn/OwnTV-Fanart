@@ -136,3 +136,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ⬆️ Films and Series (Cinematic, grid and list): ▲ from the first row of posters goes back to "Keep watching" — once the strip had scrolled away there was no way up to it.
 - 🎛️ The "Keep watching" strip above the posters of Films and Series is now a switch — Settings › Layout › "Keep watching" in Films and Series — and off by default. The "Keep watching" category is always there.
 - 🎯 Keep watching: closing the menu opened from a card (mark watched, remove…) leaves the focus on the strip — it jumped to that title's poster further down the row.
+- ➡️ Keep watching (Films and Series): moving right along the strip now scrolls it — the cards past the edge took the focus without coming into view.
