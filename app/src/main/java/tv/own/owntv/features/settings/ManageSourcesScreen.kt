@@ -543,7 +543,7 @@ private fun SourceRow(
         failureText != null && activeSync == null -> failureText
         else -> buildList {
             if (!visibleCounts.isNullOrBlank()) add(visibleCounts)
-            else if (activeSync != null) add(stringResource(R.string.settings_sources_preparing_detail))
+            else if (activeSync != null && !activeSync.queued) add(stringResource(R.string.settings_sources_preparing_detail))
             if (activeSync == null) add(syncedText)
             if (autoRefresh.mode != PlaylistAutoRefresh.OFF) add(stringResource(R.string.settings_sources_auto_refresh, playlistAutoRefreshLabel(autoRefresh)))
             expiryText?.let(::add)
@@ -559,6 +559,8 @@ private fun SourceRow(
     }
     val status = when {
         isDeleting -> stringResource(R.string.settings_sources_deleting)
+        // glcn: waiting its turn behind other playlists says so — every row read "Syncing" and looked stuck.
+        activeSync != null && activeSync.queued -> stringResource(R.string.glcn_sync_queued)
         activeSync != null -> resyncProgressPercent(activeSync.baseItemCount, activeSync.totalProcessed)
             ?.let { stringResource(R.string.sync_progress_percent, it) } ?: stringResource(R.string.sync_progress_syncing)
         else -> null

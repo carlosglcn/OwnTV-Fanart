@@ -134,4 +134,5 @@
     <string name="glcn_mark_series_unwatched">Mark the whole show as unwatched</string>
     <string name="glcn_strip_setting_title">"Keep watching" in Films and Series</string>
     <string name="glcn_strip_setting_desc">A row of what you are watching above the posters, in All. Hold OK on a card to mark it watched or remove it.</string>
+    <string name="glcn_sync_queued">Queued</string>
 </resources>
