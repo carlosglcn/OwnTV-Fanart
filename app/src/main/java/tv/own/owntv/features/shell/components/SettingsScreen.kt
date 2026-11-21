@@ -881,15 +881,7 @@ fun SettingsScreen(
             focus = vodLayoutRowFocus,
             onClick = { saveScroll(); dialogReturn = vodLayoutRowFocus; showVodLayout = true },
         ),
-        // glcn: the "Keep watching" strip above the posters of Films and Series — off until asked for.
-        RootRow(
-            "glcn_keep_watching_strip", TileTone.PRIMARY, OwnTVIcon.PLAY_CIRCLE,
-            title = stringResource(R.string.glcn_strip_setting_title),
-            desc = stringResource(R.string.glcn_strip_setting_desc),
-            chip = stringResource(if (tv.own.owntv.glcn.StripPref.on) R.string.common_on else R.string.common_off),
-            chipTone = if (tv.own.owntv.glcn.StripPref.on) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { tv.own.owntv.glcn.StripPref.set(!tv.own.owntv.glcn.StripPref.on) },
-        ),
+        keepWatchingStripRow(),
         RootRow(
             tabRowKey(SettingsTab.PANEL_WIDTH), TileTone.PRIMARY, OwnTVIcon.PANEL_WIDTH,
             title = stringResource(R.string.settings_panel_width),
@@ -3402,3 +3394,15 @@ private fun GlcnPageSlide(tab: Any, content: @Composable () -> Unit) {
         },
     ) { content() }
 }
+
+/** glcn: the "Keep watching" strip above the posters of Films and Series — off until asked for. Out of
+ *  [SettingsScreen], which is at the size limit of a method. */
+@Composable
+private fun keepWatchingStripRow(): RootRow = RootRow(
+    "glcn_keep_watching_strip", TileTone.PRIMARY, OwnTVIcon.PLAY_CIRCLE,
+    title = stringResource(R.string.glcn_strip_setting_title),
+    desc = stringResource(R.string.glcn_strip_setting_desc),
+    chip = stringResource(if (tv.own.owntv.glcn.StripPref.on) R.string.common_on else R.string.common_off),
+    chipTone = if (tv.own.owntv.glcn.StripPref.on) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = { tv.own.owntv.glcn.StripPref.set(!tv.own.owntv.glcn.StripPref.on) },
+)
