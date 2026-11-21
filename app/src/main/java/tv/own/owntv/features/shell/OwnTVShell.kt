@@ -262,6 +262,10 @@ fun OwnTVShell(
     var guideEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
     var vodEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
     var downloadsEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
+    var searchEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
+    // Search opened from the rail leaves focus there, like every section; the remote's Search key,
+    // Home's trending search and the way back from a "Go to" go straight into it.
+    var searchTakesFocus by remember { mutableStateOf(true) }
     var moreEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
     var sportsEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
     // Home's Live sports row opens a match page through the same request the player's Match button uses.
@@ -1007,12 +1011,13 @@ fun OwnTVShell(
             searchVm.setQuery("")
             trendingSearchActive = false
             restoreTrendingSearchFocus = false
+            searchTakesFocus = true
         }
         onSelectSection(section)
         // A shortcut may be fired by a control inside the destination being replaced (most notably
         // Settings). Once that screen leaves composition its focused node disappears, so hand focus
-        // to the persistent sidebar after the new destination has rendered.
-        scope.launch {
+        // to the persistent sidebar after the new destination has rendered. Search takes it itself.
+        if (section != MainSection.SEARCH) scope.launch {
             withFrameNanos { }
             focusRail()
         }
@@ -1212,6 +1217,7 @@ fun OwnTVShell(
     // so for a series the return follows the show closing.
     fun returnToSearch() {
         searchReturn = null
+        searchTakesFocus = true
         onSelectSection(MainSection.SEARCH)
     }
     LaunchedEffect(selectedSection) {
@@ -1513,6 +1519,7 @@ fun OwnTVShell(
                   trendingSearchActive = false
                   restoreTrendingSearchFocus = false
               }
+              if (section == MainSection.SEARCH) searchTakesFocus = false
               onSelectSection(section)
           }
           // Audio Mode: the now-playing bar — in the top bar left of the weather chip, or in the Stage
@@ -1799,6 +1806,8 @@ fun OwnTVShell(
                         selectedSection == MainSection.HOME -> HomeScreen(
                             vm = homeVm,
                             seasonActive = playerMode != PlayerMode.FULLSCREEN,
+                            movieVm = movieVm,
+                            seriesVm = seriesVm,
                             // Skip the fullscreen player when the global external-player toggle is on
                             // (mounting it spins up mpv even though playback went to the external app).
                             onPlayMovie = { id, pos -> scope.launch { if (movieVm.playByIdAsync(id, pos) && !movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES) } },
@@ -1847,6 +1856,7 @@ fun OwnTVShell(
                                 searchVm.setQuery(query)
                                 trendingSearchActive = true
                                 restoreTrendingSearchFocus = false
+                                searchTakesFocus = true
                                 onSelectSection(MainSection.SEARCH)
                             },
                             onChildFocused = { focusedLayer = ShellLayer.CONTENT },
@@ -1903,6 +1913,8 @@ fun OwnTVShell(
                                 restoreFocus = false
                                 onSelectSection(MainSection.HOME)
                             },
+                            focusOnOpen = searchTakesFocus,
+                            onEntryHook = { searchEntry = it },
                             modifier = Modifier.fillMaxSize(),
                         )
 
@@ -2094,6 +2106,7 @@ fun OwnTVShell(
                     MainSection.EPG, MainSection.LIVE_TV -> guideEntry
                     MainSection.MOVIES, MainSection.SERIES -> vodEntry
                     MainSection.DOWNLOADS -> downloadsEntry
+                    MainSection.SEARCH -> searchEntry
                     MainSection.MORE -> moreEntry
                     MainSection.SPORTS -> sportsEntry
                     else -> null
@@ -2349,6 +2362,13 @@ fun OwnTVShell(
                     if (!isTunedLive) return@produceState
                     value = runCatching { liveVm.copiesOf(ch) }.getOrDefault(emptyList())
                 }
+                // Names the catch-up button; the press asks again.
+                val archiveHasGuide by produceState(false, previewChannel?.id, catchupActive) {
+                    value = catchupActive || previewChannel?.takeIf { it.catchup }?.let { liveVm.hasGuideData(it) } == true
+                }
+                var archiveFor by remember { mutableStateOf<tv.own.owntv.core.database.entity.ChannelEntity?>(null) }
+                // The programme on screen when the page was opened from an archive replay; null opens on yesterday.
+                var archiveFocusMs by remember { mutableStateOf<Long?>(null) }
                 var goalToast by remember { mutableStateOf<tv.own.owntv.core.sports.MatchAlert?>(null) }
                 LaunchedEffect(isTunedLive) { if (isTunedLive) sportsPlayback.goals().collect { goalToast = it } }
                 LaunchedEffect(goalToast) { if (goalToast != null) { kotlinx.coroutines.delay(GOAL_TOAST_MS); goalToast = null } }
@@ -2390,7 +2410,7 @@ fun OwnTVShell(
                     onAudioMode = toAudioMode,
                     // The channel-list overlay draws ABOVE the HUD; while it's open the HUD goes inert so
                     // its hide/error focus grabs can't yank D-pad focus off the overlay.
-                    inert = showChannelList || showQuickGuide || showHistoryList || showCategoryBrowser || showSubtitleSearch || showLocalSubPicker || showFolderSubs || showSubFolderPicker || showOtherChannels || showCopies || showProgramInfo,
+                    inert = showChannelList || showQuickGuide || showHistoryList || showCategoryBrowser || showSubtitleSearch || showLocalSubPicker || showFolderSubs || showSubFolderPicker || showOtherChannels || showCopies || showProgramInfo || archiveFor != null,
                     onChannelUp = zap?.let { z -> { z(-1) } },
                     onChannelDown = zap?.let { z -> { z(1) } },
                     onOpenChannelList = if (isTunedLive && liveCanZap) { { showChannelList = true } } else null,
@@ -2424,6 +2444,16 @@ fun OwnTVShell(
                     // bar and the buttons, and must not show a catch-up control on a channel without catch-up.
                     jumpBackOptions = if (isTunedLive && previewChannel?.catchup == true) liveVm::currentJumpOptions else null,
                     onJumpBack = if (isTunedLive && previewChannel?.catchup == true) liveVm::jumpBackTo else null,
+                    // False when the channel has no guide: the HUD then opens "Go back to…" as before.
+                    onOpenArchive = if ((isTunedLive || catchupActive) && previewChannel?.catchup == true) {
+                        {
+                            val ch = previewChannel
+                            if (ch != null && (catchupActive || liveVm.hasGuideData(ch))) {
+                                archiveFocusMs = liveVm.currentCatchupProgrammeStartMs(); archiveFor = ch; true
+                            } else false
+                        }
+                    } else null,
+                    catchupOpensArchive = archiveHasGuide,
                     onPreviousChannel = if (isTunedLive && previousLiveChannel != null) liveVm::previousChannel else null,
                     jumpBackWindowSec = if (isTunedLive && previewChannel?.catchup == true) liveVm::currentCatchupWindowSec else null,
                     jumpBackProgrammeStart = if (isTunedLive && previewChannel?.catchup == true) liveVm::currentProgrammeStart else null,
@@ -2657,6 +2687,17 @@ fun OwnTVShell(
                         playingId = previewChannel?.id,
                         onPick = { ch -> liveVm.ensurePlaying(ch); showCopies = false },
                         onDismiss = { showCopies = false },
+                    )
+                }
+                archiveFor?.let { ch ->
+                    tv.own.owntv.features.epg.ProgrammeDayPage(
+                        vm = epgVm,
+                        channel = ch,
+                        focusStartMs = archiveFocusMs,
+                        startDay = -1,
+                        onWatch = { if (timeshifted || catchupActive) liveVm.goToLive() },
+                        onPlayFromStart = { p -> liveVm.playCatchupProgramme(ch, p) },
+                        onDismiss = { archiveFor = null },
                     )
                 }
                 if (showOtherChannels) {

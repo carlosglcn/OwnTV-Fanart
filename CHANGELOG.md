@@ -20,9 +20,21 @@
 - **👤 Zoom, text size and recent searches per profile (#368)**
 - **📂 Subtitles: "Find in folder", with automatic loading of the matching file (#355)**
 - **⏳ "Performing database migration" screen on the first start after an update**
+- **🗄️ Archive: a catch-up channel's past days and their programmes on one page** (community PR #379 by @Sekator778)
+- **📼 "Prefer HLS for catch-up" on M3U playlists too: Flussonic catch-up shows its full length and can be sought** (community PR #93 by @Sekator778)
+- **🎮 D-pad Up/Down in the live player: change channel, controls and recently watched, or nothing** (community PR #382 by @Pax24fr)
+- **🎬 Home: hold OK or press Menu on a trending poster for its menu** (community PR #386 by @Pax24fr)
+- **⏺️ Downloads opens on Recordings (#384)**
 
 ### 🐛 Fixes
+- **🔍 Search picked on the rail keeps focus on the rail, like every other section**
+- **🧭 Home: focus follows the channel or film you just watched to the front of Keep watching**
 - **📼 Catch-up: no more stutter after a programme that failed to open (#357)**
+- **📅 Guide: a channel matched by hand gets its programmes and past days even when the downloaded guide is old** (reported in PR #380 by @Sekator778)
+- **📼 Catch-up: a channel's past days fill in from the provider's archive when the downloaded guide stopped early**
+- **📼 Catch-up: a programme ExoPlayer could not start no longer puts later catch-up on mpv into software decoding**
+- **📼 Catch-up: switching a programme from mpv to ExoPlayer starts it at once, in hardware, instead of after 12 seconds in software**
+- **📅 Match EPG: ▶ jumps from the guide list straight to Clear match and Close**
 - **🎙️ Voice search no longer asks which app every time (#358)**
 - **🏒 Sports: "Starting soon" shows today's games after midnight**
 - **🏈 Sports: US team pages list their games, college tables show the real record**

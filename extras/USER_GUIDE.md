@@ -92,7 +92,8 @@ Enter the app immediately. A status pill at the bottom shows progress.
 Search, Home, Live TV, TV Guide, Movies, Series, Downloads and **⋯ More**, with the logo at the top and
 your avatar at the bottom. **Left** from anything reaches it; **Right** always goes back to exactly the
 control you left. While something plays in the mini-player or in Audio mode, a **Now playing** item
-appears under the logo.
+appears under the logo. With the mini-player open, **hold Back** from anywhere to jump into its
+controls, and hold it again to go back.
 
 **How it looks is yours to choose:** Settings → Layout → **Navigation** (see
 [Navigation](#-navigation--the-rail-your-way)).
@@ -133,12 +134,13 @@ and shows its page beside the list; **Right** enters that page; **Back** returns
 | **Back** | category list with a search typed | Clears the search and jumps to the search box. The search stays while you watch a channel |
 | **Left** | anywhere in a screen, nothing further left | Back to the rail |
 | **Back** | full-screen player | Leaves full screen (there is no exit button) |
+| **Hold Back** | mini-player open, anywhere | Into the mini-player's controls; hold again to go back to where you were |
 | **OK** | full-screen player | Shows / hides the controls |
 
 **Want different keys?** **Settings → Layout → Remote shortcuts** maps spare colour, number, channel
 and media keys to 26 actions — **Previous channel** among them. D-pad, Back, OK, volume, Home and power stay protected.
 
-**Player buttons**, on the same page, change four player keys. Every default is the behaviour above:
+**Player buttons**, on the same page, change five player keys. Every default is the behaviour above:
 
 | Option | Choices | Default |
 |---|---|---|
@@ -146,6 +148,7 @@ and media keys to 26 actions — **Previous channel** among them. D-pad, Back, O
 | **OK when the controls are hidden** | Show controls, Channel list, Guide (live channels only; films keep Show controls) | Show controls |
 | **Swap channel up/down** | CH+ and Up go to the previous channel, CH− and Down to the next | Off |
 | **Number keys tune channels** | Off stops 0–9 from typing a channel number in the player | On |
+| **D-pad Up/Down** | What Up and Down do in the full-screen live player with the controls hidden: **Change channel**; **Controls and recently watched** (Down shows the controls, Up opens Recently watched); **Off** (both do nothing). CH+/CH− always change channel | Change channel |
 
 ---
 
@@ -213,11 +216,13 @@ for the playlist chosen (or all of them).
 Ask the panel for HLS instead of MPEG-TS. Try it if live channels are unstable. **Test HLS support**
 just above it checks whether your provider really serves it.
 
-### 📼 Prefer HLS for catch-up (Xtream only)
-**Where:** Add/Edit playlist, under Prefer HLS for Live TV
+### 📼 Prefer HLS for catch-up (Xtream and M3U)
+**Where:** Add/Edit playlist (Xtream: under Prefer HLS for Live TV)
 Ask for catch-up programmes as HLS instead of MPEG-TS. Off by default: many providers only serve
 catch-up as MPEG-TS. A programme that will not open as HLS is asked for as MPEG-TS by itself, and a
 long programme can take a few seconds more to start, because the provider builds its HLS list first.
+On an M3U playlist it changes only Flussonic catch-up channels: a finished programme then shows its
+full length and can be sought.
 
 ### 📡 Stalker portals
 **Where:** Add source → Stalker (MAC)
@@ -254,8 +259,9 @@ A full page with the channel's day: every programme on one line, grouped **Earli
 Later**, the one under the cursor opened with its times, facts, categories and whole description.
 **▲▼** move through the programmes; **Right** or **OK** goes to the opened programme's buttons —
 **Watch channel**, **Watch from start**, **Record**, **Record every showing**, **Remind me**,
-**Record from catch-up**, whichever fit it — **Left/Right** between them, **OK** runs one. **Up**
-from the first programme reaches **Yesterday · Today · Tomorrow**. **Back** closes. The next and
+**Record from catch-up**, whichever fit it — **Left/Right** between them, **OK** runs one. **Left**
+reaches the days on the left — **Tomorrow**, **Today**, **Yesterday** and, on a catch-up channel, every
+older day its archive keeps; **▲▼** change the day, **Right** or **OK** go into its programmes. **Back** closes. The next and
 later lines under the preview are for reading only.
 
 ### 🗓️ List or guide
@@ -266,7 +272,7 @@ opens in** chooses which one you start in.
 ### ⭐ Favourite, rename, hide
 **Where:** long-press **OK** (or **Menu**) on a channel
 The channel menu is grouped **Watch · Channel · Guide data · Organise** and also holds **Match EPG**,
-**Catch-up**, **Record**, **Move**, **Add to Multiview**, **Remove from this category** (inside a
+**Archive** (**Catch-up** on a channel without a guide), **Record**, **Move**, **Add to Multiview**, **Remove from this category** (inside a
 custom category) and **Play in external player**.
 
 ### ↕️ Move
@@ -368,6 +374,9 @@ Auto-match does the bulk — only for the playlist(s) the guide is showing, so i
 **Logos** in the review window and every matched channel also takes the logo of the guide channel it
 is matched to. Auto-match keeps going if you leave the Guide: a message says how it went when it
 finishes, and the review window is waiting when you come back.
+A channel matched to a guide channel the downloaded guide does not hold yet gets its programmes — past days
+included on catch-up channels — from one quick download of only the guide that lists it. In the picker,
+**Right** jumps from the list to **Clear match** and **Close**.
 
 ### 📅 Guide days to keep
 **Where:** Settings → Sources & guide → **Guide days to keep**
@@ -393,11 +402,16 @@ For a provider publishing its guide in another time zone. A re-sync never undoes
 
 ### ▶️ Replay a past programme
 **Where:** Guide → a past programme → **Watch from start**
-Or long-press a channel → **Catch-up** and pick from the list. Up to 7 days, limited by what your
-provider actually keeps.
+Up to 7 days, limited by what your provider actually keeps.
+
+### 🗄️ Archive
+**Where:** long-press a channel → **Archive**, or the catch-up button in the full-screen player
+The channel's Program details page, opened on **Yesterday** (during a replay, on the programme you are
+watching), with its days on the left as far back as the archive goes. Pick a day, then a programme →
+**Watch from start**. A channel with no guide has **Catch-up** there instead, which opens **Go back to…**.
 
 ### 🕐 Go back to a time
-**Where:** full-screen player → **Go back to…**
+**Where:** full-screen player → **Go back to…** (the catch-up button, on a channel with no guide)
 Offers times counted back from now — `21:30`, `19:00`, `Sun 20:00`. The last row opens a
 day/hour/minute picker. **This works even on channels with no guide at all.** When the guide knows what
 is on, the first row is **Start of “…”** — back to the beginning of the programme on air.
@@ -649,7 +663,8 @@ its rank, **IN YOUR PLAYLIST**, title (its title art when TMDB has it), year, ge
 episodes**), **Trailer**, **All versions** (when your playlist has several copies), details and
 favourite. **Down** reaches the pager under the buttons; **◀ ▶** there change the title. Moving into
 the rows folds the hero small; **Up** from the first row opens it again. **Posters only** shows the
-trending titles as the first poster row instead.
+trending titles as the first poster row instead; **hold OK** or press **Menu** on a poster for its menu —
+**Play trailer**, **Add to Favorites**, **Download** (a series: **Download all episodes**, asked first) and details.
 
 While a large playlist is still loading after setup, Home says **Loading your library** with the
 number of titles stored so far, and that Now Trending appears as the library fills in.
@@ -689,7 +704,7 @@ switch channel rows between **Cards** and **On now** (an inline mini-guide).
 ## 🔎 Search · 🕐 History · 📥 Downloads
 
 ### 🔎 Search
-**Where:** the rail → Search
+**Where:** the rail → Search (focus stays on the rail; **▶** enters the search box) · the remote's Search shortcut goes straight into the box
 Searches Live, Movies and Series together. Four filter buttons — **Live TV / TV Shows / Movies /
 Series**, each with its count — narrow the results: **OK** turns one on, **OK** again turns it off,
 several can be on, and none on shows everything. Every match is listed, up to 500 of each kind. Words match from their start, and a dash or other mark
@@ -716,7 +731,7 @@ history**.
 
 ### 📥 Downloads
 **Where:** the rail → Downloads
-Tabs **Movies / Series / Recordings** with counts; the title shows the storage's name and free space,
+Tabs **Recordings / Movies / Series** with counts, opening on Recordings; the title shows the storage's name and free space,
 and the folder the tab saves to sits under **Download folder**. Rows are grouped **Downloading** and
 **On this TV**, each with picture, details, its file path and "64% · 12.4 MB/s · 3 min left" — or
 Queued, Paused, Failed, Ready to watch. **Pause / Resume / Retry / External / Delete** appear on the
@@ -817,7 +832,9 @@ profile with a PIN asks for it again.
 - **Remote transport keys** work — play/pause, next, previous, from the remote, a headset or a voice
   assistant.
 - **A notification won't pause your film** — the sound dips and comes back.
-- **Mini-player** — subtitles show in it too. Get back to it from any screen via **Now Playing**. Browsing Live TV or the Guide behind it does not change it: expanded, the player, its guide card, Record and CH± are still about the channel playing.
+- **Mini-player** — subtitles show in it too. Get back to it from any screen via **Now Playing**, or
+  **hold Back** to move straight into its controls; hold Back again to return to where you were. Every
+  remote has Back, Fire TV's included. Browsing Live TV or the Guide behind it does not change it: expanded, the player, its guide card, Record and CH± are still about the channel playing.
 - **Picture-in-picture** — with Settings → Watching & recording → **Picture-in-picture when leaving
   the app** on (off by default), pressing **Home** while a video plays full screen or in the mini-player
   keeps it playing in a small window. Open OwnTV again for full screen; close the window to stop. Not

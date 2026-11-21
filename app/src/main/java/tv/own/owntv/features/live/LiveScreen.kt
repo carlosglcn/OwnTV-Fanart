@@ -42,6 +42,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.produceState
@@ -589,6 +591,8 @@ fun LiveScreen(
     // glcn: ▶ from the list enters next / later under the stage; OK on one opens its menu.
     val scheduleFocus = remember { FocusRequester() }
     var openProgramme by remember { mutableStateOf<Pair<ChannelEntity, tv.own.owntv.core.parser.XtEpgEntry>?>(null) }
+    // The day the page opens on: today for Program details, yesterday for the channel's archive.
+    var programmeDay by remember { mutableIntStateOf(0) }
     LaunchedEffect(categoriesOpen) {
         if (categoriesOpen) { withFrameNanos { }; runCatching { railFocus.requestFocus() } }
         // However the sheet closed (Back, a pick, ◀ to the rail), the next one starts fresh.
@@ -1206,6 +1210,8 @@ fun LiveScreen(
                                                 // glcn: ◀ to the toolbar (Provider, Categories…); ◀ again from the search field goes on to the side menu.
                                                 else -> runCatching { toolsFocus.requestFocus() }.isSuccess
                                             }
+                                            // The remote's Info key: this channel's Program details page (▶ stays the schedule under the stage).
+                                            androidx.compose.ui.input.key.Key.Info -> { contextChannelId = channel.id; programmeDay = 0; programmeDetails = channel; true }
                                             // ▶ Schedule: next / later under the stage; nothing else to the right.
                                             androidx.compose.ui.input.key.Key.DirectionRight -> {
                                                 if (!barHeld && channels.itemCount > BAR_MIN_CHANNELS) barHeld = true
@@ -1373,6 +1379,7 @@ fun LiveScreen(
             vm = epgVm,
             channel = ch,
             focusStartMs = null,
+            startDay = programmeDay,
             onWatch = { vm.watchFullscreen(ch, emptyList()); if (!externalPlayerOn) onFullscreen() },
             onPlayFromStart = { p -> vm.playCatchupProgramme(ch, p); if (!externalPlayerOn) onFullscreen() },
             onDismiss = { programmeDetails = null; scope.launch { restoreToContextRow() } },
@@ -1512,6 +1519,8 @@ fun LiveScreen(
 
     // Long-press a channel → quick actions.
     contextChannel?.let { ch ->
+        // Names the entry: Archive with a guide, the upstream "Catch-up" label without one.
+        val menuHasGuide by produceState(false, ch.id) { value = vm.hasGuideData(ch) }
         ChannelContextMenu(
             channel = ch,
             title = ch.name,
@@ -1527,11 +1536,16 @@ fun LiveScreen(
             onHide = { vm.hideChannel(ch); contextChannel = null },
             onMatchEpg = { matchingEpg = ch; contextChannel = null },
             onEpgOffset = { offsettingEpg = ch; contextChannel = null },
-            onCatchup = { catchupChannel = ch; contextChannel = null },
+            // Asked at the press, so a channel matched since the menu opened gets the Archive page.
+            onCatchup = {
+                contextChannel = null
+                scope.launch { if (vm.hasGuideData(ch)) { programmeDay = -1; programmeDetails = ch } else catchupChannel = ch }
+            },
+            hasGuide = menuHasGuide,
             isRecording = ch.id in recordingChannelIds,
             onRecord = { if (ch.id in recordingChannelIds) vm.stopRecordingOn(ch) else vm.recordNow(ch); contextChannel = null },
             onScheduleRecord = { schedulingChannel = ch; contextChannel = null },
-            onDetails = { programmeDetails = ch; contextChannel = null },
+            onDetails = { programmeDay = 0; programmeDetails = ch; contextChannel = null },
             onPlayExternal = { vm.playExternal(ch); contextChannel = null },
             // Only offered once Multiview is switched on. Adding is silent apart from the toast: the
             // grid opens when the user plays a channel, which is the gesture that says "now".
@@ -1965,6 +1979,8 @@ private fun ChannelContextMenu(
     onMatchEpg: () -> Unit,
     onEpgOffset: () -> Unit,
     onCatchup: () -> Unit,
+    // Whether the catch-up entry opens the Archive page; without a guide it opens "Go back to…".
+    hasGuide: Boolean,
     // A recording of this channel is running: Record becomes Stop recording.
     isRecording: Boolean,
     onRecord: () -> Unit,
@@ -2000,7 +2016,7 @@ private fun ChannelContextMenu(
     val actions = buildList {
         add(MenuAction("synopsis", stringResource(R.string.glcn_synopsis_full), OwnTVIcon.INFO, group = watch, onClick = onSynopsis))
         if (onDetails != null) add(MenuAction("programme_details", stringResource(R.string.content_programme_details), OwnTVIcon.INFO, group = details, onClick = onDetails))
-        if (channel.catchup) add(MenuAction("catchup", stringResource(R.string.content_catchup), OwnTVIcon.REWIND, group = watch, onClick = onCatchup))
+        if (channel.catchup) add(MenuAction("catchup", stringResource(if (hasGuide) R.string.content_channel_archive else R.string.content_catchup), OwnTVIcon.REWIND, group = watch, onClick = onCatchup))
         // Record this channel from now. The guide's Record needs a programme, so a channel
         // the provider publishes no guide for can only be recorded from here. While it records, the
         // same row stops it — pressing Record again would start a second copy on another connection.
@@ -2242,6 +2258,9 @@ internal fun EpgMatchDialog(
     // One-shot, so later search-driven reloads don't steal focus from the field while typing.
     val firstItemFocus = remember { FocusRequester() }
     val searchFocus = remember { FocusRequester() }
+    // The buttons sit below a list of up to a few hundred guide channels, so ▶ on any row jumps to them:
+    // walking the whole list down was the only other way to reach Clear match.
+    val buttonsFocus = remember { FocusRequester() }
     var didInitialFocus by remember { mutableStateOf(false) }
     LaunchedEffect(results) {
         if (didInitialFocus || results == null) return@LaunchedEffect
@@ -2280,7 +2299,16 @@ internal fun EpgMatchDialog(
                         style = tv.own.owntv.ui.theme.stageText(18, 500), color = tv.own.owntv.ui.theme.StageColors.Muted,
                         modifier = Modifier.padding(horizontal = 14.mpx, vertical = 12.mpx),
                     )
-                    else -> LazyColumn(Modifier.fillMaxWidth().height(400.mpx)) {
+                    else -> LazyColumn(
+                        Modifier.fillMaxWidth().height(400.mpx).onPreviewKeyEvent { e ->
+                            if (e.key == Key.DirectionRight) {
+                                if (e.type == KeyEventType.KeyDown) runCatching { buttonsFocus.requestFocus() }
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                    ) {
                         items(list, key = { it.epgChannelId }) { epg ->
                             val from = epg.sourceIds.mapNotNull { sourceNames[it] }.distinct().joinToString(" + ")
                             tv.own.owntv.ui.stage.StageMenuItem(
@@ -2297,8 +2325,13 @@ internal fun EpgMatchDialog(
                     Modifier.fillMaxWidth().padding(top = 14.mpx),
                     horizontalArrangement = Arrangement.spacedBy(12.mpx, Alignment.End),
                 ) {
-                    if (currentMatch != null) tv.own.owntv.ui.stage.StageButton(stringResource(R.string.content_clear_match), onClick = onClear, height = 56.mpx, textSize = 19)
-                    tv.own.owntv.ui.stage.StageButton(stringResource(R.string.content_close), onClick = onDismiss, height = 56.mpx, textSize = 19, tinted = true)
+                    if (currentMatch != null) {
+                        tv.own.owntv.ui.stage.StageButton(stringResource(R.string.content_clear_match), onClick = onClear, height = 56.mpx, textSize = 19, modifier = Modifier.focusRequester(buttonsFocus))
+                    }
+                    tv.own.owntv.ui.stage.StageButton(
+                        stringResource(R.string.content_close), onClick = onDismiss, height = 56.mpx, textSize = 19, tinted = true,
+                        modifier = if (currentMatch == null) Modifier.focusRequester(buttonsFocus) else Modifier,
+                    )
                 }
             }
         }

@@ -124,13 +124,15 @@
 1	technical	app/src/main/java/tv/own/owntv/features/epg/GuideStage.kt	…
 1	technical	app/src/main/java/tv/own/owntv/features/epg/GuideStage.kt	→
 1	empty	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	\0
+1	log	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	Day read failed channelId=${channel.id}
+1	technical	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	EEEd
+1	log	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	ProgrammeDayPage
 1	technical	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	h$i
 1	technical	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	p${it.index}-${list[it.index].startMs}
 2	technical	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	·
-1	technical	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	▲ ▼
-1	technical	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	▶
-1	technical	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	▼
-2	technical	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	◀ ▶
+2	technical	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	▲ ▼
+2	technical	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	▶
+1	technical	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	◀ ▶
 1	technical	app/src/main/java/tv/own/owntv/features/epg/ProgrammeDayPage.kt	✓
 2	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	,
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	cinemaAmbient
@@ -157,10 +159,14 @@
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	%.1f
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	,
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	cinemaRowsLights
+1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	download
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	episode:${episode.id}
+2	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	favourite
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	live:${channel.id}
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	movie:${movie.id}
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	panelRoom
+2	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	play_trailer
+1	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	tmdb_details
 2	url	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	w1280
 2	url	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	w500
 5	technical	app/src/main/java/tv/own/owntv/features/home/HomeScreen.kt	·
@@ -536,6 +542,7 @@
 1	locale	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesAccountScreen.kt	zh-tw
 2	log	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesViewModel.kt	OpenSubtitles
 1	log	app/src/main/java/tv/own/owntv/features/settings/OpenSubtitlesViewModel.kt	user-info refresh failed: ${it.message}
+1	technical	app/src/main/java/tv/own/owntv/features/settings/PlayerButtonsSettingsScreen.kt	pb_dpad_up_down
 1	technical	app/src/main/java/tv/own/owntv/features/settings/PlayerButtonsSettingsScreen.kt	pb_hold_ok
 1	technical	app/src/main/java/tv/own/owntv/features/settings/PlayerButtonsSettingsScreen.kt	pb_number_keys
 1	technical	app/src/main/java/tv/own/owntv/features/settings/PlayerButtonsSettingsScreen.kt	pb_short_ok
@@ -562,6 +569,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	live_layout
 2	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	live_opens_in
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	navigation
+1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	pb_dpad_up_down
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	pb_hold_ok
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	pb_number_keys
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsHelpTable.kt	pb_short_ok
