@@ -860,6 +860,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_home_bg
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_keep_watching_strip
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_light_mode
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_rail_shape
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_reset_appearance
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_top_bar_shape
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	glcn_trakt
@@ -941,7 +942,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SolidAmbientBackdrop.kt	auroraPhase
 2	empty	app/src/main/java/tv/own/owntv/features/shell/components/StageRail.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/StageRail.kt	$line ›
-3	technical	app/src/main/java/tv/own/owntv/features/shell/components/StageRail.kt	?
+4	technical	app/src/main/java/tv/own/owntv/features/shell/components/StageRail.kt	?
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/StageRail.kt	railIconHop
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/StageRail.kt	topBarGlass
 2	empty	app/src/main/java/tv/own/owntv/features/shell/components/StageStatus.kt	\0
@@ -1487,6 +1488,8 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	· ▼
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	◀ ▶
 1	technical	app/src/main/java/tv/own/owntv/glcn/ProgrammeInfoScreen.kt	★
+1	technical	app/src/main/java/tv/own/owntv/glcn/RailPref.kt	glcn_rail
+1	technical	app/src/main/java/tv/own/owntv/glcn/RailPref.kt	shape
 1	technical	app/src/main/java/tv/own/owntv/glcn/RecentPins.kt	glcn_recent_pins
 1	technical	app/src/main/java/tv/own/owntv/glcn/RecentPins.kt	pinned
 2	technical	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	\0

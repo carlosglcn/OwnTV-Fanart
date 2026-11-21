@@ -158,4 +158,10 @@
     <string name="glcn_top_bar_tabs">Tabs</string>
     <string name="glcn_top_bar_pills">Pills</string>
     <string name="glcn_top_bar_icons">Icons</string>
+    <string name="glcn_rail_shape_title">Side menu shape</string>
+    <string name="glcn_rail_shape_desc">How the side menu is drawn (with Navigation set to the side). Each press moves on to the next: Glass, Fade, Column, Label.</string>
+    <string name="glcn_rail_glass">Glass</string>
+    <string name="glcn_rail_fade">Fade</string>
+    <string name="glcn_rail_column">Column</string>
+    <string name="glcn_rail_label">Label</string>
 </resources>

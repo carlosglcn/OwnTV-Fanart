@@ -136,6 +136,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         tv.own.owntv.player.LiveDiagnosticsLog.init(this)
         tv.own.owntv.glcn.StripPref.init(this)
         tv.own.owntv.glcn.TopBarPref.init(this)
+        tv.own.owntv.glcn.RailPref.init(this)
         tv.own.owntv.glcn.ListFocusPref.init(this)
         // This app's own releases, which the in-app updater asks about. Core defaults to exactly
         // this value, so the line changes nothing today — it is here so the television names its own

@@ -160,4 +160,10 @@
     <string name="glcn_top_bar_tabs">Pestañas</string>
     <string name="glcn_top_bar_pills">Píldoras</string>
     <string name="glcn_top_bar_icons">Iconos</string>
+    <string name="glcn_rail_shape_title">Forma del menú lateral</string>
+    <string name="glcn_rail_shape_desc">Cómo se dibuja el menú lateral (con Navegación en el lateral). Cada pulsación pasa a la siguiente: Cristal, Fundido, Columna, Etiqueta.</string>
+    <string name="glcn_rail_glass">Cristal</string>
+    <string name="glcn_rail_fade">Fundido</string>
+    <string name="glcn_rail_column">Columna</string>
+    <string name="glcn_rail_label">Etiqueta</string>
 </resources>

@@ -885,6 +885,7 @@ fun SettingsScreen(
         keepWatchingStripRow(),
         fixedFocusRow(),
         topBarShapeRow(),
+        railShapeRow(),
         RootRow(
             tabRowKey(SettingsTab.PANEL_WIDTH), TileTone.PRIMARY, OwnTVIcon.PANEL_WIDTH,
             title = stringResource(R.string.settings_panel_width),
@@ -3409,6 +3410,17 @@ private fun keepWatchingStripRow(): RootRow = RootRow(
     chip = stringResource(if (tv.own.owntv.glcn.StripPref.on) R.string.common_on else R.string.common_off),
     chipTone = if (tv.own.owntv.glcn.StripPref.on) TileTone.PRIMARY else TileTone.SECONDARY,
     onClick = { tv.own.owntv.glcn.StripPref.set(!tv.own.owntv.glcn.StripPref.on) },
+)
+
+/** glcn: how the side menu is drawn — each press moves on to the next shape. */
+@Composable
+private fun railShapeRow(): RootRow = RootRow(
+    "glcn_rail_shape", TileTone.PRIMARY, OwnTVIcon.LIST,
+    title = stringResource(R.string.glcn_rail_shape_title),
+    desc = stringResource(R.string.glcn_rail_shape_desc),
+    chip = stringResource(tv.own.owntv.glcn.RailPref.shape.label),
+    chipTone = TileTone.PRIMARY,
+    onClick = { tv.own.owntv.glcn.RailPref.next() },
 )
 
 /** glcn: how the top bar is drawn — each press moves on to the next shape, and the bar above shows it at once. */
