@@ -550,9 +550,11 @@ internal fun MatchCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // glcn: the competition's own mark before its name — the one drawn for a dark ground under a dark
                 // style; where the feed has only the plain one, it sits on a small light chip so a dark mark shows.
-                val mark = if (lightCard) m.leagueLogo ?: m.leagueLogoDark else m.leagueLogoDark ?: m.leagueLogo
+                // Tennis: the tournament's own logo where the data lists it (the feed has only the tour's).
+                val own = if (m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) tv.own.owntv.core.sports.TennisPhotos.tournamentLogo(m.leagueName) else null
+                val mark = own ?: if (lightCard) m.leagueLogo ?: m.leagueLogoDark else m.leagueLogoDark ?: m.leagueLogo
                 if (mark != null) {
-                    val chip = !lightCard && m.leagueLogoDark == null
+                    val chip = !lightCard && (own != null || m.leagueLogoDark == null)
                     coil3.compose.AsyncImage(
                         model = mark, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                         modifier = Modifier.padding(end = 10.mpx).size(LEAGUE_MARK.mpx)
@@ -762,7 +764,7 @@ private const val SIDE_SILVER = 0.4f
 private const val SIDE_BLACK = 0.12f
 
 /** glcn: how strongly a card takes its sides' colours, and how dark its middle stays under the score. */
-private const val LEAGUE_MARK = 30
+private const val LEAGUE_MARK = 34
 private const val TEAM_TINT = 0.78f
 private const val TEAM_TINT_LIGHT = 0.3f
 private const val TEAM_TINT_MID = 0.22f
