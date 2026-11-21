@@ -558,6 +558,21 @@ fun MoviesScreen(
             progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
         )
     }
+    // glcn: ▲ from the first row of posters goes to Keep watching — scrolled away, the grid's own search did not find it.
+    val stripFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val toStrip: () -> Boolean = {
+        if (!showStrip || runway) false else {
+            scope.launch {
+                runCatching {
+                    if (tv.own.owntv.glcn.SmoothScroll.still) { if (usesList) effectiveListState.scrollToItem(0) else effectiveGridState.scrollToItem(0) }
+                    else if (usesList) effectiveListState.animateScrollToItem(0) else effectiveGridState.animateScrollToItem(0)
+                }
+                withFrameNanos { }
+                runCatching { stripFocus.requestFocus() }
+            }
+            true
+        }
+    }
     val continueStrip: @Composable (Dp, Dp) -> Unit = { start, end ->
         tv.own.owntv.glcn.ContinueStrip(
             stripCards, start, end,
@@ -566,6 +581,7 @@ fun MoviesScreen(
             onClick = { i -> stripMovies.getOrNull(i)?.let { playMovieNow(it) } },
             onLongClick = { i -> stripMovies.getOrNull(i)?.let { stripMenuId = it.id; openMenu(it, -1) } },
             modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus },
+            focus = stripFocus,
         )
     }
     val posterOf: (MovieEntity) -> String? = {
@@ -784,7 +800,8 @@ fun MoviesScreen(
                                             )
                                             .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); runwayAt = index } }
                                             .onPreviewKeyEvent { e ->
-                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true } else false
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true }
+                                                else e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && index < columns && toStrip()
                                             },
                                     ) {
                                         VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES)
@@ -843,6 +860,7 @@ fun MoviesScreen(
                                                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                     when (e.key) {
                                                         Key.Menu -> { openMenu(movie, index); true }
+                                                        Key.DirectionUp -> index < columns && toStrip()
                                                         // ◀ from the first column goes to the menu; categories open from their button or a shortcut.
                                                         else -> false
                                                     }
@@ -971,7 +989,7 @@ fun MoviesScreen(
                                                 Key.DirectionLeft -> !locked && run { runCatching { railFocus.requestFocus() }; true }
                                                 // Step by row number: a held key outran the paged list and stopped (playbook 2).
                                                 Key.DirectionDown -> (stepper.target ?: index).let { from -> from + 1 < movies.itemCount && run { stepper.stepTo(from + 1); true } }
-                                                Key.DirectionUp -> (stepper.target ?: index).let { from -> from > 0 && run { stepper.stepTo(from - 1); true } }
+                                                Key.DirectionUp -> (stepper.target ?: index).let { from -> if (from > 0) { stepper.stepTo(from - 1); true } else toStrip() }
                                                 else -> false
                                             }
                                         },
@@ -1022,7 +1040,8 @@ fun MoviesScreen(
                                             )
                                             .onFocusChanged { if (it.isFocused) onMovieFocus(movie) }
                                             .onPreviewKeyEvent { e ->
-                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true } else false
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true }
+                                                else e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && index < columns && toStrip()
                                             },
                                     ) { VodPosterArt(posterOf(movie), OwnTVIcon.MOVIES) }
                                 }

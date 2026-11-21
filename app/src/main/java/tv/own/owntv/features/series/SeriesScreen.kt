@@ -625,6 +625,21 @@ private fun SeriesGrid(
             progress = st.progress,
         )
     }
+    // glcn: ▲ from the first row of posters goes to Keep watching — scrolled away, the grid's own search did not find it.
+    val stripFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val toStrip: () -> Boolean = {
+        if (!showStrip || runway) false else {
+            scope.launch {
+                runCatching {
+                    if (tv.own.owntv.glcn.SmoothScroll.still) { if (usesList) effectiveListState.scrollToItem(0) else effectiveGridState.scrollToItem(0) }
+                    else if (usesList) effectiveListState.animateScrollToItem(0) else effectiveGridState.animateScrollToItem(0)
+                }
+                withFrameNanos { }
+                runCatching { stripFocus.requestFocus() }
+            }
+            true
+        }
+    }
     val continueStrip: @Composable (androidx.compose.ui.unit.Dp, androidx.compose.ui.unit.Dp) -> Unit = { start, end ->
         tv.own.owntv.glcn.ContinueStrip(
             stripCards, start, end,
@@ -633,6 +648,7 @@ private fun SeriesGrid(
             onClick = { i -> stripShows.getOrNull(i)?.let { vm.openSeries(it.series) } },
             onLongClick = { i -> stripShows.getOrNull(i)?.let { stripMenu = it; openMenu(it.series, -1) } },
             modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus },
+            focus = stripFocus,
         )
     }
     val posterOf: (tv.own.owntv.core.database.entity.SeriesEntity) -> String? = {
@@ -806,7 +822,8 @@ private fun SeriesGrid(
                                             )
                                             .onFocusChanged { if (it.isFocused) { onShowFocus(show); runwayAt = index } }
                                             .onPreviewKeyEvent { e ->
-                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true } else false
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true }
+                                                else e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && index < columns && toStrip()
                                             },
                                     ) {
                                         VodPosterArt(posterOf(show), OwnTVIcon.SERIES)
@@ -863,6 +880,7 @@ private fun SeriesGrid(
                                                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                     when (e.key) {
                                                         Key.Menu -> { openMenu(show, index); true }
+                                                        Key.DirectionUp -> index < columns && toStrip()
                                                         // ◀ from the first column goes to the menu; categories open from their button or a shortcut.
                                                         else -> false
                                                     }
@@ -989,7 +1007,7 @@ private fun SeriesGrid(
                                                 Key.DirectionLeft -> !locked && run { runCatching { railFocus.requestFocus() }; true }
                                                 // Step by row number: a held key outran the paged list and stopped (playbook 2).
                                                 Key.DirectionDown -> (stepper.target ?: index).let { from -> from + 1 < series.itemCount && run { stepper.stepTo(from + 1); true } }
-                                                Key.DirectionUp -> (stepper.target ?: index).let { from -> from > 0 && run { stepper.stepTo(from - 1); true } }
+                                                Key.DirectionUp -> (stepper.target ?: index).let { from -> if (from > 0) { stepper.stepTo(from - 1); true } else toStrip() }
                                                 else -> false
                                             }
                                         },
@@ -1039,7 +1057,8 @@ private fun SeriesGrid(
                                             )
                                             .onFocusChanged { if (it.isFocused) onShowFocus(show) }
                                             .onPreviewKeyEvent { e ->
-                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true } else false
+                                                if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true }
+                                                else e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && index < columns && toStrip()
                                             },
                                     ) { VodPosterArt(posterOf(show), OwnTVIcon.SERIES) }
                                 }

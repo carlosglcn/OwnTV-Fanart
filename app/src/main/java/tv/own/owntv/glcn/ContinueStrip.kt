@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -53,6 +54,8 @@ fun ContinueStrip(
     onClick: (Int) -> Unit,
     onLongClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** glcn: to send the focus here (▲ from the first row of posters, whose own search does not find a row scrolled away). */
+    focus: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     if (cards.isEmpty()) return
     Column(modifier.fillMaxWidth()) {
@@ -65,7 +68,7 @@ fun ContinueStrip(
             state = rememberLazyListState(),
             horizontalArrangement = Arrangement.spacedBy(STRIP_GAP.mpx),
             contentPadding = PaddingValues(start = startPad, end = endPad, top = 10.mpx, bottom = 10.mpx),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(if (focus != null) Modifier.focusRequester(focus) else Modifier),
         ) {
             itemsIndexed(cards, key = { _, c -> c.key }) { i, c ->
                 StagePoster(
