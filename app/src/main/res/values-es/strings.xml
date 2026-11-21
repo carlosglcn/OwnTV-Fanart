@@ -137,4 +137,5 @@
     <string name="glcn_strip_setting_title">«Seguir viendo» en Películas y Series</string>
     <string name="glcn_strip_setting_desc">Una fila con lo que tienes a medias encima de los pósters, en Todas. Mantén OK sobre una tarjeta para marcarla como vista o quitarla.</string>
     <string name="glcn_sync_queued">En cola</string>
+    <string name="glcn_deck_search">Buscar canal</string>
 </resources>

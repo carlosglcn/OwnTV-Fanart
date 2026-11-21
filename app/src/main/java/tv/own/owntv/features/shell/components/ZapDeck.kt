@@ -129,6 +129,11 @@ fun ZapDeck(
     onTune: (ChannelEntity) -> Unit,
     /** glcn: OK held on a group hides it (undone in Settings › Customize); null = not offered. */
     onHideCategory: ((LiveKey) -> Unit)? = null,
+    /**
+     * glcn: channels of every active playlist whose name holds the text — the quick search (the magnifier beside
+     * the list's name, ▲ from the first channel). Null = not offered.
+     */
+    searchChannels: (suspend (String) -> List<ChannelEntity>)? = null,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -162,7 +167,11 @@ fun ZapDeck(
     var shownKey by remember { mutableStateOf(currentKey) }
     var loaded by remember { mutableStateOf<List<ChannelEntity>>(emptyList()) }
     var loadedFor by remember { mutableStateOf<Pair<LiveKey?, Long>?>(null) }
-    val list = if (usesZap(shownKey)) channels else loaded
+    // glcn: the quick search — its text, whether the field has the keyboard, and what it found (null = not searching).
+    var searchText by remember { mutableStateOf(NO_SEARCH) }
+    var searchOpen by remember { mutableStateOf(false) }
+    var searchList by remember { mutableStateOf<List<ChannelEntity>?>(null) }
+    val list = searchList ?: if (usesZap(shownKey)) channels else loaded
     var chIdx by remember { mutableIntStateOf(if (listIsGroup) channels.indexOfFirst { it.id == currentId }.coerceAtLeast(0) else 0) }
     // glcn: a channel number typed on the remote — the cursor jumps to it as the digits come, and the number shows a moment.
     var typed by remember { mutableStateOf("") }
@@ -225,6 +234,15 @@ fun ZapDeck(
 
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    // glcn: the search runs a moment after the last letter; under two letters there is nothing to look for.
+    LaunchedEffect(searchText) {
+        val find = searchChannels ?: return@LaunchedEffect
+        val q = searchText.trim()
+        if (q.length < DECK_SEARCH_MIN) { if (searchList != null && q.isEmpty() && !searchOpen) { searchList = null; listVersion++ }; return@LaunchedEffect }
+        delay(DECK_SEARCH_WAIT_MS)
+        val got = runCatching { find(q) }.getOrDefault(emptyList())
+        searchList = got; chIdx = 0; listVersion++
+    }
     // glcn: ◀ ◀ ◀ — the playlists panel (column -2), in the categories' place and at their width. It lists every
     // playlist of the profile, the switched-off ones too (dimmed), so one can be switched back on from here.
     var plIdx by remember { mutableIntStateOf(0) }
@@ -279,7 +297,18 @@ fun ZapDeck(
         }
         column = 0
     }
-    BackHandler { if (column == -2 || column == -3) column = 0 else onDismiss() }
+    BackHandler {
+        when {
+            // glcn: Back steps out of the search first — the keyboard, then the results — before closing the list.
+            searchOpen -> { searchOpen = false; runCatching { focus.requestFocus() } }
+            searchList != null || column == -4 -> {
+                searchList = null; searchText = NO_SEARCH; listVersion++
+                chIdx = (if (usesZap(shownKey)) channels else loaded).indexOfFirst { it.id == currentId }.coerceAtLeast(0); column = 1
+            }
+            column == -2 || column == -3 -> column = 0
+            else -> onDismiss()
+        }
+    }
 
     // Slides in.
     val enter = remember { Animatable(0f) }
@@ -290,7 +319,9 @@ fun ZapDeck(
     fun tuneFocused() {
         val ch = list.getOrNull(chIdx) ?: return
         val key = shownKey
-        if (key != null && !usesZap(key)) onArmCategory(key)
+        // glcn: a channel found by the search zaps on in its own group.
+        if (searchList != null) ch.categoryId?.let { onArmCategory(LiveKey.Folder(it)) }
+        else if (key != null && !usesZap(key)) onArmCategory(key)
         onTune(ch)
     }
 
@@ -298,7 +329,7 @@ fun ZapDeck(
     // glcn: the widths chosen in Settings → Layout → Panel widths; while the channels or the schedule have the
     // cursor the groups fold to their icons and the programme column takes the room they leave.
     val widths = tv.own.owntv.glcn.DeckWidths.shares
-    val foldTarget = if (column == 1 || column == 2) 1f else 0f
+    val foldTarget = if (column == 1 || column == 2 || column == -4) 1f else 0f
     val fold by androidx.compose.animation.core.animateFloatAsState(
         foldTarget,
         if (tv.own.owntv.glcn.LowRam.on) androidx.compose.animation.core.snap<Float>() else tween<Float>(260, easing = FastOutSlowInEasing),
@@ -402,6 +433,16 @@ fun ZapDeck(
             .focusRequester(focus)
             .focusable()
             .onPreviewKeyEvent { e ->
+                // glcn: while the search field has the keyboard the keys are its own.
+                if (searchOpen) {
+                    // ▼ leaves the field for what it found (with the keyboard put away, nothing else would).
+                    if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown) {
+                        searchOpen = false; runCatching { focus.requestFocus() }
+                        column = if (list.isNotEmpty() && searchList != null) 1 else -4
+                        return@onPreviewKeyEvent true
+                    }
+                    return@onPreviewKeyEvent false
+                }
                 // glcn: the key comes up — the wheel coasts and stops.
                 if (e.type == KeyEventType.KeyUp && (e.key == Key.DirectionUp || e.key == Key.DirectionDown) && wheelTurning) {
                     wheelTurning = false; fastRun = false; return@onPreviewKeyEvent true
@@ -448,7 +489,9 @@ fun ZapDeck(
                             // glcn: ▲ on the first of "Up next" gives the picture back, full screen (a fresh press, not a held run).
                             2 -> if (up && schedIdx <= schedFirst) { if (first) onDismiss() }
                                 else schedIdx = (schedIdx + if (up) -1 else 1).coerceIn(schedFirst, (schedCount - 1).coerceAtLeast(schedFirst))
-                            1 -> if (list.size > 1) {
+                            // glcn: ▲ on the first channel reaches the magnifier (a fresh press; a held run stops at the top).
+                            1 -> if (up && chIdx == 0 && searchChannels != null) { if (first) column = -4 }
+                            else if (list.size > 1) {
                                 // glcn: held, the cursor speeds up — one row at a time for the first moment, then 3, then 6.
                                 val held = e.nativeKeyEvent.eventTime - e.nativeKeyEvent.downTime
                                 val step = when {
@@ -467,6 +510,7 @@ fun ZapDeck(
                                 else -> groupIdx = if (groupIdx >= entries.lastIndex) 0 else groupIdx + 1
                             }
                             -1 -> if (!up) column = 0
+                            -4 -> if (!up && list.isNotEmpty()) column = 1
                             -3 -> if (manageRows.isNotEmpty()) manageIdx = if (up) (if (manageIdx == 0) manageRows.lastIndex else manageIdx - 1) else (if (manageIdx >= manageRows.lastIndex) 0 else manageIdx + 1)
                             -2 -> plIdx = if (up) (if (plIdx == 0) panelLists.lastIndex else plIdx - 1) else (if (plIdx >= panelLists.lastIndex) 0 else plIdx + 1)
                         }
@@ -495,7 +539,11 @@ fun ZapDeck(
                     Key.DirectionLeft -> {
                         when (column) {
                             2 -> column = 1
-                            1 -> { column = 0; groupIdx = entries.indexOfFirst { it.item.key == shownKey }.takeIf { it >= 0 } ?: groupIdx }
+                            1, -4 -> {
+                                // glcn: back to the groups, the search put away.
+                                if (searchList != null) { searchList = null; searchText = NO_SEARCH; listVersion++; chIdx = 0 }
+                                column = 0; groupIdx = entries.indexOfFirst { it.item.key == shownKey }.takeIf { it >= 0 } ?: groupIdx
+                            }
                             -3 -> column = 0
                             // glcn: ◀ ◀ ◀ from the picture — the quick playlist picker (as TiviMate, and as in Live TV).
                             0 -> if (chips.isNotEmpty()) { column = -2; plIdx = chips.indexOfFirst { it.first == activeChip }.coerceAtLeast(0) }
@@ -521,6 +569,7 @@ fun ZapDeck(
                     Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                         if (first) when (column) {
                             1, 2 -> tuneFocused()
+                            -4 -> searchOpen = true
                             0 -> if (list.isNotEmpty() && entries.getOrNull(groupIdx)?.item?.key == shownKey) column = 1
                             -1 -> chips.getOrNull(chipIdx)?.let { (id, _) -> playlists?.onSelect?.invoke(id); column = 0; groupIdx = 0 }
                             -2 -> pickPlaylist()
@@ -712,13 +761,24 @@ fun ZapDeck(
                 ) {
                     // glcn: a ‹ before the group's name says the categories are there, to the left (◀ opens them).
                     OwnTVIcon(OwnTVIcon.CHEVRON_LEFT, StageColors.Muted, Modifier.size(22.mpx))
-                    Text(groupName, style = stageText(26, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                    shownEntry?.item?.sourceId?.let(marks::get)?.let { tv.own.owntv.ui.stage.StagePlaylistMark(it) }
+                    val searching = searchOpen || searchList != null
+                    if (!searching) {
+                        Text(groupName, style = stageText(26, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                        shownEntry?.item?.sourceId?.let(marks::get)?.let { tv.own.owntv.ui.stage.StagePlaylistMark(it) }
+                    }
+                    if (searchChannels != null) DeckSearch(
+                        text = searchText, open = searchOpen, lit = column == -4, wide = searching,
+                        onText = { searchText = it },
+                        onDone = { searchOpen = false; runCatching { focus.requestFocus() }; column = if (list.isNotEmpty() && searchList != null) 1 else -4 },
+                        modifier = if (searching) Modifier.weight(1f) else Modifier,
+                    )
                     Text(
                         pluralStringResource(R.plurals.content_live_channel_count, list.size, list.size),
                         style = stageText(17, 500), color = StageColors.Muted, maxLines = 1,
                     )
                 }
+                // glcn: each found channel says which group it is in.
+                val groupNames = remember(entries) { entries.mapNotNull { e -> (e.item.key as? LiveKey.Folder)?.let { it.id to e.label } }.toMap() }
                 val playingIdx = remember(list, currentId) { list.indexOfFirst { it.id == currentId } }
                 val playingName = list.getOrNull(playingIdx)?.let { ProviderTags.displayName(it.name) }.orEmpty()
                 Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -738,6 +798,7 @@ fun ZapDeck(
                     DeckChannelRow(
                         channel = ch,
                         now = nowMap[ch.id],
+                        group = if (searchList != null) ch.categoryId?.let { groupNames[it] } else null,
                         playing = ch.id == currentId,
                         lit = focused && column == 1,
                         showNumber = showNumbers,
@@ -811,6 +872,10 @@ private const val ZAP_ACCEL_2_MS = 1_500L
 private const val ZAP_ACCEL_1_STEP = 3
 private const val ZAP_ACCEL_2_STEP = 8
 private const val ZAP_DIGITS_MAX = 4
+private const val DECK_SEARCH_MIN = 2
+/** No search text (the search put away). */
+private val NO_SEARCH = String()
+private const val DECK_SEARCH_WAIT_MS = 350L
 private const val ZAP_DIGIT_HOLD_MS = 1_500L
 
 /** glcn: the categories panel at least this wide, so their names read whole. */
@@ -1183,7 +1248,7 @@ internal fun GlideColumn(
 private const val PLAYING_WASH = 0.16f
 
 @Composable
-private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, playing: Boolean, lit: Boolean, showNumber: Boolean) {
+private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, playing: Boolean, lit: Boolean, showNumber: Boolean, group: String? = null) {
     val accent = stageAccent.accent
     val text by animateColorAsState(if (lit) litInk() else StageColors.Text, tween(140), label = "deckRowText")
     val sub by animateColorAsState(if (lit) litInk().copy(alpha = 0.8f) else StageColors.Muted, tween(140), label = "deckRowSub")
@@ -1210,7 +1275,9 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
                 if (playing) tv.own.owntv.glcn.EqualizerBars(if (lit) litInk() else accent, Modifier.size(18.mpx))
-                Text(ProviderTags.displayName(channel.name), style = stageText(20, if (playing) 800 else 700), color = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(ProviderTags.displayName(channel.name), style = stageText(20, if (playing) 800 else 700), color = text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                // glcn: in the search's results, the group the channel is in.
+                if (group != null) Text(group, style = stageText(14, 600), color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
             }
             if (now != null) {
                 Text(now.title, style = stageText(16, 400), color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1220,6 +1287,39 @@ private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, pla
                     Box(Modifier.fillMaxWidth(f).height(3.mpx).background(if (lit) litInk() else accent))
                 }
             }
+        }
+    }
+}
+
+/**
+ * glcn: the deck's quick search. At rest it is a magnifier beside the list's name ([lit] when the cursor is on it);
+ * OK opens the field with the TV's keyboard, and what is typed finds channels in every active playlist as it is
+ * written. The keyboard's search key, or Back, gives the keys back to the list.
+ */
+@Composable
+private fun DeckSearch(text: String, open: Boolean, lit: Boolean, wide: Boolean, onText: (String) -> Unit, onDone: () -> Unit, modifier: Modifier = Modifier) {
+    val field = remember { FocusRequester() }
+    LaunchedEffect(open) { if (open) runCatching { field.requestFocus() } }
+    val ink = if (lit && !open) litInk() else StageColors.Text
+    Row(
+        modifier
+            .clip(RoundedCornerShape(12.mpx))
+            .background(if (lit && !open) stageAccent.accent else if (wide) StageColors.Text.copy(alpha = 0.08f) else Color.Transparent)
+            .padding(horizontal = 10.mpx, vertical = 6.mpx),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.mpx),
+    ) {
+        OwnTVIcon(OwnTVIcon.SEARCH, if (lit && !open) ink else StageColors.Muted, Modifier.size(22.mpx))
+        if (wide) Box(Modifier.weight(1f)) {
+            if (text.isEmpty()) Text(stringResource(R.string.glcn_deck_search), style = stageText(20, 500), color = StageColors.Muted, maxLines = 1)
+            androidx.compose.foundation.text.BasicTextField(
+                value = text, onValueChange = onText, singleLine = true, enabled = open,
+                textStyle = stageText(20, 700).copy(color = ink),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(stageAccent.accent),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { onDone() }, onDone = { onDone() }),
+                modifier = Modifier.fillMaxWidth().focusRequester(field),
+            )
         }
     }
 }

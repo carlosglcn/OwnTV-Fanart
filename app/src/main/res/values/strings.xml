@@ -135,4 +135,5 @@
     <string name="glcn_strip_setting_title">"Keep watching" in Films and Series</string>
     <string name="glcn_strip_setting_desc">A row of what you are watching above the posters, in All. Hold OK on a card to mark it watched or remove it.</string>
     <string name="glcn_sync_queued">Queued</string>
+    <string name="glcn_deck_search">Search channel</string>
 </resources>

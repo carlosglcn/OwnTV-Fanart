@@ -2834,6 +2834,7 @@ fun OwnTVShell(
                             loadSchedule = { liveVm.scheduleFor(it) },
                             onArmCategory = { liveVm.loadChannelsForCategory(it) },
                             onHideCategory = { liveVm.hideCategory(it) },
+                            searchChannels = { liveVm.deckSearch(it) },
                             onTune = { liveVm.ensurePlaying(it); showChannelList = false },
                             onDismiss = { showChannelList = false },
                             modifier = Modifier.fillMaxSize(),

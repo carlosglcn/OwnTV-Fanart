@@ -1482,6 +1482,24 @@ class LiveViewModel(
         else -> channelsInRail(key)
     }.take(PEEK_LIMIT)
 
+    /**
+     * glcn: the deck's quick search — channels of the profile's active playlists whose name holds [query], in any
+     * letter case, without those hidden or in a hidden or locked group.
+     */
+    suspend fun deckSearch(query: String): List<ChannelEntity> {
+        val c = ctx.value
+        if (c.profileId < 0 || c.sourceIds.isEmpty()) return emptyList()
+        val raw = withContext(Dispatchers.IO) {
+            channelDao.searchList(tv.own.owntv.core.database.entity.nameKeyOf(query.trim()), c.sourceIds, DECK_SEARCH_LIMIT)
+        }
+        val cust = custom.value
+        val hiddenCats = hiddenCategoryIds.value
+        val sealed = cust.sealedCategoryIds
+        return raw
+            .filter { CustomizeKeys.channel(it) !in cust.hiddenItems && (it.categoryId == null || (it.categoryId !in hiddenCats && it.categoryId !in sealed)) }
+            .map { ch -> cust.itemNames[CustomizeKeys.channel(ch)]?.let { ch.copy(name = it) } ?: ch }
+    }
+
     /** glcn: a group's whole list for the zap deck — bounded like a zap list, not cut to a peek. */
     suspend fun deckChannels(key: LiveKey): List<ChannelEntity> = when (key) {
         is LiveKey.Folder -> channelsInCategory(key.id)
@@ -2912,6 +2930,7 @@ class LiveViewModel(
         /** How long a remembered category may wait for the complete rail before the channel's own
          *  folder is used instead — a startup must not hold the list on a slow, large playlist. */
         private const val RAIL_WAIT_MS = 2_000L
+        private const val DECK_SEARCH_LIMIT = 300
         /** glcn: how long the info page waits for the provider's short guide when nothing is stored. */
         private const val PROVIDER_GUIDE_WAIT_MS = 3_000L
         val defaultRail = listOf(
