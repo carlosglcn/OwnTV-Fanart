@@ -492,19 +492,16 @@ internal fun MatchCard(
 ) {
     val r = 20.mpx
     val locale = LocalConfiguration.current.locales[0]
-    // glcn: the card takes the two sides' colours, read from their crests — home's from the left, away's from the
-    // right. Deep tones under a dark style's light text; under a light style, a pale wash of the colour itself.
+    // glcn: each side's colour, as a bar beside it — the card itself stays plain, so the colour reads as that side's
+    // and is never dulled to carry text. The side's own colour when its feed gives one (its shirt's); the crest's
+    // strongest only stands in where there is none. Tennis: both players carry the surface's colour.
     val lightCard = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
     val sides = if (m.sport.isRace) emptyList() else listOfNotNull(m.home?.team, m.away?.team).filter { !it.isAthlete }
     val homeTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(0)?.logoUrl)
     val awayTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(1)?.logoUrl)
-    // The side's own colour when its feed gives one (its shirt's, which is what people know it by); the crest's
-    // strongest colour only stands in where there is none — a crest's colours are not always the shirt's.
     val surface = if (m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) tv.own.owntv.glcn.TennisSurface.of(m.leagueName) else null
-    val homeColor = surface?.let { sideTone(it.tone, lightCard) } ?: sides.getOrNull(0)?.let { ownColor(it, lightCard) } ?: if (lightCard) homeTone?.vivid else homeTone?.darkCard()
-    val awayColor = surface?.let { sideTone(it.tone, lightCard, deeper = true) } ?: sides.getOrNull(1)?.let { ownColor(it, lightCard) } ?: if (lightCard) awayTone?.vivid else awayTone?.darkCard()
-    val tintAlpha = if (lightCard) TEAM_TINT_LIGHT else TEAM_TINT
-    val tinted = surface != null || (sides.size == 2 && (homeColor != null || awayColor != null))
+    val homeBar = (surface?.tone ?: sides.getOrNull(0)?.let { ownColor(it) } ?: homeTone?.vivid)?.let { barTone(it, lightCard) }
+    val awayBar = (surface?.tone ?: sides.getOrNull(1)?.let { ownColor(it) } ?: awayTone?.vivid)?.let { barTone(it, lightCard) }
     val plain = StageColors.Ink.copy(alpha = 0.045f)
     StageSurface(
         onClick = onClick,
@@ -521,16 +518,7 @@ internal fun MatchCard(
                 playKey
             },
         idle = Modifier
-            .then(
-                if (tinted) Modifier.background(
-                    androidx.compose.ui.graphics.Brush.horizontalGradient(
-                        0f to (homeColor ?: plain).copy(alpha = if (homeColor != null) tintAlpha else plain.alpha),
-                        0.5f to if (lightCard) plain else Color.Black.copy(alpha = TEAM_TINT_MID),
-                        1f to (awayColor ?: plain).copy(alpha = if (awayColor != null) tintAlpha else plain.alpha),
-                    ),
-                    RoundedCornerShape(r),
-                ) else Modifier.background(plain, RoundedCornerShape(r)),
-            )
+            .background(plain, RoundedCornerShape(r))
             .drawBehind { drawInnerRing(Color.White.copy(alpha = 0.05f), 1.mpx.toPx(), r.toPx()) },
     ) { _ ->
         // glcn: the two crests, large, grey and faint, half off the card's two edges — a ghost of who plays.
@@ -583,7 +571,7 @@ internal fun MatchCard(
             }
             val spoiler = config.spoilerFree
             // The big "2 – 1" only for one score a side; sets and innings read as the two sides' lines.
-            if (featured && m.sport !in LINE_SCORE_SPORTS) FeaturedScore(m, spoiler) else Sides(m, spoiler)
+            if (featured && m.sport !in LINE_SCORE_SPORTS) FeaturedScore(m, spoiler, homeBar, awayBar) else Sides(m, spoiler, homeBar, awayBar)
             Spacer(Modifier.weight(1f))
             val followed = m.competitors.any { c -> config.teams.any { it.sport == m.sport && it.id == c.team.id } }
             CardFooter(m.venue, reminded, followed, channel)
@@ -593,7 +581,7 @@ internal fun MatchCard(
 
 /** Two sides, each a 42 px crest, the name and the score; the losing side in muted grey. */
 @Composable
-private fun Sides(m: Match, spoiler: Boolean) {
+private fun Sides(m: Match, spoiler: Boolean, homeBar: Color? = null, awayBar: Color? = null) {
     if (m.competitors.size < 2 || m.sport.isRace) {
         // Racing, a card: the session by its kind, the Grand Prix under it.
         Spacer(Modifier.height(12.mpx))
@@ -606,6 +594,7 @@ private fun Sides(m: Match, spoiler: Boolean) {
         Spacer(Modifier.height(12.mpx))
         val lost = c.winner == false
         Row(horizontalArrangement = Arrangement.spacedBy(13.mpx), verticalAlignment = Alignment.CenterVertically) {
+            SideBar(if (c === m.home) homeBar else awayBar, 36)
             Crest(c.team, 42)
             Text(teamLabel(c.team), style = stageText(21, 700), color = if (lost) StageColors.Muted else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             if (m.state != MatchState.PRE && !m.off) {
@@ -618,12 +607,13 @@ private fun Sides(m: Match, spoiler: Boolean) {
 
 /** The featured card's middle: crest and name each side, the score 51 px in between. */
 @Composable
-private fun FeaturedScore(m: Match, spoiler: Boolean) {
+private fun FeaturedScore(m: Match, spoiler: Boolean, homeBar: Color? = null, awayBar: Color? = null) {
     val home = m.home
     val away = m.away
-    if (home == null || away == null) { Sides(m, spoiler); return }
+    if (home == null || away == null) { Sides(m, spoiler, homeBar, awayBar); return }
     Row(Modifier.fillMaxWidth().padding(top = 12.mpx), verticalAlignment = Alignment.CenterVertically) {
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(13.mpx), verticalAlignment = Alignment.CenterVertically) {
+            SideBar(homeBar, 52)
             Crest(home.team, 60)
             Text(teamLabel(home.team), style = stageText(21, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -632,6 +622,7 @@ private fun FeaturedScore(m: Match, spoiler: Boolean) {
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(13.mpx, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
             Text(teamLabel(away.team), style = stageText(21, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Crest(away.team, 60)
+            SideBar(awayBar, 52)
         }
     }
 }
@@ -720,54 +711,47 @@ private fun FollowRemindMenu(
 internal fun teamLabel(t: tv.own.owntv.core.sports.model.Team): String =
     if (t.shortName.length <= 4 && t.shortName == t.shortName.uppercase() && t.name.length > t.shortName.length) t.name else t.shortName
 
+/** glcn: a side's colour bar; a side with no colour keeps the room, so the two names stay in line. */
+@Composable
+private fun SideBar(color: Color?, height: Int) {
+    Box(Modifier.size(SIDE_BAR_W.mpx, height.mpx).background(color ?: Color.Transparent, RoundedCornerShape((SIDE_BAR_W / 2).mpx)))
+}
+
 /**
- * glcn: a side's own colour for its card, from the feed's two ("004d98"). The first unless it is black, white or grey
- * and the second is a colour; then toned for the card — deep under a dark style's light text, as it is under a light
- * style (where it is laid on thin).
+ * glcn: a side's own colour, from the feed's two ("004d98"): the first, unless it is black, white or grey and the
+ * second is a colour.
  */
-private fun ownColor(team: tv.own.owntv.core.sports.model.Team, light: Boolean): Color? {
+private fun ownColor(team: tv.own.owntv.core.sports.model.Team): Color? {
     fun parse(hex: String?): Color? = hex?.let { runCatching { Color(android.graphics.Color.parseColor(HEX_MARK + it)) }.getOrNull() }
     fun sat(c: Color): Float = FloatArray(3).also { android.graphics.Color.colorToHSV(c.toArgb(), it) }[1]
     val first = parse(team.color)
     val second = parse(team.altColor)
-    val pick = when {
+    return when {
         first == null -> second
         second != null && sat(first) < GREY_SAT && sat(second) >= GREY_SAT -> second
         else -> first
-    } ?: return null
-    return sideTone(pick, light)
+    }
 }
 
-/** glcn: [c] as a card's tone: its hue kept, darkened for a dark style ([deeper] for a card's second end). */
-private fun sideTone(c: Color, light: Boolean, deeper: Boolean = false): Color {
-    if (light) return c
+/** glcn: [c] as it is, only kept off the card's own ground: not too dark on a dark style, not too pale on a light one. */
+private fun barTone(c: Color, light: Boolean): Color {
     val hsv = FloatArray(3)
     android.graphics.Color.colorToHSV(c.toArgb(), hsv)
-    val grey = hsv[1] < GREY_SAT
-    hsv[1] = if (grey) hsv[1] else hsv[1].coerceIn(SIDE_SAT_MIN, SIDE_SAT_MAX)
-    // A white side reads as silver, a black one as near black; a colour sits between, dark enough for white text.
-    hsv[2] = when {
-        grey && hsv[2] > 0.5f -> SIDE_SILVER
-        grey -> SIDE_BLACK
-        deeper -> SIDE_VALUE * 0.6f
-        else -> SIDE_VALUE
-    }
+    if (light) {
+        if (hsv[1] < GREY_SAT) hsv[2] = hsv[2].coerceAtMost(BAR_LIGHT_GREY_MAX) else hsv[2] = hsv[2].coerceAtMost(BAR_LIGHT_MAX)
+    } else hsv[2] = hsv[2].coerceAtLeast(BAR_DARK_MIN)
     return Color(android.graphics.Color.HSVToColor(hsv))
 }
 
 private const val HEX_MARK = "#"
 private const val GREY_SAT = 0.18f
-private const val SIDE_SAT_MIN = 0.55f
-private const val SIDE_SAT_MAX = 0.85f
-private const val SIDE_VALUE = 0.46f
-private const val SIDE_SILVER = 0.4f
-private const val SIDE_BLACK = 0.12f
+private const val SIDE_BAR_W = 7
+private const val BAR_DARK_MIN = 0.5f
+private const val BAR_LIGHT_MAX = 0.9f
+private const val BAR_LIGHT_GREY_MAX = 0.7f
 
 /** glcn: how strongly a card takes its sides' colours, and how dark its middle stays under the score. */
 private const val LEAGUE_MARK = 34
-private const val TEAM_TINT = 0.78f
-private const val TEAM_TINT_LIGHT = 0.3f
-private const val TEAM_TINT_MID = 0.22f
 private const val COUNTDOWN_MINUTES = 180L
 
 /** glcn: the channel a match was already found on — read from what its page found, never searched for here. */
