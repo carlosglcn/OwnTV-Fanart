@@ -179,4 +179,12 @@
     <string name="glcn_brisk_desc">El foco, las listas y el menú responden al mando el doble de rápido. Desactivado: el ritmo más suave de antes.</string>
     <string name="glcn_sports_rider_place">%1$s · P%2$d</string>
     <string name="glcn_race_result">Resultado</string>
+    <string name="glcn_more_today">Hoy</string>
+    <string name="glcn_more_yesterday">Ayer</string>
+    <plurals name="glcn_more_days_ago">
+        <item quantity="one">hace %d día</item>
+        <item quantity="other">hace %d días</item>
+    </plurals>
+    <string name="glcn_about_block_community">Comunidad</string>
+    <string name="glcn_about_block_credits">Créditos</string>
 </resources>

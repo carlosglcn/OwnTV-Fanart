@@ -177,4 +177,12 @@
     <string name="glcn_brisk_desc">The focus, the lists and the menu answer the remote twice as quickly. Off: the gentler pace they had.</string>
     <string name="glcn_sports_rider_place">%1$s · P%2$d</string>
     <string name="glcn_race_result">Result</string>
+    <string name="glcn_more_today">Today</string>
+    <string name="glcn_more_yesterday">Yesterday</string>
+    <plurals name="glcn_more_days_ago">
+        <item quantity="one">%d day ago</item>
+        <item quantity="other">%d days ago</item>
+    </plurals>
+    <string name="glcn_about_block_community">Community</string>
+    <string name="glcn_about_block_credits">Credits</string>
 </resources>

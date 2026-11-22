@@ -798,6 +798,17 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
 // ---------------------------------------------------------------------------------------------
 
 @Composable
+/** glcn: a block's name on About — small capitals in the theme's colour. */
+@Composable
+private fun AboutBlockLabel(text: String) {
+    Text(
+        text.uppercase(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]),
+        style = stageText(14, 800, 0.13.em), color = tv.own.owntv.ui.theme.stageLabelInk,
+        modifier = Modifier.padding(top = 26.mpx, bottom = 12.mpx),
+    )
+}
+
+@Composable
 internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLanguage: () -> Unit) {
     val context = LocalContext.current
     val manager: UpdateManager = koinInject()
@@ -846,14 +857,22 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
                 )
             }
         }
+        // glcn: three blocks — the version and what to do with it, the community, the credits.
+        Row(Modifier.padding(top = 22.mpx), horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
+            val languages = SupportedLocales.all.count { it.packaged }
+            StageTool(stringResource(R.string.settings_check_updates), onClick = { showUpdate = true }, icon = OwnTVIcon.REFRESH, boxed = true, modifier = Modifier.focusRequester(entry).focusRequester(updateFocus))
+            StageTool(pluralStringResource(R.plurals.more_about_languages, languages, languages), onClick = onOpenLanguage, icon = OwnTVIcon.LIST, boxed = true)
+            // glcn: a star on GitHub, as a QR for the phone (the TV has no browser).
+            StageTool(stringResource(R.string.glcn_star_action), onClick = { showStar = true }, icon = OwnTVIcon.STAR, boxed = true)
+            // glcn: the beta's updates come from a private repository; its token is pasted here once.
+            if (BuildConfig.GLCN_BETA) {
+                StageTool(stringResource(R.string.glcn_beta_token), onClick = { showToken = true }, icon = OwnTVIcon.PENCIL, boxed = true,
+                    value = if (manager.accessToken != null) stringResource(R.string.glcn_beta_token_saved) else null)
+            }
+        }
         Text(stringResource(R.string.more_about_description), style = stageText(18, 500).copy(lineHeight = 29.mpxSp), color = stageTone(Color(0xFFD3DCD8), StageColors.Body),
-            modifier = Modifier.padding(top = 26.mpx).widthIn(max = 860.mpx))
-        // glcn: what this version is, whose work it builds on, and where its own problems go.
-        Text(stringResource(R.string.glcn_about_fork), style = stageText(17, 500).copy(lineHeight = 27.mpxSp), color = StageColors.Muted,
-            modifier = Modifier.padding(top = 12.mpx).widthIn(max = 1000.mpx))
-        // glcn: Trakt's required notice (production access terms).
-        Text(stringResource(R.string.glcn_trakt_notice), style = stageText(15, 500), color = StageColors.Dim,
-            modifier = Modifier.padding(top = 8.mpx, bottom = 24.mpx).widthIn(max = 1000.mpx))
+            modifier = Modifier.padding(top = 22.mpx).widthIn(max = 1000.mpx))
+        AboutBlockLabel(stringResource(R.string.glcn_about_block_community))
         // glcn: this version's own Telegram group first, then the original project's — the same tile for both.
         Row(horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
             StageTile(Modifier.width(620.mpx)) {
@@ -886,8 +905,11 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
                 }
             }
         }
+        AboutBlockLabel(stringResource(R.string.glcn_about_block_credits))
+        Text(stringResource(R.string.glcn_about_fork), style = stageText(16, 500).copy(lineHeight = 25.mpxSp), color = StageColors.Muted,
+            modifier = Modifier.widthIn(max = 1100.mpx))
         // The links are for reading: a TV has no browser to open them in.
-        Column(Modifier.padding(top = 22.mpx), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
+        Column(Modifier.padding(top = 12.mpx), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
             for ((label, repo) in listOf(
                 stringResource(R.string.glcn_about_original) + " · " + stringResource(R.string.glcn_about_by, "ahXN00") to GITHUB_REPO,
                 stringResource(R.string.glcn_about_this) + " · " + stringResource(R.string.glcn_about_by, "carlosglcn") to GLCN_REPO,
@@ -904,18 +926,8 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
         }
         // glcn: credit for the app's wallpapers.
         Text(stringResource(R.string.glcn_wall_credit), style = stageText(14, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 10.mpx))
-        Row(Modifier.padding(top = 14.mpx), horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
-            val languages = SupportedLocales.all.count { it.packaged }
-            StageTool(pluralStringResource(R.plurals.more_about_languages, languages, languages), onClick = onOpenLanguage, icon = OwnTVIcon.LIST, boxed = true, modifier = Modifier.focusRequester(entry))
-            StageTool(stringResource(R.string.settings_check_updates), onClick = { showUpdate = true }, icon = OwnTVIcon.REFRESH, boxed = true, modifier = Modifier.focusRequester(updateFocus))
-            // glcn: a star on GitHub, as a QR for the phone (the TV has no browser).
-            StageTool(stringResource(R.string.glcn_star_action), onClick = { showStar = true }, icon = OwnTVIcon.STAR, boxed = true)
-            // glcn: the beta's updates come from a private repository; its token is pasted here once.
-            if (BuildConfig.GLCN_BETA) {
-                StageTool(stringResource(R.string.glcn_beta_token), onClick = { showToken = true }, icon = OwnTVIcon.PENCIL, boxed = true,
-                    value = if (manager.accessToken != null) stringResource(R.string.glcn_beta_token_saved) else null)
-            }
-        }
+        // glcn: Trakt's required notice (production access terms).
+        Text(stringResource(R.string.glcn_trakt_notice), style = stageText(14, 500), color = StageColors.Dim, modifier = Modifier.padding(top = 4.mpx))
     }
     if (showUpdate) {
         UpdateDialog(onDismiss = { showUpdate = false }, checkOnOpen = true)

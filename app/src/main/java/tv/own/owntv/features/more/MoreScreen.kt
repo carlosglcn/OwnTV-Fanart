@@ -157,7 +157,10 @@ fun MoreScreen(
     val pinned by settingsVm.quickPinnedKeys.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var logVersion by remember { mutableIntStateOf(0) }
-    val logCount by produceState(0, logVersion) { value = withContext(Dispatchers.IO) { PlaybackErrorLog.read(context).size } }
+    // glcn: only the last day's errors — a lifetime's count read as an alarm that never went away.
+    val logCount by produceState(0, logVersion) {
+        value = withContext(Dispatchers.IO) { System.currentTimeMillis().let { now -> PlaybackErrorLog.read(context).count { now - it.atMs < RECENT_ERRORS_MS } } }
+    }
 
     // glcn: Apps takes the whole width while you are in it — the sheet slides away left and the page with it,
     // in one move (no re-layout: the page is laid out full width and only shifted while the sheet is out).
@@ -188,10 +191,11 @@ fun MoreScreen(
                     text = label, icon = icon, value = value, warn = warn,
                     selected = selected == it,
                     onClick = { choose(it) },
-                    modifier = Modifier.focusRequester(itemFocus.getValue(it)),
+                    modifier = Modifier.padding(vertical = ITEM_GAP.mpx).focusRequester(itemFocus.getValue(it)),
                 )
             }
-            item(MoreItem.SETTINGS, OwnTVIcon.SETTINGS, stringResource(R.string.common_nav_settings), null, false)
+            // glcn: Settings, the one most opened here, as a wide button of its own under the profile.
+            SettingsButton(selected == MoreItem.SETTINGS, { choose(MoreItem.SETTINGS) }, Modifier.focusRequester(itemFocus.getValue(MoreItem.SETTINGS)))
             GroupLabel(stringResource(R.string.more_group_your_things))
             item(MoreItem.FAVORITES, OwnTVIcon.FAVORITE, stringResource(R.string.content_category_favorites), favorites.total.toString(), false)
             item(MoreItem.HISTORY, OwnTVIcon.HISTORY, stringResource(R.string.content_category_history), history.total.toString(), false)
@@ -200,11 +204,13 @@ fun MoreScreen(
             GroupLabel(stringResource(R.string.more_group_keep_safe))
             item(
                 MoreItem.BACKUP, OwnTVIcon.DOWNLOADS, stringResource(R.string.settings_backup_restore),
-                lastBackup?.let { relativeShort(it.at) } ?: stringResource(R.string.common_never), lastBackup == null,
+                // glcn: how long ago, in days — a bare date did not say whether it was up to date; amber past a month.
+                lastBackup?.let { b -> backupAge(b.at) } ?: stringResource(R.string.common_never),
+                lastBackup?.let { b -> System.currentTimeMillis() - b.at > STALE_BACKUP_MS } ?: true,
             )
             item(MoreItem.LOCAL_SYNC, OwnTVIcon.PHONE, stringResource(R.string.local_sync_title), stringResource(if (sync.listening) R.string.common_on else R.string.common_off), false)
             GroupLabel(stringResource(R.string.settings_app_group))
-            item(MoreItem.ERROR_LOG, OwnTVIcon.WARNING, stringResource(R.string.settings_playback_error_log), logCount.toString(), false)
+            item(MoreItem.ERROR_LOG, OwnTVIcon.WARNING, stringResource(R.string.settings_playback_error_log), logCount.takeIf { it > 0 }?.toString(), logCount > 0)
             item(MoreItem.ABOUT, OwnTVIcon.INFO, stringResource(R.string.settings_about), BuildConfig.VERSION_NAME, false)
             // Maintainer-only; DEV_TOOLS is a compile-time constant, so R8 removes it from published APKs.
             if (BuildConfig.DEV_TOOLS) item(MoreItem.DEVELOPER, OwnTVIcon.GEAR, "Developer", "DEV", false)
@@ -305,16 +311,43 @@ private fun ProfileRow(name: String, playlistLabel: String, playlists: Int, avat
 private fun GroupLabel(text: String) {
     Text(
         text.uppercase(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]),
-        style = stageText(12.5f, 800, 0.13.em), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(start = 16.mpx, end = 16.mpx, top = 16.mpx, bottom = 6.mpx),
+        style = stageText(14, 800, 0.13.em), color = tv.own.owntv.ui.theme.stageLabelInk, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(start = 16.mpx, end = 16.mpx, top = 26.mpx, bottom = 8.mpx),
     )
 }
 
-/** "2 days ago" — Android's own relative time, so it is localised without a string of ours. */
-private fun relativeShort(at: Long): String =
-    android.text.format.DateUtils.getRelativeTimeSpanString(
-        at, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS,
-    ).toString()
+/** glcn: Settings in More — a wide button in the theme's colours, its icon in the accent. */
+@Composable
+private fun SettingsButton(selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
+    val a = stageAccent
+    StageSurface(
+        onClick = onClick, radius = 20.mpx,
+        modifier = modifier.fillMaxWidth().height(70.mpx).padding(bottom = 2.mpx),
+        idle = Modifier.background(a.accent.copy(alpha = if (selected) 0.26f else 0.14f), RoundedCornerShape(20.mpx)),
+    ) { focused ->
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.mpx), horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically) {
+            OwnTVIcon(OwnTVIcon.SETTINGS, if (focused) a.onAccent else a.ink, Modifier.size(26.mpx))
+            Text(stringResource(R.string.common_nav_settings), style = stageText(22, 800), color = if (focused) a.onAccent else StageColors.Text, maxLines = 1, modifier = Modifier.weight(1f))
+            Text("›", style = stageText(26, 700), color = if (focused) a.onAccent else a.ink)
+        }
+    }
+}
+
+/** glcn: "today", "yesterday", "10 days ago". */
+@Composable
+private fun backupAge(at: Long): String {
+    val days = ((System.currentTimeMillis() - at) / DAY_MS).toInt().coerceAtLeast(0)
+    return when (days) {
+        0 -> stringResource(R.string.glcn_more_today)
+        1 -> stringResource(R.string.glcn_more_yesterday)
+        else -> pluralStringResource(R.plurals.glcn_more_days_ago, days, days)
+    }
+}
+
+private const val ITEM_GAP = 3
+private const val DAY_MS = 86_400_000L
+private const val STALE_BACKUP_MS = 30 * DAY_MS
+private const val RECENT_ERRORS_MS = DAY_MS
 
 /** glcn: how far right the full-width Apps page sits while the sheet is out (the sheet's room). */
 private const val APPS_SHIFT = 456

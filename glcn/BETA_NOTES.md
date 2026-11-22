@@ -56,3 +56,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🧊 Themes' surfaces take the theme's own tone (navy panels in Ría, warm ones in Brasa) instead of the same grey for all.
 - 🩹 Sound style list: the focused name reads on the focus (it was the focus's own colour, invisible with light accents such as Ría's).
 - 🎨 The theme shows beyond its focus: section labels in menus and sheets and Home's row names take the theme's colour (Ría's green by night, navy by day; Brasa's coral…), and the open section in the top bar (Capsule and Icons shapes) is a pill filled with the theme's gradient.
+- 🧭 **More, tidier:** Settings is a wide button of its own under the profile; the group names are larger and in the theme's colour, with more room between rows; the backup says how long ago it was ("10 days ago", in amber past a month); the error log shows a number only for the last day's errors, in amber.
+- ℹ️ **About in three blocks:** the version with its buttons right under it (Check for updates first), the community (both Telegram groups) and the credits (the original project and this version, wallpapers, Trakt's notice).
