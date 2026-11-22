@@ -38,3 +38,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🩹 **Sports: a match or league page no longer opens empty** — in the first minutes after the app starts (or after an update) the page waited behind the guide's matching and showed nothing; it now opens at once and its channels fill in when they are found.
 - 🏷️ Sports cards: tournament and competition logos show straight away when the app starts on its saved scores (they only came with the first refresh).
 - 🧾 Playback report: the diary of the last minutes comes before the list of live groups, so a report shortened where it is sent still carries it; a match page slow to open is noted there.
+- 🏷️ Match page: the competition's logo stays beside its name (it was lost when the match was read again).

@@ -238,7 +238,11 @@ class SportsViewModel(
             val preferred = c.preferredLanguages(appLanguage).toList()
             val opts = (s as? ChannelSearch.Found)?.options.orEmpty()
             MatchPageState(
-                match = b.match(m.key) ?: m,
+                // glcn: a match read again by itself comes without its competition's logo (only the day's list carries
+                // it): the page keeps the one its card had.
+                match = (b.match(m.key) ?: m).let { now ->
+                    if (now.leagueLogo != null || now.leagueLogoDark != null) now else now.copy(leagueLogo = m.leagueLogo, leagueLogoDark = m.leagueLogoDark)
+                },
                 summary = b.summaries[m.key],
                 standings = leagueKey?.let { b.standings[it] },
                 ranking = leagueKey?.let { b.rankings[it] },
