@@ -37,6 +37,12 @@ import kotlin.coroutines.EmptyCoroutineContext
  */
 object Pace {
     const val APP = 0.6f
+    /** glcn: "Brisk response" (PacePref): half of [APP] again — everything people steer takes half the time. */
+    private const val BRISK = 0.3f
+    private val pace: Float get() = if (PacePref.brisk) BRISK else APP
+    /** Reads the pace again (the setting was switched); set while an activity is up. */
+    @Volatile private var reread: (() -> Unit)? = null
+    fun refresh() { reread?.invoke() }
 
     /** The factor in force; read by [slow]. */
     @Volatile var factor: Float = APP
@@ -47,7 +53,7 @@ object Pace {
 
     private fun effective(system: Float): Float = when {
         system <= 0f -> 0f
-        else -> minOf(system, APP)
+        else -> minOf(system, pace)
     }
 
     private fun systemScale(activity: ComponentActivity): Float = runCatching {
@@ -74,6 +80,7 @@ object Pace {
             }
         }
         runCatching { activity.contentResolver.registerContentObserver(uri, false, observer) }
+        reread = { scale.scaleFactor = effective(systemScale(activity)); factor = scale.scaleFactor }
 
         activity.lifecycle.addObserver(object : LifecycleEventObserver {
             override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
@@ -85,6 +92,7 @@ object Pace {
                     Lifecycle.Event.ON_STOP -> clock?.pause()
                     Lifecycle.Event.ON_DESTROY -> {
                         recomposer.cancel()
+                        reread = null
                         source.lifecycle.removeObserver(this)
                         runCatching { activity.contentResolver.unregisterContentObserver(observer) }
                     }

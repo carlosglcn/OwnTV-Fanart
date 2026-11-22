@@ -884,6 +884,7 @@ fun SettingsScreen(
         ),
         keepWatchingStripRow(),
         fixedFocusRow(),
+        briskRow(),
         topBarShapeRow(),
         railShapeRow(),
         RootRow(
@@ -3410,6 +3411,17 @@ private fun keepWatchingStripRow(): RootRow = RootRow(
     chip = stringResource(if (tv.own.owntv.glcn.StripPref.on) R.string.common_on else R.string.common_off),
     chipTone = if (tv.own.owntv.glcn.StripPref.on) TileTone.PRIMARY else TileTone.SECONDARY,
     onClick = { tv.own.owntv.glcn.StripPref.set(!tv.own.owntv.glcn.StripPref.on) },
+)
+
+/** glcn: the interface's pace — brisk (everything that moves after a key takes half the time) or as gentle as it was. */
+@Composable
+private fun briskRow(): RootRow = RootRow(
+    "glcn_brisk", TileTone.PRIMARY, OwnTVIcon.PLAY,
+    title = stringResource(R.string.glcn_brisk_title),
+    desc = stringResource(R.string.glcn_brisk_desc),
+    chip = stringResource(if (tv.own.owntv.glcn.PacePref.brisk) R.string.common_on else R.string.common_off),
+    chipTone = if (tv.own.owntv.glcn.PacePref.brisk) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = { tv.own.owntv.glcn.PacePref.set(!tv.own.owntv.glcn.PacePref.brisk) },
 )
 
 /** glcn: how the side menu is drawn — each press moves on to the next shape. */

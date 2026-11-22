@@ -175,4 +175,6 @@
     <string name="glcn_tennis_grass">Hierba</string>
     <string name="glcn_tennis_hard">Pista dura</string>
     <string name="glcn_tennis_indoor">Pista dura cubierta</string>
+    <string name="glcn_brisk_title">Respuesta ágil</string>
+    <string name="glcn_brisk_desc">El foco, las listas y el menú responden al mando el doble de rápido. Desactivado: el ritmo más suave de antes.</string>
 </resources>

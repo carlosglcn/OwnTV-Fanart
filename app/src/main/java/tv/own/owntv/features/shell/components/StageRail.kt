@@ -981,6 +981,7 @@ private fun TopEntry(
     }
 }
 
+private const val REST_OPEN_MS = 420L
 private const val TOP_BAR_VEIL = 190
 private const val TOP_BAR_LINE = 4
 private const val TOP_BAR_LINE_LIFT = 2
@@ -1014,7 +1015,7 @@ private fun Modifier.selectOnRest(enabled: Boolean, onRest: () -> Unit): Modifie
     val latest by androidx.compose.runtime.rememberUpdatedState(onRest)
     androidx.compose.runtime.LaunchedEffect(focused, enabled) {
         if (focused && enabled) {
-            kotlinx.coroutines.delay(420)
+            kotlinx.coroutines.delay(tv.own.owntv.glcn.PacePref.ms(REST_OPEN_MS))
             latest()
         }
     }
