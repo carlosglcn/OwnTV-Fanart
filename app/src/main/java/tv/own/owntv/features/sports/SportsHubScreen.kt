@@ -556,7 +556,7 @@ internal fun MatchCard(
             if (featured && m.sport !in LINE_SCORE_SPORTS) FeaturedScore(m, spoiler, homeBar, awayBar) else Sides(m, spoiler, homeBar, awayBar)
             Spacer(Modifier.weight(1f))
             val followed = m.competitors.any { c -> config.teams.any { it.sport == m.sport && it.id == c.team.id } }
-            CardFooter(m.venue, reminded, followed, channel, surface)
+            CardFooter(venueText(m), reminded, followed, channel, surface)
         }
     }
 }
@@ -713,6 +713,13 @@ internal fun sideColors(m: Match): Pair<Color?, Color?> {
             .let { options -> options.firstOrNull { home == null || !alike(it, home) } ?: options.firstOrNull() }
     }
     return home to away
+}
+
+/** glcn: where [m] is played — its feed's own word, else the tournament's ground or the home side's arena (Venues). */
+@Composable
+internal fun venueText(m: Match): String? {
+    val read by tv.own.owntv.core.sports.Venues.version.collectAsStateWithLifecycle()
+    return if (read < 0) null else tv.own.owntv.core.sports.Venues.of(m)
 }
 
 /** glcn: the competition's logo — the tournament's own (tennis), the feed's (for a dark ground under a dark style), or ours. */

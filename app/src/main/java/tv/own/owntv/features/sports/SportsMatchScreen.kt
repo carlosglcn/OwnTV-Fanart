@@ -479,7 +479,7 @@ private fun ScoreHeader(m: Match, summary: MatchSummary?, hidden: Boolean, onRev
                 // Before kick-off the big number already says the day and time.
                 ((dayOf(m.startMs, locale) ?: stringResource(R.string.content_epg_today)) + " " + timeText(m.startMs)).takeIf { m.state != MatchState.PRE },
                 m.subtitle,
-                m.venue,
+                venueText(m),
             ).joinToString(stringResource(R.string.content_epg_bits_separator))
             Text(info, style = stageText(17, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 14.mpx))
             // glcn: tennis — the court's surface.

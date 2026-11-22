@@ -39,3 +39,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏷️ Sports cards: tournament and competition logos show straight away when the app starts on its saved scores (they only came with the first refresh).
 - 🧾 Playback report: the diary of the last minutes comes before the list of live groups, so a report shortened where it is sent still carries it; a match page slow to open is noted there.
 - 🏷️ Match page: the competition's logo stays beside its name (it was lost when the match was read again).
+- 🏟️ **Sports: where it is played, beyond football** — basketball and handball matches (ACB, EuroLeague, EuroCup, Primera FEB, Lega, ASOBAL, EHF, Bundesliga, LNH…) show the home side's arena, and the big tennis tournaments their ground, on the card and on the match page. The arenas are looked up once per club; a few may still be missing or need correcting.
