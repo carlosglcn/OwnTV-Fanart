@@ -501,8 +501,12 @@ internal fun MatchCard(
     val awayTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(1)?.logoUrl)
     val surface = if (m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) tv.own.owntv.glcn.TennisSurface.of(m.leagueName) else null
     // Players have no colours of their own: their sides carry no bar, and the surface is told at the card's foot.
+    // Two sides in much the same colour (two reds) would read as one: the away side then shows its second colour.
     val homeBar = (sides.getOrNull(0)?.let { ownColor(it) } ?: homeTone?.vivid)?.let { barTone(it, lightCard) }
-    val awayBar = (sides.getOrNull(1)?.let { ownColor(it) } ?: awayTone?.vivid)?.let { barTone(it, lightCard) }
+    val awayBar = sides.getOrNull(1)?.let { away ->
+        listOfNotNull(ownColor(away), parseHex(away.altColor), awayTone?.vivid).map { barTone(it, lightCard) }
+            .let { options -> options.firstOrNull { homeBar == null || !alike(it, homeBar) } ?: options.firstOrNull() }
+    }
     val plain = StageColors.Ink.copy(alpha = 0.045f)
     StageSurface(
         onClick = onClick,
@@ -541,9 +545,11 @@ internal fun MatchCard(
                 // style; where the feed has only the plain one, it sits on a small light chip so a dark mark shows.
                 // Tennis: the tournament's own logo where the data lists it (the feed has only the tour's).
                 val own = if (m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) tv.own.owntv.core.sports.TennisPhotos.tournamentLogo(m.leagueName) else null
-                val mark = own ?: if (lightCard) m.leagueLogo ?: m.leagueLogoDark else m.leagueLogoDark ?: m.leagueLogo
+                // Competitions whose scores come without a logo (ACB, ASOBAL, MotoGP, F1…) take ours.
+                val ours = if (own == null && m.leagueLogo == null && m.leagueLogoDark == null) tv.own.owntv.core.sports.CompetitionLogos.of(m.leagueSlug) else null
+                val mark = own ?: ours ?: if (lightCard) m.leagueLogo ?: m.leagueLogoDark else m.leagueLogoDark ?: m.leagueLogo
                 if (mark != null) {
-                    val chip = !lightCard && (own != null || m.leagueLogoDark == null)
+                    val chip = !lightCard && (own != null || ours != null || m.leagueLogoDark == null)
                     coil3.compose.AsyncImage(
                         model = mark, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                         modifier = Modifier.padding(end = 10.mpx).size(LEAGUE_MARK.mpx)
@@ -731,7 +737,7 @@ private fun SideBar(color: Color?, height: Int) {
  * second is a colour.
  */
 private fun ownColor(team: tv.own.owntv.core.sports.model.Team): Color? {
-    fun parse(hex: String?): Color? = hex?.let { runCatching { Color(android.graphics.Color.parseColor(HEX_MARK + it)) }.getOrNull() }
+    fun parse(hex: String?): Color? = parseHex(hex)
     fun sat(c: Color): Float = FloatArray(3).also { android.graphics.Color.colorToHSV(c.toArgb(), it) }[1]
     val first = parse(team.color)
     val second = parse(team.altColor)
@@ -740,6 +746,14 @@ private fun ownColor(team: tv.own.owntv.core.sports.model.Team): Color? {
         second != null && sat(first) < GREY_SAT && sat(second) >= GREY_SAT -> second
         else -> first
     }
+}
+
+private fun parseHex(hex: String?): Color? = hex?.let { runCatching { Color(android.graphics.Color.parseColor(HEX_MARK + it)) }.getOrNull() }
+
+/** glcn: two colours close enough to be taken for one (by their distance in RGB). */
+private fun alike(a: Color, b: Color): Boolean {
+    val dr = a.red - b.red; val dg = a.green - b.green; val db = a.blue - b.blue
+    return dr * dr + dg * dg + db * db < ALIKE * ALIKE
 }
 
 /** glcn: [c] as it is, only kept off the card's own ground: not too dark on a dark style, not too pale on a light one. */
@@ -755,6 +769,7 @@ private fun barTone(c: Color, light: Boolean): Color {
 private const val HEX_MARK = "#"
 private const val GREY_SAT = 0.18f
 private const val SIDE_BAR_W = 7
+private const val ALIKE = 0.32f
 private const val SURFACE_WASH = 0.22f
 private const val SURFACE_TAG_R = 8
 private const val BAR_DARK_MIN = 0.5f
