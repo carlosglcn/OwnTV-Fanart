@@ -534,16 +534,7 @@ fun SettingsScreen(
         ),
         // glcn: everything this version adds, on one page.
         RootGroup("group_fanart", stringResource(R.string.glcn_fanart_group), OwnTVIcon.IMAGE, stringResource(R.string.glcn_fanart_summary)),
-        RootRow(
-            "glcn_style", TileTone.PRIMARY, OwnTVIcon.PALETTE,
-            heading = stringResource(R.string.glcn_part_home),
-            title = stringResource(R.string.glcn_look_title),
-            desc = stringResource(R.string.glcn_look_desc),
-            // glcn: the theme's name, or the earlier style's, or "My own colours".
-            chip = glcnStyle?.let { st -> tv.own.owntv.core.theme.GlcnTheme.of(st)?.label() ?: st.label() } ?: stringResource(R.string.glcn_style_none),
-            chipTone = if (glcnStyle != null) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { showLook = true },
-        ),
+        glcnLookRow(glcnStyle) { showLook = true },
         glcnAccessibleRow(accessibleContext),
         glcnEmbyGroupsRow(accessibleContext),
         glcnCategoryIconsRow(accessibleContext),
@@ -553,20 +544,7 @@ fun SettingsScreen(
         if (tv.own.owntv.glcn.TvProfiles.activeIsTv) glcnTvHomeRow(accessibleContext) else glcnHomeBackdropRow(homeBackdrop) { showHomeLayout = true },
         // glcn: picture, own image and dimming are one row now — "Home background" — with its three choices in a popup.
         if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeBgRow(homeCover, homeCoverDim) { showHomeBg = true },
-        RootRow(
-            "glcn_season", TileTone.SECONDARY, OwnTVIcon.THEME,
-            title = stringResource(R.string.glcn_season_title),
-            desc = stringResource(R.string.glcn_season_desc),
-            chip = stringResource(
-                when (seasonMode) {
-                    1 -> R.string.glcn_season_details
-                    2 -> R.string.glcn_season_animated
-                    else -> R.string.common_off
-                },
-            ),
-            chipTone = if (seasonMode > 0) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { settingsVm.cycleSeasonMode() },
-        ),
+        glcnSeasonRow(seasonMode, settingsVm::cycleSeasonMode),
         RootRow(
             "glcn_safe_area", TileTone.SECONDARY, OwnTVIcon.LIST_GRID,
             title = stringResource(R.string.glcn_safe_area_title),
@@ -1600,14 +1578,15 @@ fun SettingsScreen(
     if (showHomeLayout) {
         tv.own.owntv.glcn.HomeLayoutPicker(homeBackdrop, onPick = settingsVm::setHomeBackdropStyle, onDismiss = { showHomeLayout = false })
     }
-    if (showLook) LookPopupHost(
-        settingsVm,
-        onAccent = { saveScroll(); dialogReturn = accentRowFocus; showAccent = true },
-        onFocus = { showFocusHighlight = true },
-        onSounds = { showSoundStyle = true },
-        onOlder = { showGlcnStyle = true },
-        onDismiss = { showLook = false },
-    )
+    if (showLook) LookPopupHost(settingsVm) { which ->
+        when (which) {
+            LOOK_ACCENT -> { saveScroll(); dialogReturn = accentRowFocus; showAccent = true }
+            LOOK_FOCUS -> showFocusHighlight = true
+            LOOK_SOUNDS -> showSoundStyle = true
+            LOOK_OLDER -> showGlcnStyle = true
+            else -> showLook = false
+        }
+    }
     if (showGlcnStyle) {
         tv.own.owntv.glcn.StylePickerPopup(glcnStyle, onPick = { st -> settingsVm.applyGlcnStyle(st); if (st == null) { chainAccent = true; showTheme = true } }, onDismiss = { showGlcnStyle = false })
     }
@@ -3467,22 +3446,52 @@ private fun fixedFocusRow(): RootRow = RootRow(
     onClick = { tv.own.owntv.glcn.ListFocusPref.set(!tv.own.owntv.glcn.ListFocusPref.fixed) },
 )
 
-/** glcn: Appearance's popup, on its own so the settings screen's body stays within the size a method may have. */
+/** glcn: seasonal touches (moved out of the screen's body, which is near the size a method may have). */
 @Composable
-private fun LookPopupHost(
-    settingsVm: tv.own.owntv.features.settings.SettingsViewModel,
-    onAccent: () -> Unit,
-    onFocus: () -> Unit,
-    onSounds: () -> Unit,
-    onOlder: () -> Unit,
-    onDismiss: () -> Unit,
-) {
+private fun glcnSeasonRow(seasonMode: Int, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_season", TileTone.SECONDARY, OwnTVIcon.THEME,
+    title = stringResource(R.string.glcn_season_title),
+    desc = stringResource(R.string.glcn_season_desc),
+    chip = stringResource(
+        when (seasonMode) {
+            1 -> R.string.glcn_season_details
+            2 -> R.string.glcn_season_animated
+            else -> R.string.common_off
+        },
+    ),
+    chipTone = if (seasonMode > 0) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = onClick,
+)
+
+/** glcn: Appearance's row — the theme's name, or the earlier style's, or "My own colours". */
+@Composable
+private fun glcnLookRow(style: tv.own.owntv.core.theme.GlcnStyle?, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_style", TileTone.PRIMARY, OwnTVIcon.PALETTE,
+    heading = stringResource(R.string.glcn_part_home),
+    title = stringResource(R.string.glcn_look_title),
+    desc = stringResource(R.string.glcn_look_desc),
+    chip = style?.let { st -> tv.own.owntv.core.theme.GlcnTheme.of(st)?.label() ?: st.label() } ?: stringResource(R.string.glcn_style_none),
+    chipTone = if (style != null) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = onClick,
+)
+
+private const val LOOK_CLOSE = 0
+private const val LOOK_ACCENT = 1
+private const val LOOK_FOCUS = 2
+private const val LOOK_SOUNDS = 3
+private const val LOOK_OLDER = 4
+
+/** glcn: Appearance's popup, on its own so the settings screen's body stays within the size a method may have.
+ *  [onOpen] gets what to open next (LOOK_*), or LOOK_CLOSE when it closes. */
+@Composable
+private fun LookPopupHost(settingsVm: tv.own.owntv.features.settings.SettingsViewModel, onOpen: (Int) -> Unit) {
     val style by settingsVm.glcnStyle.collectAsStateWithLifecycle()
     val mode by settingsVm.glcnStyleMode.collectAsStateWithLifecycle()
     val backdrop by settingsVm.glcnBackdrop.collectAsStateWithLifecycle()
     tv.own.owntv.glcn.LookPopup(
         style = style, mode = mode, backdrop = backdrop,
         onTheme = settingsVm::applyGlcnTheme, onMode = settingsVm::setGlcnStyleMode, onBackdrop = settingsVm::setGlcnBackdrop,
-        onAccent = onAccent, onFocus = onFocus, onSounds = onSounds, onOlder = onOlder, onDismiss = onDismiss,
+        onAccent = { onOpen(LOOK_ACCENT) }, onFocus = { onOpen(LOOK_FOCUS) }, onSounds = { onOpen(LOOK_SOUNDS) }, onOlder = { onOpen(LOOK_OLDER) },
+        onDismiss = { onOpen(LOOK_CLOSE) },
     )
 }
