@@ -342,8 +342,6 @@ fun SettingsScreen(
     val glcnStyle by settingsVm.glcnStyle.collectAsStateWithLifecycle()
     var showGlcnStyle by remember { mutableStateOf(false) }
     var showLook by remember { mutableStateOf(false) }
-    val glcnStyleMode by settingsVm.glcnStyleMode.collectAsStateWithLifecycle()
-    val glcnBackdrop by settingsVm.glcnBackdrop.collectAsStateWithLifecycle()
     var showHomeLayout by remember { mutableStateOf(false) }
     var showSoundStyle by remember { mutableStateOf(false) }
     var showResetAppearance by remember { mutableStateOf(false) }
@@ -1602,17 +1600,14 @@ fun SettingsScreen(
     if (showHomeLayout) {
         tv.own.owntv.glcn.HomeLayoutPicker(homeBackdrop, onPick = settingsVm::setHomeBackdropStyle, onDismiss = { showHomeLayout = false })
     }
-    if (showLook) {
-        tv.own.owntv.glcn.LookPopup(
-            style = glcnStyle, mode = glcnStyleMode, backdrop = glcnBackdrop,
-            onTheme = settingsVm::applyGlcnTheme, onMode = settingsVm::setGlcnStyleMode, onBackdrop = settingsVm::setGlcnBackdrop,
-            onAccent = { saveScroll(); dialogReturn = accentRowFocus; showAccent = true },
-            onFocus = { showFocusHighlight = true },
-            onSounds = { showSoundStyle = true },
-            onOlder = { showGlcnStyle = true },
-            onDismiss = { showLook = false },
-        )
-    }
+    if (showLook) LookPopupHost(
+        settingsVm,
+        onAccent = { saveScroll(); dialogReturn = accentRowFocus; showAccent = true },
+        onFocus = { showFocusHighlight = true },
+        onSounds = { showSoundStyle = true },
+        onOlder = { showGlcnStyle = true },
+        onDismiss = { showLook = false },
+    )
     if (showGlcnStyle) {
         tv.own.owntv.glcn.StylePickerPopup(glcnStyle, onPick = { st -> settingsVm.applyGlcnStyle(st); if (st == null) { chainAccent = true; showTheme = true } }, onDismiss = { showGlcnStyle = false })
     }
@@ -3471,3 +3466,23 @@ private fun fixedFocusRow(): RootRow = RootRow(
     chipTone = if (tv.own.owntv.glcn.ListFocusPref.fixed) TileTone.PRIMARY else TileTone.SECONDARY,
     onClick = { tv.own.owntv.glcn.ListFocusPref.set(!tv.own.owntv.glcn.ListFocusPref.fixed) },
 )
+
+/** glcn: Appearance's popup, on its own so the settings screen's body stays within the size a method may have. */
+@Composable
+private fun LookPopupHost(
+    settingsVm: tv.own.owntv.features.settings.SettingsViewModel,
+    onAccent: () -> Unit,
+    onFocus: () -> Unit,
+    onSounds: () -> Unit,
+    onOlder: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val style by settingsVm.glcnStyle.collectAsStateWithLifecycle()
+    val mode by settingsVm.glcnStyleMode.collectAsStateWithLifecycle()
+    val backdrop by settingsVm.glcnBackdrop.collectAsStateWithLifecycle()
+    tv.own.owntv.glcn.LookPopup(
+        style = style, mode = mode, backdrop = backdrop,
+        onTheme = settingsVm::applyGlcnTheme, onMode = settingsVm::setGlcnStyleMode, onBackdrop = settingsVm::setGlcnBackdrop,
+        onAccent = onAccent, onFocus = onFocus, onSounds = onSounds, onOlder = onOlder, onDismiss = onDismiss,
+    )
+}
