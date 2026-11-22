@@ -125,6 +125,8 @@ object UiSounds {
         // glcn: Ember moves through a few takes of its knock, never the same twice running.
         Kind.MOVE -> if (style == EMBER) {
             val take = (lastTake + 1 + (SystemClock.uptimeMillis() % (EMBER_TICKS - 1)).toInt()) % EMBER_TICKS
+            // The take before is cut short, as one kept sound would be: two takes ringing over each other read as an echo.
+            runCatching { takes[lastTake]?.takeIf { it.playState == AudioTrack.PLAYSTATE_PLAYING }?.stop() }
             lastTake = take
             takes[take] ?: build { emberTick(take).pcm() }.also { takes[take] = it }
         } else move ?: build { tick() }.also { move = it }
@@ -285,6 +287,29 @@ object UiSounds {
             }
         }
 
+        /**
+         * glcn: a short, dry tap — for a sound heard dozens of times in a row. One clear note with a little of its
+         * octave, gone in a few hundredths of a second, and the fingertip's click at its start (noise with its low part
+         * taken out, so it ticks rather than thumps). Nothing under the note and nothing after it: a low thud, a second
+         * voice or a room's echoes, in so short a sound, are what make it seem to come from inside a bottle.
+         */
+        fun tap(freq: Double, durSec: Double, amp: Double, decay: Double, click: Double, seed: Long) {
+            val n = (durSec * RATE).toInt().coerceAtMost(buf.size)
+            val rnd = java.util.Random(seed)
+            val lp = 1 - exp(-2 * PI * 1800.0 / RATE)
+            var low = 0.0
+            var phase = 0.0
+            for (i in 0 until n) {
+                val t = i.toDouble() / RATE
+                phase += 2 * PI * freq * (1 + 0.006 * exp(-t / 0.008)) / RATE
+                val white = rnd.nextDouble() * 2 - 1
+                low += lp * (white - low)
+                val note = exp(-decay * t) * (sin(phase) + 0.2 * exp(-decay * t) * sin(2 * phase))
+                val tick = click * exp(-t / 0.0022) * (white - low)
+                buf[i] += (amp * (t / 0.0015).coerceAtMost(1.0) * (note + tick)).toFloat()
+            }
+        }
+
         /** glcn: a small room around what is in the buffer — a few early, duller echoes, so it does not sound dry. */
         fun room(amount: Double = 1.0) {
             val dry = buf.copyOf()
@@ -370,15 +395,14 @@ object UiSounds {
     }.pcm()
 
     /**
-     * glcn: Ember's knock on wood, in one of [EMBER_TICKS] takes: no two strikes of a real thing sound alike, and the
+     * glcn: Ember's tap, in one of [EMBER_TICKS] takes: no two strikes of a real thing sound alike, and the
      * same sample at every step of a long list is what gives a made sound away. Each take is a shade higher or lower
      * and a shade harder or softer.
      */
     private fun emberTick(take: Int): Mix {
         val tune = doubleArrayOf(1.0, 0.985, 1.018, 0.996)[take % EMBER_TICKS]
         val hard = doubleArrayOf(1.0, 0.8, 0.9, 1.15)[take % EMBER_TICKS]
-        // Open and almost dry: in so short a sound the room's echoes pile onto the note itself and box it in.
-        return Mix(0.13).apply { struck(0.0, 370.0 * tune, 0.12, 0.32, decay = 44.0, hard = hard, seed = 11L + take, open = 1.0); room(0.2) }
+        return Mix(0.09).apply { tap(440.0 * tune, 0.085, 0.3, decay = 70.0, click = 0.22 * hard, seed = 11L + take) }
     }
 
     private fun synthPop() = when (style) {

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -119,7 +120,11 @@ class SportsViewModel(
     private val calendar: tv.own.owntv.core.sports.SportsCalendar,
 ) : ViewModel() {
 
+    // glcn: read once and kept — every screen of this section starts from what is already known. Each page used to
+    // ask the settings and the database again when it opened, and waited for them while the app, just started, was
+    // busy syncing: the match page stayed empty until its turn came.
     private val config = settings.activeSportsConfig.distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null).filterNotNull()
 
     /** glcn: the draw of a tennis match's tournament, by round (empty when it is not tennis or ESPN has none). */
     suspend fun tennisDraw(match: Match): List<tv.own.owntv.core.sports.DrawRound> = repository.tennisDraw(match)
@@ -129,6 +134,7 @@ class SportsViewModel(
     /** The profile's live playlists (id → name), for the filter panel's Playlist choice. */
     private val playlists = activeProfileSources(settings, sourceDao)
         .map { a -> a.sources.filter { it.syncLive }.map { it.id to it.name } }.distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null).filterNotNull()
 
     private val hasPlaylist = playlists.map { it.isNotEmpty() }.distinctUntilChanged()
 
