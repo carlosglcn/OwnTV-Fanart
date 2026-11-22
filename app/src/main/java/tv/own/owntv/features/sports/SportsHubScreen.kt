@@ -719,6 +719,10 @@ internal fun sideColors(m: Match): Pair<Color?, Color?> {
 @Composable
 internal fun leagueMark(m: Match): Pair<String, Boolean>? {
     val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    // Read so the card is drawn again when the logo files arrive (they come a moment after a stored board is shown).
+    val tennisRead by tv.own.owntv.core.sports.TennisPhotos.version.collectAsStateWithLifecycle()
+    val logosRead by tv.own.owntv.core.sports.CompetitionLogos.version.collectAsStateWithLifecycle()
+    if (tennisRead < 0 || logosRead < 0) return null
     val own = if (m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) tv.own.owntv.core.sports.TennisPhotos.tournamentLogo(m.leagueName) else null
     val ours = if (own == null && m.leagueLogo == null && m.leagueLogoDark == null) tv.own.owntv.core.sports.CompetitionLogos.of(m.leagueSlug) else null
     val mark = own ?: ours ?: (if (light) m.leagueLogo ?: m.leagueLogoDark else m.leagueLogoDark ?: m.leagueLogo) ?: return null

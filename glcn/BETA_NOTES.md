@@ -35,3 +35,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎨 Style picker: Brasa and Alba have a group of their own, **Outlined focus**, first — they were among the Classic ones.
 - ✨ A new install now opens on Fanart's own look: the menu as a top bar (Island), Home in Cinema and Films & Series in Runway, with Brasa. Whoever already has the app keeps every setting exactly as it was.
 - 🎞️ Changing section (Live TV, Sports, the Guide, Home…) — the new one now comes in with a longer, softer settle instead of landing at once, and keeps that pace with Brisk response on (which only quickens what follows each key). The same for screens that build up piece by piece.
+- 🩹 **Sports: a match or league page no longer opens empty** — in the first minutes after the app starts (or after an update) the page waited behind the guide's matching and showed nothing; it now opens at once and its channels fill in when they are found.
+- 🏷️ Sports cards: tournament and competition logos show straight away when the app starts on its saved scores (they only came with the first refresh).

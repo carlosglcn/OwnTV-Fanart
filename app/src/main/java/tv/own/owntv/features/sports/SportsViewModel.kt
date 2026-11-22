@@ -228,7 +228,10 @@ class SportsViewModel(
                     emit(ChannelSearch.Found(watchReader.watchFor(listOf(m)) { SportsMemory.rememberedFor(c, it) }[m.key].orEmpty()))
                 }
             }
-        }.flowOn(Dispatchers.Default)
+        }
+        // glcn: not sent to the Default pool. The page's first state came through it, and for a while after the app
+        // starts that pool is full (the guide's matching): the page then stayed empty until a thread came free. What
+        // is heavy here — reading the guide for the match's channels — goes to that pool by itself (WatchReader).
         combine(boards, config, search, pageFilter, playlists) { b, c, s, f, lists ->
             val appLanguage = Locale.getDefault().language
             val filter = f ?: WatchFilter.from(c, appLanguage, lists.map { it.first })
@@ -268,7 +271,7 @@ class SportsViewModel(
             val all = (cal.map { fresh[it.key] ?: it } + matches).distinctBy { it.key }.sortedBy { it.startMs }
             LeaguePageState(key, b.standings[key], b.rankings[key], matches, c, all)
         }
-    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    }.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null) // glcn: IO — see matchPage
 
     fun openLeague(key: String?) { openLeague.value = key }
 
