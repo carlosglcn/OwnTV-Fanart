@@ -44,3 +44,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔊 Brasa sounds: its own opening tone (four struck bars rising, with "Sound on opening" on) and a clearer move sound — brighter, almost dry, a touch higher; it sounded shut in.
 - 🩹 Sports: the match page no longer waits for the settings and the playlists to be read again when it opens (slow right after the app starts, while it syncs) — it starts from what the section already knows.
 - 🔊 Brasa: the move sound is now a short dry tap — no low thud, no second voice, no room — and a new one cuts the one before instead of ringing over it.
+- 🩹 **Sports: opening another match shows that match** — the page could keep showing the one opened before (or stay empty) while the app was syncing: its channel search, slow to answer and to let go then, held the page back. The search now runs apart and the page changes at once.
+- 🎚️ Channel lists: the playing channel's moving bars sit inside the row, over it, and in the ink that reads on a focused row — they were half hidden under the row's edge.

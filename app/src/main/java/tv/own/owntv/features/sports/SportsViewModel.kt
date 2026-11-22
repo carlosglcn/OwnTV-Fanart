@@ -198,15 +198,15 @@ class SportsViewModel(
     fun findChannels() { findAsked.value = true }
 
     /**
-     * The open match, kept fresh while shown: its details and table come from the stored board
-     * (`Demand.MatchPage` / `Demand.LeaguePage` fetch only what is live or missing). Channels are not
-     * searched until Find channels; a search already made under the current guide shows at once.
+     * glcn: the open match's channel search, run on its own and only reported to the page. It reads the guide and the
+     * database, which can be slow to answer — and slow to let go — while the app syncs; when it ran inside the page's
+     * own flow, opening another match had to wait for the one before to let go, and until then the page kept showing
+     * the earlier match (or nothing). Now a new match simply stops listening to the old search.
      */
-    val matchPage: StateFlow<MatchPageState?> = openMatch.flatMapLatest { m ->
-        if (m == null) return@flatMapLatest flowOf(null)
-        val leagueKey = League.keyOf(m.sport, m.leagueSlug).takeIf { SportsCatalog.league(it) != null }
-        val boards = if (leagueKey == null) repository.observe(Demand.MatchPage(m))
-        else combine(repository.observe(Demand.MatchPage(m)), repository.observe(Demand.LeaguePage(leagueKey))) { a, _ -> a }
+    private val searchState = MutableStateFlow<Pair<String, ChannelSearch>?>(null)
+    private var searchJob: kotlinx.coroutines.Job? = null
+
+    private fun searchOf(m: Match) = run {
         // Find channels' window is judged on the match fetched now, not the stored copy: a match can run
         // long, and a kick-off can move. Re-judged each minute while the page is open.
         val window = flow {
@@ -219,10 +219,10 @@ class SportsViewModel(
                 delay(60_000L)
             }
         }.distinctUntilChanged()
-        val search = combine(config, hasPlaylist, findAsked, window) { c, has, asked, w -> listOf(c, has, asked, w) }.transformLatest { (cv, hv, av, w) ->
+        combine(config, hasPlaylist, findAsked, window) { c, has, asked, w -> listOf(c, has, asked, w) }.transformLatest { (cv, hv, _, w) ->
             val c = cv as SportsConfig
             val has = hv as Boolean
-                        if (!has) return@transformLatest emit(ChannelSearch.NotSearched)
+            if (!has) return@transformLatest emit(ChannelSearch.NotSearched)
             if (w == null) return@transformLatest emit(ChannelSearch.Checking)
             if (w != WatchWindow.Open) return@transformLatest emit(ChannelSearch.Closed(w as WatchWindow))
             val found = watchReader.found(m) { SportsMemory.rememberedFor(c, it) }
@@ -235,9 +235,21 @@ class SportsViewModel(
                 }
             }
         }
-        // glcn: not sent to the Default pool. The page's first state came through it, and for a while after the app
-        // starts that pool is full (the guide's matching): the page then stayed empty until a thread came free. What
-        // is heavy here — reading the guide for the match's channels — goes to that pool by itself (WatchReader).
+    }
+
+    /**
+     * The open match, kept fresh while shown: its details and table come from the stored board
+     * (`Demand.MatchPage` / `Demand.LeaguePage` fetch only what is live or missing). Channels are not
+     * searched until Find channels; a search already made under the current guide shows at once.
+     */
+    val matchPage: StateFlow<MatchPageState?> = openMatch.flatMapLatest { m ->
+        if (m == null) return@flatMapLatest flowOf(null)
+        val leagueKey = League.keyOf(m.sport, m.leagueSlug).takeIf { SportsCatalog.league(it) != null }
+        val boards = if (leagueKey == null) repository.observe(Demand.MatchPage(m))
+        else combine(repository.observe(Demand.MatchPage(m)), repository.observe(Demand.LeaguePage(leagueKey))) { a, _ -> a }
+        // glcn: this match's search, as far as it has got (see searchOf): only what is already in hand is combined
+        // here, so one page gives way to the next at once.
+        val search = searchState.map { it?.takeIf { (key, _) -> key == m.key }?.second ?: ChannelSearch.Checking }.distinctUntilChanged()
         combine(boards, config, search, pageFilter, playlists) { b, c, s, f, lists ->
             val appLanguage = Locale.getDefault().language
             val filter = f ?: WatchFilter.from(c, appLanguage, lists.map { it.first })
@@ -288,7 +300,11 @@ class SportsViewModel(
     fun open(match: Match?) {
         pageFilter.value = null
         findAsked.value = false
+        // The search of the match before is left behind, not waited for.
+        searchJob?.cancel()
+        searchState.value = null
         openMatch.value = match
+        searchJob = match?.let { m -> viewModelScope.launch { searchOf(m).collect { searchState.value = m.key to it } } }
     }
 
     /** A change in the filter panel. With "Remember these filters" on, it is saved to Settings → Sports as well. */
