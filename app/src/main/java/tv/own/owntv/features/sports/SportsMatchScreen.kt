@@ -230,7 +230,11 @@ fun SportsMatchScreen(
                                 // glcn: a session running — its live order first, the season's standings under it.
                                 if (liveOrder) {
                                     item { Text(stringResource(if (m.isLive) R.string.glcn_race_live_order else R.string.glcn_race_result), style = stageText(18, 700), color = stageAccent.ink, modifier = Modifier.padding(top = 18.mpx, bottom = 6.mpx)) }
-                                    itemsIndexed(raceOrder, key = { _, c -> "lo" + c.team.id }) { i, c -> LiveOrderLine(i + 1, c) }
+                                    itemsIndexed(raceOrder, key = { _, c -> "lo" + c.team.id }) { i, c ->
+                                        LiveOrderLine(i + 1, c, followed = state.config.teams.any { it.sport == m.sport && it.id == c.team.id }) {
+                                            vm.toggleTeam(tv.own.owntv.core.sports.FollowedTeam(m.sport, c.team.id, c.team.name, c.team.abbreviation, m.feed))
+                                        }
+                                    }
                                 }
                                 state.ranking?.let { r -> item { RankingColumns(r, Modifier.padding(top = if (liveOrder) 24.mpx else 0.mpx)) } }
                             }

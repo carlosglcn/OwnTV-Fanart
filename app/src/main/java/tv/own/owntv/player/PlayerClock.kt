@@ -1,5 +1,6 @@
 package tv.own.owntv.player
 
+import tv.own.owntv.core.sports.model.isRace
 import tv.own.owntv.ui.theme.hudShade
 import tv.own.owntv.ui.theme.hudInk
 import androidx.compose.foundation.background
@@ -88,7 +89,16 @@ internal fun PlayerClock(watchingMs: Long?, modifier: Modifier = Modifier) {
     val teamMatch = remember(board, sportsConfig) {
         val keys = sportsConfig?.teams?.mapTo(HashSet()) { it.id }.orEmpty()
         if (keys.isEmpty() || sportsConfig?.spoilerFree == true) null
-        else board.today.values.flatten().firstOrNull { m -> m.isLive && m.competitors.any { it.team.id in keys } }
+        else board.today.values.flatten().firstOrNull { m -> m.isLive && !m.sport.isRace && m.competitors.any { it.team.id in keys } }
+    }
+    // glcn: a driver or rider you follow, in a session running now: their place in its order.
+    val racePlace = remember(board, sportsConfig) {
+        val c = sportsConfig
+        if (c == null || c.teams.isEmpty() || c.spoilerFree) null
+        else board.today.values.flatten().filter { it.isLive && it.sport.isRace }.firstNotNullOfOrNull { m ->
+            val order = board.summaries[m.key]?.match?.competitors?.takeIf { it.size > 3 } ?: m.competitors
+            c.followedIn(m.sport, order).firstOrNull()
+        }
     }
     val soon = reminders.filter { it.startMs > nowMs && it.startMs - nowMs <= REMINDER_AHEAD_MS }.minByOrNull { it.startMs }
 
@@ -144,6 +154,13 @@ internal fun PlayerClock(watchingMs: Long?, modifier: Modifier = Modifier) {
                     style = tv.own.owntv.ui.theme.stageText(17, 700), color = ink, maxLines = 1,
                 )
             }
+        }
+        racePlace?.let { (place, who) ->
+            Dot(dim)
+            Text(
+                stringResource(R.string.glcn_sports_rider_place, who.team.shortName.ifBlank { who.team.name }, place),
+                style = tv.own.owntv.ui.theme.stageText(17, 700), color = ink, maxLines = 1,
+            )
         }
         soon?.let { r ->
             Dot(dim)

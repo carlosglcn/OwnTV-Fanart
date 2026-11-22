@@ -145,8 +145,8 @@ fun SportsHubScreen(
     var menuChannels by remember { mutableStateOf<List<WatchOption>>(emptyList()) }
     androidx.compose.runtime.LaunchedEffect(menuFor) { menuChannels = menuFor?.let { vm.channelsFound(it) }.orEmpty() }
 
-    val myTeamKeys = remember(config.teams) { config.teams.map { it.key }.toSet() }
-    fun Match.isMine() = competitors.any { FollowedTeam(sport, it.team.id, it.team.name).key in myTeamKeys }
+    // glcn: a followed side plays it, or a followed driver or rider's series runs it (SportsConfig.follows).
+    fun Match.isMine() = config.follows(this)
     val chosenSports = chips.filterIsInstance<HubChip.One>().map { it.sport }.toSet()
     val sportLeagues = config.followedLeagues().mapNotNull(tv.own.owntv.core.sports.SportsCatalog::league).filter { it.sport in chosenSports }
         .sortedWith(compareBy({ config.rankOf(it.sport, it.key).first }, { config.rankOf(it.sport, it.key).second }))
@@ -553,7 +553,7 @@ internal fun MatchCard(
             }
             val spoiler = config.spoilerFree
             // The big "2 – 1" only for one score a side; sets and innings read as the two sides' lines.
-            if (featured && m.sport !in LINE_SCORE_SPORTS) FeaturedScore(m, spoiler, homeBar, awayBar) else Sides(m, spoiler, homeBar, awayBar)
+            if (featured && m.sport !in LINE_SCORE_SPORTS) FeaturedScore(m, spoiler, homeBar, awayBar) else Sides(m, spoiler, homeBar, awayBar, config)
             Spacer(Modifier.weight(1f))
             val followed = m.competitors.any { c -> config.teams.any { it.sport == m.sport && it.id == c.team.id } }
             CardFooter(venueText(m), reminded, followed, channel, surface)
@@ -563,13 +563,25 @@ internal fun MatchCard(
 
 /** Two sides, each a 42 px crest, the name and the score; the losing side in muted grey. */
 @Composable
-private fun Sides(m: Match, spoiler: Boolean, homeBar: Color? = null, awayBar: Color? = null) {
+private fun Sides(m: Match, spoiler: Boolean, homeBar: Color? = null, awayBar: Color? = null, config: SportsConfig? = null) {
     if (m.competitors.size < 2 || m.sport.isRace) {
         // Racing, a card: the session by its kind, the Grand Prix under it.
         Spacer(Modifier.height(12.mpx))
         val session = if (m.sport == tv.own.owntv.core.sports.model.Sport.RACING) raceSessionLabel(m) else null
         Text(session ?: m.title, style = stageText(21, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         (if (session != null) m.title else m.subtitle)?.let { Text(it, style = stageText(19, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        // glcn: the drivers or riders you follow, with their place — while it runs and once it is over.
+        if (config != null && !spoiler && m.state != MatchState.PRE) {
+            val mine = config.followedIn(m.sport, m.competitors).take(2)
+            if (mine.isNotEmpty()) Row(Modifier.padding(top = 6.mpx), horizontalArrangement = Arrangement.spacedBy(14.mpx), verticalAlignment = Alignment.CenterVertically) {
+                mine.forEach { (place, c) ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.mpx), verticalAlignment = Alignment.CenterVertically) {
+                        tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.STAR, stageAccent.ink, Modifier.size(16.mpx), filled = true)
+                        Text(stringResource(R.string.glcn_sports_rider_place, c.team.shortName.ifBlank { c.team.name }, place), style = stageText(18, 700), color = stageAccent.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
         return
     }
     listOfNotNull(m.home, m.away).forEach { c ->
@@ -666,8 +678,12 @@ private fun FollowRemindMenu(
         Box(Modifier.fillMaxSize().background(StageColors.Scrim).longPressMenuGuard(), contentAlignment = Alignment.Center) {
             StageMenu(Modifier.width(560.mpx).trapAllFocusExit().focusGroup()) {
                 StageMenuHeader(MatchNotifications.pair(LocalContext.current, match), leagueName(match))
-                (if (match.sport.isRace) match.competitors.take(3) else match.competitors).forEachIndexed { i, c ->
-                    val team = FollowedTeam(match.sport, c.team.id, c.team.name, c.team.abbreviation)
+                // glcn: a race — the ones already followed and the first three; anyone else is followed from the session's
+                // order on its page, or by name in Sports settings. Followed with their series, so its sessions are theirs.
+                val listed = if (!match.sport.isRace) match.competitors
+                else (match.competitors.filter { c -> config.teams.any { it.sport == match.sport && it.id == c.team.id } } + match.competitors.take(3)).distinctBy { it.team.id }
+                listed.forEachIndexed { i, c ->
+                    val team = FollowedTeam(match.sport, c.team.id, c.team.name, c.team.abbreviation, if (match.sport.isRace) match.feed else null)
                     val following = config.teams.any { it.key == team.key }
                     StageMenuItem(
                         text = c.team.name,
