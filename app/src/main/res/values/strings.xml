@@ -175,4 +175,5 @@
     <string name="glcn_tennis_indoor">Indoor hard court</string>
     <string name="glcn_brisk_title">Brisk response</string>
     <string name="glcn_brisk_desc">The focus, the lists and the menu answer the remote twice as quickly. Off: the gentler pace they had.</string>
+    <string name="glcn_race_result">Result</string>
 </resources>

@@ -165,5 +165,7 @@ internal fun LiveOrderLine(pos: Int, c: tv.own.owntv.core.sports.model.Competito
         Crest(c.team, 40)
         Text(c.team.name, style = stageText(20, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         c.team.country?.let { Text(it, style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        // glcn: a classified session — the winner's time, the others' gap to it.
+        c.score?.text?.takeIf { it.isNotBlank() }?.let { Text(it, style = stageText(18, 700), color = StageColors.Body, maxLines = 1) }
     }
 }

@@ -116,7 +116,9 @@ fun SportsMatchScreen(
     val state = page ?: return
     val m = state.match
     var tab by remember { mutableStateOf(MatchTab.TIMELINE) }
-    val liveOrder = m.sport.isRace && m.isLive && m.competitors.size > 3
+    // glcn: a session's order — as it runs, and once it has run its classification (MotoGP's comes with the page).
+    val raceOrder = state.summary?.match?.competitors?.takeIf { it.size > 3 } ?: m.competitors
+    val liveOrder = m.sport.isRace && (m.isLive || m.state == tv.own.owntv.core.sports.model.MatchState.POST) && raceOrder.size > 3
     // glcn: the tournament draw, read only once its tab is opened.
     var draw by remember(m.key) { mutableStateOf<List<tv.own.owntv.core.sports.DrawRound>?>(null) }
     LaunchedEffect(m.key, tab == MatchTab.DRAW) { if (tab == MatchTab.DRAW && draw == null) draw = vm.tennisDraw(m) }
@@ -213,8 +215,8 @@ fun SportsMatchScreen(
                             m.sport.isRace && (state.ranking != null || liveOrder) -> {
                                 // glcn: a session running — its live order first, the season's standings under it.
                                 if (liveOrder) {
-                                    item { Text(stringResource(R.string.glcn_race_live_order), style = stageText(18, 700), color = stageAccent.ink, modifier = Modifier.padding(top = 18.mpx, bottom = 6.mpx)) }
-                                    itemsIndexed(m.competitors, key = { _, c -> "lo" + c.team.id }) { i, c -> LiveOrderLine(i + 1, c) }
+                                    item { Text(stringResource(if (m.isLive) R.string.glcn_race_live_order else R.string.glcn_race_result), style = stageText(18, 700), color = stageAccent.ink, modifier = Modifier.padding(top = 18.mpx, bottom = 6.mpx)) }
+                                    itemsIndexed(raceOrder, key = { _, c -> "lo" + c.team.id }) { i, c -> LiveOrderLine(i + 1, c) }
                                 }
                                 state.ranking?.let { r -> item { RankingColumns(r, Modifier.padding(top = if (liveOrder) 24.mpx else 0.mpx)) } }
                             }
