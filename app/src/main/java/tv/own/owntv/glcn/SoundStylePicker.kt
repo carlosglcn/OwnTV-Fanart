@@ -48,11 +48,12 @@ fun SoundStylePicker(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit)
                     modifier = Modifier.fillMaxWidth()
                         .then(if (style == current || (names.none { it.first == current } && style == 6)) Modifier.focusRequester(first) else Modifier)
                         .onFocusChanged { if (it.hasFocus) { UiSounds.style = style; UiSounds.preview() } },
-                ) { _ ->
+                ) { focused ->
                     Text(
                         stringResource(name),
                         style = stageText(22, if (style == current) 800 else 600),
-                        color = if (style == current) stageAccent.accent else StageColors.Text,
+                        // glcn: on the focused fill the ink that reads on it — the accent there was the fill's own colour.
+                        color = if (focused) stageAccent.onAccent else if (style == current) stageAccent.accent else StageColors.Text,
                         modifier = Modifier.padding(horizontal = 18.mpx, vertical = 12.mpx),
                     )
                 }
