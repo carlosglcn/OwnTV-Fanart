@@ -797,7 +797,6 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
 // About
 // ---------------------------------------------------------------------------------------------
 
-@Composable
 /** glcn: a block's name on About — small capitals in the theme's colour. */
 @Composable
 private fun AboutBlockLabel(text: String) {
