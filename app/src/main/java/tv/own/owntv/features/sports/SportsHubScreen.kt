@@ -741,11 +741,12 @@ internal fun LeagueMark(m: Match, size: Int, modifier: Modifier = Modifier) {
 @Composable
 internal fun SurfaceTag(surface: tv.own.owntv.glcn.TennisSurface) {
     Row(
-        Modifier.background(surface.tone.copy(alpha = SURFACE_WASH), RoundedCornerShape(SURFACE_TAG_R.mpx)).padding(horizontal = 10.mpx, vertical = 4.mpx),
-        horizontalArrangement = Arrangement.spacedBy(7.mpx), verticalAlignment = Alignment.CenterVertically,
+        // No taller than the line of text it sits in (the card's foot has a fixed height: a taller tag was cut).
+        Modifier.background(surface.tone.copy(alpha = SURFACE_WASH), RoundedCornerShape(SURFACE_TAG_R.mpx)).padding(horizontal = 9.mpx, vertical = 1.mpx),
+        horizontalArrangement = Arrangement.spacedBy(6.mpx), verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(10.mpx).background(surface.tone, RoundedCornerShape(5.mpx)))
-        Text(stringResource(surface.label), style = stageText(15, 700), color = StageColors.Body, maxLines = 1)
+        Box(Modifier.size(9.mpx).background(surface.tone, RoundedCornerShape(5.mpx)))
+        Text(stringResource(surface.label), style = stageText(14, 700), color = StageColors.Body, maxLines = 1)
     }
 }
 
