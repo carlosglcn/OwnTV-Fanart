@@ -500,8 +500,9 @@ internal fun MatchCard(
     val homeTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(0)?.logoUrl)
     val awayTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(1)?.logoUrl)
     val surface = if (m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) tv.own.owntv.glcn.TennisSurface.of(m.leagueName) else null
-    val homeBar = (surface?.tone ?: sides.getOrNull(0)?.let { ownColor(it) } ?: homeTone?.vivid)?.let { barTone(it, lightCard) }
-    val awayBar = (surface?.tone ?: sides.getOrNull(1)?.let { ownColor(it) } ?: awayTone?.vivid)?.let { barTone(it, lightCard) }
+    // Players have no colours of their own: their sides carry no bar, and the surface is told at the card's foot.
+    val homeBar = (sides.getOrNull(0)?.let { ownColor(it) } ?: homeTone?.vivid)?.let { barTone(it, lightCard) }
+    val awayBar = (sides.getOrNull(1)?.let { ownColor(it) } ?: awayTone?.vivid)?.let { barTone(it, lightCard) }
     val plain = StageColors.Ink.copy(alpha = 0.045f)
     StageSurface(
         onClick = onClick,
@@ -551,7 +552,7 @@ internal fun MatchCard(
                 }
                 val day = if (m.isLive) null else dayOf(m.startMs, locale)
                 // glcn: tennis — what the tournament is played on, after its name.
-                val league = listOfNotNull(leagueName(m), surface?.let { stringResource(it.label) }, m.subtitle?.takeIf { featured && !m.sport.isRace }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
+                val league = listOfNotNull(leagueName(m), m.subtitle?.takeIf { featured && !m.sport.isRace }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
                 Text(league, style = stageText(16.5f, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 val right = when {
                     m.off -> m.statusText
@@ -574,7 +575,7 @@ internal fun MatchCard(
             if (featured && m.sport !in LINE_SCORE_SPORTS) FeaturedScore(m, spoiler, homeBar, awayBar) else Sides(m, spoiler, homeBar, awayBar)
             Spacer(Modifier.weight(1f))
             val followed = m.competitors.any { c -> config.teams.any { it.sport == m.sport && it.id == c.team.id } }
-            CardFooter(m.venue, reminded, followed, channel)
+            CardFooter(m.venue, reminded, followed, channel, surface)
         }
     }
 }
@@ -629,10 +630,18 @@ private fun FeaturedScore(m: Match, spoiler: Boolean, homeBar: Color? = null, aw
 
 /** `.ft`: the card's foot — the venue (ESPN's), then a Reminder tag or the star of a followed side. */
 @Composable
-private fun CardFooter(venue: String?, reminded: Boolean, followed: Boolean, channel: String? = null) {
+private fun CardFooter(venue: String?, reminded: Boolean, followed: Boolean, channel: String? = null, surface: tv.own.owntv.glcn.TennisSurface? = null) {
     Box(Modifier.fillMaxWidth().height(1.mpx).background(Color.White.copy(alpha = 0.07f)))
     Spacer(Modifier.height(12.mpx))
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.mpx)) {
+        // glcn: tennis — what the court is, a small tag in that surface's colour.
+        if (surface != null) Row(
+            Modifier.background(surface.tone.copy(alpha = SURFACE_WASH), RoundedCornerShape(SURFACE_TAG_R.mpx)).padding(horizontal = 10.mpx, vertical = 4.mpx),
+            horizontalArrangement = Arrangement.spacedBy(7.mpx), verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(10.mpx).background(surface.tone, RoundedCornerShape(5.mpx)))
+            Text(stringResource(surface.label), style = stageText(15, 700), color = StageColors.Body, maxLines = 1)
+        }
         // glcn: where to watch it, when that is known, says more than the stadium.
         if (channel != null) tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.LIVE_TV, StageColors.Body, Modifier.size(18.mpx))
         Text(channel ?: venue.orEmpty(), style = stageText(16, if (channel != null) 700 else 500), color = if (channel != null) StageColors.Body else StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -746,6 +755,8 @@ private fun barTone(c: Color, light: Boolean): Color {
 private const val HEX_MARK = "#"
 private const val GREY_SAT = 0.18f
 private const val SIDE_BAR_W = 7
+private const val SURFACE_WASH = 0.22f
+private const val SURFACE_TAG_R = 8
 private const val BAR_DARK_MIN = 0.5f
 private const val BAR_LIGHT_MAX = 0.9f
 private const val BAR_LIGHT_GREY_MAX = 0.7f
