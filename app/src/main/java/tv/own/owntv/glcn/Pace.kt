@@ -48,6 +48,12 @@ object Pace {
     @Volatile var factor: Float = APP
         private set
 
+    /**
+     * glcn: an entrance — a section or a page building up. It keeps the app's usual pace even with "Brisk response":
+     * what follows a key may answer at once, but a whole screen thrown in at a third of its time lands like a blow.
+     */
+    fun entrance(ms: Int): Int = if (factor <= 0f) ms else (ms * APP / factor.coerceAtMost(1f)).toInt()
+
     /** An ambient duration, lengthened back so it plays at its written speed under [APP]. */
     fun slow(ms: Int): Int = if (factor <= 0f) ms else (ms / factor.coerceAtMost(1f)).toInt()
 

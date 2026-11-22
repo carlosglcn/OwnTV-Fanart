@@ -1617,14 +1617,15 @@ fun OwnTVShell(
                     sectionZoom = tv.own.owntv.glcn.TitleZoom.take()
                     if (!sectionAnim) return@LaunchedEffect
                     sectionIn.snapTo(0f)
-                    sectionIn.animateTo(1f, androidx.compose.animation.core.tween(SECTION_IN_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                    // glcn: an entrance keeps its pace with Brisk response, and settles softly (no blow at the end).
+                    sectionIn.animateTo(1f, androidx.compose.animation.core.tween(tv.own.owntv.glcn.Pace.entrance(SECTION_IN_MS), easing = SECTION_EASE))
                 }
                 val sectionRise = with(androidx.compose.ui.platform.LocalDensity.current) { SECTION_RISE.toPx() }
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth()
                         .graphicsLayer {
                             val k = sectionIn.value
-                            alpha = 0.25f + 0.75f * k
+                            alpha = 0.15f + 0.85f * k
                             if (sectionZoom) {
                                 val z = tv.own.owntv.glcn.TitleZoom.FROM + (1f - tv.own.owntv.glcn.TitleZoom.FROM) * k
                                 scaleX = z; scaleY = z
@@ -3206,8 +3207,10 @@ private fun Modifier.cinemaInset(p: Float): Modifier = if (p <= 0f) this else th
 }
 
 /** glcn: a section's way in — how long, and from how far below. */
-private const val SECTION_IN_MS = 260
-private val SECTION_RISE = 18.mpx
+private const val SECTION_IN_MS = 380
+private val SECTION_RISE = 22.mpx
+/** glcn: a long, gentle settle — quick to show, slow to come to rest. */
+private val SECTION_EASE = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
 
 /**
  * glcn: the synopsis for an episode in the film player — the richest one there is. Lists often give an episode a
