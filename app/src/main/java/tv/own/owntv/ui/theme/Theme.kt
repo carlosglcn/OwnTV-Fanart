@@ -126,6 +126,9 @@ fun OwnTVTheme(
                 glassTint = Color(st.glassTint),
                 glassOff = Color(st.glassTint),
                 text = Color(st.text),
+                // glcn: the style's surfaces take its own tone — every flat fill is its ink at a low alpha, so a navy
+                // theme's panels are navy, a warm one's warm, instead of the same grey for all.
+                ink = if (useDark) androidx.compose.ui.graphics.lerp(Color.White, Color(st.text), 0.6f) else Color(st.text),
                 itemText = Color(st.text),
                 menuItemText = Color(st.text),
                 muted = Color(st.muted),

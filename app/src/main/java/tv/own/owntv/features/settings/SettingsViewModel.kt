@@ -1043,6 +1043,12 @@ class SettingsViewModel(
     val autoSkipIntro: StateFlow<Boolean> = settings.autoSkipIntro.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
     val glcnStyle: StateFlow<tv.own.owntv.core.theme.GlcnStyle?> = settings.glcnStyle.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     fun applyGlcnStyle(style: tv.own.owntv.core.theme.GlcnStyle?) { viewModelScope.launch { settings.applyGlcnStyle(style) } }
+    // glcn: Appearance — theme, mode and background.
+    val glcnStyleMode: StateFlow<Int?> = settings.glcnStyleMode.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val glcnBackdrop: StateFlow<Int> = settings.glcnBackdrop.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), tv.own.owntv.core.theme.GLCN_BACKDROP_THEME)
+    fun applyGlcnTheme(theme: tv.own.owntv.core.theme.GlcnTheme) { viewModelScope.launch { settings.applyGlcnTheme(theme) } }
+    fun setGlcnStyleMode(mode: Int) { viewModelScope.launch { settings.setGlcnStyleMode(mode) } }
+    fun setGlcnBackdrop(mode: Int) { viewModelScope.launch { settings.setGlcnBackdrop(mode) } }
     fun toggleAutoSkipIntro() { viewModelScope.launch { settings.setAutoSkipIntro(!autoSkipIntro.value) } }
     val homeCover: StateFlow<Int> = settings.homeCover.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     fun cycleHomeCover() { viewModelScope.launch { settings.setHomeCover((homeCover.value + 1) % 3) } }

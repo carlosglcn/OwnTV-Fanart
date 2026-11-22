@@ -1443,6 +1443,13 @@
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/LiveListFilter.kt	glcn_live_list
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/LiveListFilter.kt	playlist
 1	technical	app/src/main/java/tv/own/owntv/glcn/LogoMatte.kt	glcn.whitematte.1
+1	technical	app/src/main/java/tv/own/owntv/glcn/LookPopup.kt	1 ·
+1	technical	app/src/main/java/tv/own/owntv/glcn/LookPopup.kt	2 ·
+1	technical	app/src/main/java/tv/own/owntv/glcn/LookPopup.kt	3 ·
+1	technical	app/src/main/java/tv/own/owntv/glcn/LookPopup.kt	›
+1	technical	app/src/main/java/tv/own/owntv/glcn/LookPopup.kt	▾
+1	technical	app/src/main/java/tv/own/owntv/glcn/LookPopup.kt	●
+1	technical	app/src/main/java/tv/own/owntv/glcn/LookPopup.kt	✓
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/LowRam.kt	asked
 1	technical	app/src/main/java/tv/own/owntv/glcn/LowRam.kt	asked_slow
 1	preference-key	app/src/main/java/tv/own/owntv/glcn/LowRam.kt	forced

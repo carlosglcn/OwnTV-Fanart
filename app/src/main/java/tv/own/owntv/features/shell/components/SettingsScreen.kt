@@ -341,6 +341,9 @@ fun SettingsScreen(
     val homeCoverDim by settingsVm.homeCoverDim.collectAsStateWithLifecycle()
     val glcnStyle by settingsVm.glcnStyle.collectAsStateWithLifecycle()
     var showGlcnStyle by remember { mutableStateOf(false) }
+    var showLook by remember { mutableStateOf(false) }
+    val glcnStyleMode by settingsVm.glcnStyleMode.collectAsStateWithLifecycle()
+    val glcnBackdrop by settingsVm.glcnBackdrop.collectAsStateWithLifecycle()
     var showHomeLayout by remember { mutableStateOf(false) }
     var showSoundStyle by remember { mutableStateOf(false) }
     var showResetAppearance by remember { mutableStateOf(false) }
@@ -536,11 +539,12 @@ fun SettingsScreen(
         RootRow(
             "glcn_style", TileTone.PRIMARY, OwnTVIcon.PALETTE,
             heading = stringResource(R.string.glcn_part_home),
-            title = stringResource(R.string.glcn_style_title),
-            desc = stringResource(R.string.glcn_style_desc),
-            chip = glcnStyle?.label() ?: stringResource(R.string.glcn_style_none),
+            title = stringResource(R.string.glcn_look_title),
+            desc = stringResource(R.string.glcn_look_desc),
+            // glcn: the theme's name, or the earlier style's, or "My own colours".
+            chip = glcnStyle?.let { st -> tv.own.owntv.core.theme.GlcnTheme.of(st)?.label() ?: st.label() } ?: stringResource(R.string.glcn_style_none),
             chipTone = if (glcnStyle != null) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { showGlcnStyle = true },
+            onClick = { showLook = true },
         ),
         glcnAccessibleRow(accessibleContext),
         glcnEmbyGroupsRow(accessibleContext),
@@ -1597,6 +1601,17 @@ fun SettingsScreen(
     }
     if (showHomeLayout) {
         tv.own.owntv.glcn.HomeLayoutPicker(homeBackdrop, onPick = settingsVm::setHomeBackdropStyle, onDismiss = { showHomeLayout = false })
+    }
+    if (showLook) {
+        tv.own.owntv.glcn.LookPopup(
+            style = glcnStyle, mode = glcnStyleMode, backdrop = glcnBackdrop,
+            onTheme = settingsVm::applyGlcnTheme, onMode = settingsVm::setGlcnStyleMode, onBackdrop = settingsVm::setGlcnBackdrop,
+            onAccent = { saveScroll(); dialogReturn = accentRowFocus; showAccent = true },
+            onFocus = { showFocusHighlight = true },
+            onSounds = { showSoundStyle = true },
+            onOlder = { showGlcnStyle = true },
+            onDismiss = { showLook = false },
+        )
     }
     if (showGlcnStyle) {
         tv.own.owntv.glcn.StylePickerPopup(glcnStyle, onPick = { st -> settingsVm.applyGlcnStyle(st); if (st == null) { chainAccent = true; showTheme = true } }, onDismiss = { showGlcnStyle = false })

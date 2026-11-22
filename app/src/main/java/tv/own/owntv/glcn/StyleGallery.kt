@@ -103,7 +103,7 @@ fun StylePickerPopup(current: GlcnStyle?, onPick: (GlcnStyle?) -> Unit, onDismis
 
 /** A Home in the style's own colours: its page, its panels (glass ones see-through), its accent and text. */
 @Composable
-private fun StyleSketch(style: GlcnStyle, focused: Boolean, modifier: Modifier) {
+internal fun StyleSketch(style: GlcnStyle, focused: Boolean, modifier: Modifier) {
     Box(modifier) {
         Canvas(Modifier.matchParentSize()) { drawStyle(style) }
     }

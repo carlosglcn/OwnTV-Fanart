@@ -382,7 +382,16 @@ open class MainActivity : ComponentActivity() {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val accent by viewModel.accent.collectAsStateWithLifecycle()
             val customAccent by viewModel.customAccent.collectAsStateWithLifecycle()
-            val glcnStyle by org.koin.compose.koinInject<tv.own.owntv.core.settings.SettingsRepository>().glcnStyle.collectAsStateWithLifecycle(initialValue = null)
+            val glcnSettingsRepo = org.koin.compose.koinInject<tv.own.owntv.core.settings.SettingsRepository>()
+            val glcnStyle by glcnSettingsRepo.glcnStyle.collectAsStateWithLifecycle(initialValue = null)
+            val glcnBackdrop by glcnSettingsRepo.glcnBackdrop.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.theme.GLCN_BACKDROP_THEME)
+            // glcn: automatic mode — the theme turns to its day or night side as the hours pass (checked every few minutes).
+            LaunchedEffect(Unit) {
+                while (true) {
+                    runCatching { glcnSettingsRepo.syncGlcnStyle() }
+                    kotlinx.coroutines.delay(GLCN_MODE_CHECK_MS)
+                }
+            }
             val focusHighlight by viewModel.focusHighlight.collectAsStateWithLifecycle()
             val focusHighlightWidth by viewModel.focusHighlightWidth.collectAsStateWithLifecycle()
             val uiZoomPercent by viewModel.uiZoomPercent.collectAsStateWithLifecycle()
@@ -570,15 +579,22 @@ open class MainActivity : ComponentActivity() {
                         // Background image sits behind everything when a path is set; otherwise the solid
                         // base color shows through and glass renders over that instead.
                         val wallAnim = tv.own.owntv.glcn.Wallpapers.animKind(background.imagePath)
-                        val busyBackdrop = background.showsPicture ||
-                            (glcnStyle?.isGradient == true && themeMode != tv.own.owntv.core.theme.ThemeMode.LIGHT)
+                        // glcn: Appearance › Background — plain, the theme's own gradient, or the focused picture's colours.
+                        val backdropStyle = glcnStyle?.takeIf { themeMode != tv.own.owntv.core.theme.ThemeMode.LIGHT }?.takeIf {
+                            when (glcnBackdrop) {
+                                tv.own.owntv.core.theme.GLCN_BACKDROP_PLAIN -> false
+                                tv.own.owntv.core.theme.GLCN_BACKDROP_FANART -> true
+                                else -> it.isGradient
+                            }
+                        }
+                        val busyBackdrop = background.showsPicture || backdropStyle != null
                         androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.BusyBackdrop.on = busyBackdrop }
                         // glcn: an animated wallpaper of the app's own, drawn live, in place of a picture file.
                         if (background.showsPicture && wallAnim != null) tv.own.owntv.glcn.AnimatedWallpaper(wallAnim, Modifier.fillMaxSize())
                         else if (background.showsPicture) BackgroundLayer(background, blurred)
                         // glcn: a gradient style's backdrop (Aurora, Crepúsculo, Océano, Fanart vivo) when no picture is set.
-                        else glcnStyle?.takeIf { it.isGradient && themeMode != tv.own.owntv.core.theme.ThemeMode.LIGHT }?.let {
-                            tv.own.owntv.glcn.GradientBackdrop(it, Modifier.fillMaxSize())
+                        else backdropStyle?.let {
+                            tv.own.owntv.glcn.GradientBackdrop(it, Modifier.fillMaxSize(), art = glcnBackdrop == tv.own.owntv.core.theme.GLCN_BACKDROP_FANART)
                         }
 
                         Box(modifier = Modifier.fillMaxSize()) {
@@ -696,3 +712,6 @@ private fun BackgroundLayer(background: tv.own.owntv.core.theme.BackgroundConfig
 
 /** glcn: how long after the launch curtain has faded the window lets go of the launch picture. */
 private const val LAUNCH_WINDOW_RELEASE_MS = 600L
+
+/** glcn: how often automatic mode checks whether it is day or night. */
+private const val GLCN_MODE_CHECK_MS = 5 * 60_000L
