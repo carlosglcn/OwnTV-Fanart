@@ -33,3 +33,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎨 Two sides in much the same colour (two reds, Burgos – Albacete) no longer look alike: the away side shows its second colour.
 - 🏟️ **Match page:** the competition's logo beside its name at the top, each side's colour under its crest, how long until kick-off (its last three hours), and the court's surface for tennis. Before kick-off, the page opens on what there is (form, table…) instead of an empty minute-by-minute. Follow moved up beside the competition's name, so every tab fits (the last one, Broadcasts, was cut to "R…"); the tabs scroll if there are more than fit.
 - 🎨 Style picker: Brasa and Alba have a group of their own, **Outlined focus**, first — they were among the Classic ones.
+- ✨ A new install now opens on Fanart's own look: the menu as a top bar (Island), Home in Cinema and Films & Series in Runway, with Brasa. Whoever already has the app keeps every setting exactly as it was.

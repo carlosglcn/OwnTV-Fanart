@@ -200,6 +200,8 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             runCatching {
                 GlobalContext.get().get<tv.own.owntv.core.settings.SettingsRepository>().applyStageDefaults()
             }
+            // glcn: after the Stage's, so a new install's top bar, Cinema Home and Runway are not written over.
+            runCatching { tv.own.owntv.glcn.FreshDefaults.apply(this@OwnTVApp, GlobalContext.get().get()) }
         }
         // glcn: the logins of home-network shares, for playing their files (kept up to date as sources change).
         appScope.launch {
