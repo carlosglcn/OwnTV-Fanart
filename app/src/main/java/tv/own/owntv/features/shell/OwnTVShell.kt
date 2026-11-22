@@ -2014,7 +2014,7 @@ fun OwnTVShell(
             if (showRecentDrop) tv.own.owntv.features.shell.components.RecentChannelsDrop(
                 load = { liveVm.historyChannels() },
                 loadNow = { liveVm.nowFull(it) },
-                onPlay = { ch -> showRecentDrop = false; scope.launch { if (liveVm.ensurePlayingByIdAsync(ch.id)) openFullscreen(MainSection.LIVE_TV) } },
+                onPlay = { ch -> showRecentDrop = false; scope.launch { if (liveVm.ensurePlayingByIdAsync(ch.id, fromHistory = true)) openFullscreen(MainSection.LIVE_TV) } },
                 onDismiss = { showRecentDrop = false },
             )
             tv.own.owntv.features.shell.components.StageStatusCluster(
@@ -2944,7 +2944,7 @@ fun OwnTVShell(
                         title = stringResource(R.string.content_category_recently_watched),
                         showNumbers = directTuneEnabled,
                         alignEnd = true,
-                        onSelect = { liveVm.ensurePlaying(it); showHistoryList = false },
+                        onSelect = { liveVm.watchFromHistory(it); showHistoryList = false },
                         onDismiss = { showHistoryList = false },
                         onForget = { liveVm.removeFromHistory(it.id) },
                         onForgetAll = { liveVm.clearLiveHistory(); showHistoryList = false },

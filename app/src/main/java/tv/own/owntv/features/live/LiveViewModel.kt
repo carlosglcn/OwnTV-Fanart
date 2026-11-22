@@ -2128,11 +2128,23 @@ class LiveViewModel(
         }
     }
 
+    /** glcn: a channel picked from History (the player's right-hand list, the top-bar recent drop) keeps History
+     *  as its zap list, so ◀ opens History on that channel and CH± steps through it — it used to leave the
+     *  previous category armed, and the list opened somewhere else. */
+    fun watchFromHistory(channel: ChannelEntity) {
+        zapList.armForKey(LiveKey.History, null, { channelsInRail(LiveKey.History) }, {})
+        ensurePlaying(channel)
+    }
+
     /** Open a channel from a caller-owned rail (for example Home favorites), preserving that rail as the
      *  playback browse/zap context instead of replacing it with provider-category metadata. A channel in
      *  a locked category, or one that is gone, does not open: false. */
-    suspend fun ensurePlayingByIdAsync(channelId: Long, zapChannels: List<ChannelEntity> = emptyList()): Boolean {
+    suspend fun ensurePlayingByIdAsync(channelId: Long, zapChannels: List<ChannelEntity> = emptyList(), fromHistory: Boolean = false): Boolean {
         val channel = channelDao.getById(channelId)?.takeUnless { customize.sealsCategory(settings.activeProfileId.first(), it.categoryId) } ?: return false
+        if (fromHistory) {
+            watchFromHistory(channel)
+            return true
+        }
         // glcn: a list of one (Sports "Watch live" with a single channel) left nothing to zap through — the channel's
         // own group instead.
         if (zapChannels.size < 2) {

@@ -587,7 +587,9 @@ class EpgViewModel(
             val fresh = playlistIds.filter { it !in SilentEpgMatch.done }
             if (fresh.isEmpty()) return
             SilentEpgMatch.done += fresh
-            val outcome = autoMatcher.run(customize.observe(pid, MediaType.LIVE).first(), playlistIds)
+            // glcn: strict — a playlist's own tvg-id is never replaced behind the user's back, and only near-certain
+            // name matches with the same numbers are applied (Movistar+ had become Telecinco, La Séptima La 1).
+            val outcome = autoMatcher.run(customize.observe(pid, MediaType.LIVE).first(), playlistIds, strict = true)
             if (outcome.hadCandidates && outcome.applied.isNotEmpty()) {
                 // Through core's one entry point: it saves the matches and fetches what the cache cannot give.
                 runCatching { guideMatches.match(pid, outcome.applied.toMap()) }
