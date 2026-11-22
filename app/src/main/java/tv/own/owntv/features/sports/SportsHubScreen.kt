@@ -492,21 +492,10 @@ internal fun MatchCard(
 ) {
     val r = 20.mpx
     val locale = LocalConfiguration.current.locales[0]
-    // glcn: each side's colour, as a bar beside it — the card itself stays plain, so the colour reads as that side's
-    // and is never dulled to carry text. The side's own colour when its feed gives one (its shirt's); the crest's
-    // strongest only stands in where there is none. Tennis: both players carry the surface's colour.
+    // glcn: each side's colour, as a bar beside it (see sideColors); tennis tells its surface at the foot.
     val lightCard = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
-    val sides = if (m.sport.isRace) emptyList() else listOfNotNull(m.home?.team, m.away?.team).filter { !it.isAthlete }
-    val homeTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(0)?.logoUrl)
-    val awayTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(1)?.logoUrl)
     val surface = if (m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) tv.own.owntv.glcn.TennisSurface.of(m.leagueName) else null
-    // Players have no colours of their own: their sides carry no bar, and the surface is told at the card's foot.
-    // Two sides in much the same colour (two reds) would read as one: the away side then shows its second colour.
-    val homeBar = (sides.getOrNull(0)?.let { ownColor(it) } ?: homeTone?.vivid)?.let { barTone(it, lightCard) }
-    val awayBar = sides.getOrNull(1)?.let { away ->
-        listOfNotNull(ownColor(away), parseHex(away.altColor), awayTone?.vivid).map { barTone(it, lightCard) }
-            .let { options -> options.firstOrNull { homeBar == null || !alike(it, homeBar) } ?: options.firstOrNull() }
-    }
+    val (homeBar, awayBar) = sideColors(m)
     val plain = StageColors.Ink.copy(alpha = 0.045f)
     StageSurface(
         onClick = onClick,
@@ -541,21 +530,7 @@ internal fun MatchCard(
         Column(Modifier.fillMaxSize().padding(horizontal = 20.mpx, vertical = 16.mpx)) {
             // League line · minute (red while live) or kick-off.
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // glcn: the competition's own mark before its name — the one drawn for a dark ground under a dark
-                // style; where the feed has only the plain one, it sits on a small light chip so a dark mark shows.
-                // Tennis: the tournament's own logo where the data lists it (the feed has only the tour's).
-                val own = if (m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) tv.own.owntv.core.sports.TennisPhotos.tournamentLogo(m.leagueName) else null
-                // Competitions whose scores come without a logo (ACB, ASOBAL, MotoGP, F1…) take ours.
-                val ours = if (own == null && m.leagueLogo == null && m.leagueLogoDark == null) tv.own.owntv.core.sports.CompetitionLogos.of(m.leagueSlug) else null
-                val mark = own ?: ours ?: if (lightCard) m.leagueLogo ?: m.leagueLogoDark else m.leagueLogoDark ?: m.leagueLogo
-                if (mark != null) {
-                    val chip = !lightCard && (own != null || ours != null || m.leagueLogoDark == null)
-                    coil3.compose.AsyncImage(
-                        model = mark, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                        modifier = Modifier.padding(end = 10.mpx).size(LEAGUE_MARK.mpx)
-                            .then(if (chip) Modifier.background(Color.White.copy(alpha = 0.92f), RoundedCornerShape(7.mpx)).padding(3.mpx) else Modifier),
-                    )
-                }
+                LeagueMark(m, LEAGUE_MARK, Modifier.padding(end = 10.mpx))
                 val day = if (m.isLive) null else dayOf(m.startMs, locale)
                 // glcn: tennis — what the tournament is played on, after its name.
                 val league = listOfNotNull(leagueName(m), m.subtitle?.takeIf { featured && !m.sport.isRace }, day).joinToString(stringResource(R.string.content_epg_bits_separator))
@@ -641,13 +616,7 @@ private fun CardFooter(venue: String?, reminded: Boolean, followed: Boolean, cha
     Spacer(Modifier.height(12.mpx))
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.mpx)) {
         // glcn: tennis — what the court is, a small tag in that surface's colour.
-        if (surface != null) Row(
-            Modifier.background(surface.tone.copy(alpha = SURFACE_WASH), RoundedCornerShape(SURFACE_TAG_R.mpx)).padding(horizontal = 10.mpx, vertical = 4.mpx),
-            horizontalArrangement = Arrangement.spacedBy(7.mpx), verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(Modifier.size(10.mpx).background(surface.tone, RoundedCornerShape(5.mpx)))
-            Text(stringResource(surface.label), style = stageText(15, 700), color = StageColors.Body, maxLines = 1)
-        }
+        if (surface != null) SurfaceTag(surface)
         // glcn: where to watch it, when that is known, says more than the stadium.
         if (channel != null) tv.own.owntv.ui.components.OwnTVIcon(OwnTVIcon.LIVE_TV, StageColors.Body, Modifier.size(18.mpx))
         Text(channel ?: venue.orEmpty(), style = stageText(16, if (channel != null) 700 else 500), color = if (channel != null) StageColors.Body else StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -725,6 +694,60 @@ private fun FollowRemindMenu(
 /** A side's name on a card: the short name, unless ESPN gives only a code ("GHA" in cricket), then the full name. */
 internal fun teamLabel(t: tv.own.owntv.core.sports.model.Team): String =
     if (t.shortName.length <= 4 && t.shortName == t.shortName.uppercase() && t.name.length > t.shortName.length) t.name else t.shortName
+
+/**
+ * glcn: each side's colour, for a bar beside it — the card itself stays plain, so the colour reads as that side's and
+ * is never dulled to carry text. The side's own colour when its feed gives one (its shirt's); the crest's strongest
+ * only stands in where there is none. Two sides in much the same colour (two reds) would read as one: the away side
+ * then shows its second colour. Players have no colours of their own: none for them, nor for a race.
+ */
+@Composable
+internal fun sideColors(m: Match): Pair<Color?, Color?> {
+    val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    val sides = if (m.sport.isRace) emptyList() else listOfNotNull(m.home?.team, m.away?.team).filter { !it.isAthlete }
+    val homeTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(0)?.logoUrl)
+    val awayTone by tv.own.owntv.glcn.ArtTone.of(sides.getOrNull(1)?.logoUrl)
+    val home = (sides.getOrNull(0)?.let { ownColor(it) } ?: homeTone?.vivid)?.let { barTone(it, light) }
+    val away = sides.getOrNull(1)?.let { a ->
+        listOfNotNull(ownColor(a), parseHex(a.altColor), awayTone?.vivid).map { barTone(it, light) }
+            .let { options -> options.firstOrNull { home == null || !alike(it, home) } ?: options.firstOrNull() }
+    }
+    return home to away
+}
+
+/** glcn: the competition's logo — the tournament's own (tennis), the feed's (for a dark ground under a dark style), or ours. */
+@Composable
+internal fun leagueMark(m: Match): Pair<String, Boolean>? {
+    val light = tv.own.owntv.ui.theme.LocalStagePalette.current.isLight
+    val own = if (m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) tv.own.owntv.core.sports.TennisPhotos.tournamentLogo(m.leagueName) else null
+    val ours = if (own == null && m.leagueLogo == null && m.leagueLogoDark == null) tv.own.owntv.core.sports.CompetitionLogos.of(m.leagueSlug) else null
+    val mark = own ?: ours ?: (if (light) m.leagueLogo ?: m.leagueLogoDark else m.leagueLogoDark ?: m.leagueLogo) ?: return null
+    // Where only a mark for a light ground is had, a dark style shows it on a small light tile.
+    return mark to (!light && (own != null || ours != null || m.leagueLogoDark == null))
+}
+
+/** glcn: the competition's logo, [size] tall, on its light tile where it needs one. */
+@Composable
+internal fun LeagueMark(m: Match, size: Int, modifier: Modifier = Modifier) {
+    val (url, tile) = leagueMark(m) ?: return
+    coil3.compose.AsyncImage(
+        model = url, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+        modifier = modifier.size(size.mpx)
+            .then(if (tile) Modifier.background(Color.White.copy(alpha = 0.92f), RoundedCornerShape((size / 5).mpx)).padding((size / 10).mpx) else Modifier),
+    )
+}
+
+/** glcn: a tennis court's surface — a small tag in its colour. */
+@Composable
+internal fun SurfaceTag(surface: tv.own.owntv.glcn.TennisSurface) {
+    Row(
+        Modifier.background(surface.tone.copy(alpha = SURFACE_WASH), RoundedCornerShape(SURFACE_TAG_R.mpx)).padding(horizontal = 10.mpx, vertical = 4.mpx),
+        horizontalArrangement = Arrangement.spacedBy(7.mpx), verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(10.mpx).background(surface.tone, RoundedCornerShape(5.mpx)))
+        Text(stringResource(surface.label), style = stageText(15, 700), color = StageColors.Body, maxLines = 1)
+    }
+}
 
 /** glcn: a side's colour bar; a side with no colour keeps the room, so the two names stay in line. */
 @Composable

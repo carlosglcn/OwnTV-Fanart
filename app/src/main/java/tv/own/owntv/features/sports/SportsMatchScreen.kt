@@ -1,5 +1,7 @@
 package tv.own.owntv.features.sports
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import tv.own.owntv.core.sports.model.isRace
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -158,15 +160,24 @@ fun SportsMatchScreen(
             // 84 above the bottom, clear of the key hints.
             Column(Modifier.width(915.mpx).fillMaxHeight()) {
                 Box(Modifier.height(75.mpx).fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.mpx)) {
                         OwnTVIcon(OwnTVIcon.CHEVRON_LEFT, StageColors.Muted, Modifier.size(21.mpx))
                         Text(
                             stringResource(R.string.sports_title), style = stageText(21, 600), color = stageAccent.ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
+                        Text(sep, style = stageText(21, 400), color = StageColors.Muted, maxLines = 1)
+                        // glcn: the competition with its logo, as on its card.
+                        LeagueMark(m, 34, Modifier.padding(end = 4.mpx))
                         Text(
-                            sep + leagueName(m),
-                            style = stageText(21, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            listOfNotNull(leagueName(m), m.subtitle?.takeIf { !m.sport.isRace }).joinToString(sep),
+                            style = stageText(21, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                         )
+                        // glcn: Follow sits here, out of the tabs' way (it took the room the last tab needed).
+                        val following = vm.follows(state.config, m.feed)
+                        SportsChip(
+                            stringResource(if (following) R.string.sports_following else R.string.sports_follow),
+                            on = following, icon = OwnTVIcon.STAR,
+                        ) { vm.toggleLeague(m.feed) }
                     }
                 }
             LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(bottom = 84.mpx).focusGroup(), contentPadding = PaddingValues(bottom = 24.mpx)) {
@@ -175,28 +186,25 @@ fun SportsMatchScreen(
                 }
                 item {
                     Row(
-                        Modifier.fillMaxWidth().padding(top = 21.mpx).focusRestorer().focusGroup(),
+                        Modifier.fillMaxWidth().padding(top = 21.mpx).horizontalScroll(rememberScrollState()).focusRestorer().focusGroup(),
                         horizontalArrangement = Arrangement.spacedBy(8.mpx),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         val tabs = MatchTab.entries.filter {
+                            // glcn: before kick-off there is nothing minute by minute yet: the page opens on what there is.
+                            (it != MatchTab.TIMELINE || m.state != MatchState.PRE || !(state.summary?.timeline ?: m.events).isEmpty()) &&
                             (it != MatchTab.TABLE || state.standings?.groups?.any { g -> g.rows.isNotEmpty() } == true || state.ranking?.groups?.isNotEmpty() == true || liveOrder) &&
                                 (it != MatchTab.DRAW || m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) &&
                                 (it != MatchTab.STATS || !state.summary?.stats.isNullOrEmpty()) &&
                                 (it != MatchTab.LINEUPS || !state.summary?.lineups.isNullOrEmpty()) && (it != MatchTab.FORM || !state.summary?.form.isNullOrEmpty())
                         }
+                        LaunchedEffect(tabs) { if (tab !in tabs && tabs.isNotEmpty()) tab = tabs.first() }
                         tabs.forEach { t ->
                             StageTab(
                                 label = stringResource(t.label), count = "", selected = tab == t, onClick = { tab = t },
-                                modifier = if (t == MatchTab.TIMELINE) Modifier.focusRequester(tabFocus) else Modifier,
+                                modifier = if (t == tabs.first()) Modifier.focusRequester(tabFocus) else Modifier,
                             )
                         }
-                        Spacer(Modifier.weight(1f))
-                        val following = vm.follows(state.config, m.feed)
-                        SportsChip(
-                            stringResource(if (following) R.string.sports_following else R.string.sports_follow),
-                            on = following, icon = OwnTVIcon.STAR,
-                        ) { vm.toggleLeague(m.feed) }
                     }
                 }
                 when (tab) {
@@ -428,8 +436,9 @@ private fun ScoreHeader(m: Match, summary: MatchSummary?, hidden: Boolean, onRev
             if (m.sport.isRace) { RaceHeaderContent(m, hidden); return@Column }
             val home = m.home
             val away = m.away
+            val (homeBar, awayBar) = sideColors(m)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Side(home?.team, Modifier.weight(1f))
+                Side(home?.team, Modifier.weight(1f), homeBar)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     val score = when {
                         m.competitors.size < 2 -> m.title
@@ -442,14 +451,21 @@ private fun ScoreHeader(m: Match, summary: MatchSummary?, hidden: Boolean, onRev
                     }
                     Text(score, style = stageText(if (m.competitors.size < 2) 30f else if (score.length > 7) 51f else 81f, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(9.mpx))
+                    // glcn: how long until it starts, in the accent, for its last three hours.
+                    val left = (m.startMs - System.currentTimeMillis()) / 60_000L
                     if (m.isLive) LiveMark(stringResource(R.string.player_live) + stringResource(R.string.content_epg_bits_separator) + clockText(m))
+                    else if (m.state == MatchState.PRE && !m.off && left in 1..COUNTDOWN_HEAD_MINUTES) Text(
+                        (if (left < 60) stringResource(R.string.glcn_sports_in_minutes, left.toInt()) else stringResource(R.string.glcn_sports_in_hours, (left / 60).toInt(), (left % 60).toInt())) +
+                            stringResource(R.string.content_epg_bits_separator) + (dayOf(m.startMs, LocalConfiguration.current.locales[0]) ?: stringResource(R.string.content_epg_today)),
+                        style = stageText(17, 800), color = stageAccent.ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
                     else Text(
                         // Before kick-off ESPN's text is US-styled ("10/16 - 9:00 PM EDT"); the day in the user's own words instead.
                         if (m.state == MatchState.PRE) dayOf(m.startMs, LocalConfiguration.current.locales[0]) ?: stringResource(R.string.content_epg_today) else m.statusText,
                         style = stageText(17, 700), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Side(away?.team, Modifier.weight(1f))
+                Side(away?.team, Modifier.weight(1f), awayBar)
             }
             // Kick-off, round, venue (ESPN's), in the box rather than the crumb.
             val locale = LocalConfiguration.current.locales[0]
@@ -460,6 +476,10 @@ private fun ScoreHeader(m: Match, summary: MatchSummary?, hidden: Boolean, onRev
                 m.venue,
             ).joinToString(stringResource(R.string.content_epg_bits_separator))
             Text(info, style = stageText(17, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 14.mpx))
+            // glcn: tennis — the court's surface.
+            if (m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) tv.own.owntv.glcn.TennisSurface.of(m.leagueName)?.let { sf ->
+                Box(Modifier.fillMaxWidth().padding(top = 12.mpx), contentAlignment = Alignment.Center) { SurfaceTag(sf) }
+            }
             if (!hidden && m.competitors.size == 2) {
                 val goals = (summary?.timeline ?: m.events).filter { it.kind == MatchEvent.Kind.GOAL || it.kind == MatchEvent.Kind.PENALTY_GOAL || it.kind == MatchEvent.Kind.OWN_GOAL }
                 fun line(teamId: String?) = goals.filter { it.teamId == teamId }.joinToString(" · ") { "⚽ ${it.players.firstOrNull().orEmpty().substringAfterLast(' ')} ${it.minute}" }
@@ -473,11 +493,13 @@ private fun ScoreHeader(m: Match, summary: MatchSummary?, hidden: Boolean, onRev
 }
 
 @Composable
-private fun Side(team: tv.own.owntv.core.sports.model.Team?, modifier: Modifier) {
+private fun Side(team: tv.own.owntv.core.sports.model.Team?, modifier: Modifier, bar: Color? = null) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.mpx)) {
         if (team != null) {
             Crest(team, 93)
             Text(team.name, style = stageText(22.5f, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // glcn: the side's colour, as on its card.
+            if (bar != null) Box(Modifier.size(56.mpx, 6.mpx).background(bar, RoundedCornerShape(3.mpx)))
         }
     }
 }
@@ -728,3 +750,5 @@ private fun DrawMatchLine(dm: Match) {
         }
     }
 }
+
+private const val COUNTDOWN_HEAD_MINUTES = 180L
