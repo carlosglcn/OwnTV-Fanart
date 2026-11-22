@@ -763,7 +763,7 @@ fun StageGroupLabel(text: String, sheet: Boolean = false) {
     Text(
         text,
         style = if (sheet) stageText(13, 800, 0.12.em) else stageText(12.5f, 800, 0.13.em),
-        color = StageColors.Dim,
+        color = tv.own.owntv.ui.theme.stageLabelInk,
         maxLines = 1, overflow = TextOverflow.Ellipsis,
         modifier = if (sheet) {
             Modifier.padding(start = 16.mpx, end = 16.mpx, top = 14.mpx, bottom = 6.mpx)

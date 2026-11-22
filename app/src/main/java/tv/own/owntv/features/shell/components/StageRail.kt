@@ -912,7 +912,9 @@ private fun TopEntry(
     val idle = when {
         pills && active -> Modifier.background(palette.text.copy(alpha = 0.92f), RoundedCornerShape(r.mpx))
         pills -> chip
-        icons && active -> Modifier.background(a.accent.copy(alpha = 0.16f), RoundedCornerShape(r.mpx))
+        // glcn: the open section stands out in the theme's colours — a pill filled with the accent's gradient.
+        (icons || shape == tv.own.owntv.glcn.TopBarShape.CAPSULE) && active ->
+            Modifier.background(Brush.horizontalGradient(listOf(a.accent, second)), RoundedCornerShape(r.mpx))
         else -> Modifier
     }
     StageSurface(
@@ -927,7 +929,8 @@ private fun TopEntry(
         val tint = when {
             tabs -> if (focused) a.accent else if (active) palette.text else StageColors.NavText
             pills -> if (focused) a.onAccent else if (active) palette.page else palette.text
-            icons -> if (focused) palette.fxText else if (active || accentIcon) a.accent else StageColors.NavText
+            icons -> if (focused) palette.fxText else if (active) a.onAccent else if (accentIcon) a.accent else StageColors.NavText
+            shape == tv.own.owntv.glcn.TopBarShape.CAPSULE && active && !focused -> a.onAccent
             else -> if (focused) palette.fxText else if (active) palette.text else if (accentIcon) a.accent else StageColors.NavText
         }
         // Which parts show: the island and the pills name every section and give the open one its icon; the icons

@@ -239,6 +239,16 @@ data class StageAccent(
     val ink: Color = accent,
 )
 
+/**
+ * glcn: the small labels' colour — section names in menus and sheets, Home's row names: the theme's own colour, so a
+ * theme shows beyond its focus. A theme with a second accent uses that one by night (Ría's green, Brasa's coral);
+ * otherwise, and by day, the accent as it reads on the page.
+ */
+val stageLabelInk: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = tv.own.owntv.glcn.EmberFocus.second?.takeIf { !LocalStagePalette.current.isLight } ?: stageAccent.ink
+
 val stageAccent: StageAccent
     @Composable
     @ReadOnlyComposable

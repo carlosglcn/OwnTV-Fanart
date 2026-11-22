@@ -101,7 +101,7 @@ fun HomeRowHeader(title: String, small: String?, start: Dp, big: Boolean = false
         // glcn: a small spaced label in capitals instead of a heavy title — the rows read as an ordered page and the
         // pictures keep the weight. The box keeps its height, so nothing below moves.
         Text(
-            title.uppercase(), style = rowLabelStyle(big), color = StageColors.Text.copy(alpha = ROW_LABEL_ALPHA), maxLines = 1,
+            title.uppercase(), style = rowLabelStyle(big), color = tv.own.owntv.ui.theme.stageLabelInk, maxLines = 1,
             overflow = TextOverflow.Ellipsis, modifier = Modifier.alignByBaseline(),
         )
         if (small != null) {

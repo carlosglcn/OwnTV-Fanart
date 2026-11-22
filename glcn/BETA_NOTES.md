@@ -55,3 +55,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🌊 **New theme Ría:** deep navy with soft lights drifting behind, a cyan-to-green accent and outlined focus by night; a pale blue-grey page with navy ink by day. Estudio and Neón get a day side; Alba is now Brasa's day side, Nieve Aurora's, Arena Crepúsculo's, Papel Vitrina's.
 - 🧊 Themes' surfaces take the theme's own tone (navy panels in Ría, warm ones in Brasa) instead of the same grey for all.
 - 🩹 Sound style list: the focused name reads on the focus (it was the focus's own colour, invisible with light accents such as Ría's).
+- 🎨 The theme shows beyond its focus: section labels in menus and sheets and Home's row names take the theme's colour (Ría's green by night, navy by day; Brasa's coral…), and the open section in the top bar (Capsule and Icons shapes) is a pill filled with the theme's gradient.
