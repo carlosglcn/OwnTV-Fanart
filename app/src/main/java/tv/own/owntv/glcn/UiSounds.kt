@@ -105,7 +105,7 @@ object UiSounds {
                 Season.NEW_YEAR -> newYear()
                 Season.CARNIVAL -> carnival()
                 Season.VALENTINE -> valentine()
-                Season.NONE -> (if (style == NATURAL) raw(tv.own.owntv.R.raw.glcn_snd_open) else null) ?: chime()
+                Season.NONE -> (if (style == NATURAL) raw(tv.own.owntv.R.raw.glcn_snd_open) else null) ?: if (style == EMBER) emberChime() else chime()
             }
             val track = trackOf(pcm, gain = 0.5f) ?: return@launch
             runCatching { track.play() }
@@ -248,17 +248,19 @@ object UiSounds {
          * rings), a second voice a hair out of tune (the slow shimmer of a real bar), a pitch that settles in the first
          * instants, and the mallet's own soft thud and breath at the start.
          */
-        fun struck(atSec: Double, freq: Double, durSec: Double, amp: Double, decay: Double, hard: Double = 1.0, seed: Long = 3) {
+        fun struck(atSec: Double, freq: Double, durSec: Double, amp: Double, decay: Double, hard: Double = 1.0, seed: Long = 3, open: Double = 0.0) {
             val start = (atSec * RATE).toInt()
             val n = (durSec * RATE).toInt()
             val ratios = doubleArrayOf(1.0, 3.93, 9.6)
-            val levels = doubleArrayOf(1.0, 0.22 * hard, 0.07 * hard)
+            // [open] (0–1) lets more of the upper partials and of the mallet's click through, and less of its low thud:
+            // a short knock with them held back sounds shut in, as if heard through a bottle.
+            val levels = doubleArrayOf(1.0, (0.22 + 0.2 * open) * hard, (0.07 + 0.09 * open) * hard)
             val decays = doubleArrayOf(decay, decay * 2.7, decay * 5.5)
             val phases = DoubleArray(3)
             var twin = 0.0
             var thud = 0.0
             val rnd = java.util.Random(seed)
-            val lp = 1 - exp(-2 * PI * 2600.0 / RATE)
+            val lp = 1 - exp(-2 * PI * (2600.0 + 4400.0 * open) / RATE)
             var noise = 0.0
             for (i in 0 until n) {
                 val idx = start + i
@@ -275,7 +277,7 @@ object UiSounds {
                 v += 0.32 * exp(-decay * 0.9 * t) * sin(twin)
                 // The mallet: a low thud and a little filtered noise, gone in a few milliseconds.
                 thud += 2 * PI * f * 0.5 / RATE
-                v += 0.3 * hard * exp(-t / 0.006) * sin(thud)
+                v += 0.3 * (1 - 0.7 * open) * hard * exp(-t / 0.006) * sin(thud)
                 noise += lp * ((rnd.nextDouble() * 2 - 1) - noise)
                 v += 0.5 * hard * exp(-t / 0.004) * noise
                 val attack = (t / 0.0025).coerceAtMost(1.0)
@@ -375,7 +377,8 @@ object UiSounds {
     private fun emberTick(take: Int): Mix {
         val tune = doubleArrayOf(1.0, 0.985, 1.018, 0.996)[take % EMBER_TICKS]
         val hard = doubleArrayOf(1.0, 0.8, 0.9, 1.15)[take % EMBER_TICKS]
-        return Mix(0.12).apply { struck(0.0, 330.0 * tune, 0.1, 0.32, decay = 52.0, hard = hard, seed = 11L + take); room(0.7) }
+        // Open and almost dry: in so short a sound the room's echoes pile onto the note itself and box it in.
+        return Mix(0.13).apply { struck(0.0, 370.0 * tune, 0.12, 0.32, decay = 44.0, hard = hard, seed = 11L + take, open = 1.0); room(0.2) }
     }
 
     private fun synthPop() = when (style) {
@@ -416,6 +419,14 @@ object UiSounds {
     }.pcm()
 
     /** Halloween: a low minor chord and a theremin that rises and wavers. */
+    /** glcn: Ember's own opening — four struck bars rising through a warm chord (G, B, D, G), the last left to ring. */
+    private fun emberChime() = Mix(1.9).apply {
+        listOf(196.0 to 0.0, 246.94 to 0.13, 293.66 to 0.26, 392.0 to 0.42).forEachIndexed { i, (f, at) ->
+            struck(at, f * 2, if (i == 3) 1.4 else 0.9, if (i == 3) 0.3 else 0.24, decay = if (i == 3) 3.2 else 5.5, hard = 0.8, seed = 21L + i, open = 0.5)
+        }
+        room()
+    }.pcm()
+
     private fun halloween() = Mix(2.2).apply {
         bell(0.0, note(-24), 2.0, 0.22, decay = 1.6) // A2
         bell(0.05, note(-21), 2.0, 0.16, decay = 1.6) // C3
