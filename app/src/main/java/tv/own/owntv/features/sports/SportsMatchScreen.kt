@@ -115,6 +115,12 @@ fun SportsMatchScreen(
     // Off while the player is full screen over this page: Back then belongs to the player, which returns here.
     androidx.activity.compose.BackHandler(enabled = active) { liveVm.stopPreview(); onBack() }
     val page by vm.matchPage.collectAsStateWithLifecycle()
+    // glcn: a page that took its time to have anything to show says so in the report's diary.
+    val openedAt = remember { android.os.SystemClock.uptimeMillis() }
+    LaunchedEffect(page != null) {
+        val waited = android.os.SystemClock.uptimeMillis() - openedAt
+        if (page != null && waited >= SLOW_PAGE_MS) tv.own.owntv.player.LiveDiagnosticsLog.event("match page: first state after ${waited}ms")
+    }
     val state = page ?: return
     val m = state.match
     var tab by remember { mutableStateOf(MatchTab.TIMELINE) }
@@ -752,3 +758,4 @@ private fun DrawMatchLine(dm: Match) {
 }
 
 private const val COUNTDOWN_HEAD_MINUTES = 180L
+private const val SLOW_PAGE_MS = 1_500L
