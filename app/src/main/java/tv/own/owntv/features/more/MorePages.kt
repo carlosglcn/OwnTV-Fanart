@@ -4,6 +4,7 @@ import tv.own.owntv.ui.theme.stageTone
 import androidx.activity.compose.BackHandler
 import tv.own.owntv.ui.components.longPressMenuGuard
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
@@ -874,31 +875,47 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
         AboutBlockLabel(stringResource(R.string.glcn_about_block_community))
         // glcn: this version's own Telegram group first, then the original project's — the same tile for both.
         Row(horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
-            StageTile(Modifier.width(620.mpx)) {
+            StageTile(Modifier.width(ABOUT_TILE_W.mpx)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
                     // glcn: drawn like Telegram's own group codes (rounded dots, the plane in the middle, the name below).
                     Image(
                         painter = painterResource(R.drawable.telegram_qr_fanart),
                         contentDescription = stringResource(R.string.settings_telegram_qr),
-                        modifier = Modifier.size(150.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
+                        modifier = Modifier.size(ABOUT_QR.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
                     )
                     Column {
-                        Text(stringResource(R.string.glcn_about_community_fanart), style = stageText(20, 800), color = StageColors.Text)
+                        Text(stringResource(R.string.glcn_about_community_fanart), style = stageText(18, 800), color = StageColors.Text)
                         Text(GLCN_TELEGRAM_LINK, style = stageText(17, 500), color = accentInk, modifier = Modifier.padding(top = 4.mpx))
                         Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
                     }
                 }
             }
-            StageTile(Modifier.width(620.mpx)) {
+            StageTile(Modifier.width(ABOUT_TILE_W.mpx)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(R.drawable.telegram_qr),
                         contentDescription = stringResource(R.string.settings_telegram_qr),
-                        modifier = Modifier.size(150.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
+                        modifier = Modifier.size(ABOUT_QR.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
                     )
                     Column {
-                        Text(stringResource(R.string.glcn_about_community), style = stageText(20, 800), color = StageColors.Text)
+                        Text(stringResource(R.string.glcn_about_community), style = stageText(18, 800), color = StageColors.Text)
                         Text(TELEGRAM_LINK, style = stageText(17, 500), color = accentInk, modifier = Modifier.padding(top = 4.mpx))
+                        Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
+                    }
+                }
+            }
+            // glcn: Ko-fi, for whoever wants to support the project — always here, never asked for in a prompt of its own.
+            StageTile(Modifier.width(ABOUT_TILE_W.mpx)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
+                    remember { tv.own.owntv.core.companion.CompanionLink.renderQr(tv.own.owntv.glcn.GLCN_KOFI_URL) }?.let { qr ->
+                        Image(
+                            bitmap = qr.asImageBitmap(), contentDescription = stringResource(R.string.glcn_kofi_title),
+                            modifier = Modifier.size(ABOUT_QR.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White).padding(8.mpx),
+                        )
+                    }
+                    Column {
+                        Text(stringResource(R.string.glcn_kofi_title), style = stageText(18, 800), color = StageColors.Text)
+                        Text(tv.own.owntv.glcn.GLCN_KOFI, style = stageText(17, 500), color = accentInk, modifier = Modifier.padding(top = 4.mpx))
                         Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
                     }
                 }
@@ -944,3 +961,7 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
         )
     }
 }
+
+/** glcn: About's three community tiles side by side, and their codes. */
+private const val ABOUT_TILE_W = 432
+private const val ABOUT_QR = 124

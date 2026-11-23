@@ -109,7 +109,7 @@ internal fun GitHubStarCard(onClose: () -> Unit) {
     tv.own.owntv.ui.components.OwnTVPopup(onDismissRequest = close, stageLayout = true) {
         Box(Modifier.fillMaxSize().trapAllFocusExit(), contentAlignment = Alignment.BottomEnd) {
             Row(
-                Modifier.padding(end = 56.mpx, bottom = 48.mpx).size(width = 760.mpx, height = 250.mpx)
+                Modifier.padding(end = 56.mpx, bottom = 48.mpx).size(width = 960.mpx, height = 250.mpx)
                     .stageGlass(28.mpx, overContent = true).padding(22.mpx),
                 horizontalArrangement = Arrangement.spacedBy(22.mpx), verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -127,9 +127,19 @@ internal fun GitHubStarCard(onClose: () -> Unit) {
                         StageButton(stringResource(R.string.glcn_star_done), onClick = close, height = 48.mpx, textSize = 17)
                     }
                 }
+                // glcn: Ko-fi as a second, smaller way to help — in the same card, never a prompt of its own.
+                val kofi = remember { CompanionLink.renderQr(GLCN_KOFI_URL) }
+                if (kofi != null) Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.mpx)) {
+                    Box(Modifier.size(132.mpx).clip(RoundedCornerShape(12.mpx)).background(Color.White).padding(7.mpx)) {
+                        Image(bitmap = kofi.asImageBitmap(), contentDescription = stringResource(R.string.glcn_kofi_title), modifier = Modifier.fillMaxSize())
+                    }
+                    Text(stringResource(R.string.glcn_kofi_short), style = stageText(14, 700), color = StageColors.Muted, maxLines = 1)
+                }
             }
         }
     }
 }
 
-
+/** glcn: the Ko-fi page (About's tile and the star card's second code). */
+const val GLCN_KOFI = "ko-fi.com/galcn10"
+const val GLCN_KOFI_URL = "https://ko-fi.com/galcn10"

@@ -185,4 +185,6 @@
     </plurals>
     <string name="glcn_about_block_community">Community</string>
     <string name="glcn_about_block_credits">Credits</string>
+    <string name="glcn_kofi_title">Buy me a coffee</string>
+    <string name="glcn_kofi_short">A coffee? Ko-fi</string>
 </resources>

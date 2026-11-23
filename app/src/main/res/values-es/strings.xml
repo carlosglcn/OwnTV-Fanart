@@ -187,4 +187,6 @@
     </plurals>
     <string name="glcn_about_block_community">Comunidad</string>
     <string name="glcn_about_block_credits">Créditos</string>
+    <string name="glcn_kofi_title">Invítame a un café</string>
+    <string name="glcn_kofi_short">¿Un café? Ko-fi</string>
 </resources>
