@@ -69,3 +69,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔄 A switched-off playlist's own guide no longer downloads at start-up (its guide kept its own Auto refresh).
 - 🤾 Handball Bundesliga and the Hungarian league get their logos.
 - 🗂️ Shelves layout (Films and Series): two more rows — **Added this week** (what your list dated in the last seven days) and **In 4K** (titles marked 4K/UHD, or filed in a 4K group).
+- ✅ **Episodes are marked watched in the end credits:** leaving in the last 7 % (never under 1:30), or pressing Play now / letting the countdown start the next one, now counts — before only the last 5 % did, and going on to the next episode could leave it unwatched.

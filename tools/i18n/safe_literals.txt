@@ -408,6 +408,8 @@
 1	technical	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	episode-${episode.episodeNumber}
 2	log	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	external play episode history record failed episodeId=${episode.id} profile=$pid
 2	log	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	external play series history record failed seriesId=${episode.seriesId} profile=$pid
+1	log	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	finishIfInCredits episodeId=${ref.episode.id} marked watched
+1	log	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	finishIfInCredits failed episodeId=${ref.episode.id}
 1	log	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	openSeries seriesId=${s.id} profile=${ctx.value.profileId}
 1	log	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	playEpisodeExternal episodeId=${episode.id}
 1	log	app/src/main/java/tv/own/owntv/features/series/SeriesViewModel.kt	playEpisodeQueue episode history record failed episodeId=${episode.id} profile=$pid
