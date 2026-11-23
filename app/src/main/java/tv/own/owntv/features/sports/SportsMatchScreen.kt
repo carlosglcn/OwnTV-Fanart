@@ -80,7 +80,7 @@ import java.util.Locale
  * The match page's tabs. ESPN's summary carries no meetings, so in Head to head's place is
  * Form: each side's last five games.
  */
-private enum class MatchTab { TIMELINE, STATS, LINEUPS, TABLE, DRAW, FORM, BROADCASTS }
+private enum class MatchTab { TIMELINE, WEEKEND, STATS, LINEUPS, TABLE, DRAW, FORM, BROADCASTS }
 
 /** The tier colours of the reasons: guide green, event blue, your pick gold, likely muted. */
 internal val TierGuide = Color(0xFF9FE07E)
@@ -201,6 +201,7 @@ fun SportsMatchScreen(
                             (it != MatchTab.TIMELINE || m.state != MatchState.PRE || !(state.summary?.timeline ?: m.events).isEmpty()) &&
                             (it != MatchTab.TABLE || state.standings?.groups?.any { g -> g.rows.isNotEmpty() } == true || state.ranking?.groups?.isNotEmpty() == true || liveOrder) &&
                                 (it != MatchTab.DRAW || m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) &&
+                                (it != MatchTab.WEEKEND || (state.summary?.weekend?.size ?: 0) > 1) &&
                                 (it != MatchTab.STATS || !state.summary?.stats.isNullOrEmpty()) &&
                                 (it != MatchTab.LINEUPS || !state.summary?.lineups.isNullOrEmpty()) && (it != MatchTab.FORM || !state.summary?.form.isNullOrEmpty())
                         }
@@ -215,6 +216,7 @@ fun SportsMatchScreen(
                 }
                 when (tab) {
                     MatchTab.TIMELINE -> items((state.summary?.timeline ?: m.events).asReversed()) { e -> TimelineRow(e, m) }
+                    MatchTab.WEEKEND -> items(state.summary?.weekend.orEmpty(), key = { "wk" + it.id }) { s -> WeekendLine(s, current = s.id == m.id) }
                     MatchTab.STATS -> items(state.summary?.stats.orEmpty()) { s -> StatRow(s.label, s.home, s.away) }
                     MatchTab.LINEUPS -> item { Lineups(m, state.summary) }
                     MatchTab.TABLE -> {
@@ -337,6 +339,7 @@ fun SportsMatchScreen(
 
 private val MatchTab.label: Int get() = when (this) {
     MatchTab.TIMELINE -> R.string.sports_tab_timeline
+    MatchTab.WEEKEND -> R.string.glcn_sports_tab_weekend
     MatchTab.STATS -> R.string.sports_tab_stats
     MatchTab.LINEUPS -> R.string.sports_tab_lineups
     MatchTab.TABLE -> R.string.sports_tab_table
@@ -724,6 +727,43 @@ private fun NoPlaylistNote(onAddPlaylist: () -> Unit) {
 }
 
 @Composable
+private fun WeekendLine(s: Match, current: Boolean) {
+    var on by remember { mutableStateOf(false) }
+    val sep = stringResource(R.string.content_epg_bits_separator)
+    val zone = java.time.ZoneId.systemDefault()
+    val at = java.time.Instant.ofEpochMilli(s.startMs).atZone(zone)
+    val day = at.format(java.time.format.DateTimeFormatter.ofPattern("EEE d", java.util.Locale.getDefault()))
+        .replaceFirstChar { it.titlecase(java.util.Locale.getDefault()) }
+    val time = android.text.format.DateFormat.getTimeFormat(androidx.compose.ui.platform.LocalContext.current).format(java.util.Date(s.startMs))
+    Row(
+        Modifier.fillMaxWidth().onFocusChanged { on = it.isFocused }.focusable()
+            .background(
+                when {
+                    on -> StageColors.Ink.copy(alpha = 0.12f)
+                    current -> stageAccent.accent.copy(alpha = 0.12f)
+                    else -> androidx.compose.ui.graphics.Color.Transparent
+                },
+                androidx.compose.foundation.shape.RoundedCornerShape(10.mpx),
+            )
+            .padding(vertical = 10.mpx, horizontal = 12.mpx),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.mpx),
+    ) {
+        Text(day + sep + time, style = stageText(18, 600), color = StageColors.Muted, maxLines = 1, modifier = Modifier.width(170.mpx))
+        Text(
+            raceSessionLabel(s) ?: s.statusText.ifBlank { s.subtitle.orEmpty() },
+            style = stageText(19, if (current) 800 else 600), color = if (current) stageAccent.ink else StageColors.Text,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+        )
+        when {
+            s.isLive -> LiveMark(stringResource(R.string.player_live), 15f)
+            s.state == MatchState.POST -> OwnTVIcon(OwnTVIcon.CHECK, StageColors.Muted, Modifier.size(20.mpx))
+            else -> Unit
+        }
+    }
+}
+
+@Composable
 private fun DrawNote(text: String) {
     Text(text, style = stageText(18, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 24.mpx))
 }
@@ -756,7 +796,7 @@ private fun DrawMatchLine(dm: Match) {
             }
         }
         if (dm.state != tv.own.owntv.core.sports.model.MatchState.POST) {
-            Text(dm.statusText, style = stageText(14, 600), color = if (dm.isLive) SportsLive else StageColors.Dim, maxLines = 1)
+            Text(dm.statusText, style = stageText(14, 600), color = if (dm.isLive) tv.own.owntv.ui.theme.stageLive else StageColors.Dim, maxLines = 1)
         }
     }
 }

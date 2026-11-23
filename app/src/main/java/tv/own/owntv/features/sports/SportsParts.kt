@@ -88,7 +88,8 @@ private fun initials(name: String): String {
 @Composable
 internal fun LiveMark(text: String, textSize: Float = 16.5f) {
     Row(horizontalArrangement = Arrangement.spacedBy(7.mpx), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(10.mpx).drawBehind { drawBoxShadow(SportsLive.copy(alpha = 0.25f), 4.mpx.toPx(), size.minDimension / 2f); drawCircle(SportsLive) })
+        val live = tv.own.owntv.ui.theme.stageLive
+        Box(Modifier.size(10.mpx).drawBehind { drawBoxShadow(live.copy(alpha = 0.25f), 4.mpx.toPx(), size.minDimension / 2f); drawCircle(live) })
         Text(text, style = stageText(textSize, 800, 0.06.em), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

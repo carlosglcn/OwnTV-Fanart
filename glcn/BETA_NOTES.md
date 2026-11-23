@@ -63,3 +63,8 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🫧 **Top bar folds while you browse** (after iOS's tab bar): once you are in the content, the bar draws in around the open section, leaving the picture more room; ▲ opens it whole again. The Floating bar still hides completely.
 - ✨ **Cards with a glass edge** (after iOS 27): a thin catch of light runs along the top of the focused card, landing on the side you came from and settling at the upper left; posters and cards get a soft darker rim along their foot, and glass panels too, so they stand off bright backgrounds.
 - 🪟 Appearance › Personalise: a Glass entry takes you to the glass's transparency (Glass & background).
+- 🟢 "EN DIRECTO" and the live dot take Ría's green by night (red as before in the other themes).
+- 🌊 Ría Día: the focus outline runs from navy to a petrol blue instead of green, which clashed with the navy.
+- 🏍️ MotoGP: a session's page has a **Weekend** tab with every session of the Grand Prix — day, time, live or done — the one you opened highlighted.
+- 🔄 A switched-off playlist's own guide no longer downloads at start-up (its guide kept its own Auto refresh).
+- 🤾 Handball Bundesliga and the Hungarian league get their logos.

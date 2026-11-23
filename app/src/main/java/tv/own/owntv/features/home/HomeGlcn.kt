@@ -190,10 +190,10 @@ internal fun LiveBadge(modifier: Modifier = Modifier) {
     Text(
         stringResource(R.string.glcn_live_badge),
         style = stageText(13, 800),
-        color = Color.White,
+        color = tv.own.owntv.ui.theme.stageOnLive,
         modifier = modifier
             .clip(RoundedCornerShape(6.mpx))
-            .background(Color(0xFFE5243B))
+            .background(tv.own.owntv.ui.theme.stageLive)
             .padding(horizontal = 10.mpx, vertical = 3.mpx),
     )
 }

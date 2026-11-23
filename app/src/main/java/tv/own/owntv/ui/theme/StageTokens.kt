@@ -6,6 +6,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -248,6 +249,29 @@ val stageLabelInk: Color
     @Composable
     @ReadOnlyComposable
     get() = tv.own.owntv.glcn.EmberFocus.second?.takeIf { !LocalStagePalette.current.isLight } ?: stageAccent.ink
+
+/**
+ * glcn: what says "live" (EN DIRECTO, the live dot, a running minute). Red, unless the theme's second accent is a
+ * green — Ría's — which then marks it, as a broadcaster's "on air" light does in that palette.
+ */
+val stageLive: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = tv.own.owntv.glcn.EmberFocus.second?.takeIf { it.isGreenish() } ?: LIVE_RED
+
+/** The text on a [stageLive] pill: white on red and dark greens, the page's ink on a light green. */
+val stageOnLive: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = stageLive.let { if (it.luminance() > 0.35f) Color(0xFF0B1A10) else Color.White }
+
+private val LIVE_RED = Color(0xFFE5243B)
+
+private fun Color.isGreenish(): Boolean {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(toArgb(), hsv)
+    return hsv[0] in 70f..170f && hsv[1] > 0.35f
+}
 
 val stageAccent: StageAccent
     @Composable

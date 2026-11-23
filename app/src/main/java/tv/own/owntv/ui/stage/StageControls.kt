@@ -198,7 +198,7 @@ fun StageKeyHints(hints: List<Pair<String, String>>, modifier: Modifier = Modifi
 /** `.live`: the red-dot LIVE badge on a video, 15/800 +0.08em on black 55%. */
 @Composable
 fun StageLiveBadge(text: String) {
-    val red = Color(0xFFFF4D4D)
+    val red = tv.own.owntv.ui.theme.stageLive
     Row(
         Modifier.background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(10.mpx)).padding(horizontal = 12.mpx, vertical = 6.mpx),
         horizontalArrangement = Arrangement.spacedBy(8.mpx),
