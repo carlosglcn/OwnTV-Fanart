@@ -843,7 +843,7 @@ class SeriesViewModel(
 
     /** glcn: an episode watched → the profile's Trakt history (its series looked up for the TMDB id). */
     private suspend fun traktEpisode(profileId: Long, episode: EpisodeEntity) {
-        if (!tv.own.owntv.core.trakt.Trakt.available || !tv.own.owntv.core.trakt.Trakt.connected(profileId)) return
+        // glcn: no Trakt check here — TraktSync makes it, and for an Emby/Jellyfin episode tells the server instead.
         val series = _selectedSeries.value?.takeIf { it.id == episode.seriesId }
             ?: runCatching { seriesDao.getSeriesById(episode.seriesId) }.getOrNull() ?: return
         tv.own.owntv.core.trakt.TraktSync.watchedEpisode(profileId, series, episode)
