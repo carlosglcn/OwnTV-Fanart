@@ -38,7 +38,7 @@ import tv.own.owntv.ui.theme.stageAccent
 import tv.own.owntv.ui.theme.stageText
 
 /** How long the reminder card stays before it closes itself (and counts as dismissed). */
-const val REMINDER_CARD_MS = 12_000
+const val REMINDER_CARD_MS = 8_000
 
 private val QUALITY_WORDS = Regex("""(?i)\b(?:8K|4K|UHD|2160P|FHD|1080P|HD|720P|SD|HEVC|H265)\b""")
 private val NOT_ALNUM = Regex("""[^\p{L}\p{N}]+""")
