@@ -376,7 +376,8 @@ internal fun ChannelNumberCard(digits: String, error: String? = null, modifier: 
     LaunchedEffect(digits, error) {
         if (error != null) { countdown.snapTo(0f); return@LaunchedEffect }
         countdown.snapTo(1f)
-        countdown.animateTo(0f, tween(DIRECT_TUNE_TIMEOUT_MS.toInt(), easing = LinearEasing))
+        // glcn: a wait, kept at its real length whatever the app's pace.
+        countdown.animateTo(0f, tween(tv.own.owntv.glcn.Pace.slow(DIRECT_TUNE_TIMEOUT_MS.toInt()), easing = LinearEasing))
     }
     val track = hudInk.copy(alpha = 0.08f)
     Column(
