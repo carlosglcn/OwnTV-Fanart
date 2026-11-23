@@ -4,7 +4,6 @@ import tv.own.owntv.ui.theme.stageTone
 import androidx.activity.compose.BackHandler
 import tv.own.owntv.ui.components.longPressMenuGuard
 import androidx.compose.foundation.Image
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
@@ -907,12 +906,12 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
             // glcn: Ko-fi, for whoever wants to support the project — always here, never asked for in a prompt of its own.
             StageTile(Modifier.width(ABOUT_TILE_W.mpx)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
-                    remember { tv.own.owntv.core.companion.CompanionLink.renderQr(tv.own.owntv.glcn.GLCN_KOFI_URL) }?.let { qr ->
-                        Image(
-                            bitmap = qr.asImageBitmap(), contentDescription = stringResource(R.string.glcn_kofi_title),
-                            modifier = Modifier.size(ABOUT_QR.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White).padding(8.mpx),
-                        )
-                    }
+                    // glcn: drawn like the Telegram codes beside it (rounded dots in a gradient, a cup in the middle, the address below).
+                    Image(
+                        painter = painterResource(R.drawable.glcn_kofi_qr),
+                        contentDescription = stringResource(R.string.glcn_kofi_title),
+                        modifier = Modifier.size(ABOUT_QR.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
+                    )
                     Column {
                         Text(stringResource(R.string.glcn_kofi_title), style = stageText(18, 800), color = StageColors.Text)
                         Text(tv.own.owntv.glcn.GLCN_KOFI, style = stageText(17, 500), color = accentInk, modifier = Modifier.padding(top = 4.mpx))

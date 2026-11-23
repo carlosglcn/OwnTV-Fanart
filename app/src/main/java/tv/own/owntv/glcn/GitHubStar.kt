@@ -128,11 +128,11 @@ internal fun GitHubStarCard(onClose: () -> Unit) {
                     }
                 }
                 // glcn: Ko-fi as a second, smaller way to help — in the same card, never a prompt of its own.
-                val kofi = remember { CompanionLink.renderQr(GLCN_KOFI_URL) }
-                if (kofi != null) Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.mpx)) {
-                    Box(Modifier.size(132.mpx).clip(RoundedCornerShape(12.mpx)).background(Color.White).padding(7.mpx)) {
-                        Image(bitmap = kofi.asImageBitmap(), contentDescription = stringResource(R.string.glcn_kofi_title), modifier = Modifier.fillMaxSize())
-                    }
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.mpx)) {
+                    Image(
+                        painter = androidx.compose.ui.res.painterResource(R.drawable.glcn_kofi_qr), contentDescription = stringResource(R.string.glcn_kofi_title),
+                        modifier = Modifier.size(width = 132.mpx, height = 151.mpx).clip(RoundedCornerShape(12.mpx)).background(Color.White),
+                    )
                     Text(stringResource(R.string.glcn_kofi_short), style = stageText(14, 700), color = StageColors.Muted, maxLines = 1)
                 }
             }
