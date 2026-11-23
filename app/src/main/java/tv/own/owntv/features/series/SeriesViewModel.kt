@@ -464,7 +464,8 @@ class SeriesViewModel(
                 val ep = q.episodes.getOrNull(index) ?: return@collect
                 // glcn: "Play now" on the next-episode card, or the countdown, leaves the outgoing episode in its
                 // credits — its last save (up to 10 s old) is read back, and if it was in the credits it is watched.
-                playingEpisodeRef?.takeIf { it.episode.id != ep.id }?.let { finishIfInCredits(it) }
+                val creditsWere = tv.own.owntv.glcn.IntroSkip.creditsAt.value
+                playingEpisodeRef?.takeIf { it.episode.id != ep.id }?.let { finishIfInCredits(it, creditsWere) }
                 // The auto-advanced episode is now the one progress is saved against. No flush of the
                 // outgoing one here: the player already loaded the new item, so its position has been
                 // reset and saving now would overwrite a finished episode with ~0.
@@ -527,7 +528,9 @@ class SeriesViewModel(
         val raw = player.position.value
         val dur = player.duration.value
         // glcn: in the end credits the episode is watched — saved as finished, so every "watched" check agrees.
-        val pos = if (inCredits(raw, dur)) dur else raw
+        // Where the credits really start is known when the file's chapters or TheIntroDB say (the next-episode card uses it).
+        val credits = tv.own.owntv.glcn.IntroSkip.creditsAt.value
+        val pos = if (inCredits(raw, dur) || (credits > 0 && raw >= credits)) dur else raw
         if (pos > 0 && dur > 0) {
             viewModelScope.launch {
                 // The position belongs to the profile that started playback. If the user switched
@@ -557,13 +560,14 @@ class SeriesViewModel(
         dur > 0 && pos > 0 && dur - pos <= maxOf(CREDITS_MIN_MS, (dur * CREDITS_SHARE).toLong())
 
     /** glcn: the episode the player just left for the next: watched if its last saved place was in the credits. */
-    private fun finishIfInCredits(ref: PlayingEpisodeRef) {
+    private fun finishIfInCredits(ref: PlayingEpisodeRef, creditsAt: Long) {
         viewModelScope.launch {
             runCatching {
                 val last = progressDao.get(ref.profileId, MediaType.EPISODE, ref.episode.id) ?: return@runCatching
                 if (last.durationMs <= 0 || last.positionMs >= last.durationMs) return@runCatching
                 // The save is up to one tick old: that much more is allowed.
-                if (!inCredits((last.positionMs + SAVE_TICK_MS).coerceAtMost(last.durationMs - 1), last.durationMs)) return@runCatching
+                val reached = (last.positionMs + SAVE_TICK_MS).coerceAtMost(last.durationMs - 1)
+                if (!inCredits(reached, last.durationMs) && !(creditsAt > 0 && reached >= creditsAt)) return@runCatching
                 val done = PlaybackProgressEntity(profileId = ref.profileId, mediaType = MediaType.EPISODE, itemId = ref.episode.id, positionMs = last.durationMs, durationMs = last.durationMs)
                 progressDao.save(done)
                 if (!isEpisodeCompleted(last)) traktEpisode(ref.profileId, ref.episode)
