@@ -149,6 +149,8 @@
     <string name="glcn_vod_layout_shelves">Shelves</string>
     <string name="glcn_vod_layout_shelves_description">Cinematic, with rows above the posters of All: popular now, recent releases and the best rated.</string>
     <string name="glcn_shelf_rated">Best rated</string>
+    <string name="glcn_shelf_added">Added this week</string>
+    <string name="glcn_shelf_uhd">In 4K</string>
     <string name="glcn_shelf_recent">Recent releases</string>
     <string name="glcn_shelf_popular">Popular now</string>
     <string name="glcn_top_bar_shape_title">Top bar shape</string>

@@ -517,10 +517,14 @@ class MovieViewModel(
                     movieDao.observeShelfRated(c.sourceIds, out, shelf.RATED_FLOOR, shelf.FETCH),
                     movieDao.observeShelfRecent(c.sourceIds, out, shelf.fromYear(), shelf.FETCH),
                     movieDao.observeShelfPopular(c.sourceIds, out, shelf.FETCH),
-                ) { rated, recent, popular ->
+                    movieDao.observeShelfAdded(c.sourceIds, out, shelf.addedSince(), shelf.FETCH),
+                    movieDao.observeShelf4k(c.sourceIds, out, shelf.FETCH),
+                ) { rated, recent, popular, added, uhd ->
                     listOfNotNull(
                         shelf.row(tv.own.owntv.glcn.ShelfKind.POPULAR, popular, same),
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.ADDED, added, same),
                         shelf.row(tv.own.owntv.glcn.ShelfKind.RECENT, recent, same),
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.UHD, uhd, same),
                         shelf.row(tv.own.owntv.glcn.ShelfKind.RATED, rated, same),
                     )
                 }.throttleLatest()

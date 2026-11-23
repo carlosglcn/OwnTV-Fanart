@@ -68,3 +68,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🏍️ MotoGP: a session's page has a **Weekend** tab with every session of the Grand Prix — day, time, live or done — the one you opened highlighted.
 - 🔄 A switched-off playlist's own guide no longer downloads at start-up (its guide kept its own Auto refresh).
 - 🤾 Handball Bundesliga and the Hungarian league get their logos.
+- 🗂️ Shelves layout (Films and Series): two more rows — **Added this week** (what your list dated in the last seven days) and **In 4K** (titles marked 4K/UHD, or filed in a 4K group).

@@ -3,12 +3,14 @@ package tv.own.owntv.glcn
 import tv.own.owntv.R
 
 /**
- * glcn: the Shelves layout of Films and Series — Cinematic, with rows above the posters of All: the best rated, the
- * recent releases and what is popular now (the titles of Home's Trending that the lists carry). A row with too few
- * titles is left out; the posters of All follow below as always.
+ * glcn: the Shelves layout of Films and Series — Cinematic, with rows above the posters of All: what is popular now
+ * (the titles of Home's Trending that the lists carry), what the list added this week, the recent releases, what
+ * comes in 4K and the best rated. A row with too few titles is left out; the posters of All follow below as always.
  */
 enum class ShelfKind(val title: Int) {
     RATED(R.string.glcn_shelf_rated),
+    ADDED(R.string.glcn_shelf_added),
+    UHD(R.string.glcn_shelf_uhd),
     RECENT(R.string.glcn_shelf_recent),
     POPULAR(R.string.glcn_shelf_popular),
 }
@@ -22,6 +24,12 @@ object VodShelves {
     private const val SHOWN = 24
     private const val FEWEST = 4
     private const val EARLY_MONTHS = 2
+
+    /** Added this week: what the list dated within the last seven days. */
+    fun addedSince(): Long = System.currentTimeMillis() - ADDED_DAYS * DAY_MS
+
+    private const val ADDED_DAYS = 7
+    private const val DAY_MS = 86_400_000L
 
     /** Recent releases: this year's — and last year's too while the year is young. */
     fun fromYear(): Int {
