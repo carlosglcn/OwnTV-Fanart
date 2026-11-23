@@ -1584,6 +1584,7 @@ fun SettingsScreen(
             LOOK_FOCUS -> showFocusHighlight = true
             LOOK_SOUNDS -> showSoundStyle = true
             LOOK_OLDER -> showGlcnStyle = true
+            LOOK_GLASS -> { showLook = false; open(SettingsTab.GLASS_EFFECT) }
             else -> showLook = false
         }
     }
@@ -3480,6 +3481,7 @@ private const val LOOK_ACCENT = 1
 private const val LOOK_FOCUS = 2
 private const val LOOK_SOUNDS = 3
 private const val LOOK_OLDER = 4
+private const val LOOK_GLASS = 5
 
 /** glcn: Appearance's popup, on its own so the settings screen's body stays within the size a method may have.
  *  [onOpen] gets what to open next (LOOK_*), or LOOK_CLOSE when it closes. */
@@ -3491,7 +3493,7 @@ private fun LookPopupHost(settingsVm: tv.own.owntv.features.settings.SettingsVie
     tv.own.owntv.glcn.LookPopup(
         style = style, mode = mode, backdrop = backdrop,
         onTheme = settingsVm::applyGlcnTheme, onMode = settingsVm::setGlcnStyleMode, onBackdrop = settingsVm::setGlcnBackdrop,
-        onAccent = { onOpen(LOOK_ACCENT) }, onFocus = { onOpen(LOOK_FOCUS) }, onSounds = { onOpen(LOOK_SOUNDS) }, onOlder = { onOpen(LOOK_OLDER) },
+        onAccent = { onOpen(LOOK_ACCENT) }, onFocus = { onOpen(LOOK_FOCUS) }, onSounds = { onOpen(LOOK_SOUNDS) }, onOlder = { onOpen(LOOK_OLDER) }, onGlass = { onOpen(LOOK_GLASS) },
         onDismiss = { onOpen(LOOK_CLOSE) },
     )
 }

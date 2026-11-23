@@ -60,3 +60,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - ℹ️ **About in three blocks:** the version with its buttons right under it (Check for updates first), the community (both Telegram groups) and the credits (the original project and this version, wallpapers, Trakt's notice).
 - ☕ Ko-fi: a third tile in About › Community (QR to scan with the phone), and a small Ko-fi code beside the star card's own — never a prompt of its own.
 - 🔔 The reminder card (a programme you set or usually watch is starting) stays 8 seconds, at its real length — with Brisk response it was gone in under three. The channel-number countdown bar keeps its real length too.
+- 🫧 **Top bar folds while you browse** (after iOS's tab bar): once you are in the content, the bar draws in around the open section, leaving the picture more room; ▲ opens it whole again. The Floating bar still hides completely.
+- ✨ **Cards with a glass edge** (after iOS 27): a thin catch of light runs along the top of the focused card, landing on the side you came from and settling at the upper left; posters and cards get a soft darker rim along their foot, and glass panels too, so they stand off bright backgrounds.
+- 🪟 Appearance › Personalise: a Glass entry takes you to the glass's transparency (Glass & background).

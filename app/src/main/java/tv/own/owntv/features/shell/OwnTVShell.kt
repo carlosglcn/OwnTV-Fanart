@@ -954,6 +954,16 @@ fun OwnTVShell(
             railIdleHidden = true
         }
     }
+    // glcn: the top bar that stays (not Floating) folds to the open section once focus has settled in the content,
+    // the way iOS shrinks its tab bar while you scroll: the picture gets the room, ▲ opens the bar whole again.
+    var topFolded by remember { mutableStateOf(false) }
+    LaunchedEffect(navStyle, topFloating, topBarFocused) {
+        topFolded = false
+        if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.TOP && !topFloating && !topBarFocused) {
+            kotlinx.coroutines.delay(TOP_FOLD_MS)
+            topFolded = true
+        }
+    }
     // Docked always shows its Size; Floating rests as the capsule, opens at its Size while it holds
     // focus and hides once focus has been in the content for the delay. Compact stays the capsule —
     // except Docked + Compact with Widen on focus, which opens at that size over the content (the content
@@ -2078,6 +2088,7 @@ fun OwnTVShell(
                 freeRight = playlistPillBounds?.left?.minus(topGapPx),
                 size = if (topCompactForced) tv.own.owntv.core.settings.SettingsRepository.NavSize.COMPACT else topSize,
                 hidden = railIdleHidden,
+                folded = topFolded,
             ) else tv.own.owntv.features.shell.components.StageRail(
                 state = railState,
                 size = railSize,
@@ -3143,6 +3154,9 @@ private fun railDetail(section: MainSection, d: RailDetails): String? = when (se
 
 /** How recently ◀ / ▶ or [focusRail] must have happened for a rail visit to open the rail. */
 private const val RAIL_KEY_WINDOW_MS = 400L
+
+/** glcn: how long focus stays in the content before the top bar folds to the open section. */
+private const val TOP_FOLD_MS = 900L
 
 /** glcn: how long Back is held in the full-screen player to close it rather than leave it in the window. */
 

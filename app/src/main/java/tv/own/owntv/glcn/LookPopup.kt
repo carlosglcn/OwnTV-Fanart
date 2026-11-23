@@ -55,6 +55,7 @@ fun LookPopup(
     onFocus: () -> Unit,
     onSounds: () -> Unit,
     onOlder: () -> Unit,
+    onGlass: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val current = GlcnTheme.of(style)
@@ -126,6 +127,8 @@ fun LookPopup(
                     Small(stringResource(R.string.settings_accent), Modifier.weight(1f)) { onDismiss(); onAccent() }
                     Small(stringResource(R.string.settings_focus_highlight), Modifier.weight(1f)) { onDismiss(); onFocus() }
                     Small(stringResource(R.string.glcn_ui_sound_style_title), Modifier.weight(1f)) { onDismiss(); onSounds() }
+                    // The glass's transparency lives on its own page (Glass & background); this is the way there.
+                    Small(stringResource(R.string.glcn_look_glass), Modifier.weight(1f)) { onGlass() }
                     if (current != null) Small(stringResource(R.string.glcn_look_reset), Modifier.weight(1.4f)) { onTheme(current) }
                 }
             }

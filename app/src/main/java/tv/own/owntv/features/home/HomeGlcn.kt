@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import tv.own.owntv.ui.stage.specularEdge
 import tv.own.owntv.ui.stage.stageTilt
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -274,7 +275,7 @@ internal fun ArtLiveCard(
                 shine.animateTo(1.6f, androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing))
             } else shine.snapTo(-1f)
         }
-        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(StageRadii.Row))) {
+        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(StageRadii.Row)).specularEdge(focused, StageRadii.Row)) {
             Box(
                 Modifier
                     .fillMaxWidth()

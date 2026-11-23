@@ -1027,7 +1027,8 @@ fun StagePoster(
                 )
                 .pressSink(pressed)
                 .clip(RoundedCornerShape(r))
-                .posterWait(),
+                .posterWait()
+                .specularEdge(focused, r),
         ) {
             FocusArtFx(focused) { artwork() }
             if (rating != null) StageRatingChip(rating, Modifier.padding(8.mpx), small = compact)
@@ -1162,7 +1163,8 @@ fun StageStill(
                     },
                 )
                 .clip(RoundedCornerShape(r))
-                .posterWait(),
+                .posterWait()
+                .specularEdge(focused, r),
         ) {
             FocusArtFx(focused) { artwork() }
             if (progress != null && progress > 0f) {

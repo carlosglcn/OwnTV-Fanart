@@ -698,9 +698,12 @@ fun StageTopBar(
     hidden: Boolean = false,
     /** glcn: where the free width ends on the right (the status pills' left edge, in the window), for a centred bar. */
     freeRight: Float? = null,
+    /** glcn: focus has settled in the content — the bar folds to the open section until it is reached again. */
+    folded: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
     var hasFocus by remember { mutableStateOf(false) }
+    val fold = folded && !hasFocus
     // glcn: how the bar is drawn (Settings › Layout › Top bar shape) — see TopBarShape.
     val shape = tv.own.owntv.glcn.TopBarPref.shape
     val capsule = shape == tv.own.owntv.glcn.TopBarShape.CAPSULE
@@ -806,36 +809,46 @@ fun StageTopBar(
                         TopEntry(shape, null, OwnTVIcon.SEARCH, selected == MainSection.SEARCH, true, k, lit, { onSelect(MainSection.SEARCH) },
                             if (focusSection == MainSection.SEARCH) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
                     }
-                    if (!tabs) search()
-                    if (nowPlaying != null) TopEntry(shape, null, if (nowPlaying.audioMode) OwnTVIcon.EQ else OwnTVIcon.PLAY, false, true, k, lit, onNowPlaying, accentIcon = true)
+                    val searchKept = !fold || focusSection == MainSection.SEARCH
+                    if (!tabs) TopFold(searchKept) { search() }
+                    if (nowPlaying != null) TopFold(!fold) { TopEntry(shape, null, if (nowPlaying.audioMode) OwnTVIcon.EQ else OwnTVIcon.PLAY, false, true, k, lit, onNowPlaying, accentIcon = true) }
                     named.forEach { section ->
                         val active = section == selected
                         val focusMod = (if (section == focusSection) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
                             .selectOnRest(section.opensOnRest() && !active) { onSelect(section) }
-                        TopEntry(shape, stringResource(section.labelRes), section.stageIcon, active, compact, k, lit, { onSelect(section) }, focusMod)
+                        TopFold(!fold || active || section == focusSection) {
+                            TopEntry(shape, stringResource(section.labelRes), section.stageIcon, active, compact, k, lit, { onSelect(section) }, focusMod)
+                        }
                     }
-                    if (tabs) search()
+                    if (tabs) TopFold(searchKept) { search() }
                     val family by org.koin.compose.koinInject<tv.own.owntv.core.nav.NavVisibility>().familyMode.collectAsStateWithLifecycle(false)
-                    if (!family) TopEntry(shape, null, OwnTVIcon.TILES, selected == MainSection.MORE || selected == MainSection.SETTINGS, true, k, lit, { onSelect(MainSection.MORE) },
-                        if (focusSection == MainSection.MORE) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
-                    StageSurface(
-                        onClick = onSwitchProfile,
-                        onLongClick = onPickAvatar,
-                        radius = sc(23).mpx,
-                        modifier = Modifier.padding(start = 6.mpx).size(sc(46).mpx),
-                        focusStyle = StageFocus.POSTER,
-                        contentAlignment = Alignment.Center,
-                    ) { RailAvatar(profileName.trim().take(1).uppercase().ifEmpty { "?" }, size = sc(46), avatarId = avatarId, imagePath = avatarPath) }
+                    if (!family) TopFold(!fold || focusSection == MainSection.MORE) {
+                        TopEntry(shape, null, OwnTVIcon.TILES, selected == MainSection.MORE || selected == MainSection.SETTINGS, true, k, lit, { onSelect(MainSection.MORE) },
+                            if (focusSection == MainSection.MORE) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
+                    }
+                    TopFold(!fold) {
+                        StageSurface(
+                            onClick = onSwitchProfile,
+                            onLongClick = onPickAvatar,
+                            radius = sc(23).mpx,
+                            modifier = Modifier.padding(start = 6.mpx).size(sc(46).mpx),
+                            focusStyle = StageFocus.POSTER,
+                            contentAlignment = Alignment.Center,
+                        ) { RailAvatar(profileName.trim().take(1).uppercase().ifEmpty { "?" }, size = sc(46), avatarId = avatarId, imagePath = avatarPath) }
+                    }
                 } else
                 Row(horizontalArrangement = Arrangement.spacedBy(4.mpx), verticalAlignment = Alignment.CenterVertically) {
                 BrandMark(rememberAppliedIcon(), sc(44).mpx, Modifier.padding(start = 6.mpx, end = 10.mpx))
-                TopIcon(OwnTVIcon.SEARCH, selected == MainSection.SEARCH, { onSelect(MainSection.SEARCH) },
-                    if (focusSection == MainSection.SEARCH) Modifier.focusRequester(selectedItemFocusRequester) else Modifier, k = k)
-                if (nowPlaying != null) TopIcon(if (nowPlaying.audioMode) OwnTVIcon.EQ else OwnTVIcon.PLAY, false, onNowPlaying, accentIcon = true, k = k)
+                TopFold(!fold || focusSection == MainSection.SEARCH) {
+                    TopIcon(OwnTVIcon.SEARCH, selected == MainSection.SEARCH, { onSelect(MainSection.SEARCH) },
+                        if (focusSection == MainSection.SEARCH) Modifier.focusRequester(selectedItemFocusRequester) else Modifier, k = k)
+                }
+                if (nowPlaying != null) TopFold(!fold) { TopIcon(if (nowPlaying.audioMode) OwnTVIcon.EQ else OwnTVIcon.PLAY, false, onNowPlaying, accentIcon = true, k = k) }
                 named.forEach { section ->
                     val active = section == selected
                     val focusMod = (if (section == focusSection) Modifier.focusRequester(selectedItemFocusRequester) else Modifier)
                         .selectOnRest(section.opensOnRest() && !active) { onSelect(section) }
+                    TopFold(!fold || active || section == focusSection) {
                     if (compact && !active) {
                         // Compact: the section is its icon; only the open one shows its name.
                         TopIcon(section.stageIcon, false, { onSelect(section) }, focusMod, k = k)
@@ -863,18 +876,23 @@ fun StageTopBar(
                             }
                         }
                     }
+                    }
                 }
                 val family by org.koin.compose.koinInject<tv.own.owntv.core.nav.NavVisibility>().familyMode.collectAsStateWithLifecycle(false)
-                if (!family) TopIcon(OwnTVIcon.TILES, selected == MainSection.MORE || selected == MainSection.SETTINGS, { onSelect(MainSection.MORE) },
-                    if (focusSection == MainSection.MORE) Modifier.focusRequester(selectedItemFocusRequester) else Modifier, k = k)
-                StageSurface(
-                    onClick = onSwitchProfile,
-                    onLongClick = onPickAvatar,
-                    radius = sc(23).mpx,
-                    modifier = Modifier.padding(start = 4.mpx).size(sc(46).mpx),
-                    focusStyle = StageFocus.POSTER,
-                    contentAlignment = Alignment.Center,
-                ) { RailAvatar(profileName.trim().take(1).uppercase().ifEmpty { "?" }, size = sc(46), avatarId = avatarId, imagePath = avatarPath) }
+                if (!family) TopFold(!fold || focusSection == MainSection.MORE) {
+                    TopIcon(OwnTVIcon.TILES, selected == MainSection.MORE || selected == MainSection.SETTINGS, { onSelect(MainSection.MORE) },
+                        if (focusSection == MainSection.MORE) Modifier.focusRequester(selectedItemFocusRequester) else Modifier, k = k)
+                }
+                TopFold(!fold) {
+                    StageSurface(
+                        onClick = onSwitchProfile,
+                        onLongClick = onPickAvatar,
+                        radius = sc(23).mpx,
+                        modifier = Modifier.padding(start = 4.mpx).size(sc(46).mpx),
+                        focusStyle = StageFocus.POSTER,
+                        contentAlignment = Alignment.Center,
+                    ) { RailAvatar(profileName.trim().take(1).uppercase().ifEmpty { "?" }, size = sc(46), avatarId = avatarId, imagePath = avatarPath) }
+                }
                 }
             }
             }
@@ -985,6 +1003,23 @@ private fun TopEntry(
 }
 
 private const val REST_OPEN_MS = 420L
+
+/**
+ * glcn: one part of the top bar that steps aside while the bar is folded: it narrows and fades, so the bar draws in
+ * round the open section like iOS's tab bar does on scroll, and opens out again the same way.
+ */
+@Composable
+private fun TopFold(shown: Boolean, content: @Composable () -> Unit) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = shown,
+        enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(TOP_FOLD_ANIM_MS)) +
+            androidx.compose.animation.expandHorizontally(androidx.compose.animation.core.tween(TOP_FOLD_ANIM_MS), expandFrom = Alignment.Start, clip = false),
+        exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(TOP_FOLD_ANIM_MS)) +
+            androidx.compose.animation.shrinkHorizontally(androidx.compose.animation.core.tween(TOP_FOLD_ANIM_MS), shrinkTowards = Alignment.Start, clip = false),
+    ) { content() }
+}
+
+private const val TOP_FOLD_ANIM_MS = 320
 private const val TOP_BAR_VEIL = 190
 private const val TOP_BAR_LINE = 4
 private const val TOP_BAR_LINE_LIFT = 2
