@@ -508,6 +508,8 @@ fun PlayerHud(
     }
     // Back cancels digit entry before it hides/exits controls.
     BackHandler(enabled = digitsActive) { digitBuffer = ""; tuneOsd = null }
+    // glcn: Back on the next-episode card closes it (as Cancel), it does not leave the episode.
+    BackHandler(enabled = showNextCard && !controlsVisible && !digitsActive) { autoNextDismissed = true; player.cancelAutoNext() }
 
     // Only for the "report this stream" button, whose readout is now gathered off the main thread.
     val hudScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -788,6 +790,9 @@ fun PlayerHud(
                 // even while rewound (when the engine is playing a file and calls it not live), so that
                 // is what the keys scrub; only without one does a film's seek bar apply.
                 !controlsVisible && error == null && (e.key == Key.DirectionLeft || e.key == Key.DirectionRight) &&
+                    // glcn: with the next-episode card up, ◀ ▶ move between its buttons — ▶ used to seek to the
+                    // end and start the next episode instead of reaching Cancel.
+                    !showNextCard &&
                     // glcn: on a live channel ◀ always opens the zap deck; rewinding is OK, then ◀ on the bar (or ⏪).
                     !(isLive && onOpenChannelList != null && e.key == Key.DirectionLeft) &&
                     (if (onScrubLive != null) liveLeftRightRewinds else !isLive && duration > 0L) -> {
