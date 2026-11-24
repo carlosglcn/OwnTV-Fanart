@@ -248,7 +248,7 @@ data class StageAccent(
 val stageLabelInk: Color
     @Composable
     @ReadOnlyComposable
-    get() = tv.own.owntv.glcn.EmberFocus.second?.takeIf { !LocalStagePalette.current.isLight } ?: stageAccent.ink
+    get() = tv.own.owntv.glcn.EmberFocus.second?.takeIf { !LocalStagePalette.current.isLight }?.let { tv.own.owntv.glcn.EmberFocus.partner(stageAccent.accent, it) } ?: stageAccent.ink
 
 /**
  * glcn: what says "live" (EN DIRECTO, the live dot, a running minute). Red, unless the theme's second accent is a
@@ -257,7 +257,7 @@ val stageLabelInk: Color
 val stageLive: Color
     @Composable
     @ReadOnlyComposable
-    get() = tv.own.owntv.glcn.EmberFocus.second?.takeIf { it.isGreenish() } ?: LIVE_RED
+    get() = tv.own.owntv.glcn.EmberFocus.second?.let { tv.own.owntv.glcn.EmberFocus.partner(stageAccent.accent, it) }?.takeIf { it.isGreenish() } ?: LIVE_RED
 
 /** The text on a [stageLive] pill: white on red and dark greens, the page's ink on a light green. */
 val stageOnLive: Color

@@ -592,7 +592,7 @@ private const val RAIL_ICON_STIFFNESS = 520f
 @Composable
 private fun RailActiveBar(modifier: Modifier) {
     val accent = stageAccent.accent
-    val second = tv.own.owntv.glcn.EmberFocus.second ?: accent
+    val second = tv.own.owntv.glcn.EmberFocus.second?.let { tv.own.owntv.glcn.EmberFocus.partner(accent, it) } ?: accent
     Box(modifier.size(5.mpx, 30.mpx).background(Brush.verticalGradient(listOf(accent, second)), RoundedCornerShape(3.mpx)))
 }
 
@@ -920,7 +920,7 @@ private fun TopEntry(
     fun sc(v: Int) = (v * k).toInt()
     val a = stageAccent
     val palette = tv.own.owntv.ui.theme.LocalStagePalette.current
-    val second = tv.own.owntv.glcn.EmberFocus.second ?: a.accent
+    val second = tv.own.owntv.glcn.EmberFocus.second?.let { tv.own.owntv.glcn.EmberFocus.partner(a.accent, it) } ?: a.accent
     val tabs = shape == tv.own.owntv.glcn.TopBarShape.TABS
     val pills = shape == tv.own.owntv.glcn.TopBarShape.PILLS
     val icons = shape == tv.own.owntv.glcn.TopBarShape.ICONS
@@ -932,7 +932,7 @@ private fun TopEntry(
         pills -> chip
         // glcn: the open section stands out in the theme's colours — a pill filled with the accent's gradient.
         (icons || shape == tv.own.owntv.glcn.TopBarShape.CAPSULE) && active ->
-            Modifier.background(Brush.horizontalGradient(listOf(a.accent, second)), RoundedCornerShape(r.mpx))
+            Modifier.background(Brush.horizontalGradient(tv.own.owntv.glcn.EmberFocus.sweepOf(a.accent, second)), RoundedCornerShape(r.mpx))
         else -> Modifier
     }
     StageSurface(
@@ -966,9 +966,9 @@ private fun TopEntry(
         // The open section's line (and the tabs' focus): along the foot, in the accent's gradient.
         val line = when {
             label == null && !(tabs && focused) -> null
-            tabs && active -> Brush.horizontalGradient(listOf(a.accent, second))
+            tabs && active -> Brush.horizontalGradient(tv.own.owntv.glcn.EmberFocus.sweepOf(a.accent, second))
             tabs && focused -> androidx.compose.ui.graphics.SolidColor(palette.text.copy(alpha = 0.55f))
-            shape == tv.own.owntv.glcn.TopBarShape.ISLAND && active && !focused -> Brush.horizontalGradient(listOf(a.accent, second))
+            shape == tv.own.owntv.glcn.TopBarShape.ISLAND && active && !focused -> Brush.horizontalGradient(tv.own.owntv.glcn.EmberFocus.sweepOf(a.accent, second))
             else -> null
         }
         Row(

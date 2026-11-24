@@ -164,7 +164,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocusInner
     }
     // glcn: a style with a second accent (Brasa) — see EmberFocus.
     tv.own.owntv.glcn.EmberFocus.second?.let { second ->
-        val sweep = Brush.horizontalGradient(listOf(a.accent, second))
+        val sweep = Brush.horizontalGradient(tv.own.owntv.glcn.EmberFocus.sweepOf(a.accent, second))
         when (style) {
             StageFocus.FX -> {
                 drawBoxShadow(a.accent.copy(alpha = 0.18f), 30 * px, r, dy = 6 * px)

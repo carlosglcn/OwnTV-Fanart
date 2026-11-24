@@ -411,7 +411,7 @@ open class MainActivity : ComponentActivity() {
             val glassConfig by viewModel.glassConfig.collectAsStateWithLifecycle()
             tv.own.owntv.glcn.GlassFocus.on = glassConfig.enabled // glcn: the focus drawn as tinted glass
             // glcn: a style with a second accent (Brasa) — outlined focus and a gradient on buttons.
-            tv.own.owntv.glcn.EmberFocus.second = glcnStyle?.accent2Hex?.let { runCatching { androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(it)) }.getOrNull() }
+            tv.own.owntv.glcn.EmberFocus.second = tv.own.owntv.glcn.EmberFocus.secondFor(glcnStyle)
             val background by viewModel.backgroundConfig.collectAsStateWithLifecycle()
             val avatarId by viewModel.avatarId.collectAsStateWithLifecycle()
             val avatarPath by viewModel.avatarPath.collectAsStateWithLifecycle()
