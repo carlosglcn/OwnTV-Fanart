@@ -1373,7 +1373,7 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	http://
 1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	https://
 1	technical	app/src/main/java/tv/own/owntv/glcn/ChapterThumbs.kt	image
-2	technical	app/src/main/java/tv/own/owntv/glcn/CrashScreen.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/glcn/CrashScreen.kt	\0
 1	log	app/src/main/java/tv/own/owntv/glcn/CrashScreen.kt	--- live diagnostics (most recent) ---
 1	technical	app/src/main/java/tv/own/owntv/glcn/CrashScreen.kt	/proc/self/cmdline
 1	technical	app/src/main/java/tv/own/owntv/glcn/CrashScreen.kt	:crash
