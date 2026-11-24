@@ -1195,6 +1195,25 @@ class SeriesViewModel(
         }
     }
 
+    /** glcn: an episode played in VLC / MX Player — where it stopped is saved like the app's own player saves it, and
+     *  the end credits or the end count as watched. Before, nothing came back: no progress bar, never watched. */
+    private fun saveExternalEpisode(pid: Long, episode: EpisodeEntity, outcome: tv.own.owntv.core.player.ExternalPlayerLauncher.Outcome) {
+        viewModelScope.launch {
+            val dur = outcome.durationMs
+            if (dur <= 0) return@launch
+            val pos = if (outcome.finished || inCredits(outcome.positionMs, dur)) dur else outcome.positionMs
+            if (pos <= 0) return@launch
+            Log.d(TAG, "saveExternalEpisode episodeId=${episode.id} positionMs=$pos durationMs=$dur finished=${outcome.finished}")
+            runCatching {
+                val before = runCatching { progressDao.get(pid, MediaType.EPISODE, episode.id) }.getOrNull()
+                val now = PlaybackProgressEntity(profileId = pid, mediaType = MediaType.EPISODE, itemId = episode.id, positionMs = pos, durationMs = dur)
+                progressDao.save(now)
+                if (isEpisodeCompleted(now) && (before == null || !isEpisodeCompleted(before))) traktEpisode(pid, episode)
+            }.onFailure { t -> Log.w(TAG, "saveExternalEpisode failed episodeId=${episode.id}", t) }
+            launcherIntegrationRepository.publishEpisodeProgress(pid, episode.id, pos, dur)
+        }
+    }
+
     fun playEpisodeExternal(episode: EpisodeEntity) {
         _lastPlayedEpisodeId.value = episode.id
         viewModelScope.launch {
@@ -1211,6 +1230,7 @@ class SeriesViewModel(
                 userAgent = source?.userAgent,
                 httpHeaders = tv.own.owntv.core.settings.SourceOverrides.headersWithReferer(episode.httpHeaders, source),
                 startPositionMs = savedPositionMs(episode),
+                onResult = { outcome -> if (pid != null) saveExternalEpisode(pid, episode, outcome) },
             )
             if (pid != null) {
                 runCatching {
@@ -1255,6 +1275,7 @@ class SeriesViewModel(
                     userAgent = source?.userAgent,
                     httpHeaders = tv.own.owntv.core.settings.SourceOverrides.headersWithReferer(episode.httpHeaders, source),
                     startPositionMs = startPositionMs, // the screen's Resume / Start over answer
+                    onResult = { outcome -> if (pid != null) saveExternalEpisode(pid, episode, outcome) },
                 )
                 if (pid != null) {
                     runCatching {

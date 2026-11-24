@@ -220,7 +220,10 @@ open class MainActivity : ComponentActivity() {
         if (hasFocus) quietSystemClicks()
     }
 
+    private var externalStarter: ((android.content.Intent) -> Boolean)? = null
+
     override fun onDestroy() {
+        if (tv.own.owntv.core.player.ExternalPlayerLauncher.resultStarter === externalStarter) tv.own.owntv.core.player.ExternalPlayerLauncher.resultStarter = null
         visibility.removeListener(onVisibility)
         tv.own.owntv.glcn.FrameWatch.detach(this)
         tv.own.owntv.ui.components.TrailerPool.free() // glcn: the trailer player was made on this activity
@@ -246,6 +249,12 @@ open class MainActivity : ComponentActivity() {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         tv.own.owntv.glcn.FrameWatch.attach(this) // glcn: frame timing per screen, into the report
+        // glcn: VLC / MX Player say where they stopped when they close — progress and "watched" for films and episodes.
+        val externalResult = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {
+            tv.own.owntv.core.player.ExternalPlayerLauncher.deliver(it.data)
+        }
+        externalStarter = { intent -> externalResult.launch(intent); true }
+        tv.own.owntv.core.player.ExternalPlayerLauncher.resultStarter = externalStarter
         // glcn: the app went down last time — show what happened (and let it be shared) before anything else runs.
         // (The application has already opened the report in its own process; this window steps aside.)
         if (tv.own.owntv.glcn.CrashScreen.pending(this)) {
