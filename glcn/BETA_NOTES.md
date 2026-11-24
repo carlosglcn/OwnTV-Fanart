@@ -82,3 +82,6 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 **Emby now sees what you play:** before reporting, the app asks Emby for the item's play session (as Emby's own apps do) — Emby refused the "playing" reports without one (error 400), so nothing showed in its activity, nothing was marked watched and nothing reached Trakt. The playback report now notes Emby's reason when it refuses.
 - 🇪🇸 Local sync: the "Sync automatically" row in Spanish.
 - 📱 Local sync: the pairing card puts the QR beside the name and the code, so it fits on the screen (the QR was cut off at the bottom).
+- 🪶 **Smoother browsing:** pictures read again from the disk no longer fade in as if loading for the first time — only new ones from the network fade. When Android asks for memory, the pictures of the screen on show stay (a quarter of the cache) instead of all going, so coming back to a row or a screen does not redraw it all.
+- 🎞️ **4K / HDR films and episodes:** before one starts, the trailer and most pictures in memory are let go, so the film has room from its first second.
+- 🔎 **Playback report:** notes why the app left the screen while playing (Home pressed, another app on top, or the screen closed) — to find what sends a 4K episode out of the app.

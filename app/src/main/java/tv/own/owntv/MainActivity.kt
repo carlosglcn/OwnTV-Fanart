@@ -145,8 +145,18 @@ open class MainActivity : ComponentActivity() {
         else { shellViewModel.relockCategories(); engines.onAppBackgrounded() }
     }
 
+    // glcn: why the app left the screen, into the playback report — a film that "closes" can then be told apart:
+    // the person pressed Home, another app came on top, or the activity itself was closed.
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (tv.own.owntv.features.home.CinemaTrailer.blocked) tv.own.owntv.player.LiveDiagnosticsLog.event("screen left by the person (Home or another app) while playing")
+    }
+
     override fun onStop() {
         super.onStop()
+        if (tv.own.owntv.features.home.CinemaTrailer.blocked || isFinishing) {
+            tv.own.owntv.player.LiveDiagnosticsLog.event("app off screen · playing=${tv.own.owntv.features.home.CinemaTrailer.blocked} finishing=$isFinishing changing=$isChangingConfigurations")
+        }
         if (!isChangingConfigurations) get<tv.own.owntv.core.sync.local.AutoSyncManager>().onBackground() // glcn
         // A picture-in-picture window only pauses the activity, so playback there never reaches this.
         if (!isChangingConfigurations) visibility.activityStopped()
@@ -223,6 +233,7 @@ open class MainActivity : ComponentActivity() {
     private var externalStarter: ((android.content.Intent) -> Boolean)? = null
 
     override fun onDestroy() {
+        tv.own.owntv.player.LiveDiagnosticsLog.event("activity closed · finishing=$isFinishing changing=$isChangingConfigurations")
         if (tv.own.owntv.core.player.ExternalPlayerLauncher.resultStarter === externalStarter) tv.own.owntv.core.player.ExternalPlayerLauncher.resultStarter = null
         visibility.removeListener(onVisibility)
         tv.own.owntv.glcn.FrameWatch.detach(this)

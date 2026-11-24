@@ -35,6 +35,11 @@ object MemoryWatch {
     @Volatile private var lastPong = SystemClock.uptimeMillis()
     private val pong = Runnable { lastPong = SystemClock.uptimeMillis() }
 
+    /** glcn: optional work holds back for a while (a heavy film is starting); lifted by the minute check as usual. */
+    fun holdBack() {
+        tight = true
+    }
+
     fun start(context: Context) {
         if (started) return
         started = true
@@ -131,7 +136,8 @@ object MemoryWatch {
         tight = true
         main.post {
             tv.own.owntv.ui.components.TrailerPool.free()
-            runCatching { SingletonImageLoader.get(app).memoryCache?.clear() }
+            // a quarter stays (the screen on show), so the brake is not seen as everything loading again
+            runCatching { SingletonImageLoader.get(app).memoryCache?.let { it.trimToSize(it.maxSize / 4) } }
         }
         LiveDiagnosticsLog.event("memory brake at $mb MB (limit $brakeMb)${if (boxShort) ", box short" else ""}: pictures in memory, trailer and prefetch let go")
     }

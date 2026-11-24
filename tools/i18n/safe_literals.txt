@@ -26,7 +26,9 @@
 1	log	app/src/main/java/tv/own/owntv/BlurredBackdropLoader.kt	blur: produceState failed: ${it.javaClass.simpleName}: ${it.message}
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	OwnTVHome
 1	compiler	app/src/main/java/tv/own/owntv/MainActivity.kt	RememberReturnType
+1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	activity closed · finishing=$isFinishing changing=$isChangingConfigurations
 1	technical	app/src/main/java/tv/own/owntv/MainActivity.kt	activity-create
+1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	app off screen · playing=${tv.own.owntv.features.home.CinemaTrailer.blocked} finishing=$isFinishing changing=$isChangingConfigurations
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	back-hold
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	database probe failed: $error
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	db-probed
@@ -39,8 +41,10 @@
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	onNewIntent deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	profile-id-loaded
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	profiles-loaded
+1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	screen left by the person (Home or another app) while playing
 2	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	\0
 1	log	app/src/main/java/tv/own/owntv/OwnTVApp.kt	,
+1	log	app/src/main/java/tv/own/owntv/OwnTVApp.kt	4K / HDR film starting: trailer and most pictures in memory let go
 3	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	DEPRECATION
 1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	beta-tv
 1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	carlosglcn/OwnTV-Fanart-Beta

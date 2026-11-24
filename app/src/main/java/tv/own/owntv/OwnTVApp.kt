@@ -12,6 +12,7 @@ import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.allowRgb565
 import coil3.request.crossfade
+import coil3.request.transitionFactory
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -153,6 +154,15 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // Fixed for this process before any player exists: the setting applies only after a restart.
         tv.own.owntv.core.player.FfmpegAudioSetting.load(this)
         tv.own.owntv.glcn.CategoryIcons.ensure(this) // glcn: category icons and the ones chosen by hand
+        // glcn: before a 4K / HDR / Dolby Vision film takes its memory, the trailer and most pictures in memory go.
+        tv.own.owntv.player.HeavyPlayback.onStart = {
+            android.os.Handler(mainLooper).post {
+                tv.own.owntv.ui.components.TrailerPool.free()
+                runCatching { SingletonImageLoader.get(this).memoryCache?.let { it.trimToSize(it.maxSize / 3) } }
+                tv.own.owntv.glcn.MemoryWatch.holdBack()
+            }
+            tv.own.owntv.player.LiveDiagnosticsLog.event("4K / HDR film starting: trailer and most pictures in memory let go")
+        }
         tv.own.owntv.glcn.MemoryWatch.start(this) // glcn: memory diary, stall watch and memory brake (one sleeping thread)
         tv.own.owntv.glcn.LiveBanner.ensure(this) // glcn: the live banner's style
         tv.own.owntv.glcn.PlayerGlass.ensure(this) // glcn: see-through level of the panels over the video
@@ -281,7 +291,8 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             // gradients; the cache is capped in bytes, so full colour only means fewer pictures kept. Boxes Android
             // calls low-RAM, and Light mode, keep the saving.
             .allowRgb565(lowRam || tv.own.owntv.glcn.LowRam.on)
-            .crossfade(if (tv.own.owntv.glcn.LowRam.on || lowRam) 0 else if (tv.own.owntv.glcn.DeviceClass.modest) 120 else 220)
+            // glcn: fade in only what comes from the network (NetworkFade); a picture read again from the disk just appears.
+            .let { b -> (if (tv.own.owntv.glcn.LowRam.on || lowRam) 0 else if (tv.own.owntv.glcn.DeviceClass.modest) 120 else 220).let { ms -> if (ms > 0) b.transitionFactory(tv.own.owntv.glcn.NetworkFade(ms)) else b.crossfade(0) } }
             .build()
     }
 
@@ -312,8 +323,11 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // TRIM_MEMORY_RUNNING_LOW is deprecated on API 34+ but still the only signal on TV devices
         // running older Android, so keep honouring it.
         @Suppress("DEPRECATION")
-        if (level >= TRIM_MEMORY_RUNNING_LOW) {
+        if (level >= TRIM_MEMORY_RUNNING_CRITICAL) {
             runCatching { SingletonImageLoader.get(this).memoryCache?.clear() }
+        } else if (level >= TRIM_MEMORY_RUNNING_LOW) {
+            // glcn: low, not yet critical — keep a quarter (the screen on show), so coming back does not redraw it all.
+            runCatching { SingletonImageLoader.get(this).memoryCache?.let { it.trimToSize(it.maxSize / 4) } }
         } else if (level >= TRIM_MEMORY_RUNNING_MODERATE) {
             // glcn: the first warning halves the picture cache instead of waiting for the one that empties it.
             runCatching { SingletonImageLoader.get(this).memoryCache?.let { it.trimToSize(it.maxSize / 2) } }
