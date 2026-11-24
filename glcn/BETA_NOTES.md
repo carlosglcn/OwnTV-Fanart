@@ -79,3 +79,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🩺 Playback report: an **Emby / Jellyfin** section with each report sent to the server (playing, stopped, watched) and its answer.
 - 🧯 **Crash screen:** after a native crash or a freeze it no longer opens with an old crash from another version — it shows how the app last closed and the player's last lines before it.
 - 🛟 **4K / HDR films and episodes:** opening Info or Audio & subtitles no longer closes the app — the picture stays full size behind the side panel instead of shrinking to the left (resizing a 4K HDR picture while it played brought the app down on the SHIELD).
+- 📺 **Emby now sees what you play:** before reporting, the app asks Emby for the item's play session (as Emby's own apps do) — Emby refused the "playing" reports without one (error 400), so nothing showed in its activity, nothing was marked watched and nothing reached Trakt. The playback report now notes Emby's reason when it refuses.
+- 🇪🇸 Local sync: the "Sync automatically" row in Spanish.
