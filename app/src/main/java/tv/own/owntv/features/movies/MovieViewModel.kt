@@ -758,6 +758,25 @@ class MovieViewModel(
         }
     }
 
+    /** glcn: a film played in VLC / MX Player — where it stopped is saved like the app's own player saves it; played
+     *  to the end counts as watched. Before, nothing came back: no progress bar, never watched. */
+    private fun saveExternalMovie(pid: Long, movie: MovieEntity, outcome: tv.own.owntv.core.player.ExternalPlayerLauncher.Outcome) {
+        viewModelScope.launch {
+            val dur = outcome.durationMs
+            if (dur <= 0) return@launch
+            val pos = if (outcome.finished) dur else outcome.positionMs
+            if (pos <= 0) return@launch
+            Log.d(TAG, "saveExternalMovie movieId=${movie.id} positionMs=$pos durationMs=$dur finished=${outcome.finished}")
+            runCatching {
+                val before = runCatching { progressDao.get(pid, MediaType.MOVIE, movie.id) }.getOrNull()
+                val done = PlaybackProgressEntity(profileId = pid, mediaType = MediaType.MOVIE, itemId = movie.id, positionMs = pos, durationMs = dur)
+                progressDao.save(done)
+                if (isMovieCompleted(done) && (before == null || !isMovieCompleted(before))) tv.own.owntv.core.trakt.TraktSync.watchedMovie(pid, movie)
+            }.onFailure { t -> Log.w(TAG, "saveExternalMovie failed movieId=${movie.id}", t) }
+            launcherIntegrationRepository.publishMovieProgress(pid, movie.id, pos, dur)
+        }
+    }
+
     /** Long-press "Play with external player" — always external, regardless of the global toggle. */
     fun playExternal(movie: MovieEntity) {
         viewModelScope.launch {
@@ -772,6 +791,7 @@ class MovieViewModel(
                 userAgent = source?.userAgent,
                 httpHeaders = SourceOverrides.headersWithReferer(movie.httpHeaders, source),
                 startPositionMs = savedPositionMs(movie),
+                onResult = { outcome -> if (pid != null) saveExternalMovie(pid, movie, outcome) },
             )
             if (pid != null) {
                 runCatching {
@@ -802,6 +822,7 @@ class MovieViewModel(
                     userAgent = source?.userAgent,
                     httpHeaders = SourceOverrides.headersWithReferer(movie.httpHeaders, source),
                     startPositionMs = startPositionMs, // the screen's Resume / Start over answer
+                    onResult = { outcome -> if (pid != null) saveExternalMovie(pid, movie, outcome) },
                 )
                 if (pid != null) {
                     runCatching {
