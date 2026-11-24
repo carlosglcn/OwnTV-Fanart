@@ -2273,7 +2273,7 @@ fun OwnTVShell(
             } else {
                 // glcn: the cinema side panel slides the film to the left, still playing.
                 val cinemaShift by androidx.compose.animation.core.animateFloatAsState(
-                    if (isFull && !inPip && tv.own.owntv.glcn.CinemaStage.panelOpen) 1f else 0f,
+                    if (isFull && !inPip && tv.own.owntv.glcn.CinemaStage.panelOpen && !tv.own.owntv.glcn.CinemaStage.keepFullPicture) 1f else 0f,
                     androidx.compose.animation.core.tween(if (tv.own.owntv.glcn.DeviceClass.richMotion) CINEMA_SHIFT_MS else 0),
                     label = "cinemaShift",
                 )
@@ -2309,7 +2309,7 @@ fun OwnTVShell(
             // dropping the only line of dialogue there made subtitles look broken. Scaled to the box.
             if (!liveOnExo && !inPip) {
                 tv.own.owntv.player.SubtitleOverlay(
-                    player = player, modifier = Modifier.fillMaxSize().cinemaInset(if (tv.own.owntv.glcn.CinemaStage.panelOpen && isFull) 1f else 0f),
+                    player = player, modifier = Modifier.fillMaxSize().cinemaInset(if (tv.own.owntv.glcn.CinemaStage.panelOpen && isFull && !tv.own.owntv.glcn.CinemaStage.keepFullPicture) 1f else 0f),
                     // Tied to the chosen mini size, but nudged up and floored: a strictly proportional
                     // line would be unreadable in the smallest box.
                     sizeScale = if (isFull) 1f else {

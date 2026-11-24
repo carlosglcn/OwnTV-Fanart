@@ -888,6 +888,8 @@ fun PlayerHud(
         if (controlsVisible && cinemaMode && error == null && cinema != null) {
             // glcn: films and episodes — the cinema banner, or the side panel with the picture slid left.
             val tech = rememberCinemaTech(player)
+            val heavy = (tech.height ?: 0) >= UHD_HEIGHT || (tech.hdr != null && tech.hdr != tv.own.owntv.player.StreamHdrMode.SDR) || tech.dolbyVision
+            androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.CinemaStage.keepFullPicture = heavy }
             val openTab = cinemaTab
             if (openTab == null) {
                 CinemaBanner(
@@ -1408,3 +1410,6 @@ private fun FichaChannelLine(player: PlaybackEngine, chips: List<String>) {
 
 /** glcn: how far above the centre the transport sits on a live channel with an archive (see its call). */
 private const val REWIND_TRANSPORT_LIFT = -176
+
+/** glcn: from this height a picture is 4K (kept full size behind the side panel). */
+private const val UHD_HEIGHT = 2000
