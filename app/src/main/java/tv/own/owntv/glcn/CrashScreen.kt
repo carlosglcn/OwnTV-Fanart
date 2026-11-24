@@ -49,9 +49,16 @@ object CrashScreen {
         val stamp = lastCrashAt(activity)
         if (stamp <= 0L) return false
         val prefs = activity.prefs()
-        val recorded = runCatching { file.takeIf { it.exists() }?.readText() }.getOrNull().orEmpty()
+        // glcn: the recorded (Java) crash only when it is the one being shown — a native crash or a freeze today used to
+        // open with a crash from weeks before, from an older version, and the real one was at the foot of the screen.
+        val recordedAt = if (file.exists()) file.lastModified() else 0L
+        val recorded = if (recordedAt > 0 && kotlin.math.abs(stamp - recordedAt) < SAME_CRASH_MS)
+            runCatching { file.readText() }.getOrNull().orEmpty() else String()
         val system = runCatching { tv.own.owntv.core.util.CrashRecorder.exitReasons(activity) }.getOrNull().orEmpty()
-        val text = (recorded + "\n\n" + system).trim().takeIf { it.isNotBlank() } ?: return false
+        // Without a recorded crash (native, a freeze) what the player was doing just before is the only clue.
+        val lead = if (recorded.isNotBlank()) String() else runCatching { tv.own.owntv.player.LiveDiagnosticsLog.tail(LEAD_LINES) }.getOrNull().orEmpty()
+        val text = listOf(recorded, system, lead.takeIf { it.isNotBlank() }?.let { LEAD_HEADER + System.lineSeparator() + it }.orEmpty())
+            .filter { it.isNotBlank() }.joinToString(System.lineSeparator().repeat(2)).trim().takeIf { it.isNotBlank() } ?: return false
         val pad = (24 * activity.resources.displayMetrics.density).toInt()
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -122,3 +129,9 @@ class CrashActivity : Activity() {
         if (!CrashScreen.show(this)) finish()
     }
 }
+
+/** glcn: a recorded crash this close to the newest exit is that exit. */
+private const val SAME_CRASH_MS = 10 * 60_000L
+/** glcn: the player's last lines shown under a native crash or a freeze. */
+private const val LEAD_LINES = 80
+private const val LEAD_HEADER = "--- live diagnostics (most recent) ---"
