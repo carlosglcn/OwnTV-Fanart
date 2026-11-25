@@ -192,6 +192,8 @@ fun SeriesScreen(
     // The show itself, not "the selected one": the grid's way in can focus the first poster before
     // the opened one is laid out, and that makes the first poster the selected show.
     var returnToShowId by remember { mutableStateOf<Long?>(null) }
+    // glcn: kept here, above the titles, which leave the screen while a show's page is open.
+    val gridMemory = remember { GridMemory() }
     LaunchedEffect(openedSeries) { openedSeries?.let { returnToShowId = it.id } }
     // Where that show sat in the titles, when it was opened from them: the list reloads from its
     // first page on the way back, so a show further down is found only after scrolling there again.
@@ -215,6 +217,7 @@ fun SeriesScreen(
             onChildFocused = onChildFocused,
             restoreShowId = returnToShowId,
             restoreShowIndex = returnToIndex,
+            memory = gridMemory,
             onOpenAt = { returnToIndex = it },
             onRestoredSelected = { returnToShowId = null; returnToIndex = -1 },
             lockedKey = lockedKey,
@@ -239,6 +242,7 @@ private fun SeriesGrid(
     onChildFocused: () -> Unit,
     restoreShowId: Long? = null,
     restoreShowIndex: Int = -1,
+    memory: GridMemory = remember { GridMemory() },
     onOpenAt: (Int) -> Unit = {},
     onRestoredSelected: () -> Unit = {},
     /** Non-null while this grid is a More screen's stage — see [SeriesScreen]. */
@@ -331,9 +335,10 @@ private fun SeriesGrid(
     val perCategorySeriesIds = remember { mutableStateMapOf<LiveKey, Long>() }
     // glcn: the last title focused in the posters themselves, per category — Keep watching above them also makes its
     // show the selected one, and the posters used to follow it (jumping to that show) instead of staying put.
-    val gridTitleIds = remember { mutableStateMapOf<LiveKey, Long>() }
+    val gridTitleIds = memory.titles
     // glcn: the Keep watching card a show was opened from; Back from its page returns there, not to the posters.
-    var stripOpenAt by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(-1) }
+    // glcn: the Keep watching card a show was opened from; Back from its page returns there, not to the posters.
+    var stripOpenAt by memory::stripOpenAt
     // NOTE: plain constructors, not remember*State() — these are created lazily inside getOrPut, so a
     // @Composable/rememberSaveable call here would register slots conditionally and corrupt the slot table.
     val glideScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -589,7 +594,7 @@ private fun SeriesGrid(
         // glcn: Runway — only the posters around the centre exist, so the remembered title (coming back from its page
         // or the player) may not be there yet: centre the row on it first, then focus it a frame or two later.
         if (runway && series.itemCount > 0) {
-            val tid = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedSeries?.id else gridTitleIds[selectedKey] ?: selectedSeries?.id
+            val tid = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedSeries?.id?.takeIf { it != memory.stripId } else gridTitleIds[selectedKey] ?: selectedSeries?.id?.takeIf { it != memory.stripId }
             val idx = tid?.let { id -> series.itemSnapshotList.items.indexOfFirst { it.id == id } } ?: -1
             if (idx >= 0 && idx != runwayAt) {
                 runwayAt = idx
@@ -601,7 +606,7 @@ private fun SeriesGrid(
     }
     // From the categories to the shows: the remembered one, else the first; a locked one's Enter PIN button; else the search field.
     fun focusTitles() {
-        val targetId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedSeries?.id else gridTitleIds[selectedKey] ?: selectedSeries?.id
+        val targetId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedSeries?.id?.takeIf { it != memory.stripId } else gridTitleIds[selectedKey] ?: selectedSeries?.id?.takeIf { it != memory.stripId }
         scope.launch {
             if (series.itemCount > 0) {
                 val targetIdx = targetId?.let { id -> series.itemSnapshotList.items.indexOfFirst { it.id == id }.takeIf { it >= 0 } } ?: 0
@@ -706,7 +711,7 @@ private fun SeriesGrid(
             }
         }
     }
-    val targetSeriesId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedSeries?.id else gridTitleIds[selectedKey] ?: selectedSeries?.id
+    val targetSeriesId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedSeries?.id?.takeIf { it != memory.stripId } else gridTitleIds[selectedKey] ?: selectedSeries?.id?.takeIf { it != memory.stripId }
     // glcn: Runway — the row centres on the remembered title once the list is there, so restoring focus to it
     // finds it composed (only the posters around the centre exist).
     androidx.compose.runtime.LaunchedEffect(runway, selectedKey, series.itemCount > 0) {
@@ -720,6 +725,7 @@ private fun SeriesGrid(
         vm.onSeriesFocused(show)
         gridTitleIds[selectedKey] = show.id
         stripOpenAt = -1
+        memory.stripId = null
         if (rememberSeries) perCategorySeriesIds[selectedKey] = show.id
     }
     val stripCards = stripShows.map { st ->
@@ -756,7 +762,7 @@ private fun SeriesGrid(
         tv.own.owntv.glcn.ContinueStrip(
             stripCards, start, end,
             onFocus = { i ->
-                stripShows.getOrNull(i)?.let { vm.onSeriesFocused(it.series) }
+                stripShows.getOrNull(i)?.let { memory.stripId = it.series.id; vm.onSeriesFocused(it.series) }
                 // glcn: above the shelves the strip is scrolled away: it comes back into view with the focus.
                 if (shelves.isNotEmpty()) scope.launch { runCatching { if (tv.own.owntv.glcn.SmoothScroll.still) effectiveGridState.scrollToItem(0) else effectiveGridState.animateScrollToItem(0) } }
             },
@@ -2451,3 +2457,11 @@ private const val SHELF_BACK_FRAMES = 20
 
 /** glcn: frames the strip is asked for the focus after its menu closes (about half a second). */
 private const val STRIP_FOCUS_TRIES = 30
+
+/** glcn: what the titles remember across a show's page (the grid leaves the screen meanwhile): the poster last focused
+ *  in each category, and whether the show was opened from Keep watching (which card, and which show it holds). */
+internal class GridMemory {
+    val titles = androidx.compose.runtime.mutableStateMapOf<LiveKey, Long>()
+    var stripOpenAt by androidx.compose.runtime.mutableIntStateOf(-1)
+    var stripId by mutableStateOf<Long?>(null)
+}

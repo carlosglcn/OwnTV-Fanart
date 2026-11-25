@@ -270,7 +270,6 @@ fun MoviesScreen(
     // film the selected one, and the posters used to follow it (jumping to that film) instead of staying put.
     val gridTitleIds = remember { mutableStateMapOf<LiveKey, Long>() }
     // glcn: the Keep watching film played from the strip; coming back from the player returns to that card.
-    var stripOpenId by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<Long?>(null) }
     // NOTE: plain constructors, not remember*State() — these are created lazily inside getOrPut, so a
     // @Composable/rememberSaveable call here would register slots conditionally and corrupt the slot table.
     val glideScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -366,8 +365,8 @@ fun MoviesScreen(
     LaunchedEffect(restoreFocus, movies.itemCount) {
         if (!restoreFocus || movies.itemCount == 0) return@LaunchedEffect
         // glcn: played from Keep watching: back to that card; the posters below keep the place they had.
-        val fromStrip = stripOpenId
-        stripOpenId = null
+        val fromStrip = tv.own.owntv.glcn.StripReturn.movieId
+        tv.own.owntv.glcn.StripReturn.movieId = null
         if (fromStrip != null && showStrip) {
             stripFocus.index = stripMovies.indexOfFirst { it.id == fromStrip }.coerceAtLeast(0)
             if (shelves.isNotEmpty()) scrollToIndex(0)
@@ -644,7 +643,7 @@ fun MoviesScreen(
     val onMovieFocus: (MovieEntity) -> Unit = { movie ->
         vm.onMovieFocused(movie)
         gridTitleIds[selectedKey] = movie.id
-        stripOpenId = null
+        tv.own.owntv.glcn.StripReturn.movieId = null
         if (rememberMovies) perCategoryMovieIds[selectedKey] = movie.id
     }
     val stripCards = stripMovies.map { m ->
@@ -688,7 +687,7 @@ fun MoviesScreen(
                 if (shelves.isNotEmpty()) scope.launch { runCatching { if (tv.own.owntv.glcn.SmoothScroll.still) effectiveGridState.scrollToItem(0) else effectiveGridState.animateScrollToItem(0) } }
             },
             // OK plays it on from where it stopped; hold OK opens its menu (seen, out of Keep watching…).
-            onClick = { i -> stripMovies.getOrNull(i)?.let { stripOpenId = it.id; playMovieNow(it) } },
+            onClick = { i -> stripMovies.getOrNull(i)?.let { tv.own.owntv.glcn.StripReturn.movieId = it.id; playMovieNow(it) } },
             onLongClick = { i -> stripMovies.getOrNull(i)?.let { stripMenuId = it.id; openMenu(it, -1) } },
             modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus },
             focus = stripFocus,
