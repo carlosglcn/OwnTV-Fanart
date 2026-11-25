@@ -190,6 +190,20 @@ fun SportsMatchScreen(
                 item {
                     ScoreHeader(m, state.summary, hidden = state.config.spoilerFree && !revealed, onReveal = { revealed = true })
                 }
+                // glcn: a Davis Cup tie under way: the rubber on court, its players and sets, under the tie's score.
+                if (m.leagueSlug == tv.own.owntv.core.sports.BasketDataSource.DAVIS && m.isLive && !(state.config.spoilerFree && !revealed)) {
+                    tv.own.owntv.core.sports.BasketDataSource.rubbers(m).firstOrNull { it.isLive }?.let { now ->
+                        item(key = "davis-now") {
+                            Column(Modifier.fillMaxWidth().padding(top = 15.mpx)) {
+                                Text(
+                                    stringResource(R.string.glcn_davis_now) + " · " + now.subtitle.orEmpty(),
+                                    style = stageText(15, 700), color = tv.own.owntv.ui.theme.stageLive, maxLines = 1,
+                                )
+                                DrawMatchLine(now)
+                            }
+                        }
+                    }
+                }
                 item {
                     Row(
                         Modifier.fillMaxWidth().padding(top = 21.mpx).horizontalScroll(rememberScrollState()).focusRestorer().focusGroup(),
@@ -199,6 +213,8 @@ fun SportsMatchScreen(
                         val tabs = MatchTab.entries.filter {
                             // glcn: before kick-off there is nothing minute by minute yet: the page opens on what there is.
                             (it != MatchTab.TIMELINE || m.state != MatchState.PRE || !(state.summary?.timeline ?: m.events).isEmpty()) &&
+                            // glcn: a Davis Cup tie has no minute by minute: its rubbers (Draw) are the page.
+                            (it != MatchTab.TIMELINE || m.leagueSlug != tv.own.owntv.core.sports.BasketDataSource.DAVIS) &&
                             (it != MatchTab.TABLE || state.standings?.groups?.any { g -> g.rows.isNotEmpty() } == true || state.ranking?.groups?.isNotEmpty() == true || liveOrder) &&
                                 (it != MatchTab.DRAW || m.sport == tv.own.owntv.core.sports.model.Sport.TENNIS) &&
                                 (it != MatchTab.WEEKEND || (state.summary?.weekend?.size ?: 0) > 1) &&
@@ -778,6 +794,10 @@ private fun DrawMatchLine(dm: Match) {
             .padding(vertical = 6.mpx, horizontal = 10.mpx),
         verticalArrangement = Arrangement.spacedBy(2.mpx),
     ) {
+        // glcn: a Davis Cup rubber says which one it is (Singles 1, Doubles…).
+        if (dm.leagueSlug == tv.own.owntv.core.sports.BasketDataSource.DAVIS) dm.subtitle?.let { label ->
+            Text(label, style = stageText(14, 700), color = StageColors.Dim, maxLines = 1)
+        }
         dm.competitors.take(2).forEach { c ->
             val won = c.winner == true
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.mpx)) {
@@ -796,7 +816,8 @@ private fun DrawMatchLine(dm: Match) {
             }
         }
         if (dm.state != tv.own.owntv.core.sports.model.MatchState.POST) {
-            Text(dm.statusText, style = stageText(14, 600), color = if (dm.isLive) tv.own.owntv.ui.theme.stageLive else StageColors.Dim, maxLines = 1)
+            val status = if (dm.isLive && dm.leagueSlug == tv.own.owntv.core.sports.BasketDataSource.DAVIS) stringResource(R.string.glcn_davis_now) else dm.statusText
+            Text(status, style = stageText(14, 600), color = if (dm.isLive) tv.own.owntv.ui.theme.stageLive else StageColors.Dim, maxLines = 1)
         }
     }
 }
