@@ -87,3 +87,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔎 **Playback report:** notes why the app left the screen while playing (Home pressed, another app on top, or the screen closed) — to find what sends a 4K episode out of the app.
 - 🩹 **Live TV no longer closes while a list updates** — the channel number shown while scrolling read a row the update had just removed, and the app went down (seen on a Fire TV with a very large list).
 - 🔎 **Playback report: what the app was busy with when memory ran short** — each memory warning now names the work running at that moment, to find what loads so much on very large lists.
+- 🩹 **Amlogic boxes: no more frozen picture after changing channel** — on boxes like the KM9PRO, ExoPlayer kept the video decoder from the previous channel and the picture stopped after a few frames while the sound went on. Each channel now gets its own decoder there.
