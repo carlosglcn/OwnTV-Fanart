@@ -29,7 +29,7 @@ enum class TennisSurface(val label: Int, val tone: Color, private val names: Str
 }
 
 private const val TENNIS_SPLIT = "|"
-private const val TENNIS_INDOOR = "atp finals|wta finals|paris masters|rolex paris|vienna|erste bank|basel|swiss indoors|stockholm|antwerp|metz|rotterdam|marseille|montpellier|dallas|sofia|astana|almaty|next gen|davis cup finals|billie jean king cup finals|linz|ostrava|st. petersburg|belgrade|brussels|athens"
+private const val TENNIS_INDOOR = "atp finals|wta finals|paris masters|rolex paris|vienna|erste bank|basel|swiss indoors|stockholm|antwerp|metz|rotterdam|marseille|montpellier|dallas|sofia|astana|almaty|next gen|davis cup|billie jean king cup finals|linz|ostrava|st. petersburg|belgrade|brussels|athens"
 private const val TENNIS_GRASS = "wimbledon|queen|halle|eastbourne|mallorca|hertogenbosch|libema|newport|nottingham|birmingham|bad homburg|berlin|stuttgart|boss open"
 private const val TENNIS_CLAY = "roland garros|french open|monte-carlo|monte carlo|madrid|rome|internazionali|italian open|barcelona|godo|hamburg|munich|bmw open|estoril|geneva|lyon|bastad|gstaad|umag|kitzbuhel|buenos aires|rio open|santiago|cordoba|marrakech|bucharest|houston|charleston|bogota|rabat|strasbourg|palermo|prague|budapest|lausanne|iasi|parma"
 private const val TENNIS_HARD = "australian open|us open|indian wells|bnp paribas|miami|canada|canadian|national bank|montreal|toronto|cincinnati|western & southern|shanghai|beijing|china open|tokyo|japan open|dubai|doha|qatar|acapulco|washington|citi open|winston|brisbane|adelaide|auckland|hong kong|delray|los cabos|atlanta|chengdu|zhuhai|hangzhou|wuhan|guadalajara|monterrey|san diego|cleveland|united cup|abu dhabi|singapore|seoul|osaka|ningbo|guangzhou|hobart|merida|austin|san jose|olympic"
