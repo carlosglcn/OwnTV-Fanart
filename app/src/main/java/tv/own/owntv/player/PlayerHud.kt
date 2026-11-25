@@ -888,8 +888,8 @@ fun PlayerHud(
         if (controlsVisible && cinemaMode && error == null && cinema != null) {
             // glcn: films and episodes — the cinema banner, or the side panel with the picture slid left.
             val tech = rememberCinemaTech(player)
-            val heavy = (tech.height ?: 0) >= UHD_HEIGHT || (tech.hdr != null && tech.hdr != tv.own.owntv.player.StreamHdrMode.SDR) || tech.dolbyVision
-            androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.CinemaStage.keepFullPicture = heavy }
+            // glcn: 4K / HDR pictures slide left with the panel again — the crash was the libass layer, not the resize.
+            androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.CinemaStage.keepFullPicture = false }
             val openTab = cinemaTab
             if (openTab == null) {
                 CinemaBanner(

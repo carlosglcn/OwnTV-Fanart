@@ -329,6 +329,11 @@ private fun SeriesGrid(
     val perCategoryGrid = remember { mutableStateMapOf<LiveKey, androidx.compose.foundation.lazy.grid.LazyGridState>() }
     val perCategoryList = remember { mutableStateMapOf<LiveKey, androidx.compose.foundation.lazy.LazyListState>() }
     val perCategorySeriesIds = remember { mutableStateMapOf<LiveKey, Long>() }
+    // glcn: the last title focused in the posters themselves, per category — Keep watching above them also makes its
+    // show the selected one, and the posters used to follow it (jumping to that show) instead of staying put.
+    val gridTitleIds = remember { mutableStateMapOf<LiveKey, Long>() }
+    // glcn: the Keep watching card a show was opened from; Back from its page returns there, not to the posters.
+    var stripOpenAt by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(-1) }
     // NOTE: plain constructors, not remember*State() — these are created lazily inside getOrPut, so a
     // @Composable/rememberSaveable call here would register slots conditionally and corrupt the slot table.
     val glideScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -426,6 +431,22 @@ private fun SeriesGrid(
     LaunchedEffect(restoreShowId, series.itemCount) {
         val showId = restoreShowId ?: return@LaunchedEffect
         if (series.itemCount == 0) return@LaunchedEffect
+        // glcn: opened from Keep watching: back to that card; the posters below keep the place they had.
+        if (stripOpenAt >= 0 && showStrip) {
+            // By the show: the one just watched may have moved to the front of the strip.
+            stripFocus.index = stripShows.indexOfFirst { it.series.id == showId }.takeIf { it >= 0 } ?: stripOpenAt.coerceAtMost(stripShows.lastIndex)
+            stripOpenAt = -1
+            if (shelves.isNotEmpty()) runCatching { effectiveGridState.scrollToItem(0) }
+            withFrameNanos { }
+            stripFocus.hold()
+            for (attempt in 0 until STRIP_FOCUS_TRIES) {
+                if (stripFocus.focus() || stripHasFocus) break
+                withFrameNanos { }
+            }
+            onRestoredSelected()
+            return@LaunchedEffect
+        }
+        stripOpenAt = -1
         // glcn: opened from a shelf: back to that shelf.
         if (shelfAt in shelves.indices) {
             scrollToIndex(0)
@@ -568,7 +589,7 @@ private fun SeriesGrid(
         // glcn: Runway — only the posters around the centre exist, so the remembered title (coming back from its page
         // or the player) may not be there yet: centre the row on it first, then focus it a frame or two later.
         if (runway && series.itemCount > 0) {
-            val tid = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: selectedSeries?.id else selectedSeries?.id
+            val tid = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedSeries?.id else gridTitleIds[selectedKey] ?: selectedSeries?.id
             val idx = tid?.let { id -> series.itemSnapshotList.items.indexOfFirst { it.id == id } } ?: -1
             if (idx >= 0 && idx != runwayAt) {
                 runwayAt = idx
@@ -580,7 +601,7 @@ private fun SeriesGrid(
     }
     // From the categories to the shows: the remembered one, else the first; a locked one's Enter PIN button; else the search field.
     fun focusTitles() {
-        val targetId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: selectedSeries?.id else selectedSeries?.id
+        val targetId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedSeries?.id else gridTitleIds[selectedKey] ?: selectedSeries?.id
         scope.launch {
             if (series.itemCount > 0) {
                 val targetIdx = targetId?.let { id -> series.itemSnapshotList.items.indexOfFirst { it.id == id }.takeIf { it >= 0 } } ?: 0
@@ -685,7 +706,7 @@ private fun SeriesGrid(
             }
         }
     }
-    val targetSeriesId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: selectedSeries?.id else selectedSeries?.id
+    val targetSeriesId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedSeries?.id else gridTitleIds[selectedKey] ?: selectedSeries?.id
     // glcn: Runway — the row centres on the remembered title once the list is there, so restoring focus to it
     // finds it composed (only the posters around the centre exist).
     androidx.compose.runtime.LaunchedEffect(runway, selectedKey, series.itemCount > 0) {
@@ -697,6 +718,8 @@ private fun SeriesGrid(
     val openMenu: (tv.own.owntv.core.database.entity.SeriesEntity, Int) -> Unit = { show, index -> if (index >= 0) stripMenu = null; contextSeries = show; contextSeriesId = show.id; contextSeriesIndex = index }
     val onShowFocus: (tv.own.owntv.core.database.entity.SeriesEntity) -> Unit = { show ->
         vm.onSeriesFocused(show)
+        gridTitleIds[selectedKey] = show.id
+        stripOpenAt = -1
         if (rememberSeries) perCategorySeriesIds[selectedKey] = show.id
     }
     val stripCards = stripShows.map { st ->
@@ -738,7 +761,7 @@ private fun SeriesGrid(
                 if (shelves.isNotEmpty()) scope.launch { runCatching { if (tv.own.owntv.glcn.SmoothScroll.still) effectiveGridState.scrollToItem(0) else effectiveGridState.animateScrollToItem(0) } }
             },
             // OK opens the show's page, where Play goes on with the episode it stands at.
-            onClick = { i -> stripShows.getOrNull(i)?.let { vm.openSeries(it.series) } },
+            onClick = { i -> stripShows.getOrNull(i)?.let { stripOpenAt = i; vm.openSeries(it.series) } },
             onLongClick = { i -> stripShows.getOrNull(i)?.let { stripMenu = it; openMenu(it.series, -1) } },
             modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus },
             focus = stripFocus,

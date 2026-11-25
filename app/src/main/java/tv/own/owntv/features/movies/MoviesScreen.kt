@@ -266,6 +266,11 @@ fun MoviesScreen(
     val perCategoryGrid = remember { mutableStateMapOf<LiveKey, LazyGridState>() }
     val perCategoryList = remember { mutableStateMapOf<LiveKey, LazyListState>() }
     val perCategoryMovieIds = remember { mutableStateMapOf<LiveKey, Long>() }
+    // glcn: the last title focused in the posters themselves, per category — Keep watching above them also makes its
+    // film the selected one, and the posters used to follow it (jumping to that film) instead of staying put.
+    val gridTitleIds = remember { mutableStateMapOf<LiveKey, Long>() }
+    // glcn: the Keep watching film played from the strip; coming back from the player returns to that card.
+    var stripOpenId by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<Long?>(null) }
     // NOTE: plain constructors, not remember*State() — these are created lazily inside getOrPut, so a
     // @Composable/rememberSaveable call here would register slots conditionally and corrupt the slot table.
     val glideScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -360,6 +365,21 @@ fun MoviesScreen(
     // Returning from the player: scroll to and focus the movie you just played (waits for the grid to load).
     LaunchedEffect(restoreFocus, movies.itemCount) {
         if (!restoreFocus || movies.itemCount == 0) return@LaunchedEffect
+        // glcn: played from Keep watching: back to that card; the posters below keep the place they had.
+        val fromStrip = stripOpenId
+        stripOpenId = null
+        if (fromStrip != null && showStrip) {
+            stripFocus.index = stripMovies.indexOfFirst { it.id == fromStrip }.coerceAtLeast(0)
+            if (shelves.isNotEmpty()) scrollToIndex(0)
+            withFrameNanos { }
+            stripFocus.hold()
+            for (attempt in 0 until STRIP_FOCUS_TRIES) {
+                if (stripFocus.focus() || stripHasFocus) break
+                withFrameNanos { }
+            }
+            onRestored()
+            return@LaunchedEffect
+        }
         val sel = selectedMovie
         val idx = if (sel != null) movies.itemSnapshotList.items.indexOfFirst { it.id == sel.id } else -1
         if (shelfAt in shelves.indices) {
@@ -494,7 +514,7 @@ fun MoviesScreen(
         // glcn: Runway — only the posters around the centre exist, so the remembered title (coming back from its page
         // or the player) may not be there yet: centre the row on it first, then focus it a frame or two later.
         if (runway && movies.itemCount > 0) {
-            val tid = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: selectedMovie?.id else selectedMovie?.id
+            val tid = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedMovie?.id else gridTitleIds[selectedKey] ?: selectedMovie?.id
             val idx = tid?.let { id -> movies.itemSnapshotList.items.indexOfFirst { it.id == id } } ?: -1
             if (idx >= 0 && idx != runwayAt) {
                 runwayAt = idx
@@ -506,7 +526,7 @@ fun MoviesScreen(
     }
     // From the categories to the titles: the remembered movie, else the first; a locked one's Enter PIN button; else the search field.
     fun focusTitles() {
-        val targetId = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: selectedMovie?.id else selectedMovie?.id
+        val targetId = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedMovie?.id else gridTitleIds[selectedKey] ?: selectedMovie?.id
         scope.launch {
             if (movies.itemCount > 0) {
                 val targetIdx = targetId?.let { id -> movies.itemSnapshotList.items.indexOfFirst { it.id == id }.takeIf { it >= 0 } } ?: 0
@@ -611,7 +631,7 @@ fun MoviesScreen(
             }
         }
     }
-    val targetMovieId = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: selectedMovie?.id else selectedMovie?.id
+    val targetMovieId = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedMovie?.id else gridTitleIds[selectedKey] ?: selectedMovie?.id
     // glcn: Runway — the row centres on the remembered title once the list is there, so restoring focus to it
     // finds it composed (only the posters around the centre exist).
     androidx.compose.runtime.LaunchedEffect(runway, selectedKey, movies.itemCount > 0) {
@@ -623,6 +643,8 @@ fun MoviesScreen(
     val openMenu: (MovieEntity, Int) -> Unit = { movie, index -> if (index >= 0) stripMenuId = null; contextMovie = movie; contextMovieId = movie.id; contextMovieIndex = index }
     val onMovieFocus: (MovieEntity) -> Unit = { movie ->
         vm.onMovieFocused(movie)
+        gridTitleIds[selectedKey] = movie.id
+        stripOpenId = null
         if (rememberMovies) perCategoryMovieIds[selectedKey] = movie.id
     }
     val stripCards = stripMovies.map { m ->
@@ -666,7 +688,7 @@ fun MoviesScreen(
                 if (shelves.isNotEmpty()) scope.launch { runCatching { if (tv.own.owntv.glcn.SmoothScroll.still) effectiveGridState.scrollToItem(0) else effectiveGridState.animateScrollToItem(0) } }
             },
             // OK plays it on from where it stopped; hold OK opens its menu (seen, out of Keep watching…).
-            onClick = { i -> stripMovies.getOrNull(i)?.let { playMovieNow(it) } },
+            onClick = { i -> stripMovies.getOrNull(i)?.let { stripOpenId = it.id; playMovieNow(it) } },
             onLongClick = { i -> stripMovies.getOrNull(i)?.let { stripMenuId = it.id; openMenu(it, -1) } },
             modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus },
             focus = stripFocus,
