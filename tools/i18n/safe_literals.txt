@@ -42,16 +42,33 @@
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	profile-id-loaded
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	profiles-loaded
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	screen left by the person (Home or another app) while playing
-2	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	\0
+3	empty	app/src/main/java/tv/own/owntv/OwnTVApp.kt	\0
 1	log	app/src/main/java/tv/own/owntv/OwnTVApp.kt	,
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	.
 1	log	app/src/main/java/tv/own/owntv/OwnTVApp.kt	4K / HDR film starting: trailer and most pictures in memory let go
+2	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	:
 3	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	DEPRECATION
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	android.
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	androidx.
 1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	beta-tv
 1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	carlosglcn/OwnTV-Fanart-Beta
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	com.android.
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	dalvik.
 1	file-path	app/src/main/java/tv/own/owntv/OwnTVApp.kt	image_cache
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	io.ktor.
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	java.
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	javax.
 1	performance	app/src/main/java/tv/own/owntv/OwnTVApp.kt	koin-started
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	kotlin.
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	kotlinx.
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	libcore.
 1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	memory warning (level $level) ·
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	okhttp3.
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	okio.
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	org.apache.
 1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	prefs-loaded
+1	technical	app/src/main/java/tv/own/owntv/OwnTVApp.kt	sun.
+1	log	app/src/main/java/tv/own/owntv/OwnTVApp.kt	|
 1	log	app/src/main/java/tv/own/owntv/OwnTVApp.kt	· syncing $s
 3	empty	app/src/main/java/tv/own/owntv/core/i18n/LocalizedContent.kt	\0
 1	empty	app/src/main/java/tv/own/owntv/features/autostart/AutoStart.kt	\0

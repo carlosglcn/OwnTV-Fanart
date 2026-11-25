@@ -86,3 +86,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎞️ **4K / HDR films and episodes:** before one starts, the trailer and most pictures in memory are let go, so the film has room from its first second.
 - 🔎 **Playback report:** notes why the app left the screen while playing (Home pressed, another app on top, or the screen closed) — to find what sends a 4K episode out of the app.
 - 🩹 **Live TV no longer closes while a list updates** — the channel number shown while scrolling read a row the update had just removed, and the app went down (seen on a Fire TV with a very large list).
+- 🔎 **Playback report: what the app was busy with when memory ran short** — each memory warning now names the work running at that moment, to find what loads so much on very large lists.

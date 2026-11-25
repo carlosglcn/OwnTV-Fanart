@@ -340,9 +340,12 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
                 GlobalContext.getOrNull()?.getOrNull<tv.own.owntv.core.sync.SyncActivityTracker>()?.active?.value?.values
                     ?.joinToString(", ") { a -> a.sourceName }
             }.getOrNull()?.takeIf { it.isNotBlank() }
+            // glcn: what the app was busy with at that moment — big transient loads (Java swinging 35↔350 MB every few
+            // seconds on a 40k-channel list) left no other trace. Obfuscated; read back with the build's R8 mapping.
+            val busy = busyFrames()
             Thread {
                 tv.own.owntv.player.MemoryBreakdown.read()?.let {
-                    tv.own.owntv.player.LiveDiagnosticsLog.event("memory warning (level $level) · " + it.line() + (syncing?.let { s -> " · syncing $s" } ?: ""))
+                    tv.own.owntv.player.LiveDiagnosticsLog.event("memory warning (level $level) · " + it.line() + (syncing?.let { s -> " · syncing $s" } ?: "") + (busy?.let { b -> " · busy $b" } ?: ""))
                 }
             }.start()
         }
@@ -352,6 +355,22 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         runCatching { GlobalContext.getOrNull()?.getOrNull<tv.own.owntv.player.PlaybackEngines>()?.onTrimMemory(level) }
     }
 }
+
+/** glcn: up to three running threads and the first app frame each is in — framework, Kotlin and library frames skipped. */
+internal fun busyFrames(): String? = runCatching {
+    val self = Thread.currentThread()
+    Thread.getAllStackTraces().asSequence()
+        .filter { (t, _) -> t !== self && t.state == Thread.State.RUNNABLE }
+        .mapNotNull { (t, frames) ->
+            frames.firstOrNull { f -> FRAMEWORK_PREFIXES.none { f.className.startsWith(it) } }
+                ?.let { f -> t.name.take(24) + ":" + f.className + "." + f.methodName + ":" + f.lineNumber }
+        }
+        .take(3)
+        .joinToString(" | ")
+        .takeIf { it.isNotEmpty() }
+}.getOrNull()
+
+private val FRAMEWORK_PREFIXES = listOf("java.", "javax.", "kotlin.", "kotlinx.", "android.", "androidx.", "dalvik.", "libcore.", "sun.", "com.android.", "org.apache.", "okio.", "okhttp3.", "io.ktor.")
 
 /** 15% of the heap, capped at 64 MB; low-RAM devices keep 10%. */
 internal fun imageMemoryCacheBytes(heapBytes: Long, lowRam: Boolean): Long {
