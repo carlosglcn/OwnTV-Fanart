@@ -1154,7 +1154,7 @@ fun LiveScreen(
                             resting = { if (channelPaneFocused) 0.45f else 0f },
                             held = { barHeld && channelPaneFocused },
                             // glcn: the bubble names the focused channel by its number (or its place in the list).
-                            label = { (wheel.row ?: stepTarget ?: focusedRow).let { i -> channels.peek(i)?.number?.toString() ?: (i + 1).toString() } },
+                            label = { (wheel.row ?: stepTarget ?: focusedRow).let { i -> channels.takeIf { i in 0 until it.itemCount }?.peek(i)?.number?.toString() ?: (i + 1).toString() } }, // glcn: a sync can shrink the list under a remembered row — reading past its end closed the app
                         ),
                         // glcn: room at the foot so the last row never sits on the edge of the TV (overscan).
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(start = glowRoom, end = glowRoom, bottom = 48.mpx),
