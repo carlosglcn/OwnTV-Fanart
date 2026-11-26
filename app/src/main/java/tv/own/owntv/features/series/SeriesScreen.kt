@@ -105,6 +105,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -364,6 +365,7 @@ private fun SeriesGrid(
     remember { tv.own.owntv.glcn.StripDismissed.ensure(context) }
     val showStrip = tv.own.owntv.glcn.StripPref.on && stripShows.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
     val showStripNow by androidx.compose.runtime.rememberUpdatedState(showStrip)
+    val stripShowsNow by androidx.compose.runtime.rememberUpdatedState(stripShows)
     // glcn: the shelves (see VodShelves) — rows of the grid, after Keep watching and before the posters.
     val shelfData by (if (shelvesOn) vm.shelves else remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList<tv.own.owntv.glcn.Shelf<tv.own.owntv.core.database.entity.SeriesEntity>>()) })
         .collectAsStateWithLifecycle()
@@ -436,10 +438,14 @@ private fun SeriesGrid(
     LaunchedEffect(restoreShowId, series.itemCount) {
         val showId = restoreShowId ?: return@LaunchedEffect
         if (series.itemCount == 0) return@LaunchedEffect
-        // glcn: opened from Keep watching: back to that card; the posters below keep the place they had.
-        if (stripOpenAt >= 0 && showStrip) {
+        // glcn: opened from Keep watching: back to that card; the posters below keep the place they had. The strip
+        // is read again when the titles come back, a moment after them — wait for it rather than fall to the posters.
+        if (stripOpenAt >= 0 && !showStripNow) {
+            kotlinx.coroutines.withTimeoutOrNull(STRIP_WAIT_MS) { androidx.compose.runtime.snapshotFlow { showStripNow }.first { it } }
+        }
+        if (stripOpenAt >= 0 && showStripNow) {
             // By the show: the one just watched may have moved to the front of the strip.
-            stripFocus.index = stripShows.indexOfFirst { it.series.id == showId }.takeIf { it >= 0 } ?: stripOpenAt.coerceAtMost(stripShows.lastIndex)
+            stripFocus.index = stripShowsNow.indexOfFirst { it.series.id == showId }.takeIf { it >= 0 } ?: stripOpenAt.coerceIn(0, stripShowsNow.lastIndex.coerceAtLeast(0))
             stripOpenAt = -1
             if (shelves.isNotEmpty()) runCatching { effectiveGridState.scrollToItem(0) }
             withFrameNanos { }
@@ -2465,3 +2471,6 @@ internal class GridMemory {
     var stripOpenAt by androidx.compose.runtime.mutableIntStateOf(-1)
     var stripId by mutableStateOf<Long?>(null)
 }
+
+/** glcn: how long Back from a show's page waits for Keep watching to be there again before giving up on it. */
+private const val STRIP_WAIT_MS = 1_500L
