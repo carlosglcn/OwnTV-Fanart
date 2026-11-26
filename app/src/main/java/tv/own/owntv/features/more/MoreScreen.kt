@@ -186,11 +186,12 @@ fun MoreScreen(
                 .focusGroup(),
         ) {
             ProfileRow(profileName, playlistLabel, playlists, avatarId, avatarPath, onSwitchProfile, onPickAvatar)
+            val labsContext = androidx.compose.ui.platform.LocalContext.current
             val item = @Composable { it: MoreItem, icon: OwnTVIcon, label: String, value: String?, warn: Boolean ->
                 StageGroupItem(
                     text = label, icon = icon, value = value, warn = warn,
                     selected = selected == it,
-                    onClick = { choose(it) },
+                    onClick = { if (it == MoreItem.ABOUT) tv.own.owntv.glcn.Labs.tap(labsContext); choose(it) },
                     modifier = Modifier.padding(vertical = ITEM_GAP.mpx).focusRequester(itemFocus.getValue(it)),
                 )
             }
