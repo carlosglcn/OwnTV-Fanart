@@ -544,7 +544,9 @@ internal fun MatchCard(
                 // glcn: about to start (the next three hours): how long is left, in the accent, before the hour.
                 val left = (m.startMs - now) / 60_000L
                 val soon = m.state == MatchState.PRE && !m.off && left in 1..COUNTDOWN_MINUTES
-                if (m.isLive) LiveMark(stringResource(R.string.player_live) + stringResource(R.string.content_epg_bits_separator) + clockText(m), 17f)
+                // glcn: a Davis Cup tie says which rubber is on court (Singles 1, Doubles…) where a match has its minute.
+                val davisNow = davisOnCourt(m)
+                if (m.isLive) LiveMark(stringResource(R.string.player_live) + stringResource(R.string.content_epg_bits_separator) + (davisNow?.subtitle ?: clockText(m)), 17f)
                 else if (soon) {
                     val inText = if (left < 60) stringResource(R.string.glcn_sports_in_minutes, left.toInt()) else stringResource(R.string.glcn_sports_in_hours, (left / 60).toInt(), (left % 60).toInt())
                     Text(inText + stringResource(R.string.content_epg_bits_separator) + right, style = stageText(17, 800), maxLines = 1, overflow = TextOverflow.Ellipsis, color = tv.own.owntv.ui.theme.stageAccent.ink)
@@ -555,6 +557,11 @@ internal fun MatchCard(
             // The big "2 – 1" only for one score a side; sets and innings read as the two sides' lines.
             if (featured && m.sport !in LINE_SCORE_SPORTS) FeaturedScore(m, spoiler, homeBar, awayBar) else Sides(m, spoiler, homeBar, awayBar, config)
             Spacer(Modifier.weight(1f))
+            // glcn: Davis Cup — the players on court and their sets, above the footer.
+            davisOnCourt(m)?.takeIf { !spoiler }?.let { now ->
+                Text(davisLine(now), style = stageText(15, 600), color = StageColors.Body, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(bottom = 8.mpx))
+            }
             val followed = m.competitors.any { c -> config.teams.any { it.sport == m.sport && it.id == c.team.id } }
             CardFooter(venueText(m), reminded, followed, channel, surface)
         }
@@ -730,6 +737,23 @@ internal fun sideColors(m: Match): Pair<Color?, Color?> {
     }
     return home to away
 }
+
+/** glcn: the rubber on court in a Davis Cup tie under way, if the file has it. */
+internal fun davisOnCourt(m: Match): Match? =
+    if (m.leagueSlug == tv.own.owntv.core.sports.BasketDataSource.DAVIS && m.isLive) tv.own.owntv.core.sports.BasketDataSource.rubbers(m).firstOrNull { it.isLive } else null
+
+/** glcn: "Schwärzler – Mérida · 6-3 2-1": the two sides' surnames, and the sets so far when there are any. */
+internal fun davisLine(r: Match): String {
+    val a = r.competitors.getOrNull(0); val b = r.competitors.getOrNull(1)
+    val names = listOfNotNull(a?.team?.shortName, b?.team?.shortName).joinToString(DAVIS_VS)
+    val sets = (a?.score?.periods.orEmpty()).zip(b?.score?.periods.orEmpty()).joinToString(DAVIS_SET_GAP) { (x, y) -> "${x.value}$DAVIS_GAMES${y.value}" }
+    return if (sets.isEmpty()) names else names + DAVIS_SETS + sets
+}
+
+private const val DAVIS_VS = " – "
+private const val DAVIS_SETS = " · "
+private const val DAVIS_SET_GAP = " "
+private const val DAVIS_GAMES = "-"
 
 /** glcn: where [m] is played — its feed's own word, else the tournament's ground or the home side's arena (Venues). */
 @Composable
