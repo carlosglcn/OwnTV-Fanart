@@ -701,6 +701,8 @@ fun StageTopBar(
     freeRight: Float? = null,
     /** glcn: focus has settled in the content — the bar folds to the open section until it is reached again. */
     folded: Boolean = false,
+    /** glcn: the bar does not fit at its size — drawn a step smaller, names kept, before it has to fold to icons. */
+    tight: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
     var hasFocus by remember { mutableStateOf(false) }
@@ -712,7 +714,7 @@ fun StageTopBar(
     var barW by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     val compact = size == NavSize.COMPACT
     // 1.0 at Normal; Wide and Extra wide grow the bar and its type.
-    val k = when (size) { NavSize.WIDE -> 1.14f; NavSize.EXTRA_WIDE -> 1.28f; else -> 1f }
+    val k = (when (size) { NavSize.WIDE -> 1.14f; NavSize.EXTRA_WIDE -> 1.28f; else -> 1f }) * (if (tight) TOP_BAR_TIGHT else 1f)
     fun sc(v: Int) = (v * k).toInt()
     // Floating: slides up and fades once idle, but stays where focus can reach it with ▲.
     val shown by androidx.compose.animation.core.animateFloatAsState(
@@ -1013,6 +1015,8 @@ private fun TopEntry(
 
 /** glcn: how briskly a top-bar entry's width follows its name coming and going. */
 private const val TOP_ENTRY_WIDTH_STIFFNESS = 520f
+/** glcn: the bar a step smaller, when it does not fit beside the chips at the right. */
+private const val TOP_BAR_TIGHT = 0.84f
 private const val REST_OPEN_MS = 420L
 
 /**

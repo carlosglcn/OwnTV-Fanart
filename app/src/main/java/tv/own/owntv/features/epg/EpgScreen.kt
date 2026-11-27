@@ -635,7 +635,8 @@ fun EpgScreen(
                         val rating = tv.own.owntv.ui.components.rememberTmdbRating(shown.title, shown.categories)
                         listOfNotNull(programmeDetailsLine(shown)?.takeIf { it.isNotBlank() }, rating).joinToString("  ·  ").ifBlank { null }
                     },
-                    synopsis = shown?.description,
+                    // glcn: without the "(Genre, Genre)" the guide opens its text with — the line above already says it.
+                    synopsis = shown?.description?.let { tv.own.owntv.glcn.SynopsisText.withoutGenres(it, shown?.categories) },
                     modifier = Modifier.padding(start = 46.mpx, top = 76.mpx).widthIn(max = 1080.mpx),
                     sourceId = shown?.sourceId ?: 0L,
                 )

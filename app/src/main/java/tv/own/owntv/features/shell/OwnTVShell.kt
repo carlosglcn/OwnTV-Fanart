@@ -295,6 +295,9 @@ fun OwnTVShell(
     // glcn: …and when the bar's shape changes — a wide shape that did not fit left the next one folded to icons too,
     // names gone for good ("Normal" size, yet only icons), until the app was opened again.
     var topCompactForced by remember(topSize, visibleSections, tv.own.owntv.glcn.Accessible.on, androidx.compose.ui.platform.LocalDensity.current.fontScale, tv.own.owntv.glcn.TopBarPref.shape) { mutableStateOf(false) }
+    // glcn: before folding to icons the bar tries itself a size smaller, names and all — folded, only the open section
+    // is named and the bar changes width at every step along it.
+    var topTight by remember(topSize, visibleSections, tv.own.owntv.glcn.Accessible.on, androidx.compose.ui.platform.LocalDensity.current.fontScale, tv.own.owntv.glcn.TopBarPref.shape) { mutableStateOf(false) }
     val topGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 16.mpx.toPx() }
     LaunchedEffect(topBarBounds, playlistPillBounds, navStyle, topCompactForced) {
         val bar = topBarBounds
@@ -302,7 +305,14 @@ fun OwnTVShell(
         if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.TOP && bar != null && pl != null &&
             !topCompactForced && topSize != tv.own.owntv.core.settings.SettingsRepository.NavSize.COMPACT &&
             bar.right > pl.left - topGapPx
-        ) topCompactForced = true
+        ) {
+            if (!topTight) topTight = true
+            else {
+                // Still over the chips once the smaller bar has settled (this starts again while its width moves).
+                kotlinx.coroutines.delay(TOP_TIGHT_SETTLE_MS)
+                topCompactForced = true
+            }
+        }
     }
     var miniHasFocus by remember { mutableStateOf(false) }
     val subtitleController = koinInject<tv.own.owntv.core.subtitles.SubtitleController>()
@@ -2097,6 +2107,7 @@ fun OwnTVShell(
                 onBarBounds = { topBarBounds = it },
                 freeRight = playlistPillBounds?.left?.minus(topGapPx),
                 size = if (topCompactForced) tv.own.owntv.core.settings.SettingsRepository.NavSize.COMPACT else topSize,
+                tight = topTight && !topCompactForced,
                 hidden = railIdleHidden,
                 folded = topFolded,
             ) else tv.own.owntv.features.shell.components.StageRail(
@@ -3231,6 +3242,7 @@ private fun Modifier.cinemaInset(p: Float): Modifier = if (p <= 0f) this else th
 }
 
 /** glcn: a section's way in — how long, and from how far below. */
+private const val TOP_TIGHT_SETTLE_MS = 500L
 private const val SECTION_IN_MS = 380
 private val SECTION_RISE = 22.mpx
 /** glcn: a long, gentle settle — quick to show, slow to come to rest. */
