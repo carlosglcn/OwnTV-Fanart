@@ -870,7 +870,7 @@ fun MoviesScreen(
                         VodSortTool(sortMode, selectedKey.hasFixedOrder, Modifier.focusRequester(sortFocus)) { sortOpen = true }
                         StageTool(text = stringResource(R.string.content_category_browser_title), icon = OwnTVIcon.LIST, onClick = { categoriesOpen = true })
                         Spacer(Modifier.weight(1f))
-                        StageKeyHints(listOf(playHint, optionsHint))
+                        StageKeyHints(listOf(playHint, optionsHint), overArt = true)
                     }
                     if (movies.itemCount == 0) {
                         tv.own.owntv.features.categorylock.CategoryEmptyState(emptyText, sealed, onEnterPin, firstItemFocus, Modifier.padding(start = fx(84), top = 60.mpx), onNavigateLeft = { openCategories() })
