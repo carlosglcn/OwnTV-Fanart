@@ -424,14 +424,18 @@ private fun LiveCinematicHero(
                     val cy = size.height * 0.5f
                     val rx = size.width * 0.92f
                     val ry = size.height * 1.05f
-                    scale(scaleX = rx / ry, scaleY = 1f, pivot = androidx.compose.ui.geometry.Offset(cx, cy)) {
-                        drawCircle(
-                            Brush.radialGradient(
-                                0f to wash.copy(alpha = 0.92f), 0.6f to wash.copy(alpha = 0.78f), 1f to wash.copy(alpha = 0f),
-                                center = androidx.compose.ui.geometry.Offset(cx, cy), radius = ry,
-                            ),
-                            radius = ry, center = androidx.compose.ui.geometry.Offset(cx, cy),
-                        )
+                    // glcn: never to the left of the words — there stands the preview box, and the wash lay over it as a
+                    // pale glow on its black.
+                    androidx.compose.ui.graphics.drawscope.clipRect(left = 0f, top = -size.height, right = size.width * 2f, bottom = size.height * 2f) {
+                        scale(scaleX = rx / ry, scaleY = 1f, pivot = androidx.compose.ui.geometry.Offset(cx, cy)) {
+                            drawCircle(
+                                Brush.radialGradient(
+                                    0f to wash.copy(alpha = 0.92f), 0.6f to wash.copy(alpha = 0.78f), 1f to wash.copy(alpha = 0f),
+                                    center = androidx.compose.ui.geometry.Offset(cx, cy), radius = ry,
+                                ),
+                                radius = ry, center = androidx.compose.ui.geometry.Offset(cx, cy),
+                            )
+                        }
                     }
                 },
         ) {

@@ -106,3 +106,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 **Live TV, Cinematic:** the "You may like" row starts at its first card after zapping (it could stay part-way along, a card stuck to the screen's edge).
 - 📺 **"You may like":** what is on air now always comes first; after it, only what starts within the hour (it looked four hours ahead, and a later programme could stand before one already on).
 - 📺 **Live TV:** "You may like" leaves out the channels already on show in the row of cards above it, and a synopsis no longer opens with the genres in brackets ("(Cine,Ciencia ficción) …") when the line above already says them.
+- 📺 **Live TV, Cinematic:** the pale glow over the black preview box is gone (the wash behind the words spilled onto it).
