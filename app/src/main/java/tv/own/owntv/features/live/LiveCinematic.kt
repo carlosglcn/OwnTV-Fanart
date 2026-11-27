@@ -39,6 +39,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -426,7 +427,7 @@ private fun LiveCinematicHero(
                     val ry = size.height * 1.05f
                     // glcn: never to the left of the words — there stands the preview box, and the wash lay over it as a
                     // pale glow on its black.
-                    androidx.compose.ui.graphics.drawscope.clipRect(left = 0f, top = -size.height, right = size.width * 2f, bottom = size.height * 2f) {
+                    clipRect(left = 0f, top = -size.height, right = size.width * 2f, bottom = size.height * 2f) {
                         scale(scaleX = rx / ry, scaleY = 1f, pivot = androidx.compose.ui.geometry.Offset(cx, cy)) {
                             drawCircle(
                                 Brush.radialGradient(
