@@ -160,6 +160,10 @@ internal fun LiveCinematicPane(
     val returnTo = remember { androidx.compose.ui.focus.FocusRequester() }
     // The strip may have been scrolled, so its first card may not exist yet: scroll back, wait a frame, then focus it.
     val similarState = androidx.compose.foundation.lazy.rememberLazyListState()
+    // glcn: a new set of suggestions starts at its first card. The row kept the place of the card it was showing
+    // (by its key), so after zapping it could stand part-way along, its first card stuck to the screen's edge.
+    var similarHasFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(similar.map { it.programme.id }) { if (!similarHasFocus) runCatching { similarState.scrollToItem(0) } }
     val enterScope = androidx.compose.runtime.rememberCoroutineScope()
     val enterSimilar: () -> Unit = {
         enterScope.launch {
@@ -290,7 +294,7 @@ internal fun LiveCinematicPane(
                         state = similarState,
                         horizontalArrangement = Arrangement.spacedBy(18.mpx),
                         contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 6.mpx, bottom = 24.mpx),
-                        modifier = Modifier.fillMaxWidth().focusGroup(),
+                        modifier = Modifier.fillMaxWidth().onFocusChanged { similarHasFocus = it.hasFocus }.focusGroup(),
                     ) {
                         items(count = similar.size, key = { similar[it].programme.id }) { i ->
                             val e = similar[i]

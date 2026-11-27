@@ -25,6 +25,7 @@ object UiSounds {
     private const val RATE = 44_100
     private const val EMBER = 7
     private const val EMBER_TICKS = 4
+    private const val PAD_PARTIALS = 5
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     /**
      * glcn: the sounds are started on their own quiet thread, never on the main one — stopping and restarting an
@@ -310,6 +311,33 @@ object UiSounds {
             }
         }
 
+        /**
+         * glcn: a held, swelling note, as a film score's strings or low brass — two voices a hair apart (the width of a
+         * section playing together), each a handful of soft harmonics, rising slowly over [attack] seconds and letting
+         * go over [release]. Nothing is struck: it is the sound of a cinema's logo, not of a bell.
+         */
+        fun pad(atSec: Double, freq: Double, durSec: Double, amp: Double, attack: Double, release: Double, bright: Double = 0.5) {
+            val start = (atSec * RATE).toInt()
+            val n = (durSec * RATE).toInt()
+            val voices = doubleArrayOf(0.9965, 1.0035)
+            val phases = Array(voices.size) { DoubleArray(PAD_PARTIALS) }
+            for (i in 0 until n) {
+                val idx = start + i
+                if (idx >= buf.size) break
+                val t = i.toDouble() / RATE
+                val up = (t / attack).coerceAtMost(1.0)
+                val down = ((durSec - t) / release).coerceIn(0.0, 1.0)
+                // Smooth both ends (no click) and open up a little as it swells, the way a section grows louder.
+                val env = up * up * (3 - 2 * up) * down * down * (3 - 2 * down)
+                var v = 0.0
+                for (vi in voices.indices) for (k in 0 until PAD_PARTIALS) {
+                    phases[vi][k] += 2 * PI * freq * voices[vi] * (k + 1) / RATE
+                    v += Math.pow(bright * (0.6 + 0.4 * up), k.toDouble()) / (k + 1) * sin(phases[vi][k])
+                }
+                buf[idx] += (amp * env * v * 0.5).toFloat()
+            }
+        }
+
         /** glcn: a small room around what is in the buffer — a few early, duller echoes, so it does not sound dry. */
         fun room(amount: Double = 1.0) {
             val dry = buf.copyOf()
@@ -411,11 +439,13 @@ object UiSounds {
         3 -> Mix(0.12).apply { drop(0.0, 600.0, 1500.0, 0.1, 0.32, decay = 26.0) }
         4 -> Mix(0.3).apply { bell(0.0, 523.0, 0.28, 0.26, decay = 16.0, partials = doubleArrayOf(1.0, 0.06), attack = 0.009); bell(0.07, 659.0, 0.22, 0.22, decay = 18.0, partials = doubleArrayOf(1.0, 0.05), attack = 0.009) }
         5 -> Mix(0.4).apply { bell(0.0, 659.0, 0.36, 0.3, decay = 11.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003); bell(0.07, 988.0, 0.32, 0.26, decay = 13.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003) }
-        // Ember: a warm fifth rising (G–D), opened by a little air.
-        7 -> Mix(0.5).apply {
-            struck(0.0, 392.0, 0.42, 0.3, decay = 10.0, seed = 5)
-            struck(0.07, 587.33, 0.4, 0.25, decay = 11.0, hard = 0.8, seed = 6)
-            room()
+        // Ember: a cinema's "confirm" — a soft, deep hit that falls away under a short warm swell and a breath of air.
+        7 -> Mix(0.42).apply {
+            drop(0.0, 150.0, 52.0, 0.36, 0.5, decay = 9.0)
+            pad(0.0, 146.83, 0.4, 0.2, attack = 0.03, release = 0.3, bright = 0.45)
+            pad(0.02, 220.0, 0.36, 0.11, attack = 0.05, release = 0.28, bright = 0.4)
+            air(0.0, 0.2, 0.035, cutoff = 1600.0)
+            room(0.7)
         }
         else -> Mix(0.09).apply { bell(0.0, 1250.0, 0.09, 0.3, decay = 45.0); bell(0.012, 1870.0, 0.07, 0.15, decay = 60.0) }
     }.pcm()
@@ -443,11 +473,19 @@ object UiSounds {
     }.pcm()
 
     /** Halloween: a low minor chord and a theremin that rises and wavers. */
-    /** glcn: Ember's own opening — four struck bars rising through a warm chord (G, B, D, G), the last left to ring. */
-    private fun emberChime() = Mix(1.9).apply {
-        listOf(196.0 to 0.0, 246.94 to 0.13, 293.66 to 0.26, 392.0 to 0.42).forEachIndexed { i, (f, at) ->
-            struck(at, f * 2, if (i == 3) 1.4 else 0.9, if (i == 3) 0.3 else 0.24, decay = if (i == 3) 3.2 else 5.5, hard = 0.8, seed = 21L + i, open = 0.5)
-        }
+    /** glcn: Ember's own opening, a film studio's logo in three seconds: a low swell, the chord opening over a deep hit, a glint. */
+    private fun emberChime() = Mix(3.6).apply {
+        // A low note and a breath of air swell out of silence…
+        air(0.0, 1.5, 0.04, cutoff = 900.0)
+        pad(0.0, 73.42, 3.5, 0.2, attack = 1.0, release = 1.5, bright = 0.5)
+        pad(0.2, 110.0, 3.3, 0.12, attack = 0.95, release = 1.5, bright = 0.45)
+        // …then the chord opens at once (D, A, F♯) over a deep, soft hit, and rings out with a glint on top.
+        drop(1.15, 150.0, 44.0, 1.0, 0.5, decay = 3.6)
+        pad(1.1, 146.83, 2.5, 0.15, attack = 0.22, release = 1.6, bright = 0.55)
+        pad(1.1, 220.0, 2.5, 0.11, attack = 0.25, release = 1.6, bright = 0.5)
+        pad(1.12, 369.99, 2.45, 0.08, attack = 0.3, release = 1.6, bright = 0.45)
+        bell(1.2, 587.33, 2.0, 0.06, decay = 2.0, partials = doubleArrayOf(1.0, 0.3), attack = 0.02)
+        bell(1.34, 880.0, 1.8, 0.035, decay = 2.4, partials = doubleArrayOf(1.0, 0.2), attack = 0.02)
         room()
     }.pcm()
 
