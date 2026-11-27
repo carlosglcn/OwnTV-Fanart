@@ -965,6 +965,8 @@ private fun TopEntry(
         val drawn = label == null || when {
             tabs -> compact && !active
             icons -> true
+            // glcn: the pills are names alone — the open one is the filled one; its icon coming on made it wider.
+            pills -> compact
             else -> active || compact
         }
         // The open section's line (and the tabs' focus): along the foot, in the accent's gradient.

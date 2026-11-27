@@ -126,3 +126,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎯 **No focus sweeping across the screen:** going from Home's "Watch now" up to the top bar (or any far jump between menus) showed the focus box flying over the picture; it now travels only between things that are close and otherwise simply comes on where it lands.
 - 🎬 **Home rows, the focus stays put:** moving along a row of Home, the focus box no longer travels from card to card — it keeps its place at the start of the row and the cards pass under it, as on Prime Video. At the end of a row, where it cannot scroll further, the box walks to the last cards.
 - 🔘 **Top bar "Icons" is icons only:** no name appears on the open or the focused entry, so the bar keeps one width as you move; the open section is the one filled with the accent.
+- 💊 **Top bar "Pills" are names only:** the open section is the filled pill; its icon no longer comes on (it made that pill wider and pushed the others at every step).
+- 🧭 **Top bar opens on the Capsule:** a new install's top bar is the Capsule again (the Island did not fit on a 1080p screen with every name). Who already chose a shape keeps it.

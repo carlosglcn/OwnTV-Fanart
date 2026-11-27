@@ -24,7 +24,11 @@ enum class TopBarShape(val label: Int) {
     val centred: Boolean get() = this == ISLAND || this == ICONS
 }
 
-/** glcn: the chosen [TopBarShape]. Who already had the app keeps the capsule; a new install opens on the island. */
+/**
+ * glcn: the chosen [TopBarShape]. The capsule unless another is picked — it brings its own glass, so its names read
+ * over any picture, and it fits beside the chips on the right (the island, once the default of a new install, did not
+ * fit on a 1080p screen with every name).
+ */
 object TopBarPref {
     var shape by mutableStateOf(TopBarShape.CAPSULE)
         private set
@@ -34,7 +38,7 @@ object TopBarPref {
         app = context.applicationContext
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val stored = prefs.getString(KEY, null)?.let { name -> TopBarShape.entries.firstOrNull { it.name == name } }
-        shape = stored ?: (if (freshInstall(context)) TopBarShape.ISLAND else TopBarShape.CAPSULE).also {
+        shape = stored ?: TopBarShape.CAPSULE.also {
             prefs.edit().putString(KEY, it.name).apply()
         }
     }
@@ -45,12 +49,6 @@ object TopBarPref {
     }
 
     fun next() = set(TopBarShape.entries[(shape.ordinal + 1) % TopBarShape.entries.size])
-
-    /** Never updated: installed and not yet replaced by a newer build. */
-    private fun freshInstall(context: Context): Boolean = runCatching {
-        val info = context.packageManager.getPackageInfo(context.packageName, 0)
-        info.firstInstallTime == info.lastUpdateTime
-    }.getOrDefault(false)
 
     private const val FILE = "glcn_top_bar"
     private const val KEY = "shape"
