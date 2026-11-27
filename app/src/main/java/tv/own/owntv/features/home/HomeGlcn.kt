@@ -1179,7 +1179,7 @@ internal fun HomeLazyRow(
     val startPx = with(density) { contentPadding.calculateStartPadding(layoutDir).toPx() }
     val endPx = with(density) { contentPadding.calculateEndPadding(layoutDir).toPx() }
     val gapPx = with(density) { horizontalArrangement.spacing.toPx() }
-    val spec = androidx.compose.runtime.remember(startPx, endPx, gapPx) { tv.own.owntv.glcn.WholeCardScroll(startPx, endPx, gapPx) }
+    val spec = tv.own.owntv.glcn.LocalPinnedRows.current.let { fixed -> androidx.compose.runtime.remember(startPx, endPx, gapPx, fixed) { tv.own.owntv.glcn.WholeCardScroll(startPx, endPx, gapPx, fixed = fixed) } }
     // glcn: nothing is drawn left of the first card's place (bar its focus ring), so no sliver of the card before it.
     // Up to just short of the gap before the first card: room for its ring, none for the card before it.
     val clipLeft = startPx - (gapPx - with(density) { 2.mpx.toPx() }).coerceIn(0f, with(density) { 14.mpx.toPx() })

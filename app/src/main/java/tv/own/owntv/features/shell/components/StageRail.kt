@@ -955,9 +955,10 @@ private fun TopEntry(
             else -> if (focused) palette.fxText else if (active) palette.text else if (accentIcon) a.accent else StageColors.NavText
         }
         // Which parts show: the island and the pills name every section and give the open one its icon; the icons
-        // name only the open and the focused one; the tabs are names alone.
+        // are icons alone (a name coming and going at each step made the bar change width as you moved along it —
+        // the open section is the one filled with the accent); the tabs are names alone.
         val named = label != null && when {
-            icons -> active || focused
+            icons -> false
             compact -> active
             else -> true
         }

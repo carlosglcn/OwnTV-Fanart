@@ -11,11 +11,15 @@ import kotlin.math.floor
  * slot and the last-but-one (a card of room on each side, so the next one is always laid out for a held
  * key), and when it goes past either end the row glides by whole cards to put it back.
  */
-class WholeCardScroll(private val start: Float, private val end: Float, private val gap: Float) : BringIntoViewSpec {
+class WholeCardScroll(
+    private val start: Float, private val end: Float, private val gap: Float,
+    /** glcn: the focused card always comes to the first place — the focus stays there and the row passes under it. */
+    private val fixed: Boolean = false,
+) : BringIntoViewSpec {
     override val scrollAnimationSpec: AnimationSpec<Float> get() = SmoothScroll.animation
 
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
-        if (size <= 0f || size > containerSize) return offset - start
+        if (fixed || size <= 0f || size > containerSize) return offset - start
         val step = size + gap
         val slots = floor((containerSize - end - start - size) / step).toInt().coerceAtLeast(0)
         val room = slots >= 2

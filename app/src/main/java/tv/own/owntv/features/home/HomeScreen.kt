@@ -529,7 +529,7 @@ fun HomeScreen(
                 androidx.compose.animation.core.tween(if (CinemaTrailer.lightsDown) 1_600 else 350), label = "cinemaRowsLights",
             )
             // glcn: one focus box for the whole page — it glides from card to card, along a row and between rows.
-            tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxSize(), stiffness = HOME_GLIDE_STIFFNESS, damping = HOME_GLIDE_DAMPING) {
+            tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxSize(), stiffness = HOME_GLIDE_STIFFNESS, damping = HOME_GLIDE_DAMPING, pinned = true) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
