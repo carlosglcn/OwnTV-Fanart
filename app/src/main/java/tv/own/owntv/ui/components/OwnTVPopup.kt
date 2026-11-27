@@ -74,6 +74,16 @@ fun OwnTVPopup(
             parent = parent.parent
         }
         val dialogWindow = provider?.window
+        // glcn: a popup is a window of its own, and Android TV's system clicks were only silenced on the main one —
+        // so moving inside a popup clicked even with the app's sounds Off. Silenced here too (see MainActivity).
+        val popupView = androidx.compose.ui.platform.LocalView.current
+        androidx.compose.runtime.SideEffect {
+            fun walk(v: android.view.View) {
+                v.isSoundEffectsEnabled = false
+                if (v is android.view.ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
+            }
+            runCatching { walk(dialogWindow?.decorView ?: popupView.rootView) }
+        }
         // glcn: this window's frame timings too (a title's page is drawn here).
         DisposableEffect(dialogWindow) {
             dialogWindow?.let { tv.own.owntv.glcn.FrameWatch.attach(it, popup = true) }
