@@ -132,6 +132,9 @@ fun OwnTVTheme(
                 itemText = Color(st.text),
                 menuItemText = Color(st.text),
                 muted = Color(st.muted),
+                // glcn: in a light style the faintest text (times, hints, second lines) keeps close to the muted ink —
+                // the shared grey read too pale on a white page, the more so on a projector.
+                dim = if (useDark) base.dim else androidx.compose.ui.graphics.lerp(Color(st.muted), page, LIGHT_DIM_TOWARDS_PAGE),
                 navText = Color(st.muted),
                 body = Color(st.body),
             )
@@ -159,3 +162,6 @@ object OwnTVTheme {
         @ReadOnlyComposable
         get() = LocalOwnTVColors.current
 }
+
+/** glcn: how far a light style's faintest text sits from its muted ink towards the page. */
+private const val LIGHT_DIM_TOWARDS_PAGE = 0.12f

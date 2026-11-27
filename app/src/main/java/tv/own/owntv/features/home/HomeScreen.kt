@@ -2127,11 +2127,17 @@ private fun Modifier.rowFitFade(state: androidx.compose.foundation.lazy.LazyList
         val cutBelow = (item.offset + item.size - info.viewportEndOffset).coerceAtLeast(0)
         val cutAbove = (top - item.offset).coerceAtLeast(0f)
         val cut = (cutBelow + cutAbove) / item.size
-        val t = (cut / ROW_CUT_GONE).coerceIn(0f, 1f)
+        // glcn: a tall row (the billboard) keeps its picture while most of it is still on screen and only goes with its
+        // last part — faded like a short row it left the top half of the page empty while the next rows came up.
+        val tall = item.size > (info.viewportEndOffset - info.viewportStartOffset) * ROW_TALL
+        val t = if (tall) ((cut - ROW_TALL_FROM) / (ROW_TALL_GONE - ROW_TALL_FROM)).coerceIn(0f, 1f) else (cut / ROW_CUT_GONE).coerceIn(0f, 1f)
         alpha = 1f - (1f - ROW_CUT_MIN) * t * t * (3f - 2f * t)
     }
 
 private const val ROW_CUT_GONE = 0.35f
+private const val ROW_TALL = 0.45f
+private const val ROW_TALL_FROM = 0.55f
+private const val ROW_TALL_GONE = 0.9f
 private const val ROW_CUT_MIN = 0.12f
 
 /** glcn: the height of a row's heading over its cards, kept clear of the top bar when a row is brought down. */

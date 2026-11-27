@@ -167,10 +167,14 @@ fun Modifier.runwayPage(scroll: androidx.compose.foundation.ScrollState): Modifi
 /** glcn: the page follows the focus — up to the strip, down to the posters. */
 @Composable
 fun RunwayPageFollow(scroll: androidx.compose.foundation.ScrollState, onStrip: Boolean) {
+    // glcn: where the page stands when the section opens is simply where it is — it only slides once it has been laid
+    // out and the focus then moves between the strip and the posters (it used to open on the strip and slide away).
+    val settled = androidx.compose.runtime.remember { booleanArrayOf(false) }
     androidx.compose.runtime.LaunchedEffect(onStrip, scroll.maxValue) {
         val to = if (onStrip) 0 else scroll.maxValue
-        if (LowRam.on || tv.own.owntv.ui.stage.GlcnMotion.off) scroll.scrollTo(to)
+        if (!settled[0] || LowRam.on || tv.own.owntv.ui.stage.GlcnMotion.off) scroll.scrollTo(to)
         else scroll.animateScrollTo(to, androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = RUNWAY_PAGE_STIFFNESS))
+        if (scroll.maxValue > 0) settled[0] = true
     }
 }
 

@@ -366,6 +366,14 @@ private fun SeriesGrid(
     val showStrip = tv.own.owntv.glcn.StripPref.on && stripShows.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
     val showStripNow by androidx.compose.runtime.rememberUpdatedState(showStrip)
     val stripShowsNow by androidx.compose.runtime.rememberUpdatedState(stripShows)
+    // glcn: before anything has had the focus the header already shows a series — the one ▼ from the menu lands on
+    // (the first of Keep watching, else the first poster), not an empty top half.
+    LaunchedEffect(selectedSeries == null, series.itemCount > 0, showStrip) {
+        if (selectedSeries != null || series.itemCount == 0) return@LaunchedEffect
+        val first = stripShows.firstOrNull()?.takeIf { showStrip }?.series
+        if (first != null) memory.stripId = first.id
+        (first ?: series.peek(0))?.let { vm.onSeriesFocused(it) }
+    }
     // glcn: the shelves (see VodShelves) — rows of the grid, after Keep watching and before the posters.
     val shelfData by (if (shelvesOn) vm.shelves else remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList<tv.own.owntv.glcn.Shelf<tv.own.owntv.core.database.entity.SeriesEntity>>()) })
         .collectAsStateWithLifecycle()
@@ -775,7 +783,7 @@ private fun SeriesGrid(
             // OK opens the show's page, where Play goes on with the episode it stands at.
             onClick = { i -> stripShows.getOrNull(i)?.let { stripOpenAt = i; vm.openSeries(it.series) } },
             onLongClick = { i -> stripShows.getOrNull(i)?.let { stripMenu = it; openMenu(it.series, -1) } },
-            modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus },
+            modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus; if (it.hasFocus) memory.onPosters = false },
             focus = stripFocus,
         )
     }
@@ -920,7 +928,8 @@ private fun SeriesGrid(
                         val glide = remember(effectiveGridState) { tv.own.owntv.glcn.GlideScroller(effectiveGridState, glideScope) }
                         if (runway) {
                             Spacer(Modifier.height(10.mpx))
-                            tv.own.owntv.glcn.RunwayPageFollow(runwayScroll, showStrip && stripHasFocus)
+                            // glcn: Keep watching stays in view until the posters take the focus: it is where ▼ from the menu lands.
+                            tv.own.owntv.glcn.RunwayPageFollow(runwayScroll, showStrip && !memory.onPosters)
                             Column(Modifier.weight(1f).fillMaxWidth().runwayPage(runwayScroll)) {
                             if (showStrip) continueStrip(fx(84), fx(64))
                             tv.own.owntv.glcn.PosterRunway(
@@ -949,7 +958,7 @@ private fun SeriesGrid(
                                                 selectedId = targetSeriesId, selectedFocus = gridSelFocus,
                                                 firstItemFocus = firstItemFocus,
                                             )
-                                            .onFocusChanged { if (it.isFocused) { onShowFocus(show); runwayAt = index } }
+                                            .onFocusChanged { if (it.isFocused) { memory.onPosters = true; onShowFocus(show); runwayAt = index } }
                                             .onPreviewKeyEvent { e ->
                                                 if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true }
                                                 else e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && index < columns && toStrip()
@@ -2470,6 +2479,8 @@ internal class GridMemory {
     val titles = androidx.compose.runtime.mutableStateMapOf<LiveKey, Long>()
     var stripOpenAt by androidx.compose.runtime.mutableIntStateOf(-1)
     var stripId by mutableStateOf<Long?>(null)
+    /** The posters (not Keep watching above them) had the focus last: the Pasarela page then stands on them. */
+    var onPosters by mutableStateOf(false)
 }
 
 /** glcn: how long Back from a show's page waits for Keep watching to be there again before giving up on it. */

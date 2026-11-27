@@ -287,6 +287,8 @@ fun MoviesScreen(
     val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
     // glcn: "Keep watching" above the posters, in All, while something is under way (the strip is the lists' first item).
     val stripMovies by vm.continueStrip.collectAsStateWithLifecycle()
+    // glcn: the posters (not Keep watching above them) had the focus last: the Pasarela page then stands on them.
+    var onPosters by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     // glcn: the menu opened from a card of Keep watching (it adds "out of Keep watching"), and the Runway's page.
     var stripMenuId by remember { mutableStateOf<Long?>(null) }
     var stripHasFocus by remember { mutableStateOf(false) }
@@ -295,6 +297,12 @@ fun MoviesScreen(
     remember { tv.own.owntv.glcn.StripDismissed.ensure(context) }
     val showStrip = tv.own.owntv.glcn.StripPref.on && stripMovies.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
     val showStripNow by androidx.compose.runtime.rememberUpdatedState(showStrip)
+    // glcn: before anything has had the focus the header already shows a film — the one ▼ from the menu lands on (the
+    // first of Keep watching, else the first poster). The top half used to stay empty until the focus came down.
+    LaunchedEffect(selectedMovie == null, movies.itemCount > 0, showStrip) {
+        if (selectedMovie != null || movies.itemCount == 0) return@LaunchedEffect
+        (stripMovies.firstOrNull()?.takeIf { showStrip } ?: movies.peek(0))?.let { vm.onMovieFocused(it) }
+    }
     // glcn: the shelves (see VodShelves) — rows of the grid, after Keep watching and before the posters.
     val shelfData by (if (shelvesOn) vm.shelves else remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList<tv.own.owntv.glcn.Shelf<MovieEntity>>()) })
         .collectAsStateWithLifecycle()
@@ -689,7 +697,7 @@ fun MoviesScreen(
             // OK plays it on from where it stopped; hold OK opens its menu (seen, out of Keep watching…).
             onClick = { i -> stripMovies.getOrNull(i)?.let { tv.own.owntv.glcn.StripReturn.movieId = it.id; playMovieNow(it) } },
             onLongClick = { i -> stripMovies.getOrNull(i)?.let { stripMenuId = it.id; openMenu(it, -1) } },
-            modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus },
+            modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus; if (it.hasFocus) onPosters = false },
             focus = stripFocus,
         )
     }
@@ -877,7 +885,8 @@ fun MoviesScreen(
                         val glide = remember(effectiveGridState) { tv.own.owntv.glcn.GlideScroller(effectiveGridState, glideScope) }
                         if (runway) {
                             Spacer(Modifier.height(10.mpx))
-                            tv.own.owntv.glcn.RunwayPageFollow(runwayScroll, showStrip && stripHasFocus)
+                            // glcn: Keep watching stays in view until the posters take the focus: it is where ▼ from the menu lands.
+                            tv.own.owntv.glcn.RunwayPageFollow(runwayScroll, showStrip && !onPosters)
                             Column(Modifier.weight(1f).fillMaxWidth().runwayPage(runwayScroll)) {
                             if (showStrip) continueStrip(fx(84), fx(64))
                             tv.own.owntv.glcn.PosterRunway(
@@ -908,7 +917,7 @@ fun MoviesScreen(
                                                 selectedId = targetMovieId, selectedFocus = selFocus,
                                                 firstItemFocus = firstItemFocus,
                                             )
-                                            .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); runwayAt = index } }
+                                            .onFocusChanged { if (it.isFocused) onPosters = true; if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); runwayAt = index } }
                                             .onPreviewKeyEvent { e ->
                                                 if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true }
                                                 else e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && index < columns && toStrip()

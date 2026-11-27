@@ -170,6 +170,9 @@ fun SportsHubScreen(
         .sortedWith(compareBy<Match>({ config.rankOf(it.sport, it.feed).first }, { config.rankOf(it.sport, it.feed).second }, { !it.isMine() }, { it.startMs }))
     val soon = state.board.matches.filter { it.state == MatchState.PRE && it.startMs > now && it.passes() }
         .sortedWith(compareBy<Match>({ config.rankOf(it.sport, it.feed).first }, { config.rankOf(it.sport, it.feed).second }, { it.startMs })).take(12)
+    // glcn: what has finished and is still on the board, the latest first — a day with nothing live is not an empty page.
+    val done = state.board.matches.filter { it.state == MatchState.POST && it.passes() }
+        .sortedWith(compareBy<Match>({ !it.isMine() }, { -it.startMs })).take(DONE_MAX)
     val onNow = state.onNow.values.flatten().take(6)
     val followedSports = remember(config) { vm.followedSports(config) }
 
@@ -233,7 +236,7 @@ fun SportsHubScreen(
                 }
             }
 
-            val nothing = live.isEmpty() && soon.isEmpty() && onNow.isEmpty()
+            val nothing = live.isEmpty() && soon.isEmpty() && onNow.isEmpty() && done.isEmpty()
             if (config.followedLeagues().isEmpty()) {
                 item(key = "none") { NothingFollowedNote(Modifier.padding(start = contentStart, top = 80.mpx, end = 360.mpx), onPreset = vm::applyPreset) }
             } else if (nothing && !state.rebuilding) {
@@ -311,6 +314,32 @@ fun SportsHubScreen(
                                     onClick = { onOpenMatch(m) }, onPlay = { onOpenMatch(m) }, onHold = { menuFor = m },
                                     modifier = Modifier.focusRequester(focusOf(m.key)),
                                     channel = cardChannel(vm, m),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            if (done.isNotEmpty()) {
+                item(key = "done") {
+                    val context = LocalContext.current
+                    Column {
+                        RowHeader(contentStart, stringResource(R.string.glcn_sports_finished), null)
+                        val doneState = androidx.compose.foundation.lazy.rememberLazyListState()
+                        androidx.compose.runtime.LaunchedEffect(chips, leagues) { doneState.scrollToItem(0) }
+                        tv.own.owntv.features.home.HomeLazyRow(
+                            state = doneState,
+                            modifier = Modifier.focusRestorer().focusGroup(),
+                            contentPadding = PaddingValues(start = contentStart, end = 64.mpx, top = 6.mpx, bottom = 6.mpx),
+                            horizontalArrangement = Arrangement.spacedBy(18.mpx),
+                        ) {
+                            items(done, key = { it.key }) { m ->
+                                MatchCard(
+                                    m, featured = false, config = config, now = now,
+                                    reminded = SportsViewModel.reminderKey(m.startMs, MatchNotifications.pair(context, m)) in state.reminders,
+                                    onClick = { onOpenMatch(m) }, onPlay = { onOpenMatch(m) }, onHold = { menuFor = m },
+                                    modifier = Modifier.focusRequester(focusOf(m.key)),
+                                    channel = null,
                                 )
                             }
                         }
@@ -866,3 +895,6 @@ internal fun cardChannel(vm: SportsViewModel, m: Match): String? {
 
 /** glcn: a match card's crest ghosts, each half off its edge. */
 private const val MATCH_GHOST = 190
+
+/** glcn: how many finished matches the hub's last row holds. */
+private const val DONE_MAX = 12

@@ -117,7 +117,7 @@ data class StagePalette(
             isLight = true,
             text = Color(0xFF0F1A16),
             muted = Color(0xFF4C5A54),
-            dim = Color(0xFF77847F),
+            dim = Color(0xFF66736E),
             itemText = Color(0xFF1C2824),
             menuItemText = Color(0xFF1C2824),
             tagText = Color(0xFF3D4B45),

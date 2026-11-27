@@ -1050,6 +1050,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsHubScreen.kt	+${followedSports.size - SPORT_CHIPS}
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsHubScreen.kt	-
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsHubScreen.kt	cricket/all
+1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsHubScreen.kt	done
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsHubScreen.kt	empty
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsHubScreen.kt	head
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsHubScreen.kt	live

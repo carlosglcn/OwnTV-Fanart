@@ -333,7 +333,8 @@ fun DownloadsScreen(
             if (listIds.isEmpty()) {
                 Text(
                     stringResource(if (tab == DownloadsTab.RECORDINGS) R.string.recording_empty else R.string.content_downloads_empty),
-                    style = stageText(20, 500), color = StageColors.Muted, modifier = Modifier.padding(start = 20.mpx, top = 26.mpx),
+                    // glcn: an empty page says so in a size that can be read from the sofa, not as a footnote at the top.
+                    style = stageText(26, 600), color = StageColors.Body, modifier = Modifier.padding(start = 20.mpx, top = 70.mpx).width(fx(860)),
                 )
             } else {
                 CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
