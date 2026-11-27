@@ -473,19 +473,14 @@ object UiSounds {
     }.pcm()
 
     /** Halloween: a low minor chord and a theremin that rises and wavers. */
-    /** glcn: Ember's own opening, a film studio's logo in three seconds: a low swell, the chord opening over a deep hit, a glint. */
-    private fun emberChime() = Mix(3.6).apply {
-        // A low note swells out of silence…
-        pad(0.0, 73.42, 3.5, 0.18, attack = 1.0, release = 1.5, bright = 0.3)
-        pad(0.2, 110.0, 3.3, 0.1, attack = 0.95, release = 1.5, bright = 0.25)
-        // …then the chord opens (D, A, F♯) over a soft low knock, and rings out with a glint on top. Round tones and
-        // no echoes, so it stays clean on small speakers.
-        drop(1.15, 110.0, 62.0, 0.6, 0.3, decay = 5.0)
-        pad(1.1, 146.83, 2.5, 0.14, attack = 0.22, release = 1.6, bright = 0.3)
-        pad(1.1, 220.0, 2.5, 0.1, attack = 0.25, release = 1.6, bright = 0.25)
-        pad(1.12, 369.99, 2.45, 0.07, attack = 0.3, release = 1.6, bright = 0.2)
-        bell(1.2, 587.33, 2.0, 0.05, decay = 2.0, partials = doubleArrayOf(1.0, 0.15), attack = 0.02)
-        bell(1.34, 880.0, 1.8, 0.03, decay = 2.4, partials = doubleArrayOf(1.0, 0.1), attack = 0.02)
+    /** glcn: Ember's own opening: the lights going down in a cinema — one chord that swells and fades. */
+    private fun emberChime() = Mix(3.4).apply {
+        // "Sala" (chosen by ear from three): only the chord — D, A, D, A, D, F♯ from the bottom up, each voice coming
+        // in a little after the one below — swelling slowly and dying away. Nothing is struck.
+        listOf(
+            Triple(73.42, 0.17, 0.0), Triple(110.0, 0.12, 0.1), Triple(146.83, 0.12, 0.25),
+            Triple(220.0, 0.1, 0.4), Triple(293.66, 0.08, 0.55), Triple(369.99, 0.06, 0.7),
+        ).forEach { (f, amp, at) -> pad(at, f, 3.3 - at, amp, attack = 1.3, release = 1.5, bright = 0.28) }
     }.pcm()
 
     private fun halloween() = Mix(2.2).apply {

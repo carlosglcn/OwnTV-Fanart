@@ -108,3 +108,5 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 **Live TV:** "You may like" leaves out the channels already on show in the row of cards above it, and a synopsis no longer opens with the genres in brackets ("(Cine,Ciencia ficción) …") when the line above already says them.
 - 📺 **Live TV, Cinematic:** the pale glow over the black preview box is gone (the wash behind the words spilled onto it).
 - 🔊 **Brasa OK and opening, cleaned up:** the first cinematic try sounded metallic and distorted on the TV. Both are now made of round, nearly pure tones with no echoes or noise — OK is a soft low knock under two notes a fifth apart; the opening keeps its low swell and the chord that opens, without the heavy sub hit.
+- 🔊 **Brasa opening:** now a single chord that swells slowly and fades, like the lights going down in a cinema (chosen from three by ear). OK stays as it was reworked.
+- 📺 **Live TV, Cinematic:** no line down the page beside the preview box — the wash behind the words fades out towards it instead of being cut.
