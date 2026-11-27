@@ -31,6 +31,7 @@ import tv.own.owntv.ui.stage.StageFocus
 import tv.own.owntv.ui.stage.drawStageFocus
 import tv.own.owntv.ui.theme.LocalStagePalette
 import tv.own.owntv.ui.theme.StageAccent
+import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.ownTvTween
 import tv.own.owntv.ui.theme.stageAccent
 
@@ -155,6 +156,7 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
     var rect by remember { mutableStateOf(Rect.Zero) }
     val anim = tv.own.owntv.ui.theme.animationsOn
     val scope = rememberCoroutineScope()
+    val crossMax = with(androidx.compose.ui.platform.LocalDensity.current) { CROSS_MAX_MPX.mpx.toPx() }
     if (region != null) {
         androidx.compose.runtime.SideEffect {
             if (rect == Rect.Zero) rect = region.rect
@@ -167,7 +169,10 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
                 // The gap from where the box was drawn to this item, so it starts where it is and glides in.
                 val visible = st.current != null || st.alpha.value > 0.05f
                 // glcn: coming from another host's box (just drawn somewhere else on screen): set off from there.
-                val crossing = if (!visible && !LowRam.on && anim) SlideFocusTrail.fresh() else null
+                // Only from nearby: across half the screen (Home's "Watch now" up to the top bar) the box was seen
+                // sweeping over the picture — there it simply comes on where focus lands.
+                val crossing = (if (!visible && !LowRam.on && anim) SlideFocusTrail.fresh() else null)
+                    ?.takeIf { rect == Rect.Zero || (it.center - rect.center).getDistance() <= crossMax }
                 if (crossing != null) st.arrived = true
                 val from = crossing ?: st.drawn
                 val visible2 = visible || crossing != null
@@ -210,6 +215,8 @@ const val CHANNEL_FOCUS_STIFFNESS = 760f
 const val CHANNEL_FOCUS_DAMPING = 0.76f
 
 /** glcn: a launcher-like pop — a small overshoot (about 6 % past the step), settled in a quarter of a second. */
+/** glcn: the farthest (in design px) a box travels from one list or menu to another; beyond it, no journey. */
+private const val CROSS_MAX_MPX = 300
 private const val POP_DAMPING = 0.55f
 private const val POP_STIFFNESS = 420f
 
