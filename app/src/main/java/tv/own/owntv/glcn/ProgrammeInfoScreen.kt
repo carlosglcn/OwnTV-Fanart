@@ -469,7 +469,7 @@ fun ProgrammeInfoScreen(
                         onFailed = { logoFailed = true }, onDarkScreen = true,
                     )
                 } else {
-                    Text(cur.title, style = tv.own.owntv.ui.theme.stageDisplay(62), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.then(slideInLeft))
+                    Text(guideTitle(cur.title, cur.sourceId), style = tv.own.owntv.ui.theme.stageDisplay(62), color = Ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.then(slideInLeft))
                 }
                 val remaining = ((cur.stopMs - nowMs) / 60_000L).toInt()
                 Text(
@@ -535,7 +535,7 @@ fun ProgrammeInfoScreen(
                         it,
                         modifier = Modifier.then(slideInLeft).padding(top = 18.mpx).width(SYNOPSIS_W)
                             .onGloballyPositioned { c -> if (synTop < 0f) synTop = c.positionInRoot().y },
-                        style = synStyle, color = Soft,
+                        style = synStyle, color = Soft, sourceId = cur.sourceId,
                         lines = if (next.isNotEmpty() && NEXT_CARDS > 0) SYNOPSIS_LINES_WITH_CARDS else fitLines, fade = true,
                     )
                 }

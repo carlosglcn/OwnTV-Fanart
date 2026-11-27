@@ -636,6 +636,7 @@ fun EpgScreen(
                     },
                     synopsis = shown?.description,
                     modifier = Modifier.padding(start = 46.mpx, top = 76.mpx).widthIn(max = 1080.mpx),
+                    sourceId = shown?.sourceId ?: 0L,
                 )
             }
             // The key hints at the bottom right of the top area, level with the video's bottom edge.

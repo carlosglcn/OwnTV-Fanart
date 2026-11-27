@@ -189,6 +189,8 @@ internal fun GuideProgrammeBlock(
     details: String?,
     synopsis: String?,
     modifier: Modifier = Modifier,
+    /** glcn: the guide the programme comes from, for the tints of its title and synopsis ([tv.own.owntv.glcn.GuideInk]). */
+    sourceId: Long = 0L,
 ) {
     val a = stageAccent
     // glcn: a new programme's words rise in softly rather than cutting over.
@@ -207,13 +209,13 @@ internal fun GuideProgrammeBlock(
         }
         if (title != null) {
             Text(
-                title, style = stageText(60, 800, (-1.5).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                tv.own.owntv.glcn.guideTitle(title, sourceId), style = stageText(60, 800, (-1.5).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 10.mpx, bottom = 6.mpx),
             )
         }
         if (details != null) Text(details, style = stageText(19, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
-            synopsis.orEmpty(),
+            tv.own.owntv.glcn.guideSynopsis(synopsis.orEmpty(), sourceId),
             style = stageText(19, 400).copy(lineHeight = (19 * 1.5f).mpxSp), color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
             maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.widthIn(max = 1000.mpx).padding(top = 12.mpx, bottom = 20.mpx),

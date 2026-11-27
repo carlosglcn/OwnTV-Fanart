@@ -96,6 +96,10 @@ internal fun ProgrammeStripCanvas(
         programmes.map { String.format(java.util.Locale.ROOT, rangeTemplate, formatTime(it.startMs), formatTime(it.stopMs)) }
     }
     val recRed = Color(0xFFFF5B5B)
+    // glcn: the season mark and the episode title tinted (the guide's own colours, or the theme's) — built once a
+    // programme and kept, since this row is drawn again on every frame of a scroll. Two of each: plain and past.
+    val guideInk = tv.own.owntv.glcn.rememberGuideInk(programmes.firstOrNull()?.sourceId ?: 0L)
+    val inked = remember(programmes, guideInk) { arrayOfNulls<androidx.compose.ui.text.AnnotatedString>(programmes.size * 2) }
     val textColor = tv.own.owntv.ui.theme.StageColors.Text
     val dimColor = tv.own.owntv.ui.theme.StageColors.Dim
     val ink = tv.own.owntv.ui.theme.StageColors.Ink
@@ -174,7 +178,14 @@ internal fun ProgrammeStripCanvas(
                 else androidx.compose.ui.graphics.lerp(dimColor.copy(alpha = fade), a.onAccent.copy(alpha = 0.72f), blend)
             val iconColor = if (cursor == null) (if (focused) a.onAccent else a.accent.copy(alpha = fade))
                 else androidx.compose.ui.graphics.lerp(a.accent.copy(alpha = fade), a.onAccent, blend)
-            val title = measurer.measure(p.title, titleStyle.copy(color = titleColor), overflow = TextOverflow.Ellipsis, maxLines = 1, softWrap = false, constraints = Constraints(maxWidth = textW))
+            // The focused cell (and one the cursor is sliding onto) keeps one colour: its text sits on the accent.
+            val title = if (focused || blend > 0f) {
+                measurer.measure(p.title, titleStyle.copy(color = titleColor), overflow = TextOverflow.Ellipsis, maxLines = 1, softWrap = false, constraints = Constraints(maxWidth = textW))
+            } else {
+                val slot = i * 2 + (if (fade < 1f) 1 else 0)
+                val text = inked[slot] ?: guideInk.title(p.title, fade).also { inked[slot] = it }
+                measurer.measure(text, titleStyle.copy(color = titleColor), overflow = TextOverflow.Ellipsis, maxLines = 1, softWrap = false, constraints = Constraints(maxWidth = textW))
+            }
             // glcn: title and time centred in the (taller) row together.
             val textTop = ((h - title.size.height - 3 * px - 20 * px) / 2f).coerceAtLeast(8 * px)
             drawText(title, topLeft = Offset(tx + 14 * px, textTop))
@@ -268,7 +279,7 @@ internal fun ProgrammeDetailDialog(
     ) {
         BackHandler { onDismiss() }
                 if (!description.isNullOrBlank()) {
-                    Text(description.orEmpty(), style = stageText(18, 400), color = StageColors.Muted)
+                    Text(tv.own.owntv.glcn.guideSynopsis(description.orEmpty(), programme.sourceId), style = stageText(18, 400), color = StageColors.Muted)
                 }
                 // The clash, said before the user commits to anything. A live programme cannot wait
                 // its turn — "start when the other finishes" would mean "start half-way through"

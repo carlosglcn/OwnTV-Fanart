@@ -417,7 +417,7 @@ private fun ProgrammeLine(p: EpgProgrammeEntity, now: Long, highlighted: Boolean
             Text(formatTime(p.stopMs), style = stageText(13, 600), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Column(Modifier.weight(1f)) {
-            Text(p.title, style = stageText(20, 700).copy(textDirection = TextDirection.Content), color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(if (titleColor == StageColors.Text) tv.own.owntv.glcn.guideTitle(p.title, p.sourceId) else androidx.compose.ui.text.AnnotatedString(p.title), style = stageText(20, 700).copy(textDirection = TextDirection.Content), color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
             p.description?.takeIf { it.isNotBlank() }?.let {
                 Text(it, style = stageText(15, 400).copy(textDirection = TextDirection.Content), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.mpx))
             }
@@ -487,7 +487,7 @@ private fun OpenProgramme(
             Text(formatTime(shown.stopMs), style = stageText(13, 600), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Column(Modifier.weight(1f)) {
-            Text(shown.title, style = stageText(30, 800, (-0.5).mpxSp).copy(textDirection = TextDirection.Content), color = StageColors.Text)
+            Text(tv.own.owntv.glcn.guideTitle(shown.title, shown.sourceId), style = stageText(30, 800, (-0.5).mpxSp).copy(textDirection = TextDirection.Content), color = StageColors.Text)
             Text(facts.joinToString(" · "), style = stageText(16, 600), color = StageColors.Muted, modifier = Modifier.padding(top = 6.mpx))
             if (time == ProgrammeTime.NOW) StageProgress(progressOf(shown, now), Modifier.width(560.mpx).padding(top = 10.mpx))
             val tags = shown.details.categoryList

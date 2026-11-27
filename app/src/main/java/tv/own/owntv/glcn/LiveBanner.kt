@@ -112,6 +112,8 @@ private fun LeftRing(progress: Float, modifier: Modifier = Modifier) {
 private class Facts(
     val title: String, val meta: String, val progress: Float, val synopsis: String?, val nextLine: String?,
     val start: String, val stop: String, val ring: String, val upcoming: List<Pair<String, String>>,
+    /** The guide the programme comes from, for the tints of its title and synopsis ([GuideInk]). */
+    val sourceId: Long = 0L,
 )
 
 @Composable
@@ -133,7 +135,7 @@ private fun facts(epg: EpgNowNext): Facts? {
         .take(6)
         .map { formatTime(it.startMs) to it.title }
     val ring = stringResource(R.string.content_live_time_range, formatTime(now.startMs), formatTime(now.stopMs))
-    return Facts(now.title, meta, progress, now.description?.takeIf { it.isNotBlank() && !isFactsOnly(it) }, nextLine, formatTime(now.startMs), formatTime(now.stopMs), ring, upcoming)
+    return Facts(now.title, meta, progress, now.description?.takeIf { it.isNotBlank() && !isFactsOnly(it) }, nextLine, formatTime(now.startMs), formatTime(now.stopMs), ring, upcoming, now.sourceId)
 }
 
 /**
@@ -175,7 +177,7 @@ fun LiveBannerFicha(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifie
         if (!art.isNullOrBlank()) tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.width(150.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp)))
         Column(Modifier.weight(1f)) {
             Label(stringResource(R.string.content_live_now), stageAccent.accent)
-            Text(f.title, style = stageText(21, 700), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(guideTitle(f.title, f.sourceId), style = stageText(21, 700), color = hudInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(Modifier.padding(top = 1.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LeftRing(f.progress, Modifier.size(14.dp))
                 Text(f.meta, style = stageText(15, 400), color = hudInk.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -183,7 +185,7 @@ fun LiveBannerFicha(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifie
             f.synopsis?.let {
                 tv.own.owntv.features.shell.components.DriftingSynopsis(
                     it, modifier = Modifier.padding(top = 2.dp),
-                    style = stageText(14, 400), color = hudInk.copy(alpha = 0.88f), lines = 4,
+                    style = stageText(14, 400), color = hudInk.copy(alpha = 0.88f), lines = 4, sourceId = f.sourceId,
                 )
             }
 
@@ -245,7 +247,7 @@ fun LiveBannerCine(epg: EpgNowNext?, art: String?, modifier: Modifier = Modifier
                 f.synopsis?.let {
                     tv.own.owntv.features.shell.components.DriftingSynopsis(
                         it, modifier = Modifier.padding(top = 8.dp).fillMaxWidth(0.8f),
-                        style = stageText(18, 400), color = ink.copy(alpha = 0.88f), lines = 2,
+                        style = stageText(18, 400), color = ink.copy(alpha = 0.88f), lines = 2, sourceId = f.sourceId,
                     )
                 }
             }
@@ -279,7 +281,7 @@ fun LiveBannerLateral(epg: EpgNowNext?, art: String?, modifier: Modifier = Modif
         if (!art.isNullOrBlank()) tv.own.owntv.ui.components.ProgrammeArt(url = art, modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)))
         Spacer(Modifier.height(14.dp))
         Label(stringResource(R.string.content_live_now), stageAccent.accent)
-        Text(f.title, style = stageText(28, 700), color = hudInk, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(guideTitle(f.title, f.sourceId), style = stageText(28, 700), color = hudInk, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LeftRing(f.progress, Modifier.size(16.dp))
             Text(f.meta, style = stageText(16, 400), color = hudInk.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -287,7 +289,7 @@ fun LiveBannerLateral(epg: EpgNowNext?, art: String?, modifier: Modifier = Modif
         f.synopsis?.let {
             tv.own.owntv.features.shell.components.DriftingSynopsis(
                 it, modifier = Modifier.padding(top = 10.dp).weight(1f, fill = false),
-                style = stageText(16, 400), color = hudInk.copy(alpha = 0.88f), lines = 8,
+                style = stageText(16, 400), color = hudInk.copy(alpha = 0.88f), lines = 8, sourceId = f.sourceId,
             )
         }
         if (f.upcoming.isNotEmpty()) {

@@ -470,7 +470,7 @@ private fun LiveCinematicHero(
             }
             if (now != null) {
                 Text(
-                    tv.own.owntv.core.live.SportsNow.displayTitle(now.title), style = stageText(44, 800, (-0.5).mpxSp), color = StageColors.Text,
+                    tv.own.owntv.glcn.guideTitle(tv.own.owntv.core.live.SportsNow.displayTitle(now.title), now.sourceId), style = stageText(44, 800, (-0.5).mpxSp), color = StageColors.Text,
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
                     onTextLayout = { titleLines = it.lineCount },
                 )
@@ -487,7 +487,7 @@ private fun LiveCinematicHero(
                 StageProgress(progressOf(now), Modifier.width(420.mpx))
                 now.description?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.glcn.SynopsisText.withoutGenres(it, nowNext.nowDetails?.categories) }?.takeIf { it.isNotBlank() }?.let {
                     Text(
-                        it, style = stageText(19, 400).copy(lineHeight = (19 * 1.5f).mpxSp), color = StageColors.Text,
+                        tv.own.owntv.glcn.guideSynopsis(it, now.sourceId), style = stageText(19, 400).copy(lineHeight = (19 * 1.5f).mpxSp), color = StageColors.Text,
                         maxLines = if (titleLines > 1) SYNOPSIS_LINES - 1 else SYNOPSIS_LINES, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 16.mpx).widthIn(max = 820.mpx),
                     )

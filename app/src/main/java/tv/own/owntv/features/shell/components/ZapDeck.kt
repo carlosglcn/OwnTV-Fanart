@@ -1060,7 +1060,7 @@ private fun DeckInfoPanel(
                 Text(ProviderTags.displayName(channel.name), style = stageText(28, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 return@Column
             }
-            Text(p.title, style = stageText(28, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(tv.own.owntv.glcn.guideTitle(p.title, p.sourceId), style = stageText(28, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             val live = nowMs in p.startMs until p.stopMs
             val time = fmt.format(java.util.Date(p.startMs)) + " – " +
                 if (live) stringResource(R.string.content_live_time_remaining, fmt.format(java.util.Date(p.stopMs)), ((p.stopMs - nowMs) / 60_000L).toInt().coerceAtLeast(0))

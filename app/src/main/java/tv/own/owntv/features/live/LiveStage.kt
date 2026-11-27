@@ -449,7 +449,7 @@ internal fun LiveStagePane(
         if (showTop) Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             if (now != null) {
-                if (!tall) Text(now.title, style = stageText(if (rowSchedule) 30 else 42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = if (rowSchedule) 1 else 2, overflow = TextOverflow.Ellipsis)
+                if (!tall) Text(tv.own.owntv.glcn.guideTitle(now.title, now.sourceId), style = stageText(if (rowSchedule) 30 else 42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = if (rowSchedule) 1 else 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     listOfNotNull(
                         detailsLine(now, nowNext.nowDetails).takeIf { it.isNotBlank() },
@@ -480,6 +480,7 @@ internal fun LiveStagePane(
         if (showTop) (now?.description?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.glcn.SynopsisText.withoutGenres(it, nowNext?.nowDetails?.categories) }?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
             tv.own.owntv.features.shell.components.DriftingSynopsis(
                 it,
+                sourceId = now?.sourceId ?: 0L,
                 modifier = Modifier.padding(top = 14.mpx).then(if (rowSchedule) Modifier.weight(1f) else if (tall) Modifier.weight(1f, fill = false) else Modifier), // glcn: Ficha — the synopsis takes all the room down to the cards at the foot
                 // glcn: Ficha — a little smaller and as many lines as the room under the video holds, so it reads at once.
                 style = if (rowSchedule) stageText(17, 400).copy(lineHeight = (17 * 1.4f).mpxSp) else stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp),
