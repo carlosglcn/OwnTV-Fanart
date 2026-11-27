@@ -108,7 +108,10 @@ object MemoryWatch {
                 lastLoggedMb = mb
                 lastLineAt = now
             }
-            if ((mb >= brakeMb || boxShort) && now - lastBrakeAt >= BRAKE_GAP_MS) {
+            // glcn: with the box at ease (plenty free) the app may run a little past its mark before anything is let
+            // go — on a SHIELD the brake came on at 497 MB with 880 MB free, and browsing then loaded its pictures again.
+            val limitMb = if (!boxShort && freeMb >= FREE_EASY_MB) brakeMb * EASY_PCT / 100 else brakeMb
+            if ((mb >= limitMb || boxShort) && now - lastBrakeAt >= BRAKE_GAP_MS) {
                 lastBrakeAt = now
                 brake(app, mb, brakeMb, boxShort)
             } else if (tight && !boxShort && mb < brakeMb * 85 / 100) {
@@ -142,6 +145,8 @@ object MemoryWatch {
         LiveDiagnosticsLog.event("memory brake at $mb MB (limit $brakeMb)${if (boxShort) ", box short" else ""}: pictures in memory, trailer and prefetch let go")
     }
 
+    private const val FREE_EASY_MB = 600
+    private const val EASY_PCT = 130
     private const val TICK_MS = 1_000L
     private const val STALL_MS = 3_000L
     private const val STACK_LINES = 12

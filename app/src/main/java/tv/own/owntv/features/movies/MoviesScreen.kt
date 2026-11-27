@@ -208,6 +208,7 @@ fun MoviesScreen(
     val movieProgress by vm.movieProgress.collectAsStateWithLifecycle()
     val downloadStates by vm.downloadStates.collectAsStateWithLifecycle()
     val movies = vm.movies.collectAsLazyPagingItems()
+    tv.own.owntv.glcn.SectionReady(movies.itemCount > 0)
     val resumeMode by vm.resumeMode.collectAsStateWithLifecycle()
     // Global external-player toggle: never mount the fullscreen in-app player (it spins up mpv)
     // when playback is handed to an external app.

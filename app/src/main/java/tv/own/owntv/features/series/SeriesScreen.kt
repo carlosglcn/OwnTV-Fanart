@@ -270,6 +270,7 @@ private fun SeriesGrid(
     val context = androidx.compose.ui.platform.LocalContext.current
     val toast = rememberInAppToast()
     val series = vm.series.collectAsLazyPagingItems()
+    tv.own.owntv.glcn.SectionReady(series.itemCount > 0)
     val moveState by vm.moveState.collectAsStateWithLifecycle()
     val categoryMoveState by vm.categoryMoveState.collectAsStateWithLifecycle()
     var contextCategory by remember { mutableStateOf<LiveRailItem?>(null) }

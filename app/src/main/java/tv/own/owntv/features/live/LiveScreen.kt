@@ -172,6 +172,7 @@ fun LiveScreen(
     val previewOnOk by vm.livePreviewOnOk.collectAsStateWithLifecycle()
     val paneChannel by vm.paneChannel.collectAsStateWithLifecycle()
     val channels = vm.channels.collectAsLazyPagingItems()
+    tv.own.owntv.glcn.SectionReady(channels.itemCount > 0)
     val moveState by vm.moveState.collectAsStateWithLifecycle()
     val categoryMoveState by vm.categoryMoveState.collectAsStateWithLifecycle()
 

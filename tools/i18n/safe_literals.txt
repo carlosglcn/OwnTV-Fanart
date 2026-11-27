@@ -1438,6 +1438,7 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	$screen·popup
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	(trailer)
 1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	, ${t.janky} >${JANK_MS}ms
+1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	, app ${t.appNs * 100 / all}% gpu ${t.gpuNs * 100 / all}% wait ${t.waitNs * 100 / all}%
 1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	, worst ${t.worstMs}ms
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	glcn-frames
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	start
@@ -1548,6 +1549,10 @@
 2	technical	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	\0
 1	regex	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	(?i)\\b(?:8K|4K|UHD|2160P|FHD|1080P|HD|720P|SD|HEVC|H265)\\b
 1	regex	app/src/main/java/tv/own/owntv/glcn/ReminderCard.kt	[^\\p{L}\\p{N}]+
+1	technical	app/src/main/java/tv/own/owntv/glcn/SectionCurtain.kt	EPG
+1	technical	app/src/main/java/tv/own/owntv/glcn/SectionCurtain.kt	LIVE_TV
+1	technical	app/src/main/java/tv/own/owntv/glcn/SectionCurtain.kt	MOVIES
+1	technical	app/src/main/java/tv/own/owntv/glcn/SectionCurtain.kt	SERIES
 1	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	2026.11a
 1	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	ambient_glow
 1	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	animations

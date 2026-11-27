@@ -18,7 +18,11 @@ object FrameWatch {
     /** What else is going on that can cost frames (set while it happens). */
     @Volatile var trailerOn = false
 
-    private class Tally { var frames = 0; var slow = 0; var janky = 0; var worstMs = 0; var worstWithTrailer = false }
+    private class Tally {
+        var frames = 0; var slow = 0; var janky = 0; var worstMs = 0; var worstWithTrailer = false
+        // Where the slow frames' time went: building the screen (app), drawing it (gpu), or waiting for the app's turn.
+        var appNs = 0L; var gpuNs = 0L; var waitNs = 0L
+    }
     private val tallies = HashMap<String, Tally>()
     private val lock = Any()
     private var thread: HandlerThread? = null
@@ -33,7 +37,14 @@ object FrameWatch {
         synchronized(lock) {
             val t = tallies.getOrPut(label) { Tally() }
             t.frames++
-            if (ms > SLOW_MS) t.slow++
+            if (ms > SLOW_MS) {
+                t.slow++
+                t.appNs += metrics.getMetric(FrameMetrics.INPUT_HANDLING_DURATION) + metrics.getMetric(FrameMetrics.ANIMATION_DURATION) +
+                    metrics.getMetric(FrameMetrics.LAYOUT_MEASURE_DURATION) + metrics.getMetric(FrameMetrics.DRAW_DURATION)
+                t.gpuNs += metrics.getMetric(FrameMetrics.SYNC_DURATION) + metrics.getMetric(FrameMetrics.COMMAND_ISSUE_DURATION) +
+                    metrics.getMetric(FrameMetrics.SWAP_BUFFERS_DURATION)
+                t.waitNs += metrics.getMetric(FrameMetrics.UNKNOWN_DELAY_DURATION)
+            }
             if (ms > JANK_MS) t.janky++
             if (ms > t.worstMs) { t.worstMs = ms; t.worstWithTrailer = trailerOn }
         }
@@ -61,10 +72,18 @@ object FrameWatch {
         return snapshot.entries.filter { it.value.frames >= MIN_FRAMES }.sortedByDescending { it.value.frames }.joinToString(" · ") { (name, t) ->
             val pct = t.slow * 1000 / t.frames / 10.0
             "$name ${t.frames}f ${pct}% slow" + (if (t.janky > 0) ", ${t.janky} >${JANK_MS}ms" else "") +
-                ", worst ${t.worstMs}ms" + (if (t.worstWithTrailer) " (trailer)" else "")
+                ", worst ${t.worstMs}ms" + (if (t.worstWithTrailer) " (trailer)" else "") + split(t)
         }
     }
 
+    /** glcn: of the slow frames' time, the share spent building the screen, drawing it and waiting — where to look. */
+    private fun split(t: Tally): String {
+        val all = t.appNs + t.gpuNs + t.waitNs
+        if (t.slow < MIN_SLOW || all <= 0L) return String()
+        return ", app ${t.appNs * 100 / all}% gpu ${t.gpuNs * 100 / all}% wait ${t.waitNs * 100 / all}%"
+    }
+
+    private const val MIN_SLOW = 5
     /** A frame longer than this missed the 60 fps beat by a visible margin. */
     private const val SLOW_MS = 25
     /** A frame longer than this is a stutter anyone sees. */

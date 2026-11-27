@@ -1623,10 +1623,18 @@ fun OwnTVShell(
                 val sectionAnim = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
                 // glcn: a title opened from Home grows into its page instead of rising in (TitleZoom).
                 var sectionZoom by remember { mutableStateOf(false) }
+                var sectionHeld by remember { mutableStateOf(false) }
                 LaunchedEffect(selectedSection) {
                     sectionZoom = tv.own.owntv.glcn.TitleZoom.take()
+                    // glcn: the page waits behind a curtain until its first content is in, then comes in whole. (Set
+                    // on every change: a wait cut short by the next section must not leave that one hidden.)
+                    sectionHeld = sectionAnim && tv.own.owntv.glcn.SectionCurtain.waits(selectedSection.name)
                     if (!sectionAnim) return@LaunchedEffect
                     sectionIn.snapTo(0f)
+                    if (sectionHeld) {
+                        tv.own.owntv.glcn.SectionCurtain.await()
+                        sectionHeld = false
+                    }
                     // glcn: an entrance keeps its pace with Brisk response, and settles softly (no blow at the end).
                     sectionIn.animateTo(1f, androidx.compose.animation.core.tween(tv.own.owntv.glcn.Pace.entrance(SECTION_IN_MS), easing = SECTION_EASE))
                 }
@@ -1635,7 +1643,7 @@ fun OwnTVShell(
                     modifier = Modifier.weight(1f).fillMaxWidth()
                         .graphicsLayer {
                             val k = sectionIn.value
-                            alpha = 0.15f + 0.85f * k
+                            alpha = if (sectionHeld) 0f else 0.15f + 0.85f * k
                             if (sectionZoom) {
                                 val z = tv.own.owntv.glcn.TitleZoom.FROM + (1f - tv.own.owntv.glcn.TitleZoom.FROM) * k
                                 scaleX = z; scaleY = z
