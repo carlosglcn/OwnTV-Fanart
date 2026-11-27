@@ -385,12 +385,12 @@ private fun LiveCinematicHero(
     modifier: Modifier = Modifier,
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(44.mpx)) {
-        // glcn: the box is for the video; until it plays it shows the programme's picture with the channel's logo in
-        // a corner, not the logo alone on a black block.
+        // glcn: the box is for the video. Until it plays it shows the channel's logo on black: the backdrop beside it
+        // already shows the programme's picture, and a second copy here only repeated it.
         if (showVideo) {
             LiveCinematicVideo(
                 channel = channel,
-                art = art,
+                art = null,
                 previewEngine = previewEngine,
                 showVideo = showVideo,
                 singleSessionBlocked = singleSessionBlocked,
@@ -500,10 +500,6 @@ private fun LiveCinematicVideo(
         if (loading) OwnTVSpinner(sizeDp = 28)
         if (channel != null) {
             Box(Modifier.align(Alignment.TopStart).padding(start = 18.mpx, top = 16.mpx)) { StageLiveBadge(tv.own.owntv.glcn.onAirLabel(nowTitle)) }
-            // glcn: over the programme's picture, whose channel it is.
-            if ((!playing || loading) && !art.isNullOrBlank()) {
-                Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.mpx, bottom = 14.mpx)) { LivePlate(channel.displayLogoUrl, 84.mpx, 58.mpx) }
-            }
         }
         if (singleSessionBlocked && !playing) {
             Text(
