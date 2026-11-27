@@ -222,7 +222,17 @@ internal fun LiveCinematicPane(
                     style = stageText(20, 500), color = StageColors.Muted,
                     modifier = Modifier.padding(start = 64.mpx, top = 40.mpx),
                 )
-            } else {
+            } else tv.own.owntv.glcn.SlideFocusHost(pinned = true) { Column {
+                // glcn: the focus keeps its place — the first card, right under the words that describe it — and the
+                // channels pass under it (as Home's rows do); at the row's end, where it cannot scroll, it walks.
+                val pinnedRows = tv.own.owntv.glcn.LocalPinnedRows.current
+                val rowDensity = androidx.compose.ui.platform.LocalDensity.current
+                val channelScroll = remember(pinnedRows, rowDensity) {
+                    if (pinnedRows) with(rowDensity) { tv.own.owntv.glcn.WholeCardScroll(64.mpx.toPx(), 64.mpx.toPx(), 26.mpx.toPx(), fixed = true) } else edgeScrollSpec
+                }
+                val similarScroll = remember(pinnedRows, rowDensity) {
+                    if (pinnedRows) with(rowDensity) { tv.own.owntv.glcn.WholeCardScroll(64.mpx.toPx(), 64.mpx.toPx(), 18.mpx.toPx(), fixed = true) } else edgeScrollSpec
+                }
                 val cardsGate = tv.own.owntv.glcn.rememberStaggerGate()
                 // glcn: ▶ on the last channel goes round to the first. ◀ on the first goes round to the last only with the
                 // menu on top — with the side menu, ◀ there opens the menu, as in every list.
@@ -231,7 +241,7 @@ internal fun LiveCinematicPane(
                 val wrapFocus = remember { androidx.compose.ui.focus.FocusRequester() }
                 var wrapTo by remember { mutableStateOf(-1) }
                 val wrapScope = androidx.compose.runtime.rememberCoroutineScope()
-                CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
+                CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides channelScroll) {
                     LazyRow(
                         state = listState,
                         horizontalArrangement = Arrangement.spacedBy(26.mpx),
@@ -300,6 +310,7 @@ internal fun LiveCinematicPane(
                         // glcn: clear of the focused card above, which grows when it takes focus.
                         modifier = Modifier.padding(start = 64.mpx, top = 26.mpx),
                     )
+                    CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides similarScroll) {
                     LazyRow(
                         state = similarState,
                         horizontalArrangement = Arrangement.spacedBy(18.mpx),
@@ -321,8 +332,9 @@ internal fun LiveCinematicPane(
                             )
                         }
                     }
+                    }
                 }
-            }
+            } }
         }
     }
 }

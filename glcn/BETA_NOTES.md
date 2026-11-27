@@ -128,3 +128,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔘 **Top bar "Icons" is icons only:** no name appears on the open or the focused entry, so the bar keeps one width as you move; the open section is the one filled with the accent.
 - 💊 **Top bar "Pills" are names only:** the open section is the filled pill; its icon no longer comes on (it made that pill wider and pushed the others at every step).
 - 🧭 **Top bar opens on the Capsule:** a new install's top bar is the Capsule again (the Island did not fit on a 1080p screen with every name). Who already chose a shape keeps it.
+- 📺 **Live TV, Cinematic — the focus stays put:** the highlight keeps the first card's place, right under the words that describe that channel, and the channels pass under it (as Home's rows now do); "You may like" moves the same way. At the end of a row it walks to the last cards.

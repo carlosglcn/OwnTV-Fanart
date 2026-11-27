@@ -279,11 +279,12 @@ fun StageSurface(
     val focused = real || highlighted
     val palette = LocalStagePalette.current
     // glcn: inside a list or menu with a sliding focus box, the item leaves the focus drawing to it.
-    val slide = tv.own.owntv.glcn.LocalSlideFocus.current?.takeIf { focusDecor && (focusStyle == StageFocus.FILLED || focusStyle == StageFocus.FX) }
+    val slide = tv.own.owntv.glcn.LocalSlideFocus.current?.takeIf { focusDecor && (focusStyle == StageFocus.FILLED || focusStyle == StageFocus.FX || (it.pinned && focusStyle == StageFocus.POSTER)) }
     val sliding = slide != null && real
     Box(
         modifier = modifier
-            .stageLift(focused, focusStyle)
+            // glcn: under a pinned box a poster card does not grow — the box behind it would be hidden by it.
+            .stageLift(focused && !(slide != null && focusStyle == StageFocus.POSTER), focusStyle)
             .then(if (slide != null) Modifier.slideFocusReport(slide, focusStyle, radius, accent) else Modifier)
             .then(if (focused && focusDecor && !sliding) Modifier.stageFocusDecor(focusStyle, radius, accent, palette) else if (focused) Modifier else idle)
             .stageClickable(interaction, enabled, onClick, onLongClick),
