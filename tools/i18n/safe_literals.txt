@@ -281,6 +281,7 @@
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	not allowed on this profile
 1	technical	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	pelicula
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	stalker resolve failed channelId=${channel.id}
+1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	teletext subtitle picked on mpv: the channel goes over to ExoPlayer
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	tune refused '${channel.name}': $why
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	tuneByNumber($number) failed
 1	log	app/src/main/java/tv/own/owntv/features/live/LiveViewModel.kt	zap: tune wait ${delayMs}ms — ${zapWaitReason(lastZapPressMs, now, singleConnection)}

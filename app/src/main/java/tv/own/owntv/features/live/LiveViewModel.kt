@@ -1376,7 +1376,18 @@ class LiveViewModel(
         engines.liveTuner = live
     }
 
+    init {
+        // glcn: a teletext subtitle (page 888) picked while the channel plays on mpv, which cannot draw it: the channel
+        // goes over to ExoPlayer (pinned there, as the engine button does) and the subtitle is switched on as it starts.
+        player.onLiveTeletextPick = { lang ->
+            previewEngine.subtitlesWantedOnce = lang.orEmpty()
+            tv.own.owntv.player.LiveDiagnosticsLog.event("teletext subtitle picked on mpv: the channel goes over to ExoPlayer")
+            toggleForceMpv()
+        }
+    }
+
     override fun onCleared() {
+        if (player.onLiveTeletextPick != null) player.onLiveTeletextPick = null
         if (engines.liveTuner === live) engines.liveTuner = null
         super.onCleared()
     }
