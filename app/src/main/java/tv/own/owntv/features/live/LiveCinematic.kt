@@ -153,7 +153,13 @@ internal fun LiveCinematicPane(
     LaunchedEffect(previewChannel?.id, focusTitle) {
         if (focusTitle == null) { similar = emptyList(); return@LaunchedEffect }
         delay(500)
-        similar = runCatching { loadSimilar(focusTitle, focusCategories, focusYear, previewChannel?.id, previewChannel?.name) }.getOrDefault(emptyList())
+        val found = runCatching { loadSimilar(focusTitle, focusCategories, focusYear, previewChannel?.id, previewChannel?.name) }.getOrDefault(emptyList())
+        // glcn: a channel already on show in the row of cards above is not a suggestion — the strip is for what is
+        // elsewhere. (Unless that would leave it empty: then the plain answer stays.)
+        val snapshot = channels.itemSnapshotList
+        val onShow = listState.layoutInfo.visibleItemsInfo.mapNotNull { snapshot.getOrNull(it.index) }
+            .map { tv.own.owntv.core.live.SimilarNow.family(it.name) }.toSet()
+        similar = found.filter { tv.own.owntv.core.live.SimilarNow.family(it.channel.name) !in onShow }.ifEmpty { found }
     }
     val similarFirst = remember { androidx.compose.ui.focus.FocusRequester() }
     // ▲ from a suggestion goes back to the card of the channel the strip was built for.
@@ -458,7 +464,7 @@ private fun LiveCinematicHero(
                     modifier = Modifier.padding(top = 8.mpx, bottom = 14.mpx),
                 )
                 StageProgress(progressOf(now), Modifier.width(420.mpx))
-                now.description?.takeIf { it.isNotBlank() }?.let {
+                now.description?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.glcn.SynopsisText.withoutGenres(it, nowNext.nowDetails?.categories) }?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         it, style = stageText(19, 400).copy(lineHeight = (19 * 1.5f).mpxSp), color = StageColors.Text,
                         maxLines = if (titleLines > 1) SYNOPSIS_LINES - 1 else SYNOPSIS_LINES, overflow = TextOverflow.Ellipsis,

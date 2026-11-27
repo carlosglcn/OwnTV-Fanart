@@ -105,3 +105,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🎬 **Brasa menu sounds, more cinematic:** OK is now a soft, deep hit under a short warm swell (not two wooden notes), and the opening is a film-logo sting — a low swell out of silence, the chord opening over a deep hit, a glint on top. Moving and Back are as they were.
 - 📺 **Live TV, Cinematic:** the "You may like" row starts at its first card after zapping (it could stay part-way along, a card stuck to the screen's edge).
 - 📺 **"You may like":** what is on air now always comes first; after it, only what starts within the hour (it looked four hours ahead, and a later programme could stand before one already on).
+- 📺 **Live TV:** "You may like" leaves out the channels already on show in the row of cards above it, and a synopsis no longer opens with the genres in brackets ("(Cine,Ciencia ficción) …") when the line above already says them.

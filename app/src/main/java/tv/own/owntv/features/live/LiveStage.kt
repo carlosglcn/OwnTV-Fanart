@@ -476,7 +476,8 @@ internal fun LiveStagePane(
             kotlinx.coroutines.delay(300)
             value = runCatching { resolver.detailsFor(n.title, null) }.getOrNull()?.overview
         }
-        if (showTop) (now?.description?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
+        // glcn: without the genres some guides repeat in brackets at the start (the line above already has them).
+        if (showTop) (now?.description?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.glcn.SynopsisText.withoutGenres(it, nowNext?.nowDetails?.categories) }?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
             tv.own.owntv.features.shell.components.DriftingSynopsis(
                 it,
                 modifier = Modifier.padding(top = 14.mpx).then(if (rowSchedule) Modifier.weight(1f) else if (tall) Modifier.weight(1f, fill = false) else Modifier), // glcn: Ficha — the synopsis takes all the room down to the cards at the foot
