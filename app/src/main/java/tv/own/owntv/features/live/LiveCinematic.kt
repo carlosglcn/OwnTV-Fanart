@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -91,6 +92,8 @@ private const val WINDOW_HOURS = 6L
 /** glcn: with the menu on top, how much lower the rows sit (the room goes to the words above). */
 private const val HERO_SPARE = 56
 private const val HERO_FOOT = 10
+/** glcn: the width over which the words' wash fades out towards the preview box (the gap between them). */
+private const val WASH_FADE = 44
 private const val SYNOPSIS_LINES = 4
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -425,18 +428,31 @@ private fun LiveCinematicHero(
                     val cy = size.height * 0.5f
                     val rx = size.width * 0.92f
                     val ry = size.height * 1.05f
-                    // glcn: never to the left of the words — there stands the preview box, and the wash lay over it as a
-                    // pale glow on its black.
-                    clipRect(left = 0f, top = -size.height, right = size.width * 2f, bottom = size.height * 2f) {
-                        scale(scaleX = rx / ry, scaleY = 1f, pivot = androidx.compose.ui.geometry.Offset(cx, cy)) {
-                            drawCircle(
-                                Brush.radialGradient(
-                                    0f to wash.copy(alpha = 0.92f), 0.6f to wash.copy(alpha = 0.78f), 1f to wash.copy(alpha = 0f),
-                                    center = androidx.compose.ui.geometry.Offset(cx, cy), radius = ry,
-                                ),
-                                radius = ry, center = androidx.compose.ui.geometry.Offset(cx, cy),
+                    // glcn: never over the preview box to the left of the words (it lay on its black as a pale glow) — and
+                    // with no edge either: the wash fades out across the gap between the box and the words. A plain
+                    // clip there left a line down the page.
+                    val fade = WASH_FADE.mpx.toPx()
+                    val bounds = androidx.compose.ui.geometry.Rect(-fade, -size.height, size.width * 2f, size.height * 2f)
+                    drawIntoCanvas { canvas ->
+                        canvas.saveLayer(bounds, androidx.compose.ui.graphics.Paint())
+                        clipRect(left = bounds.left, top = bounds.top, right = bounds.right, bottom = bounds.bottom) {
+                            scale(scaleX = rx / ry, scaleY = 1f, pivot = androidx.compose.ui.geometry.Offset(cx, cy)) {
+                                drawCircle(
+                                    Brush.radialGradient(
+                                        0f to wash.copy(alpha = 0.92f), 0.6f to wash.copy(alpha = 0.78f), 1f to wash.copy(alpha = 0f),
+                                        center = androidx.compose.ui.geometry.Offset(cx, cy), radius = ry,
+                                    ),
+                                    radius = ry, center = androidx.compose.ui.geometry.Offset(cx, cy),
+                                )
+                            }
+                            drawRect(
+                                Brush.horizontalGradient(0f to Color.Transparent, 1f to Color.Black, startX = -fade, endX = 0f),
+                                topLeft = androidx.compose.ui.geometry.Offset(-fade, bounds.top),
+                                size = androidx.compose.ui.geometry.Size(fade, bounds.height),
+                                blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
                             )
                         }
+                        canvas.restore()
                     }
                 },
         ) {
