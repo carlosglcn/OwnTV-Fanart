@@ -240,6 +240,12 @@ fun CategoryBrowserOverlay(
                 }
             }
         }
+        // glcn: a ‹ tab left of the categories when ◀ opens the playlists from them — in the margin, since a focused
+        // category fills the panel to its edge. Gone while the playlists are open or the search is being typed in.
+        if (playlists != null) tv.own.owntv.glcn.EdgeTab(
+            visible = hasFocus && !listsOpen && !typing && !onChips,
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = 3.mpx),
+        )
         // glcn: a › tab on the categories' right edge while their channels sit beside them (▶ goes there).
         if (peekChannels != null) tv.own.owntv.glcn.EdgeTab(
             visible = hasFocus && peeked.isNotEmpty(), toRight = true,
