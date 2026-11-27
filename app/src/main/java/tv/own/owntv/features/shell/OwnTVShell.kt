@@ -292,7 +292,9 @@ fun OwnTVShell(
     val navSections = if (tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId)) visibleSections - setOf(MainSection.MOVIES, MainSection.SERIES, MainSection.DOWNLOADS) else visibleSections
     // glcn: measured again when the text size changes (accessible mode makes the names a quarter larger): the bar
     // only folds to icons while it truly does not fit, and opens up again once it does.
-    var topCompactForced by remember(topSize, visibleSections, tv.own.owntv.glcn.Accessible.on, androidx.compose.ui.platform.LocalDensity.current.fontScale) { mutableStateOf(false) }
+    // glcn: …and when the bar's shape changes — a wide shape that did not fit left the next one folded to icons too,
+    // names gone for good ("Normal" size, yet only icons), until the app was opened again.
+    var topCompactForced by remember(topSize, visibleSections, tv.own.owntv.glcn.Accessible.on, androidx.compose.ui.platform.LocalDensity.current.fontScale, tv.own.owntv.glcn.TopBarPref.shape) { mutableStateOf(false) }
     val topGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 16.mpx.toPx() }
     LaunchedEffect(topBarBounds, playlistPillBounds, navStyle, topCompactForced) {
         val bar = topBarBounds
