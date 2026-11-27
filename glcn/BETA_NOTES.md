@@ -107,3 +107,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📺 **"You may like":** what is on air now always comes first; after it, only what starts within the hour (it looked four hours ahead, and a later programme could stand before one already on).
 - 📺 **Live TV:** "You may like" leaves out the channels already on show in the row of cards above it, and a synopsis no longer opens with the genres in brackets ("(Cine,Ciencia ficción) …") when the line above already says them.
 - 📺 **Live TV, Cinematic:** the pale glow over the black preview box is gone (the wash behind the words spilled onto it).
+- 🔊 **Brasa OK and opening, cleaned up:** the first cinematic try sounded metallic and distorted on the TV. Both are now made of round, nearly pure tones with no echoes or noise — OK is a soft low knock under two notes a fifth apart; the opening keeps its low swell and the chord that opens, without the heavy sub hit.

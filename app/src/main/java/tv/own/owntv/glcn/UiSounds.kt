@@ -319,7 +319,7 @@ object UiSounds {
         fun pad(atSec: Double, freq: Double, durSec: Double, amp: Double, attack: Double, release: Double, bright: Double = 0.5) {
             val start = (atSec * RATE).toInt()
             val n = (durSec * RATE).toInt()
-            val voices = doubleArrayOf(0.9965, 1.0035)
+            val voices = doubleArrayOf(0.9985, 1.0015)
             val phases = Array(voices.size) { DoubleArray(PAD_PARTIALS) }
             for (i in 0 until n) {
                 val idx = start + i
@@ -439,13 +439,13 @@ object UiSounds {
         3 -> Mix(0.12).apply { drop(0.0, 600.0, 1500.0, 0.1, 0.32, decay = 26.0) }
         4 -> Mix(0.3).apply { bell(0.0, 523.0, 0.28, 0.26, decay = 16.0, partials = doubleArrayOf(1.0, 0.06), attack = 0.009); bell(0.07, 659.0, 0.22, 0.22, decay = 18.0, partials = doubleArrayOf(1.0, 0.05), attack = 0.009) }
         5 -> Mix(0.4).apply { bell(0.0, 659.0, 0.36, 0.3, decay = 11.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003); bell(0.07, 988.0, 0.32, 0.26, decay = 13.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003) }
-        // Ember: a cinema's "confirm" — a soft, deep hit that falls away under a short warm swell and a breath of air.
-        7 -> Mix(0.42).apply {
-            drop(0.0, 150.0, 52.0, 0.36, 0.5, decay = 9.0)
-            pad(0.0, 146.83, 0.4, 0.2, attack = 0.03, release = 0.3, bright = 0.45)
-            pad(0.02, 220.0, 0.36, 0.11, attack = 0.05, release = 0.28, bright = 0.4)
-            air(0.0, 0.2, 0.035, cutoff = 1600.0)
-            room(0.7)
+        // Ember: a cinema's "confirm", kept clean — a soft low knock and two round notes a fifth apart (D, A) that
+        // bloom and fade. Nearly pure tones, no echoes and no noise: the first try (detuned voices, a deep sub and a
+        // room) came out metallic and distorted on the TV's speakers.
+        7 -> Mix(0.45).apply {
+            drop(0.0, 120.0, 74.0, 0.16, 0.26, decay = 16.0)
+            bell(0.0, 293.66, 0.42, 0.22, decay = 7.5, partials = doubleArrayOf(1.0, 0.1), attack = 0.018)
+            bell(0.03, 440.0, 0.4, 0.13, decay = 8.5, partials = doubleArrayOf(1.0, 0.06), attack = 0.022)
         }
         else -> Mix(0.09).apply { bell(0.0, 1250.0, 0.09, 0.3, decay = 45.0); bell(0.012, 1870.0, 0.07, 0.15, decay = 60.0) }
     }.pcm()
@@ -475,18 +475,17 @@ object UiSounds {
     /** Halloween: a low minor chord and a theremin that rises and wavers. */
     /** glcn: Ember's own opening, a film studio's logo in three seconds: a low swell, the chord opening over a deep hit, a glint. */
     private fun emberChime() = Mix(3.6).apply {
-        // A low note and a breath of air swell out of silence…
-        air(0.0, 1.5, 0.04, cutoff = 900.0)
-        pad(0.0, 73.42, 3.5, 0.2, attack = 1.0, release = 1.5, bright = 0.5)
-        pad(0.2, 110.0, 3.3, 0.12, attack = 0.95, release = 1.5, bright = 0.45)
-        // …then the chord opens at once (D, A, F♯) over a deep, soft hit, and rings out with a glint on top.
-        drop(1.15, 150.0, 44.0, 1.0, 0.5, decay = 3.6)
-        pad(1.1, 146.83, 2.5, 0.15, attack = 0.22, release = 1.6, bright = 0.55)
-        pad(1.1, 220.0, 2.5, 0.11, attack = 0.25, release = 1.6, bright = 0.5)
-        pad(1.12, 369.99, 2.45, 0.08, attack = 0.3, release = 1.6, bright = 0.45)
-        bell(1.2, 587.33, 2.0, 0.06, decay = 2.0, partials = doubleArrayOf(1.0, 0.3), attack = 0.02)
-        bell(1.34, 880.0, 1.8, 0.035, decay = 2.4, partials = doubleArrayOf(1.0, 0.2), attack = 0.02)
-        room()
+        // A low note swells out of silence…
+        pad(0.0, 73.42, 3.5, 0.18, attack = 1.0, release = 1.5, bright = 0.3)
+        pad(0.2, 110.0, 3.3, 0.1, attack = 0.95, release = 1.5, bright = 0.25)
+        // …then the chord opens (D, A, F♯) over a soft low knock, and rings out with a glint on top. Round tones and
+        // no echoes, so it stays clean on small speakers.
+        drop(1.15, 110.0, 62.0, 0.6, 0.3, decay = 5.0)
+        pad(1.1, 146.83, 2.5, 0.14, attack = 0.22, release = 1.6, bright = 0.3)
+        pad(1.1, 220.0, 2.5, 0.1, attack = 0.25, release = 1.6, bright = 0.25)
+        pad(1.12, 369.99, 2.45, 0.07, attack = 0.3, release = 1.6, bright = 0.2)
+        bell(1.2, 587.33, 2.0, 0.05, decay = 2.0, partials = doubleArrayOf(1.0, 0.15), attack = 0.02)
+        bell(1.34, 880.0, 1.8, 0.03, decay = 2.4, partials = doubleArrayOf(1.0, 0.1), attack = 0.02)
     }.pcm()
 
     private fun halloween() = Mix(2.2).apply {
