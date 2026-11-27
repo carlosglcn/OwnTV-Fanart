@@ -119,3 +119,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 📏 **Smoothness meter, more telling:** the report's frame line now says where the slow frames' time went — building the screen (app), drawing it (gpu) or waiting — per section.
 - 🔤 **Movies and Series, key hints over the picture:** "Play" and "Options" beside the OK caps were muted grey on the backdrop and could not be read on a light theme; over a picture they now take the text colour, a little bolder, with a soft halo.
 - 🔇 **Sounds Off is silent in popups too:** with the app's sounds off, moving inside a popup (Settings › Layout › Navigation, a title's page…) still clicked — Android TV's own system sound, which was only silenced on the main screen.
+- 🧭 **Top bar, no more jumps:** an entry that gains or loses its name as you move (and the bolder focused name) changed width in a single frame and the whole bar jumped; the width now glides and the name is uncovered as the entry opens.

@@ -1,5 +1,6 @@
 package tv.own.owntv.features.shell.components
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInWindow
@@ -973,6 +974,14 @@ private fun TopEntry(
         }
         Row(
             Modifier
+                // glcn: an entry that gains or loses its name (the focused one in Icons, the open one when compact) and
+                // the bolder weight of the focused name changed its width in one frame, and the whole bar jumped with
+                // it. The width now glides, the name uncovered as the entry opens; the neighbours follow along.
+                .then(
+                    if (tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on) Modifier.animateContentSize(
+                        androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = TOP_ENTRY_WIDTH_STIFFNESS),
+                    ) else Modifier,
+                )
                 .padding(horizontal = sc(if (!named) 14 else if (tabs) 12 else 18).mpx)
                 .fillMaxHeight()
                 .drawBehind {
@@ -1002,6 +1011,8 @@ private fun TopEntry(
     }
 }
 
+/** glcn: how briskly a top-bar entry's width follows its name coming and going. */
+private const val TOP_ENTRY_WIDTH_STIFFNESS = 520f
 private const val REST_OPEN_MS = 420L
 
 /**
