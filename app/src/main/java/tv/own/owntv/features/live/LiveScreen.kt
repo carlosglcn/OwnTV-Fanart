@@ -872,10 +872,14 @@ fun LiveScreen(
                 loadSimilar = { t, c, y, id, n -> vm.similarTo(t, c, y, id, n) },
                 header = {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(28.mpx)) {
-                        LiveHeader(category = headerLabel, count = count, showChevron = true, modifier = Modifier.weight(1f, fill = false))
+                        LiveHeader(
+                            category = headerLabel, count = count, showChevron = true, showTitle = false,
+                            // glcn: on glass, like the tools: these words lie over the programme's picture.
+                            modifier = Modifier.weight(1f, fill = false).stageGlass(22.mpx, overContent = true).padding(horizontal = 18.mpx, vertical = 9.mpx),
+                        )
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.mpx),
-                            modifier = Modifier.focusGroup().onPreviewKeyEvent { e ->
+                            modifier = Modifier.stageGlass(22.mpx, overContent = true).padding(horizontal = 8.mpx, vertical = 3.mpx).focusGroup().onPreviewKeyEvent { e ->
                                 if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown &&
                                     e.key == androidx.compose.ui.input.key.Key.DirectionDown
                                 ) { focusChannelList(); true } else false

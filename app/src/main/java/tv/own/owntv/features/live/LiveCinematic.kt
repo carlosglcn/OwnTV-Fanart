@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -86,6 +87,10 @@ import tv.own.owntv.ui.theme.stageText
 private const val CARD_W = 400
 private const val CARD_H = 225
 private const val WINDOW_HOURS = 6L
+/** glcn: with the menu on top, how much lower the rows sit (the room goes to the words above). */
+private const val HERO_SPARE = 56
+private const val HERO_FOOT = 10
+private const val SYNOPSIS_LINES = 4
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -174,7 +179,10 @@ internal fun LiveCinematicPane(
         // the chips no longer need, and the rows with it, so "You may like" is whole at the bottom.
         val short = (1080.mpx - maxHeight).coerceAtLeast(0.mpx)
         val heroTop = (100.mpx - short).coerceAtLeast(16.mpx)
-        val rowsTop = 450.mpx - (100.mpx - heroTop)
+        // glcn: with the menu on top the cards carry no "up next" boxes, which left an empty band at the foot of the
+        // page: the rows sit a little lower there and the words above get that room (the synopsis ran into the tools).
+        val spare = if (short > 0.mpx) HERO_SPARE.mpx else 0.mpx
+        val rowsTop = 450.mpx - (100.mpx - heroTop) + spare
         // The picture fills the top right and dissolves into the page, as Movies' Cinematic does.
         tv.own.owntv.ui.components.ArtTint(heroArt, Modifier.matchParentSize())
         VodCinematicBackdrop(heroArt, series = true, Modifier.align(Alignment.TopEnd))
@@ -186,6 +194,7 @@ internal fun LiveCinematicPane(
             previewEngine = previewEngine,
             showVideo = showVideo,
             singleSessionBlocked = singleSessionBlocked,
+            room = rowsTop - heroTop - HERO_FOOT.mpx,
             // glcn: low enough to clear the top bar's chips ("Last channel", the playlist picker).
             modifier = Modifier.padding(start = 64.mpx, top = heroTop, end = 64.mpx),
         )
@@ -372,15 +381,16 @@ private fun LiveCinematicHero(
     previewEngine: tv.own.owntv.player.LivePreviewEngine,
     showVideo: Boolean,
     singleSessionBlocked: Boolean,
+    room: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(44.mpx)) {
-        // glcn: the box is for the video. Without one the backdrop already shows the picture, so a
-        // second copy of it here only repeated it — the words take the room instead.
+        // glcn: the box is for the video; until it plays it shows the programme's picture with the channel's logo in
+        // a corner, not the logo alone on a black block.
         if (showVideo) {
             LiveCinematicVideo(
                 channel = channel,
-                art = null,
+                art = art,
                 previewEngine = previewEngine,
                 showVideo = showVideo,
                 singleSessionBlocked = singleSessionBlocked,
@@ -392,19 +402,22 @@ private fun LiveCinematicHero(
         // glcn: a soft wash of the page colour behind the words, strongest where they start and gone past their end,
         // so title and synopsis read over a bright picture (the picture itself fades in only further right).
         val wash = StageColors.Wash
+        // glcn: how many lines the title took — a two-line title leaves the synopsis one line less, so the words never
+        // reach the tools below them.
+        var titleLines by remember { androidx.compose.runtime.mutableIntStateOf(1) }
         Column(
-            Modifier.width(if (showVideo) 1000.mpx else 1100.mpx).padding(top = 6.mpx)
+            Modifier.width(if (showVideo) 1000.mpx else 1100.mpx).heightIn(max = room).padding(top = 6.mpx)
                 .drawBehind {
                     // glcn: a soft oval of the page colour, no edges anywhere: strongest behind the words, fading out
                     // well past them on every side (a radial glow stretched to the text's shape).
                     val cx = size.width * 0.42f
                     val cy = size.height * 0.5f
-                    val rx = size.width * 0.78f
-                    val ry = size.height * 0.95f
+                    val rx = size.width * 0.92f
+                    val ry = size.height * 1.05f
                     scale(scaleX = rx / ry, scaleY = 1f, pivot = androidx.compose.ui.geometry.Offset(cx, cy)) {
                         drawCircle(
                             Brush.radialGradient(
-                                0f to wash.copy(alpha = 0.80f), 0.55f to wash.copy(alpha = 0.6f), 1f to wash.copy(alpha = 0f),
+                                0f to wash.copy(alpha = 0.92f), 0.6f to wash.copy(alpha = 0.78f), 1f to wash.copy(alpha = 0f),
                                 center = androidx.compose.ui.geometry.Offset(cx, cy), radius = ry,
                             ),
                             radius = ry, center = androidx.compose.ui.geometry.Offset(cx, cy),
@@ -428,23 +441,23 @@ private fun LiveCinematicHero(
                 Text(
                     tv.own.owntv.core.live.SportsNow.displayTitle(now.title), style = stageText(44, 800, (-0.5).mpxSp), color = StageColors.Text,
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { titleLines = it.lineCount },
                 )
                 Text(
+                    // glcn: the time left sits with the times it belongs to, not loose beside the bar.
                     listOfNotNull(
                         detailsLine(now, nowNext.nowDetails).takeIf { it.isNotBlank() },
+                        timeLeftText(minutesLeft(now)).takeIf { it.isNotBlank() },
                         tv.own.owntv.ui.components.rememberTmdbRating(now.title, nowNext.nowDetails?.categories),
                     ).joinToString("  ·  "),
                     style = stageText(19, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 8.mpx, bottom = 14.mpx),
                 )
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
-                    StageProgress(progressOf(now), Modifier.width(420.mpx))
-                    Text(timeLeftText(minutesLeft(now)), style = stageText(17, 500), color = StageColors.Muted, maxLines = 1)
-                }
+                StageProgress(progressOf(now), Modifier.width(420.mpx))
                 now.description?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         it, style = stageText(19, 400).copy(lineHeight = (19 * 1.5f).mpxSp), color = StageColors.Text,
-                        maxLines = 4, overflow = TextOverflow.Ellipsis,
+                        maxLines = if (titleLines > 1) SYNOPSIS_LINES - 1 else SYNOPSIS_LINES, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 16.mpx).widthIn(max = 820.mpx),
                     )
                 }
@@ -487,6 +500,10 @@ private fun LiveCinematicVideo(
         if (loading) OwnTVSpinner(sizeDp = 28)
         if (channel != null) {
             Box(Modifier.align(Alignment.TopStart).padding(start = 18.mpx, top = 16.mpx)) { StageLiveBadge(tv.own.owntv.glcn.onAirLabel(nowTitle)) }
+            // glcn: over the programme's picture, whose channel it is.
+            if ((!playing || loading) && !art.isNullOrBlank()) {
+                Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.mpx, bottom = 14.mpx)) { LivePlate(channel.displayLogoUrl, 84.mpx, 58.mpx) }
+            }
         }
         if (singleSessionBlocked && !playing) {
             Text(
