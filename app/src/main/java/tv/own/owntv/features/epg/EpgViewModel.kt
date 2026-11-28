@@ -1056,7 +1056,10 @@ class EpgViewModel(
         val previous = loadJob
         loadJob = viewModelScope.launch {
             previous?.cancelAndJoin()
-            loadMutex.withLock { runLoad() }
+            // glcn: off the app's own thread — the report's busy log showed this load holding it for 230–390 ms at a
+            // time (sorting and matching every channel), which is the stall on entering the Guide. It only writes to
+            // state flows, so it is free to run elsewhere.
+            loadMutex.withLock { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { runLoad() } }
         }
     }
 
