@@ -3080,6 +3080,8 @@ fun OwnTVShell(
     tv.own.owntv.features.settings.lock.MenuChangeGateHost()
     // "Check TheIntroDB" from any film, series or episode long-press menu.
     tv.own.owntv.features.settings.TheIntroDbCheckHost()
+    // glcn: favourite channels lost with a replaced playlist, offered back once when the new one has them.
+    tv.own.owntv.glcn.PortableFavorites.Host()
     if (showExit) {
         ExitDialog(onConfirm = onExitApp, onDismiss = { showExit = false })
     }

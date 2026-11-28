@@ -196,4 +196,8 @@
     <string name="glcn_downloads_empty_title">Aún no hay nada</string>
     <string name="glcn_downloads_empty_body">Aquí aparecen tus descargas y grabaciones. Abre una película o un episodio y pulsa Descargar, o pulsa Grabar en un programa de la guía de TV.</string>
     <string name="glcn_davis_pending">Jugadores por confirmar</string>
+    <string name="glcn_favs_recover_title">Favoritos recuperables</string>
+    <string name="glcn_favs_recover_body">%1$d de los %2$d canales favoritos que se quedaron sin canal están en tus listas actuales. ¿Volver a marcarlos como favoritos?</string>
+    <string name="glcn_favs_recover_yes">Recuperar</string>
+    <string name="glcn_favs_recover_no">Ahora no</string>
 </resources>
