@@ -348,11 +348,15 @@ fun LumenHome(
                 val (homeTone, awayTone) = tv.own.owntv.features.sports.sideColors(m)
                 val one = homeTone ?: awayTone
                 val two = awayTone ?: homeTone
-                if (one != null && two != null) Box(
-                    Modifier.fillMaxSize().background(
-                        Brush.horizontalGradient(MATCH_WASH_FROM to Color.Transparent, MATCH_WASH_MID to one.copy(alpha = MATCH_WASH), 1f to two.copy(alpha = MATCH_WASH)),
-                    ),
-                )
+                if (one != null && two != null) {
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            Brush.horizontalGradient(MATCH_WASH_FROM to Color.Transparent, MATCH_WASH_MID to one.copy(alpha = MATCH_WASH), 1f to two.copy(alpha = MATCH_WASH)),
+                        ),
+                    )
+                    // Calmer at the top, where the clock and the chips sit.
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to palette.page.copy(alpha = MATCH_WASH_TOP), MATCH_WASH_TOP_END to Color.Transparent)))
+                }
             }
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(palette.page.copy(alpha = 0.78f), palette.page.copy(alpha = 0.34f), palette.page.copy(alpha = 0f)))))
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to palette.page.copy(alpha = 0.95f))))
@@ -366,7 +370,7 @@ fun LumenHome(
             val score = m?.takeIf { (it.isLive || it.state == tv.own.owntv.core.sports.model.MatchState.POST) && !sportsConfig.spoilerFree }
                 ?.let { tv.own.owntv.features.sports.scoreText(it.sport, it.home?.score) to tv.own.owntv.features.sports.scoreText(it.sport, it.away?.score) }
                 ?.takeIf { it.first.isNotBlank() && it.second.isNotBlank() && m?.sport != tv.own.owntv.core.sports.model.Sport.TENNIS }
-            Row(Modifier.align(Alignment.TopEnd).padding(end = 140.mpx, top = 170.mpx), horizontalArrangement = Arrangement.spacedBy(if (score != null) 34.mpx else 48.mpx), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.align(Alignment.TopEnd).padding(end = 140.mpx, top = 170.mpx).graphicsLayer { alpha = chrome }, horizontalArrangement = Arrangement.spacedBy(if (score != null) 34.mpx else 48.mpx), verticalAlignment = Alignment.CenterVertically) {
                 tv.own.owntv.features.sports.Crest(pair.getOrNull(0), 230)
                 if (score != null) Text(score.first + MATCH_SCORE_DASH + score.second, style = tv.own.owntv.ui.theme.stageDisplay(84), color = StageColors.Text, maxLines = 1)
                 tv.own.owntv.features.sports.Crest(pair.getOrNull(1), 230)
@@ -374,7 +378,12 @@ fun LumenHome(
         }
         // A race or a tournament day has no two sides: its competition's mark stands where the crests would.
         shown?.match?.takeIf { shown?.crests == null }?.let { m ->
-            tv.own.owntv.features.sports.LeagueMark(m, 220, Modifier.align(Alignment.TopEnd).padding(end = 220.mpx, top = 175.mpx))
+            tv.own.owntv.features.sports.LeagueMark(m, 220, Modifier.align(Alignment.TopEnd).padding(end = 220.mpx, top = 175.mpx).graphicsLayer { alpha = chrome })
+        }
+        // glcn: at rest a film leaves its picture; a match left two crests in a corner of an empty page. It now
+        // leaves a poster of itself — the two sides large, the hour or the score between them, over both colours.
+        shown?.match?.takeIf { chrome < 1f }?.let { m ->
+            DockMatchPoster(m, spoilerFree = sportsConfig.spoilerFree, modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 1f - chrome })
         }
         menuRow?.let { row ->
             KeepWatchingMenu(
@@ -702,9 +711,62 @@ private fun DockMatchFacts(m: Match, vm: SportsViewModel) {
         DockChip(tv.own.owntv.features.sports.leagueName(m))
     }
     val venue = tv.own.owntv.features.sports.venueText(m)
-    val channel = tv.own.owntv.features.sports.cardChannel(vm, m) ?: m.broadcasts.take(2).joinToString(MATCH_FACT_SEP) { it.name }.takeIf { it.isNotBlank() }
+    // Only a channel of the list it was found on: the feed's own broadcasters are another country's ("ESPN Deportes").
+    val channel = tv.own.owntv.features.sports.cardChannel(vm, m)
     listOfNotNull(venue, channel).takeIf { it.isNotEmpty() }?.let {
         Text(it.joinToString(MATCH_FACT_DOT), style = stageText(21, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx))
+    }
+}
+
+/** glcn: a match as the page shows it at rest (see where it is called). */
+@Composable
+private fun DockMatchPoster(m: Match, spoilerFree: Boolean, modifier: Modifier = Modifier) {
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    val (homeTone, awayTone) = tv.own.owntv.features.sports.sideColors(m)
+    val sides = listOfNotNull(m.home?.team, m.away?.team).takeIf { m.competitors.size >= 2 }
+    Box(modifier, contentAlignment = Alignment.Center) {
+        val one = homeTone ?: awayTone
+        val two = awayTone ?: homeTone
+        if (one != null && two != null) Box(
+            Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to one.copy(alpha = POSTER_WASH), 0.5f to Color.Transparent, 1f to two.copy(alpha = POSTER_WASH))),
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (sides != null) tv.own.owntv.features.sports.LeagueMark(m, 96)
+            Text(tv.own.owntv.features.sports.leagueName(m), style = stageText(24, 700), color = StageColors.Muted, maxLines = 1, modifier = Modifier.padding(top = 14.mpx, bottom = 34.mpx))
+            if (sides == null) {
+                tv.own.owntv.features.sports.LeagueMark(m, 260)
+                Text(m.title, style = tv.own.owntv.ui.theme.stageDisplay(56), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 30.mpx).widthIn(max = 1300.mpx))
+            } else Row(horizontalArrangement = Arrangement.spacedBy(70.mpx), verticalAlignment = Alignment.CenterVertically) {
+                PosterSide(sides[0])
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val played = (m.isLive || m.state == tv.own.owntv.core.sports.model.MatchState.POST) && !spoilerFree && m.sport != tv.own.owntv.core.sports.model.Sport.TENNIS
+                    val home = tv.own.owntv.features.sports.scoreText(m.sport, m.home?.score)
+                    val away = tv.own.owntv.features.sports.scoreText(m.sport, m.away?.score)
+                    val hour = tv.own.owntv.features.sports.timeText(m.startMs)
+                    Text(
+                        if (played && home.isNotBlank() && away.isNotBlank()) home + MATCH_SCORE_DASH + away else hour,
+                        style = tv.own.owntv.ui.theme.stageDisplay(110), color = StageColors.Text, maxLines = 1,
+                    )
+                    if (m.isLive) tv.own.owntv.features.sports.LiveMark(tv.own.owntv.features.sports.clockText(m), 22f)
+                    else tv.own.owntv.features.sports.dayOf(m.startMs, locale)?.let { Text(it, style = stageText(24, 600), color = StageColors.Muted, maxLines = 1) }
+                }
+                PosterSide(sides[1])
+            }
+            tv.own.owntv.features.sports.venueText(m)?.let {
+                Text(it, style = stageText(22, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 40.mpx))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PosterSide(team: tv.own.owntv.core.sports.model.Team) {
+    Column(Modifier.width(420.mpx), horizontalAlignment = Alignment.CenterHorizontally) {
+        tv.own.owntv.features.sports.Crest(team, 300)
+        Text(
+            tv.own.owntv.features.sports.teamLabel(team), style = stageText(30, 800), color = StageColors.Text, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 20.mpx),
+        )
     }
 }
 
@@ -712,8 +774,10 @@ private const val MATCH_SCORE_DASH = " – "
 /** glcn: a match's colour wash — where it starts across the page, where the home colour is whole, how strong. */
 private const val MATCH_WASH_FROM = 0.3f
 private const val MATCH_WASH_MID = 0.66f
-private const val MATCH_WASH = 0.5f
-private const val MATCH_FACT_SEP = ", "
+private const val MATCH_WASH = 0.4f
+private const val MATCH_WASH_TOP = 0.6f
+private const val MATCH_WASH_TOP_END = 0.3f
+private const val POSTER_WASH = 0.42f
 private const val MATCH_FACT_DOT = "  ·  "
 
 @Composable

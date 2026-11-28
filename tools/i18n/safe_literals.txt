@@ -106,11 +106,15 @@
 1	technical	app/src/main/java/tv/own/owntv/features/customize/CustomizeScreen.kt	▶
 1	empty	app/src/main/java/tv/own/owntv/features/customize/CustomizeViewModel.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	/
+1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	/files/
+1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	/storage/emulated/0/
 1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	content://
 1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	d_${it.id}
 1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	hdr_$labelRes
 1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	jm
 1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	primary
+1	technical	app/src/main/java/tv/own/owntv/features/downloads/DownloadsScreen.kt	›
 1	empty	app/src/main/java/tv/own/owntv/features/downloads/DownloadsViewModel.kt	\0
 2	technical	app/src/main/java/tv/own/owntv/features/epg/EpgScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/epg/EpgScreen.kt	$p
@@ -164,7 +168,6 @@
 9	technical	app/src/main/java/tv/own/owntv/features/home/HomeGlcn.kt	·
 3	empty	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	%.1f
-1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	,
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	c
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	dockRest
 1	technical	app/src/main/java/tv/own/owntv/features/home/HomeLumen.kt	dockTrailerHole
@@ -1436,13 +1439,18 @@
 2	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	\0
 1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	$name ${t.frames}f ${pct}% slow
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	$screen·popup
+1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	$who ${b.ms}ms/${b.count} worst ${b.worst}ms
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	(trailer)
 1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	, ${t.janky} >${JANK_MS}ms
 1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	, app ${t.appNs * 100 / all}% gpu ${t.gpuNs * 100 / all}% wait ${t.waitNs * 100 / all}%
 1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	, worst ${t.worstMs}ms
+1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	/
+1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	>>>>>
+1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	@
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	glcn-frames
+1	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	null
 1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	start
-1	technical	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	·
+2	log	app/src/main/java/tv/own/owntv/glcn/FrameWatch.kt	·
 1	technical	app/src/main/java/tv/own/owntv/glcn/FreshDefaults.kt	done
 1	technical	app/src/main/java/tv/own/owntv/glcn/FreshDefaults.kt	glcn_fresh_defaults
 1	technical	app/src/main/java/tv/own/owntv/glcn/Ghosts.kt	ghostLogo
@@ -1499,9 +1507,10 @@
 2	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}
 1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	(short)
-1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	,
+1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	,
 1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	, box short
 1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	browsing
+1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	busy · $it
 1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	frames · $it
 1	technical	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	glcn-watch
 1	log	app/src/main/java/tv/own/owntv/glcn/MemoryWatch.kt	in background

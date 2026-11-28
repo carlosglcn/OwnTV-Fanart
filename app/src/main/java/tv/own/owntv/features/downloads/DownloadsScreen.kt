@@ -103,6 +103,28 @@ private fun dk(id: Long): Long = id + DOWNLOAD_KEYS
 private const val STORAGE_BAR = 300
 
 /**
+ * glcn: where a file is, as a person would say it — "OwnTV › Series › Carrie › Season 1 › First rule.mkv" — not the
+ * drive's own road to it ("/storage/emulated/0/Android/data/…/files/…"), which filled two lines of every row.
+ */
+internal fun shownPath(path: String): String {
+    val label = StorageAccess.folderLabel(path) ?: path
+    val tail = when {
+        PATH_PRIVATE in label -> label.substringAfter(PATH_PRIVATE)
+        label.startsWith(PATH_SHARED) -> label.removePrefix(PATH_SHARED)
+        else -> label
+    }
+    return tail.trim('/').replace(PATH_SLASH, PATH_STEP)
+}
+
+private const val PATH_PRIVATE = "/files/"
+private const val PATH_SHARED = "/storage/emulated/0/"
+private const val PATH_SLASH = "/"
+private const val PATH_STEP = " › "
+/** glcn: how far across the page the list keeps a plain ground under it, and where the picture is whole again. */
+private const val LIST_GROUND = 0.67f
+private const val LIST_GROUND_END = 0.82f
+
+/**
  * Downloads: title + storage crumb, the Recordings · Movies · Series tabs and the
  * Download folder tool, the list grouped DOWNLOADING / ON THIS TV, and the Recordings card on the right.
  */
@@ -246,6 +268,10 @@ fun DownloadsScreen(
 
         tv.own.owntv.ui.components.ArtTint(focusedArt, Modifier.matchParentSize())
         tv.own.owntv.features.shell.components.VodCinematicBackdrop(focusedArt, series = true, Modifier.align(Alignment.TopEnd))
+        // glcn: the list reads on the page's own colour — the picture begins beyond its right edge (a row's "Ready to
+        // watch" and its buttons were lost on it).
+        val pageColor = tv.own.owntv.ui.theme.LocalStagePalette.current.page
+        Box(Modifier.matchParentSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to pageColor, LIST_GROUND to pageColor, LIST_GROUND_END to Color.Transparent)))
 
         // "Downloads" 46/800, then the drive: its name, how much is free, and a bar of what is used.
         Column(Modifier.padding(start = contentStart + 20.mpx, top = 52.mpx).width(fx(1100) - contentStart)) {
@@ -288,7 +314,9 @@ fun DownloadsScreen(
         // The two tools, up beside the title: what playing does to a download on a one-stream playlist (OK steps
         // through the three answers) and the folder downloads go to.
         Row(
-            Modifier.align(Alignment.TopEnd).padding(end = screenW - fx(1856), top = 66.mpx).focusGroup(),
+            // On a ground of their own: their glass let the picture behind through and the words went with it.
+            Modifier.align(Alignment.TopEnd).padding(end = screenW - fx(1856), top = 60.mpx)
+                .background(pageColor.copy(alpha = 0.88f), RoundedCornerShape(22.mpx)).padding(6.mpx).focusGroup(),
             horizontalArrangement = Arrangement.spacedBy(14.mpx),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -603,7 +631,7 @@ internal fun StageDownloadRow(
                     Text(title, style = stageText(24, 700), color = if (hasFocus) StageColors.FxText else StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(line, style = stageText(17, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.mpx))
                     path?.takeIf { it.isNotBlank() }?.let {
-                        Text(StorageAccess.folderLabel(it) ?: it, style = stageText(15, 500), color = StageColors.Dim, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.mpx))
+                        Text(shownPath(it), style = stageText(15, 500), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.mpx))
                     }
                 }
             }
