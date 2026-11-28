@@ -1,5 +1,6 @@
 package tv.own.owntv.features.more
 
+import androidx.compose.ui.layout.layout
 import tv.own.owntv.ui.theme.stageTone
 import androidx.activity.compose.BackHandler
 import tv.own.owntv.ui.components.longPressMenuGuard
@@ -415,7 +416,18 @@ internal fun FavouritesPage(
                 else -> stringResource(R.string.more_fav_movies_series)
             }
             RowHead(heading, null, top = if (showLive && lists.live.isNotEmpty()) 36.mpx else 34.mpx)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(24.mpx), contentPadding = PaddingValues(end = 24.mpx, bottom = 24.mpx)) {
+            // glcn: room inside the row for the focused poster — it grows, and with no padding at the row's start and
+            // top its left edge, its ring and the first letters of its title were cut off. The row is shifted back by
+            // the same amount, so the posters stay in line with the heading.
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(24.mpx),
+                contentPadding = PaddingValues(start = FAV_ROW_ROOM.mpx, top = FAV_ROW_ROOM.mpx, end = 24.mpx, bottom = 24.mpx),
+                modifier = Modifier.layout { measurable, constraints ->
+                    val room = FAV_ROW_ROOM.mpx.roundToPx()
+                    val placeable = measurable.measure(constraints.copy(maxWidth = constraints.maxWidth + room))
+                    layout((placeable.width - room).coerceAtLeast(0), (placeable.height - room).coerceAtLeast(0)) { placeable.place(-room, -room) }
+                },
+            ) {
                 items(vodShown, key = { (t, item) -> t.name + ((item as? tv.own.owntv.core.database.entity.MovieEntity)?.id ?: (item as tv.own.owntv.core.database.entity.SeriesEntity).id) }) { (type, item) ->
                     val movie = item as? tv.own.owntv.core.database.entity.MovieEntity
                     val series = item as? tv.own.owntv.core.database.entity.SeriesEntity
@@ -964,3 +976,6 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
 /** glcn: About's three community tiles side by side, and their codes. */
 private const val ABOUT_TILE_W = 432
 private const val ABOUT_QR = 124
+
+/** glcn: the room a Favourites row keeps around its posters for the focused one to grow into. */
+private const val FAV_ROW_ROOM = 20
