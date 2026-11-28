@@ -90,6 +90,8 @@ private class LumenItem(
     val landscape: Boolean,
     /** A match has no picture: its two crests are the art, on the card and large over the title. */
     val crests: List<tv.own.owntv.core.sports.model.Team?>? = null,
+    /** glcn: the match itself — its state, score, ground and channel are written above the dock; a race has no crests and shows its competition's mark. */
+    val match: Match? = null,
     /** A channel's programme on air: its synopsis is not in the guide slice, so it is read when the card is focused. */
     val programmeId: Long? = null,
     /** glcn: a channel's logo — whole and centred on the closed card (over its programme's picture, dimmed and softened). */
@@ -184,7 +186,7 @@ fun LumenHome(
             if (matches.isNotEmpty() && HomeRow.LIVE_SPORTS in order) add(
                 LumenTab(
                     HomeRow.LIVE_SPORTS,
-                    matches.map { m -> LumenItem("x" + m.key, MatchNotifications.pair(context, m), m.leagueName, null, null, null, null, true, listOf(m.home?.team, m.away?.team).takeIf { m.competitors.size >= 2 }) { onOpenMatch(m) } },
+                    matches.map { m -> LumenItem("x" + m.key, MatchNotifications.pair(context, m), tv.own.owntv.features.sports.leagueName(m), null, null, null, null, true, listOf(m.home?.team, m.away?.team).takeIf { m.competitors.size >= 2 }, match = m) { onOpenMatch(m) } },
                 ),
             )
             if (state.trendingItems.isNotEmpty() && HomeRow.TRENDING in order) add(
@@ -345,10 +347,22 @@ fun LumenHome(
         }
         LaunchedEffect(ambientKey) { if (ambientKey == null) CinemaTrailer.playing = null }
 
+        val sportsConfig by sportsVm.sportsConfig.collectAsStateWithLifecycle()
         shown?.crests?.let { pair ->
-            Row(Modifier.align(Alignment.TopEnd).padding(end = 140.mpx, top = 170.mpx), horizontalArrangement = Arrangement.spacedBy(48.mpx)) {
-                pair.forEach { tv.own.owntv.features.sports.Crest(it, 230) }
+            // glcn: the score between the two crests once the match is on or over (never with "no spoilers").
+            val m = shown?.match
+            val score = m?.takeIf { (it.isLive || it.state == tv.own.owntv.core.sports.model.MatchState.POST) && !sportsConfig.spoilerFree }
+                ?.let { tv.own.owntv.features.sports.scoreText(it.sport, it.home?.score) to tv.own.owntv.features.sports.scoreText(it.sport, it.away?.score) }
+                ?.takeIf { it.first.isNotBlank() && it.second.isNotBlank() && m?.sport != tv.own.owntv.core.sports.model.Sport.TENNIS }
+            Row(Modifier.align(Alignment.TopEnd).padding(end = 140.mpx, top = 170.mpx), horizontalArrangement = Arrangement.spacedBy(if (score != null) 34.mpx else 48.mpx), verticalAlignment = Alignment.CenterVertically) {
+                tv.own.owntv.features.sports.Crest(pair.getOrNull(0), 230)
+                if (score != null) Text(score.first + MATCH_SCORE_DASH + score.second, style = tv.own.owntv.ui.theme.stageDisplay(84), color = StageColors.Text, maxLines = 1)
+                tv.own.owntv.features.sports.Crest(pair.getOrNull(1), 230)
             }
+        }
+        // A race or a tournament day has no two sides: its competition's mark stands where the crests would.
+        shown?.match?.takeIf { shown?.crests == null }?.let { m ->
+            tv.own.owntv.features.sports.LeagueMark(m, 220, Modifier.align(Alignment.TopEnd).padding(end = 220.mpx, top = 175.mpx))
         }
         menuRow?.let { row ->
             KeepWatchingMenu(
@@ -395,7 +409,8 @@ fun LumenHome(
                             year?.let { DockChip(it.toString()) }
                             genres.take(2).forEach { DockChip(it) }
                         }
-                    } else it0?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
+                    } else if (it0?.match != null) DockMatchFacts(it0.match, sportsVm)
+                    else it0?.line?.let { Text(it, style = stageText(23, 600), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx)) }
                     // glcn: how far along — a film or episode left half-way, or the programme on air.
                     it0?.progress?.takeIf { it > 0f }?.let { tv.own.owntv.ui.stage.StageProgress(it.coerceIn(0f, 1f), Modifier.padding(top = 14.mpx).width(440.mpx)) }
                     (it0?.plot ?: it0?.programmeId?.let { synopses[it] })?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.features.shell.components.DriftingSynopsis(it, modifier = Modifier.padding(top = 16.mpx).width(1040.mpx), style = stageText(20, 400), color = StageColors.Body, lines = if (tv.own.owntv.glcn.DockPrefs.doubleRow) 2 else 3, fade = true) }
@@ -536,6 +551,9 @@ fun LumenHome(
                                     horizontalArrangement = Arrangement.spacedBy(20.mpx, Alignment.CenterHorizontally),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) { item.crests.forEach { tv.own.owntv.features.sports.Crest(it, 84) } }
+                                else if (item.match != null) Box(Modifier.fillMaxSize().background(accent.accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+                                    tv.own.owntv.features.sports.LeagueMark(item.match, 96)
+                                }
                                 else if (item.logo != null) {
                                     // glcn: a channel. Closed: its programme's picture dimmed (no GPU blur: it would be redrawn on every frame of the glide), the channel's logo whole in
                                     // the middle (no picture: the logo on a tint). Opening: the picture comes up sharp as the logo fades.
@@ -652,6 +670,36 @@ private data class TrendingFacts(val name: String, val poster: String?, val back
 private fun ratingOf(r: Double): String = String.format(java.util.Locale.getDefault(), "%.1f", r)
 
 /** glcn: one fact above the dock as a tag; the rating in the accent with its star. */
+/**
+ * glcn: a match's facts under its name above the dock — live with its minute, or the day and hour it starts; the
+ * competition; where it is played; and the channel of the list it was found on (else who broadcasts it).
+ */
+@Composable
+private fun DockMatchFacts(m: Match, vm: SportsViewModel) {
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    Row(Modifier.padding(top = 14.mpx), horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
+        if (m.isLive) {
+            Box(Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.mpx)).background(StageColors.Text.copy(alpha = 0.12f)).padding(horizontal = 14.mpx, vertical = 6.mpx)) {
+                tv.own.owntv.features.sports.LiveMark(tv.own.owntv.features.sports.clockText(m), 19f)
+            }
+        } else if (m.state == tv.own.owntv.core.sports.model.MatchState.PRE) {
+            val day = tv.own.owntv.features.sports.dayOf(m.startMs, locale)
+            val hour = tv.own.owntv.features.sports.timeText(m.startMs)
+            DockChip(if (day != null) day + ' ' + hour else hour, accent = true)
+        } else if (m.statusText.isNotBlank()) DockChip(m.statusText)
+        DockChip(tv.own.owntv.features.sports.leagueName(m))
+    }
+    val venue = tv.own.owntv.features.sports.venueText(m)
+    val channel = tv.own.owntv.features.sports.cardChannel(vm, m) ?: m.broadcasts.take(2).joinToString(MATCH_FACT_SEP) { it.name }.takeIf { it.isNotBlank() }
+    listOfNotNull(venue, channel).takeIf { it.isNotEmpty() }?.let {
+        Text(it.joinToString(MATCH_FACT_DOT), style = stageText(21, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 12.mpx))
+    }
+}
+
+private const val MATCH_SCORE_DASH = " – "
+private const val MATCH_FACT_SEP = ", "
+private const val MATCH_FACT_DOT = "  ·  "
+
 @Composable
 private fun DockChip(text: String, accent: Boolean = false, star: Boolean = false) {
     val a = stageAccent
