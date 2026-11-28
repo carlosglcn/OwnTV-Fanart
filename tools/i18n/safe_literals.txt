@@ -489,6 +489,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/settings/LocalSyncScreen.kt	localSyncBusyAngle
 1	technical	app/src/main/java/tv/own/owntv/features/settings/LocalSyncScreen.kt	…
 1	empty	app/src/main/java/tv/own/owntv/features/settings/LocalSyncViewModel.kt	\0
+1	log	app/src/main/java/tv/own/owntv/features/settings/LocalSyncViewModel.kt	local sync failed · $direction · ${error?.javaClass?.simpleName} · ${cause.javaClass.simpleName}: ${cause.message}
 5	empty	app/src/main/java/tv/own/owntv/features/settings/ManageSourcesScreen.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/settings/ManageSourcesScreen.kt	$it · ${health.second}
 1	technical	app/src/main/java/tv/own/owntv/features/settings/ManageSourcesScreen.kt	▶

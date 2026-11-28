@@ -726,11 +726,17 @@ private fun SectionsBlock(vm: LocalSyncViewModel, step: LocalSyncViewModel.Step.
                 onClick = { sections = if (section in sections) sections - section else sections + section },
             )
         }
+        // glcn: the work and its failure are said here, in the popup. They were only written on the page behind it, so
+        // Continue seemed to do nothing: no "working", and a device that could not be reached left no word at all.
+        if (vm.busy) BusyRow()
+        vm.error?.let { failure ->
+            Text(stringResource(failure.messageRes()), style = stageText(18, 600), color = StageColors.Danger, modifier = Modifier.padding(top = 12.mpx))
+        }
         Row(Modifier.fillMaxWidth().padding(top = 22.mpx), horizontalArrangement = Arrangement.spacedBy(14.mpx, Alignment.End)) {
-            tv.own.owntv.ui.stage.StagePopupButton(stringResource(R.string.common_cancel), onClick = vm::cancel, primary = false)
+            tv.own.owntv.ui.stage.StagePopupButton(stringResource(R.string.common_cancel), onClick = { vm.dismissError(); vm.cancel() }, primary = false)
             tv.own.owntv.ui.stage.StagePopupButton(
                 stringResource(R.string.settings_backup_continue),
-                onClick = { if (sections.isNotEmpty()) vm.start(sections) },
+                onClick = { if (sections.isNotEmpty() && !vm.busy) { vm.dismissError(); vm.start(sections) } },
             )
         }
     }
