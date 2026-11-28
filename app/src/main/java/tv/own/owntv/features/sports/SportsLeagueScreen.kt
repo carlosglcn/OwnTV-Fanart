@@ -1,6 +1,14 @@
 package tv.own.owntv.features.sports
 
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -97,19 +105,21 @@ fun SportsLeagueScreen(vm: SportsViewModel, onOpenMatch: (Match) -> Unit, onBack
                 LeagueTab.FIXTURES -> state.season.ifEmpty { state.matches }.filter { it.state != MatchState.POST }
                 LeagueTab.RESULTS -> state.season.ifEmpty { state.matches }.filter { it.state == MatchState.POST }.reversed()
             }
+            // glcn: one list state for whichever table shows, so ▲▼ can read it to its end (its rows take no focus).
+            val tableScroll = androidx.compose.foundation.lazy.rememberLazyListState()
             val players = state.ranking?.groups?.singleOrNull()?.takeIf { it.kind == tv.own.owntv.core.sports.model.RankingKind.PLAYERS }
             if (tab == LeagueTab.TABLE && players != null && state.table == null) {
                 // glcn: a tennis tour — the whole ranking, a row each, with photos (lazily: 150 rows).
-                LazyColumn(Modifier.width(960.mpx).fillMaxSize(), contentPadding = PaddingValues(top = 9.mpx, bottom = 60.mpx)) {
+                LazyColumn(Modifier.width(960.mpx).fillMaxSize().readByKeys(tableScroll), state = tableScroll, contentPadding = PaddingValues(top = 9.mpx, bottom = 60.mpx)) {
                     players.title?.let { t -> item { Text(t, style = stageText(19, 800), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(12.mpx)) } }
                     items(players.rows, key = { it.team.id }) { r -> PlayerRankLine(r) }
                 }
             } else if (tab == LeagueTab.TABLE && state.ranking != null && state.table == null) {
-                LazyColumn(Modifier.width(960.mpx).fillMaxSize(), contentPadding = PaddingValues(bottom = 60.mpx)) {
+                LazyColumn(Modifier.width(960.mpx).fillMaxSize().readByKeys(tableScroll), state = tableScroll, contentPadding = PaddingValues(bottom = 60.mpx)) {
                     item { RankingColumns(state.ranking) }
                 }
             } else if (tab == LeagueTab.TABLE) {
-                LazyColumn(Modifier.width(960.mpx).fillMaxSize(), contentPadding = PaddingValues(bottom = 60.mpx)) {
+                LazyColumn(Modifier.width(960.mpx).fillMaxSize().readByKeys(tableScroll), state = tableScroll, contentPadding = PaddingValues(bottom = 60.mpx)) {
                     item { StandingsHeader() }
                     state.table?.groups?.forEach { g ->
                         if ((state.table.groups.size) > 1) item { Text(g.name, style = stageText(19, 800), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(12.mpx)) }
@@ -144,3 +154,40 @@ private fun LeagueMatchRow(m: Match, spoilerFree: Boolean, onClick: () -> Unit) 
         }
     }
 }
+
+/**
+ * glcn: a table whose rows take no focus could not be read past the fold — nothing in it for ▲▼ to land on. The table
+ * itself takes the focus instead (a faint frame says so) and ▲▼ move it a few rows at a time; at either end the
+ * key goes on to whatever lies beyond (the tabs above). ▶ goes to the matches as before.
+ */
+@Composable
+private fun Modifier.readByKeys(state: androidx.compose.foundation.lazy.LazyListState): Modifier {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val focused = remember { mutableStateOf(false) }
+    val step = with(androidx.compose.ui.platform.LocalDensity.current) { READ_STEP.toPx() }
+    val frame = stageAccent.ink.copy(alpha = 0.55f)
+    val glide = tv.own.owntv.ui.theme.ownTvTween<Float>(READ_MS)
+    return this
+        .onFocusChanged { focused.value = it.isFocused }
+        .onPreviewKeyEvent { e ->
+            val down = e.key == androidx.compose.ui.input.key.Key.DirectionDown
+            val up = e.key == androidx.compose.ui.input.key.Key.DirectionUp
+            if (!focused.value || (!down && !up)) return@onPreviewKeyEvent false
+            if (if (down) !state.canScrollForward else !state.canScrollBackward) return@onPreviewKeyEvent false
+            if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) scope.launch {
+                state.animateScrollBy(if (down) step else -step, glide)
+            }
+            true
+        }
+        .focusable()
+        .drawWithContent {
+            drawContent()
+            if (focused.value) {
+                val w = 2.mpx.toPx()
+                drawRoundRect(frame, topLeft = androidx.compose.ui.geometry.Offset(-6.mpx.toPx(), 0f), size = androidx.compose.ui.geometry.Size(size.width + 12.mpx.toPx(), size.height), cornerRadius = androidx.compose.ui.geometry.CornerRadius(14.mpx.toPx()), style = androidx.compose.ui.graphics.drawscope.Stroke(w))
+            }
+        }
+}
+
+private val READ_STEP = 180.mpx
+private const val READ_MS = 220

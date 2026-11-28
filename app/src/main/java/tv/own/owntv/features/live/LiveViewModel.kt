@@ -127,7 +127,7 @@ class LiveViewModel(
     private val contentOrderDao: ContentOrderDao,
     private val customCategoryDao: CustomCategoryDao,
     private val streamUrlResolver: tv.own.owntv.core.stalker.StreamUrlResolver,
-    private val epgRepository: tv.own.owntv.core.repository.EpgRepository,
+    private val guideMatches: tv.own.owntv.core.epg.GuideMatches,
     private val externalPlayerLauncher: tv.own.owntv.core.player.ExternalPlayerLauncher,
     private val recordings: tv.own.owntv.core.recording.RecordingManager,
     /** Keeps the preview pane off a one-stream playlist while a download is using it. */
@@ -295,6 +295,34 @@ class LiveViewModel(
     val recordingChannelIds: StateFlow<Set<Long>> = recordings.observeRunning()
         .map { rows -> rows.mapTo(HashSet()) { it.channelId } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    /** What the remote's Record shortcut did, so it can say so. */
+    sealed interface RecordToggle {
+        data object Started : RecordToggle
+        data object Stopped : RecordToggle
+        /** The playlist has no connection to spare; [grant] says what holds them. */
+        data class Refused(val grant: StreamGrant.Refused) : RecordToggle
+        data object Failed : RecordToggle
+    }
+
+    /**
+     * The remote's Record shortcut: stop this channel's recording if one runs, else record it from now
+     * as [recordNow] does — but answering what happened, because a key press has no menu to show it.
+     */
+    suspend fun toggleRecordingNow(channel: ChannelEntity): RecordToggle {
+        val running = recordings.observeRunning().first().filter { it.channelId == channel.id }
+        if (running.isNotEmpty()) {
+            running.forEach { row ->
+                recordings.stop(row)
+                if (_playerRecording.value?.id == row.id) _playerRecording.value = null
+            }
+            return RecordToggle.Stopped
+        }
+        (recordings.canRecordOn(channel.sourceId) as? StreamGrant.Refused)?.let { return RecordToggle.Refused(it) }
+        val pid = currentProfileId() ?: return RecordToggle.Failed
+        val programme = epgReader.nowNext(channel, custom.value, epgOffset.value)?.now
+        return if (startRecordingNow(channel, pid, programme) != null) RecordToggle.Started else RecordToggle.Failed
+    }
 
     /** Stop the running recording(s) of this channel, keeping what was captured. */
     fun stopRecordingOn(channel: ChannelEntity) {
@@ -937,12 +965,14 @@ class LiveViewModel(
     fun setEpgMatch(channel: ChannelEntity, epgChannelId: String?) {
         viewModelScope.launch {
             val pid = currentProfileId() ?: return@launch
-            customize.setEpgMatch(pid, MediaType.LIVE, CustomizeKeys.channel(channel), epgChannelId)
-            // The matched id may have no stored programmes yet (bulk sync only keeps ids in use) —
-            // top it up from the cached XMLTV, then drop the channel's stale now/next and re-fetch,
-            // so the details pane reflects the new match immediately instead of after a restart.
-            val id = epgChannelId?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
-            if (id != null) runCatching { epgRepository.storeProgrammesForIdsFromCache(setOf(id)) }
+            // The matched id may have no stored programmes yet (bulk sync only keeps ids in use) — core
+            // tops it up from the cached XMLTV, or queues a guide re-sync when that cannot. Then drop the
+            // channel's stale now/next and re-fetch, so the details pane reflects the new match at once.
+            if (!epgChannelId.isNullOrBlank()) {
+                runCatching { guideMatches.match(pid, mapOf(CustomizeKeys.channel(channel) to epgChannelId)) }
+            } else {
+                customize.setEpgMatch(pid, MediaType.LIVE, CustomizeKeys.channel(channel), null)
+            }
             epgReader.invalidate(channel.id)
             epgRefresh.value++
         }
@@ -1374,9 +1404,19 @@ class LiveViewModel(
         engines.liveTuner = live
     }
 
+    init {
+        // glcn: a teletext subtitle (page 888) picked while the channel plays on mpv, which cannot draw it: the channel
+        // goes over to ExoPlayer (pinned there, as the engine button does) and the subtitle is switched on as it starts.
+        player.onLiveTeletextPick = { lang ->
+            previewEngine.subtitlesWantedOnce = lang.orEmpty()
+            tv.own.owntv.player.LiveDiagnosticsLog.event("teletext subtitle picked on mpv: the channel goes over to ExoPlayer")
+            toggleForceMpv()
+        }
+    }
+
     override fun onCleared() {
+        if (player.onLiveTeletextPick != null) player.onLiveTeletextPick = null
         if (engines.liveTuner === live) engines.liveTuner = null
-        super.onCleared()
     }
 
     // True while the in-pane preview is suppressed because the provider allows one stream at a time and
@@ -1481,6 +1521,24 @@ class LiveViewModel(
         is LiveKey.Custom -> channelsInCustom(key)
         else -> channelsInRail(key)
     }.take(PEEK_LIMIT)
+
+    /**
+     * glcn: the deck's quick search — channels of the profile's active playlists whose name holds [query], in any
+     * letter case, without those hidden or in a hidden or locked group.
+     */
+    suspend fun deckSearch(query: String): List<ChannelEntity> {
+        val c = ctx.value
+        if (c.profileId < 0 || c.sourceIds.isEmpty()) return emptyList()
+        val raw = withContext(Dispatchers.IO) {
+            channelDao.searchList(tv.own.owntv.core.database.entity.nameKeyOf(query.trim()), c.sourceIds, DECK_SEARCH_LIMIT)
+        }
+        val cust = custom.value
+        val hiddenCats = hiddenCategoryIds.value
+        val sealed = cust.sealedCategoryIds
+        return raw
+            .filter { CustomizeKeys.channel(it) !in cust.hiddenItems && (it.categoryId == null || (it.categoryId !in hiddenCats && it.categoryId !in sealed)) }
+            .map { ch -> cust.itemNames[CustomizeKeys.channel(ch)]?.let { ch.copy(name = it) } ?: ch }
+    }
 
     /** glcn: a group's whole list for the zap deck — bounded like a zap list, not cut to a peek. */
     suspend fun deckChannels(key: LiveKey): List<ChannelEntity> = when (key) {
@@ -2108,11 +2166,23 @@ class LiveViewModel(
         }
     }
 
+    /** glcn: a channel picked from History (the player's right-hand list, the top-bar recent drop) keeps History
+     *  as its zap list, so ◀ opens History on that channel and CH± steps through it — it used to leave the
+     *  previous category armed, and the list opened somewhere else. */
+    fun watchFromHistory(channel: ChannelEntity) {
+        zapList.armForKey(LiveKey.History, null, { channelsInRail(LiveKey.History) }, {})
+        ensurePlaying(channel)
+    }
+
     /** Open a channel from a caller-owned rail (for example Home favorites), preserving that rail as the
      *  playback browse/zap context instead of replacing it with provider-category metadata. A channel in
      *  a locked category, or one that is gone, does not open: false. */
-    suspend fun ensurePlayingByIdAsync(channelId: Long, zapChannels: List<ChannelEntity> = emptyList()): Boolean {
+    suspend fun ensurePlayingByIdAsync(channelId: Long, zapChannels: List<ChannelEntity> = emptyList(), fromHistory: Boolean = false): Boolean {
         val channel = channelDao.getById(channelId)?.takeUnless { customize.sealsCategory(settings.activeProfileId.first(), it.categoryId) } ?: return false
+        if (fromHistory) {
+            watchFromHistory(channel)
+            return true
+        }
         // glcn: a list of one (Sports "Watch live" with a single channel) left nothing to zap through — the channel's
         // own group instead.
         if (zapChannels.size < 2) {
@@ -2314,6 +2384,22 @@ class LiveViewModel(
     /** The archive programme on screen, for [continueAfterCatchup] to find the one after it. Null
      *  whenever the picture is not a fixed catch-up programme. */
     private var playingCatchupProgramme: tv.own.owntv.core.database.entity.EpgProgrammeEntity? = null
+
+    /**
+     * Whether the guide holds any programme for [ch], through a manual match or its own guide id, in
+     * the days its Archive page shows. Rows only outside them — a feed that stopped weeks ago, or one
+     * that lists only days ahead — would open a page of empty days. One indexed lookup, cheap enough to
+     * ask when a button is pressed. A channel with none keeps the "Go back to…" offsets, which need no guide.
+     */
+    suspend fun hasGuideData(ch: ChannelEntity): Boolean {
+        val key = (custom.value.epgMatchResolver.epgIdFor(ch) ?: ch.epgChannelId)
+            ?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return false
+        val span = tv.own.owntv.features.epg.archivePageSpan(ch, System.currentTimeMillis())
+        return runCatching { epgDao.hasProgrammesBetween(key, span.first, span.last) }.getOrDefault(false)
+    }
+
+    /** Start of the archive programme on screen, so the Archive page can open on it; null while live. */
+    fun currentCatchupProgrammeStartMs(): Long? = if (_catchupActive.value) playingCatchupProgramme?.startMs else null
 
     /** Replay a past programme from the channel's archive (seekable, like the Guide's "Watch from start"). */
     fun playCatchupProgramme(ch: ChannelEntity, programme: tv.own.owntv.core.database.entity.EpgProgrammeEntity) {
@@ -2912,6 +2998,7 @@ class LiveViewModel(
         /** How long a remembered category may wait for the complete rail before the channel's own
          *  folder is used instead — a startup must not hold the list on a slow, large playlist. */
         private const val RAIL_WAIT_MS = 2_000L
+        private const val DECK_SEARCH_LIMIT = 300
         /** glcn: how long the info page waits for the provider's short guide when nothing is stored. */
         private const val PROVIDER_GUIDE_WAIT_MS = 3_000L
         val defaultRail = listOf(

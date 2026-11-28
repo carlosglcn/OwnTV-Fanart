@@ -47,6 +47,9 @@ internal fun StyleStep(onNext: () -> Unit, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val current by settings.glcnStyle.collectAsStateWithLifecycle(initialValue = null)
     val first = rememberFirstFocus()
+    // glcn: a new install chooses here — it is never offered the new style afterwards.
+    val setupContext = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) { tv.own.owntv.glcn.StyleInvite.seen(setupContext) }
     WizardFrame(
         step = WizardStep.DISPLAY,
         title = stringResource(R.string.glcn_setup_style_title),

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -38,6 +39,7 @@ import org.koin.android.ext.android.get
 import org.koin.android.ext.android.inject
 import org.koin.androidx.compose.koinViewModel
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import tv.own.owntv.core.database.DatabaseUpgrade
 import tv.own.owntv.core.util.Perf
 import tv.own.owntv.core.launcher.LauncherDeepLink
 import tv.own.owntv.features.profiles.ProfileGate
@@ -143,8 +145,18 @@ open class MainActivity : ComponentActivity() {
         else { shellViewModel.relockCategories(); engines.onAppBackgrounded() }
     }
 
+    // glcn: why the app left the screen, into the playback report — a film that "closes" can then be told apart:
+    // the person pressed Home, another app came on top, or the activity itself was closed.
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (tv.own.owntv.features.home.CinemaTrailer.blocked) tv.own.owntv.player.LiveDiagnosticsLog.event("screen left by the person (Home or another app) while playing")
+    }
+
     override fun onStop() {
         super.onStop()
+        if (tv.own.owntv.features.home.CinemaTrailer.blocked || isFinishing) {
+            tv.own.owntv.player.LiveDiagnosticsLog.event("app off screen · playing=${tv.own.owntv.features.home.CinemaTrailer.blocked} finishing=$isFinishing changing=$isChangingConfigurations")
+        }
         if (!isChangingConfigurations) get<tv.own.owntv.core.sync.local.AutoSyncManager>().onBackground() // glcn
         // A picture-in-picture window only pauses the activity, so playback there never reaches this.
         if (!isChangingConfigurations) visibility.activityStopped()
@@ -218,7 +230,11 @@ open class MainActivity : ComponentActivity() {
         if (hasFocus) quietSystemClicks()
     }
 
+    private var externalStarter: ((android.content.Intent) -> Boolean)? = null
+
     override fun onDestroy() {
+        tv.own.owntv.player.LiveDiagnosticsLog.event("activity closed · finishing=$isFinishing changing=$isChangingConfigurations")
+        if (tv.own.owntv.core.player.ExternalPlayerLauncher.resultStarter === externalStarter) tv.own.owntv.core.player.ExternalPlayerLauncher.resultStarter = null
         visibility.removeListener(onVisibility)
         tv.own.owntv.glcn.FrameWatch.detach(this)
         tv.own.owntv.ui.components.TrailerPool.free() // glcn: the trailer player was made on this activity
@@ -244,6 +260,23 @@ open class MainActivity : ComponentActivity() {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         tv.own.owntv.glcn.FrameWatch.attach(this) // glcn: frame timing per screen, into the report
+        // glcn: whether Android has compiled the app's code yet. After an install or an update it runs uncompiled until
+        // the box's overnight tidy-up, and every screen opens slower meanwhile — the report says which state it was
+        // measured in. Android 11 (the SHIELD) will not tell an app outright, so the compiled file's size says it: a
+        // few hundred kB is "checked only", tens of MB is compiled.
+        Thread {
+            runCatching {
+                val apk = java.io.File(applicationInfo.sourceDir)
+                val odex = java.io.File(apk.parentFile, OAT_DIR).listFiles()?.firstNotNullOfOrNull { arch -> arch.listFiles()?.firstOrNull { it.name.endsWith(ODEX_EXT) } }
+                tv.own.owntv.player.LiveDiagnosticsLog.event("compiled · api=${android.os.Build.VERSION.SDK_INT} odex=${(odex?.length() ?: -1L) / 1024}kB apk=${apk.length() / 1024}kB updated=${(System.currentTimeMillis() - packageManager.getPackageInfo(packageName, 0).lastUpdateTime) / 60000}min ago")
+            }
+        }.start()
+        // glcn: VLC / MX Player say where they stopped when they close — progress and "watched" for films and episodes.
+        val externalResult = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {
+            tv.own.owntv.core.player.ExternalPlayerLauncher.deliver(it.data)
+        }
+        externalStarter = { intent -> externalResult.launch(intent); true }
+        tv.own.owntv.core.player.ExternalPlayerLauncher.resultStarter = externalStarter
         // glcn: the app went down last time — show what happened (and let it be shared) before anything else runs.
         // (The application has already opened the report in its own process; this window steps aside.)
         if (tv.own.owntv.glcn.CrashScreen.pending(this)) {
@@ -355,6 +388,14 @@ open class MainActivity : ComponentActivity() {
             @Suppress("RememberReturnType")
             remember { Perf.stamp("first-composition"); Unit }
 
+            // Only a migration still running after a second gets the screen, so a quick one does not flash it.
+            val migrating by DatabaseUpgrade.running.collectAsState()
+            val showMigration by produceState(false, migrating) { value = false; if (migrating) { kotlinx.coroutines.delay(1_000); value = true } }
+            if (migrating && showMigration) {
+                tv.own.owntv.features.recovery.DatabaseMigrationScreen()
+                return@setContent
+            }
+
             // Hold the screen on while video is actually playing, so the TV screensaver doesn't
             // start mid-channel/episode; released when paused/stopped (then the screensaver is fine).
             // Buffering counts as playing: the screensaver timer runs from the last remote press, so
@@ -372,7 +413,16 @@ open class MainActivity : ComponentActivity() {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val accent by viewModel.accent.collectAsStateWithLifecycle()
             val customAccent by viewModel.customAccent.collectAsStateWithLifecycle()
-            val glcnStyle by org.koin.compose.koinInject<tv.own.owntv.core.settings.SettingsRepository>().glcnStyle.collectAsStateWithLifecycle(initialValue = null)
+            val glcnSettingsRepo = org.koin.compose.koinInject<tv.own.owntv.core.settings.SettingsRepository>()
+            val glcnStyle by glcnSettingsRepo.glcnStyle.collectAsStateWithLifecycle(initialValue = null)
+            val glcnBackdrop by glcnSettingsRepo.glcnBackdrop.collectAsStateWithLifecycle(initialValue = tv.own.owntv.core.theme.GLCN_BACKDROP_THEME)
+            // glcn: automatic mode — the theme turns to its day or night side as the hours pass (checked every few minutes).
+            LaunchedEffect(Unit) {
+                while (true) {
+                    runCatching { glcnSettingsRepo.syncGlcnStyle() }
+                    kotlinx.coroutines.delay(GLCN_MODE_CHECK_MS)
+                }
+            }
             val focusHighlight by viewModel.focusHighlight.collectAsStateWithLifecycle()
             val focusHighlightWidth by viewModel.focusHighlightWidth.collectAsStateWithLifecycle()
             val uiZoomPercent by viewModel.uiZoomPercent.collectAsStateWithLifecycle()
@@ -391,6 +441,8 @@ open class MainActivity : ComponentActivity() {
             val bgImagePath by viewModel.bgImagePath.collectAsStateWithLifecycle()
             val glassConfig by viewModel.glassConfig.collectAsStateWithLifecycle()
             tv.own.owntv.glcn.GlassFocus.on = glassConfig.enabled // glcn: the focus drawn as tinted glass
+            // glcn: a style with a second accent (Brasa) — outlined focus and a gradient on buttons.
+            tv.own.owntv.glcn.EmberFocus.second = tv.own.owntv.glcn.EmberFocus.secondFor(glcnStyle)
             val background by viewModel.backgroundConfig.collectAsStateWithLifecycle()
             val avatarId by viewModel.avatarId.collectAsStateWithLifecycle()
             val avatarPath by viewModel.avatarPath.collectAsStateWithLifecycle()
@@ -558,15 +610,22 @@ open class MainActivity : ComponentActivity() {
                         // Background image sits behind everything when a path is set; otherwise the solid
                         // base color shows through and glass renders over that instead.
                         val wallAnim = tv.own.owntv.glcn.Wallpapers.animKind(background.imagePath)
-                        val busyBackdrop = background.showsPicture ||
-                            (glcnStyle?.isGradient == true && themeMode != tv.own.owntv.core.theme.ThemeMode.LIGHT)
+                        // glcn: Appearance › Background — plain, the theme's own gradient, or the focused picture's colours.
+                        val backdropStyle = glcnStyle?.takeIf { themeMode != tv.own.owntv.core.theme.ThemeMode.LIGHT }?.takeIf {
+                            when (glcnBackdrop) {
+                                tv.own.owntv.core.theme.GLCN_BACKDROP_PLAIN -> false
+                                tv.own.owntv.core.theme.GLCN_BACKDROP_FANART -> true
+                                else -> it.isGradient
+                            }
+                        }
+                        val busyBackdrop = background.showsPicture || backdropStyle != null
                         androidx.compose.runtime.SideEffect { tv.own.owntv.glcn.BusyBackdrop.on = busyBackdrop }
                         // glcn: an animated wallpaper of the app's own, drawn live, in place of a picture file.
                         if (background.showsPicture && wallAnim != null) tv.own.owntv.glcn.AnimatedWallpaper(wallAnim, Modifier.fillMaxSize())
                         else if (background.showsPicture) BackgroundLayer(background, blurred)
                         // glcn: a gradient style's backdrop (Aurora, Crepúsculo, Océano, Fanart vivo) when no picture is set.
-                        else glcnStyle?.takeIf { it.isGradient && themeMode != tv.own.owntv.core.theme.ThemeMode.LIGHT }?.let {
-                            tv.own.owntv.glcn.GradientBackdrop(it, Modifier.fillMaxSize())
+                        else backdropStyle?.let {
+                            tv.own.owntv.glcn.GradientBackdrop(it, Modifier.fillMaxSize(), art = glcnBackdrop == tv.own.owntv.core.theme.GLCN_BACKDROP_FANART)
                         }
 
                         Box(modifier = Modifier.fillMaxSize()) {
@@ -661,7 +720,9 @@ open class MainActivity : ComponentActivity() {
             var curtainTimedOut by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) { kotlinx.coroutines.delay(SPLASH_TIMEOUT_MS); if (!contentReady) curtainTimedOut = true }
             LaunchedEffect(contentReady) { if (contentReady) { kotlinx.coroutines.delay(STARTUP_SETTLE_TIMEOUT_MS); curtainTimedOut = true } }
-            val curtainUp = !curtainTimedOut && !(contentReady && startupSettled)
+            // glcn: a database migration can run for a minute or more and has its own screen: the curtain steps aside for it.
+            val curtainMigrating by DatabaseUpgrade.running.collectAsState()
+            val curtainUp = !curtainMigrating && !curtainTimedOut && !(contentReady && startupSettled)
             tv.own.owntv.glcn.LaunchCurtain(visible = curtainUp)
             tv.own.owntv.glcn.SleepWatch.Overlay(org.koin.compose.koinInject())
             tv.own.owntv.ui.components.InAppToast(tv.own.owntv.ui.components.AppToast.state)
@@ -682,3 +743,9 @@ private fun BackgroundLayer(background: tv.own.owntv.core.theme.BackgroundConfig
 
 /** glcn: how long after the launch curtain has faded the window lets go of the launch picture. */
 private const val LAUNCH_WINDOW_RELEASE_MS = 600L
+
+/** glcn: how often automatic mode checks whether it is day or night. */
+private const val GLCN_MODE_CHECK_MS = 5 * 60_000L
+
+private const val OAT_DIR = "oat"
+private const val ODEX_EXT = ".odex"

@@ -132,9 +132,9 @@ import tv.own.owntv.core.live.LiveKey
 fun MoviesScreen(
     onFullscreen: () -> Unit,
     onChildFocused: () -> Unit,
+    modifier: Modifier = Modifier,
     restoreFocus: Boolean = false,
     onRestored: () -> Unit = {},
-    modifier: Modifier = Modifier,
     /**
      * Pins the grid to one folder and takes the category rail away — how More → Favourites and
      * More → History show films without a second copy of this grid existing.
@@ -208,6 +208,7 @@ fun MoviesScreen(
     val movieProgress by vm.movieProgress.collectAsStateWithLifecycle()
     val downloadStates by vm.downloadStates.collectAsStateWithLifecycle()
     val movies = vm.movies.collectAsLazyPagingItems()
+    tv.own.owntv.glcn.SectionReady(movies.itemCount > 0)
     val resumeMode by vm.resumeMode.collectAsStateWithLifecycle()
     // Global external-player toggle: never mount the fullscreen in-app player (it spins up mpv)
     // when playback is handed to an external app.
@@ -248,7 +249,9 @@ fun MoviesScreen(
     val vodLayout by settingsVm.vodLayout.collectAsStateWithLifecycle()
     // Cinematic is the browse section's; More → Favourites / History pin the plain Separate list.
     val runway = vodLayout == SettingsRepository.VodLayout.RUNWAY && lockedKey == null
-    val cinematic = (vodLayout == SettingsRepository.VodLayout.CINEMATIC || runway) && lockedKey == null
+    // glcn: Shelves is Cinematic with rows above the posters of All.
+    val shelvesOn = vodLayout == SettingsRepository.VodLayout.SHELVES && lockedKey == null
+    val cinematic = (vodLayout == SettingsRepository.VodLayout.CINEMATIC || runway || shelvesOn) && lockedKey == null
     val cinematicDetailsPct by settingsVm.cinematicDetailsHeight(PanelSection.MOVIES).collectAsStateWithLifecycle()
     // Cinematic is grid-only: the List rows have nowhere to put a full-bleed backdrop. The stored
     // choice is deliberately not rewritten, so switching back to Separate restores the user's List.
@@ -264,6 +267,10 @@ fun MoviesScreen(
     val perCategoryGrid = remember { mutableStateMapOf<LiveKey, LazyGridState>() }
     val perCategoryList = remember { mutableStateMapOf<LiveKey, LazyListState>() }
     val perCategoryMovieIds = remember { mutableStateMapOf<LiveKey, Long>() }
+    // glcn: the last title focused in the posters themselves, per category — Keep watching above them also makes its
+    // film the selected one, and the posters used to follow it (jumping to that film) instead of staying put.
+    val gridTitleIds = remember { mutableStateMapOf<LiveKey, Long>() }
+    // glcn: the Keep watching film played from the strip; coming back from the player returns to that card.
     // NOTE: plain constructors, not remember*State() — these are created lazily inside getOrPut, so a
     // @Composable/rememberSaveable call here would register slots conditionally and corrupt the slot table.
     val glideScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -281,6 +288,8 @@ fun MoviesScreen(
     val runwayBackdrops = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
     // glcn: "Keep watching" above the posters, in All, while something is under way (the strip is the lists' first item).
     val stripMovies by vm.continueStrip.collectAsStateWithLifecycle()
+    // glcn: the posters (not Keep watching above them) had the focus last: the Pasarela page then stands on them.
+    var onPosters by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     // glcn: the menu opened from a card of Keep watching (it adds "out of Keep watching"), and the Runway's page.
     var stripMenuId by remember { mutableStateOf<Long?>(null) }
     var stripHasFocus by remember { mutableStateOf(false) }
@@ -289,9 +298,39 @@ fun MoviesScreen(
     remember { tv.own.owntv.glcn.StripDismissed.ensure(context) }
     val showStrip = tv.own.owntv.glcn.StripPref.on && stripMovies.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
     val showStripNow by androidx.compose.runtime.rememberUpdatedState(showStrip)
-    val stripOffset = if (showStrip && !runway) 1 else 0
+    // glcn: before anything has had the focus the header already shows a film — the one ▼ from the menu lands on (the
+    // first of Keep watching, else the first poster). The top half used to stay empty until the focus came down.
+    LaunchedEffect(selectedMovie == null, movies.itemCount > 0, showStrip) {
+        if (selectedMovie != null || movies.itemCount == 0) return@LaunchedEffect
+        (stripMovies.firstOrNull()?.takeIf { showStrip } ?: movies.peek(0))?.let { vm.onMovieFocused(it) }
+    }
+    // glcn: the shelves (see VodShelves) — rows of the grid, after Keep watching and before the posters.
+    val shelfData by (if (shelvesOn) vm.shelves else remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList<tv.own.owntv.glcn.Shelf<MovieEntity>>()) })
+        .collectAsStateWithLifecycle()
+    val shelves = if (shelvesOn && selectedKey == LiveKey.All && searchQuery.isBlank()) shelfData else emptyList()
+    val shelfFocus = remember { List(tv.own.owntv.glcn.ShelfKind.entries.size) { tv.own.owntv.glcn.StripFocus() } }
+    // The shelf the focus was on last (-1: on a poster). It opens on the first shelf, and coming back from a film's page
+    // or the player it returns to its shelf — not to that film's poster, far down the list.
+    var shelfAt by androidx.compose.runtime.saveable.rememberSaveable(selectedKey, shelvesOn) { androidx.compose.runtime.mutableIntStateOf(if (shelvesOn && selectedKey == LiveKey.All) 0 else -1) }
+    var shelfMenu by remember { androidx.compose.runtime.mutableIntStateOf(-1) }
+    val shelfAsk = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
+    val stripRows = if (showStrip && !runway) 1 else 0
+    val stripOffset = stripRows + shelves.size
+    val shelvesNow by androidx.compose.runtime.rememberUpdatedState(shelves)
+    suspend fun toShelfRow(k: Int) {
+        runCatching {
+            if (tv.own.owntv.glcn.SmoothScroll.still) effectiveGridState.scrollToItem(stripRows + k) else effectiveGridState.animateScrollToItem(stripRows + k)
+        }
+    }
+    /** The shelf that had the focus takes it again; false when the focus was on a poster (or there are no shelves). */
+    fun shelfFocusNow(): Boolean {
+        val f = shelfFocus.getOrNull(shelfAt)?.takeIf { shelfAt in shelves.indices } ?: return false
+        if (!f.focusNow() && shelfAsk[0]?.isActive != true) { val k = shelfAt; shelfAsk[0] = scope.launch { runCatching { effectiveGridState.scrollToItem(stripRows + k) }; withFrameNanos { }; f.focus() } }
+        return true
+    }
     suspend fun scrollToIndex(i: Int) {
         if (runway) { runwayAt = i; return }
+        if (shelfAt in shelves.indices) { runCatching { effectiveGridState.scrollToItem(stripRows + shelfAt) }; return }
         runCatching { if (usesList) effectiveListState.scrollToItem(i + stripOffset) else effectiveGridState.scrollToItem(i + stripOffset) }
     }
     val stepper = remember { VodStepper(scope) { effectiveListState } }
@@ -307,6 +346,15 @@ fun MoviesScreen(
     val catListState = rememberLazyListState()
     var gridPaneFocused by remember { mutableStateOf(false) }
     var railPaneFocused by remember { mutableStateOf(false) }
+    // glcn: the shelves are read a moment after the posters: still at the top, the focus moves up to the first shelf.
+    LaunchedEffect(shelves.isNotEmpty()) {
+        if (shelves.isNotEmpty() && shelfAt >= 0 && effectiveGridState.firstVisibleItemIndex <= SHELF_TOP_REACH) {
+            val k = shelfAt.coerceAtMost(shelves.lastIndex)
+            runCatching { effectiveGridState.scrollToItem(stripRows + k) }
+            withFrameNanos { }
+            if (gridPaneFocused) shelfFocus[k].focus()
+        }
+    }
     // Tiles the provider gave no artwork for: ask for the TMDB poster already cached from an earlier
     // focus, so the placeholder is only shown when nothing at all is known. peek() reads the loaded
     // page without triggering a fetch.
@@ -325,9 +373,28 @@ fun MoviesScreen(
     // Returning from the player: scroll to and focus the movie you just played (waits for the grid to load).
     LaunchedEffect(restoreFocus, movies.itemCount) {
         if (!restoreFocus || movies.itemCount == 0) return@LaunchedEffect
+        // glcn: played from Keep watching: back to that card; the posters below keep the place they had.
+        val fromStrip = tv.own.owntv.glcn.StripReturn.movieId
+        tv.own.owntv.glcn.StripReturn.movieId = null
+        if (fromStrip != null && showStrip) {
+            stripFocus.index = stripMovies.indexOfFirst { it.id == fromStrip }.coerceAtLeast(0)
+            if (shelves.isNotEmpty()) scrollToIndex(0)
+            withFrameNanos { }
+            stripFocus.hold()
+            for (attempt in 0 until STRIP_FOCUS_TRIES) {
+                if (stripFocus.focus() || stripHasFocus) break
+                withFrameNanos { }
+            }
+            onRestored()
+            return@LaunchedEffect
+        }
         val sel = selectedMovie
         val idx = if (sel != null) movies.itemSnapshotList.items.indexOfFirst { it.id == sel.id } else -1
-        if (idx >= 0) {
+        if (shelfAt in shelves.indices) {
+            scrollToIndex(0)
+            delay(60)
+            shelfFocusNow()
+        } else if (idx >= 0) {
             // Scroll whichever layout is on screen: scrolling only the grid state left LIST view
             // unscrolled, so a movie further down was never composed and focus fell to the category rail
             // instead of the film just played. Same defect as the Series back-from-show restore.
@@ -343,6 +410,7 @@ fun MoviesScreen(
     LaunchedEffect(reveal, selectedKey) {
         val r = reveal ?: return@LaunchedEffect
         if (selectedKey != r.key) return@LaunchedEffect
+        shelfAt = -1
         if (rememberMovies) perCategoryMovieIds[selectedKey] = r.id
         var found = false
         for (attempt in 0 until 50) {
@@ -380,6 +448,21 @@ fun MoviesScreen(
         // this effect re-runs when the whole flow closes and restores the row below.
         if (moveItem != null || creatingCategory || moveState != null) return@LaunchedEffect
 
+        // glcn: a menu opened from a shelf gives the focus back to that shelf.
+        if (shelfMenu >= 0) {
+            val f = shelfFocus.getOrNull(shelfMenu)
+            shelfMenu = -1
+            if (f != null && shelvesNow.isNotEmpty()) {
+                withFrameNanos { }
+                var got = false
+                for (attempt in 0 until STRIP_FOCUS_TRIES) {
+                    if (shelvesNow.isEmpty()) break
+                    if (f.focus()) { got = true; break }
+                    withFrameNanos { }
+                }
+                if (got) { contextMovieIndex = -1; return@LaunchedEffect }
+            }
+        }
         // glcn: a menu opened from Keep watching gives the focus back to the strip, not to the film's poster further down.
         if (stripMenuId != null) {
             stripMenuId = null
@@ -431,6 +514,7 @@ fun MoviesScreen(
     // The title the cursor was on: after a long-press it carries contextFocus instead of selFocus
     // (gridFocusTarget prefers it), so both are tried before the first title (fix playbook 6).
     fun focusCurrentTitleNow(): Boolean =
+        shelfFocusNow() ||
         runCatching { selFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { contextFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
@@ -438,7 +522,7 @@ fun MoviesScreen(
         // glcn: Runway — only the posters around the centre exist, so the remembered title (coming back from its page
         // or the player) may not be there yet: centre the row on it first, then focus it a frame or two later.
         if (runway && movies.itemCount > 0) {
-            val tid = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: selectedMovie?.id else selectedMovie?.id
+            val tid = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedMovie?.id else gridTitleIds[selectedKey] ?: selectedMovie?.id
             val idx = tid?.let { id -> movies.itemSnapshotList.items.indexOfFirst { it.id == id } } ?: -1
             if (idx >= 0 && idx != runwayAt) {
                 runwayAt = idx
@@ -450,7 +534,7 @@ fun MoviesScreen(
     }
     // From the categories to the titles: the remembered movie, else the first; a locked one's Enter PIN button; else the search field.
     fun focusTitles() {
-        val targetId = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: selectedMovie?.id else selectedMovie?.id
+        val targetId = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedMovie?.id else gridTitleIds[selectedKey] ?: selectedMovie?.id
         scope.launch {
             if (movies.itemCount > 0) {
                 val targetIdx = targetId?.let { id -> movies.itemSnapshotList.items.indexOfFirst { it.id == id }.takeIf { it >= 0 } } ?: 0
@@ -461,7 +545,7 @@ fun MoviesScreen(
                 // 0.7 s and take focus back whenever the titles lost it.
                 repeat(40) {
                     if (!gridPaneFocused) {
-                        if (!(targetId != null && focusCurrentTitle())) runCatching { firstItemFocus.requestFocus() }
+                        if (!shelfFocusNow() && !(targetId != null && focusCurrentTitle())) runCatching { firstItemFocus.requestFocus() }
                     }
                     withFrameNanos { }
                 }
@@ -555,7 +639,7 @@ fun MoviesScreen(
             }
         }
     }
-    val targetMovieId = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: selectedMovie?.id else selectedMovie?.id
+    val targetMovieId = if (rememberMovies) perCategoryMovieIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedMovie?.id else gridTitleIds[selectedKey] ?: selectedMovie?.id
     // glcn: Runway — the row centres on the remembered title once the list is there, so restoring focus to it
     // finds it composed (only the posters around the centre exist).
     androidx.compose.runtime.LaunchedEffect(runway, selectedKey, movies.itemCount > 0) {
@@ -567,6 +651,8 @@ fun MoviesScreen(
     val openMenu: (MovieEntity, Int) -> Unit = { movie, index -> if (index >= 0) stripMenuId = null; contextMovie = movie; contextMovieId = movie.id; contextMovieIndex = index }
     val onMovieFocus: (MovieEntity) -> Unit = { movie ->
         vm.onMovieFocused(movie)
+        gridTitleIds[selectedKey] = movie.id
+        tv.own.owntv.glcn.StripReturn.movieId = null
         if (rememberMovies) perCategoryMovieIds[selectedKey] = movie.id
     }
     val stripCards = stripMovies.map { m ->
@@ -584,7 +670,12 @@ fun MoviesScreen(
         if (!showStrip && stripFocus.holding) { withFrameNanos { }; focusCurrentTitleNow() }
     }
     val toStrip: () -> Boolean = {
-        if (!showStrip || runway) false else {
+        // glcn: with shelves, ▲ from the first posters goes to the last of them.
+        if (shelves.isNotEmpty()) {
+            val k = shelves.lastIndex
+            scope.launch { toShelfRow(k); withFrameNanos { }; shelfFocus[k].focus() }
+            true
+        } else if (!showStrip || runway) false else {
             scope.launch {
                 runCatching {
                     if (tv.own.owntv.glcn.SmoothScroll.still) { if (usesList) effectiveListState.scrollToItem(0) else effectiveGridState.scrollToItem(0) }
@@ -599,11 +690,15 @@ fun MoviesScreen(
     val continueStrip: @Composable (Dp, Dp) -> Unit = { start, end ->
         tv.own.owntv.glcn.ContinueStrip(
             stripCards, start, end,
-            onFocus = { i -> stripMovies.getOrNull(i)?.let { vm.onMovieFocused(it) } },
+            onFocus = { i ->
+                stripMovies.getOrNull(i)?.let { vm.onMovieFocused(it) }
+                // glcn: above the shelves the strip is scrolled away: it comes back into view with the focus.
+                if (shelves.isNotEmpty()) scope.launch { runCatching { if (tv.own.owntv.glcn.SmoothScroll.still) effectiveGridState.scrollToItem(0) else effectiveGridState.animateScrollToItem(0) } }
+            },
             // OK plays it on from where it stopped; hold OK opens its menu (seen, out of Keep watching…).
-            onClick = { i -> stripMovies.getOrNull(i)?.let { playMovieNow(it) } },
+            onClick = { i -> stripMovies.getOrNull(i)?.let { tv.own.owntv.glcn.StripReturn.movieId = it.id; playMovieNow(it) } },
             onLongClick = { i -> stripMovies.getOrNull(i)?.let { stripMenuId = it.id; openMenu(it, -1) } },
-            modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus },
+            modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus; if (it.hasFocus) onPosters = false },
             focus = stripFocus,
         )
     }
@@ -641,6 +736,7 @@ fun MoviesScreen(
                 // (gridFocusTarget keys on selectedMovie.id), and request focus after one frame.
                 scope.launch {
                     val item = movies.itemSnapshotList.items.getOrNull(idx)
+                    shelfAt = -1
                     scrollToIndex(idx)
                     withFrameNanos { }
                     if (item != null) {
@@ -656,7 +752,7 @@ fun MoviesScreen(
         )
         .focusProperties {
             onEnter = {
-                val landed = (targetMovieId != null && focusCurrentTitle()) || runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
+                val landed = shelfFocusNow() || (targetMovieId != null && focusCurrentTitle()) || runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
                 // Landed on a title: stop the default entry, which would go on to the search field.
                 if (landed) cancelFocusChange()
             }
@@ -774,7 +870,7 @@ fun MoviesScreen(
                         VodSortTool(sortMode, selectedKey.hasFixedOrder, Modifier.focusRequester(sortFocus)) { sortOpen = true }
                         StageTool(text = stringResource(R.string.content_category_browser_title), icon = OwnTVIcon.LIST, onClick = { categoriesOpen = true })
                         Spacer(Modifier.weight(1f))
-                        StageKeyHints(listOf(playHint, optionsHint))
+                        StageKeyHints(listOf(playHint, optionsHint), overArt = true)
                     }
                     if (movies.itemCount == 0) {
                         tv.own.owntv.features.categorylock.CategoryEmptyState(emptyText, sealed, onEnterPin, firstItemFocus, Modifier.padding(start = fx(84), top = 60.mpx), onNavigateLeft = { openCategories() })
@@ -790,7 +886,8 @@ fun MoviesScreen(
                         val glide = remember(effectiveGridState) { tv.own.owntv.glcn.GlideScroller(effectiveGridState, glideScope) }
                         if (runway) {
                             Spacer(Modifier.height(10.mpx))
-                            tv.own.owntv.glcn.RunwayPageFollow(runwayScroll, showStrip && stripHasFocus)
+                            // glcn: Keep watching stays in view until the posters take the focus: it is where ▼ from the menu lands.
+                            tv.own.owntv.glcn.RunwayPageFollow(runwayScroll, showStrip && !onPosters)
                             Column(Modifier.weight(1f).fillMaxWidth().runwayPage(runwayScroll)) {
                             if (showStrip) continueStrip(fx(84), fx(64))
                             tv.own.owntv.glcn.PosterRunway(
@@ -821,7 +918,7 @@ fun MoviesScreen(
                                                 selectedId = targetMovieId, selectedFocus = selFocus,
                                                 firstItemFocus = firstItemFocus,
                                             )
-                                            .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); runwayAt = index } }
+                                            .onFocusChanged { if (it.isFocused) onPosters = true; if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); runwayAt = index } }
                                             .onPreviewKeyEvent { e ->
                                                 if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(movie, index); true }
                                                 else e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && index < columns && toStrip()
@@ -856,6 +953,40 @@ fun MoviesScreen(
                                             layout(c.maxWidth, pl.height) { pl.place(-fx(84).roundToPx(), 0) }
                                         }) { continueStrip(fx(84), fx(64)) }
                                     }
+                                    shelves.forEachIndexed { k, shelf ->
+                                        item(key = SHELF_KEY + shelf.kind.name, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }, contentType = STRIP_KEY) {
+                                            val upright = remember(shelf) { tv.own.owntv.glcn.VodShelves.upright(shelf.items) { it.backdropUrl } }
+                                            val cards = shelf.items.map { m ->
+                                                val prog = movieProgress[m.id]
+                                                tv.own.owntv.glcn.StripCard(
+                                                    key = m.id, title = m.name,
+                                                    image = if (upright) posterOf(m) else m.backdropUrl ?: runwayBackdrops[m.id] ?: posterOf(m),
+                                                    line = listOfNotNull(m.rating?.takeIf { it > 0 }?.let { SHELF_STAR + vodRating(it) }, (m.year ?: m.parsedYear)?.toString()).joinToString(SHELF_DOT).ifBlank { null },
+                                                    progress = prog?.takeIf { it.durationMs > 0 }?.let { it.positionMs.toFloat() / it.durationMs },
+                                                )
+                                            }
+                                            Box(Modifier.layout { m, c ->
+                                                val bleed = (fx(84) + fx(64)).roundToPx()
+                                                val pl = m.measure(c.copy(minWidth = c.maxWidth + bleed, maxWidth = c.maxWidth + bleed))
+                                                layout(c.maxWidth, pl.height) { pl.place(-fx(84).roundToPx(), 0) }
+                                            }) {
+                                                tv.own.owntv.glcn.ContinueStrip(
+                                                    cards, fx(84), fx(64),
+                                                    onFocus = { i ->
+                                                        shelfAt = k
+                                                        shelf.items.getOrNull(i)?.let { vm.onMovieFocused(it) }
+                                                        scope.launch { toShelfRow(k) }
+                                                    },
+                                                    onClick = { i -> shelf.items.getOrNull(i)?.let { startMovie(it) } },
+                                                    onLongClick = { i -> shelf.items.getOrNull(i)?.let { shelfMenu = k; openMenu(it, -1) } },
+                                                    modifier = Modifier.padding(bottom = 18.mpx),
+                                                    focus = shelfFocus[k],
+                                                    title = stringResource(shelf.kind.title),
+                                                    upright = upright,
+                                                )
+                                            }
+                                        }
+                                    }
                                     items(count = movies.itemCount, key = movies.itemKey { it.id }, contentType = movies.itemContentType { "movie" }) { index ->
                                         // glcn: a poster still on its way shows its shape, shimmering, instead of a gap.
                                         val movie = movies[index] ?: run { tv.own.owntv.glcn.SkeletonPoster(); return@items }
@@ -878,7 +1009,7 @@ fun MoviesScreen(
                                                     selectedId = targetMovieId, selectedFocus = selFocus,
                                                     firstItemFocus = firstItemFocus,
                                                 )
-                                                .onFocusChanged { if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); glide.focused(index + stripOffset) } }
+                                                .onFocusChanged { if (it.isFocused && shelves.isNotEmpty()) shelfAt = -1; if (it.isFocused && !wasInPlace[0]) { onMovieFocus(movie); glide.focused(index + stripOffset) } }
                                                 .onPreviewKeyEvent { e ->
                                                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                     when (e.key) {
@@ -1214,6 +1345,9 @@ fun MoviesScreen(
                     contextMovie = null; setTmdbNameMovie = m
                 })
             }
+            add(MenuAction(tv.own.owntv.core.menu.CHECK_THEINTRODB_ACTION, stringResource(R.string.content_check_theintrodb), OwnTVIcon.SKIP_NEXT, group = VodGroupDetails) {
+                contextMovie = null; tv.own.owntv.features.settings.TheIntroDbCheckRequests.movie(m)
+            })
             add(MenuAction("delete_subtitles", stringResource(R.string.content_delete_subtitles), OwnTVIcon.SUBTITLE, group = VodGroupDetails) {
                 if (contextMovieSubs.isNotEmpty()) showDeleteSubs = true
             })
@@ -1518,6 +1652,10 @@ internal fun movieTitleInfo(
 
 /** glcn: the Keep watching strip's key in the lists (never a film id). */
 private const val STRIP_KEY = "glcn_strip"
+private const val SHELF_KEY = "glcn_shelf_"
+private const val SHELF_STAR = "★ "
+private const val SHELF_DOT = " · "
+private const val SHELF_TOP_REACH = 12
 
 /** glcn: frames the strip is asked for the focus after its menu closes (about half a second). */
 private const val STRIP_FOCUS_TRIES = 30

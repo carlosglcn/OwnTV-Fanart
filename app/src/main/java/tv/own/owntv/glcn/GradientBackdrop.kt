@@ -30,19 +30,26 @@ object FanartAmbient {
  * "art" takes the focused picture's colour into the lights, changing gently from one picture to the next.
  */
 @Composable
-fun GradientBackdrop(style: GlcnStyle, modifier: Modifier = Modifier) {
-    val stops = style.gradient?.map { Color(it) } ?: return
-    val moving = style.motion != GlcnStyle.MOTION_STILL && !LowRam.on && tv.own.owntv.ui.theme.animationsOn
+fun GradientBackdrop(style: GlcnStyle, modifier: Modifier = Modifier, art: Boolean = false) {
+    // glcn: Background › Fanart works with any theme — one without a gradient lends its accent and page to the lights.
+    val stops = style.gradient?.map { Color(it) } ?: run {
+        val accent = runCatching { Color(android.graphics.Color.parseColor(style.accentHex)) }.getOrNull() ?: return
+        val second = style.accent2Hex?.let { runCatching { Color(android.graphics.Color.parseColor(it)) }.getOrNull() } ?: accent
+        val page = Color(style.page)
+        listOf(androidx.compose.ui.graphics.lerp(accent, page, 0.45f), androidx.compose.ui.graphics.lerp(second, page, 0.55f), androidx.compose.ui.graphics.lerp(accent, page, 0.7f), page)
+    }
+    val motion = if (art) GlcnStyle.MOTION_ART else style.motion.takeIf { style.gradient != null } ?: GlcnStyle.MOTION_DRIFT
+    val moving = motion != GlcnStyle.MOTION_STILL && !LowRam.on && tv.own.owntv.ui.theme.animationsOn
     val t = if (moving) {
         rememberInfiniteTransition(label = "aurora").animateFloat(
             0f, 1f, infiniteRepeatable(tween(DRIFT_MS, easing = LinearEasing), RepeatMode.Restart), label = "auroraT",
         ).value
     } else 0.18f
-    val artTone = if (style.motion == GlcnStyle.MOTION_ART) tv.own.owntv.ui.components.rememberArtColor(FanartAmbient.url) else null
+    val artTone = if (motion == GlcnStyle.MOTION_ART) tv.own.owntv.ui.components.rememberArtColor(FanartAmbient.url) else null
     val lead by animateColorAsState(artTone?.let { lift(it) } ?: stops[0], tween(900), label = "artLead")
     val second by animateColorAsState(artTone?.let { shift(it) } ?: stops[1], tween(1100), label = "artSecond")
     Canvas(modifier) {
-        if (style.motion == GlcnStyle.MOTION_STILL) drawStill(stops)
+        if (motion == GlcnStyle.MOTION_STILL) drawStill(stops)
         else drawLights(listOf(lead, second, stops[2]), stops.last(), t)
     }
 }

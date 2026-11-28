@@ -79,7 +79,9 @@ fun ReminderCard(
         enter.animateTo(1f, enterSpec)
     }
     LaunchedEffect(reminder.id) {
-        left.animateTo(0f, tween(REMINDER_CARD_MS, easing = LinearEasing))
+        // glcn: a time to read, not a motion — kept at its real length whatever the app's pace ("Brisk response" played
+        // it at a third, and the card was gone in under three seconds).
+        left.animateTo(0f, tween(Pace.slow(REMINDER_CARD_MS), easing = LinearEasing))
         onDismiss()
     }
     Box(modifier.fillMaxSize().padding(top = 45.mpx, end = 60.mpx), contentAlignment = Alignment.TopEnd) {

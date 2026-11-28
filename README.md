@@ -48,7 +48,7 @@ OwnTV Fanart is free and made in spare time. If it makes your TV nicer, you can 
 - **A new Home** — four layouts (*Classic*, *Cinema*, *Panel* and *Dock*), with a Featured billboard, Sports now, Tonight (with reminders) and recently added films and series.
 - **A screen for what is on** — press Info in Live TV for the programme's fanart, logo, rating, synopsis, what comes next and when it airs again this week.
 - **TMDB ratings, years and synopses** beside films and series on live TV.
-- **Sports** — football, basketball (ACB, EuroLeague), handball, tennis, cycling, snooker, Formula 1 and MotoGP with calendars, live scores and classifications.
+- **Sports** — football, basketball (ACB, EuroLeague), handball, tennis (with the Davis Cup), cycling, snooker, Formula 1, MotoGP, the Dakar and WRC with calendars, live scores and classifications.
 - **Zap panel and TV profile** — ◀ in the player opens groups and channels with what is on; a TV profile starts on its last channel, with a Home where the focused channel plays behind.
 - **Title pages and a cinema player** — a page before watching with trailer, versions and extras, and a player with real quality badges; each file opens on the player that suits it.
 - **Network folders** — films and series straight from your NAS over SMB, WebDAV or NFS.
@@ -64,6 +64,9 @@ OwnTV Fanart is free and made in spare time. If it makes your TV nicer, you can 
 - **Smooth as a launcher** — springy lists, a focus that glides between rows and menus, cards that pop, and fast channel lists (hold ▲/▼ or type the number).
 - **Programme and cast pages** — a page for what is on that opens at once, with the match score or the cast as faces; a cast page with portraits, a Wikipedia summary and that person's films in your playlists.
 - **Keep watching** — a category in Films and Series and an optional strip above the posters, with mark-as-watched for a whole season or show.
+- **Themes** — eight themes with a night and a day side (Ría, Brasa, Lumen, Aurora…), a gradient accent and an outlined focus, a top bar in five shapes and a side menu in four; the focus stays put while rows pass under it.
+- **Skip intro and credits** — TheIntroDB's times first, then the file's own chapters and the jump learned for each series; the next episode is offered at the start of the credits.
+- **Favourites that outlive a playlist** — replace a playlist and the app offers, once, to mark the same channels as favourites again.
 
 ## 📄 Licence and credits
 
@@ -147,6 +150,7 @@ Problems with **this version** go to the Fanart group; the original group is for
 - **Two engines** — mpv for compatibility, ExoPlayer for instant Live TV, with automatic fallback and a per-channel override
 - **4K HDR** direct rendering, optional auto frame-rate matching, surround sound with a stereo safety net, 150% volume boost
 - **Subtitles** — text, image and closed captions, plus OpenSubtitles search and local files
+- **Skip intro, recap, end credits and preview** in films and series — a button or automatically, from [TheIntroDB](https://theintrodb.org/)
 - Resume, next-episode auto-play, mini-player/PiP, picture-in-picture when you press Home, audio-only mode, live stream-info overlay
 - Media-session transport keys and proper audio focus — it behaves like a TV app
 - An **error log you can export** for any stream that misbehaves
@@ -342,6 +346,12 @@ Movie & series metadata and trailers are provided by [TMDB](https://www.themovie
 Subtitle search & download is powered by [OpenSubtitles.com](https://www.opensubtitles.com/).
 **This product uses the OpenSubtitles API but is not endorsed or certified by OpenSubtitles.** You sign
 in with your own OpenSubtitles account and are subject to their terms and download quotas.
+
+<img src="extras/partner-logos/theintrodb_logo.svg" alt="TheIntroDB" height="120">
+
+Skip times for intros, recaps, end credits and previews come from [TheIntroDB](https://theintrodb.org/),
+a free database built by its community — anyone can add the times a title is still missing there. The
+TheIntroDB logo is the project's own artwork, used unchanged under CC BY-SA 4.0.
 
 ### 🎨 Brand
 

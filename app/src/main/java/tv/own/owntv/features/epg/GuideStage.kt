@@ -189,6 +189,8 @@ internal fun GuideProgrammeBlock(
     details: String?,
     synopsis: String?,
     modifier: Modifier = Modifier,
+    /** glcn: the guide the programme comes from, for the tints of its title and synopsis ([tv.own.owntv.glcn.GuideInk]). */
+    sourceId: Long = 0L,
 ) {
     val a = stageAccent
     // glcn: a new programme's words rise in softly rather than cutting over.
@@ -207,13 +209,13 @@ internal fun GuideProgrammeBlock(
         }
         if (title != null) {
             Text(
-                title, style = stageText(60, 800, (-1.5).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                tv.own.owntv.glcn.guideTitle(title, sourceId), style = stageText(60, 800, (-1.5).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 10.mpx, bottom = 6.mpx),
             )
         }
         if (details != null) Text(details, style = stageText(19, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
-            synopsis.orEmpty(),
+            tv.own.owntv.glcn.guideSynopsis(synopsis.orEmpty(), sourceId),
             style = stageText(19, 400).copy(lineHeight = (19 * 1.5f).mpxSp), color = stageTone(Color(0xFFCCD6D2), StageColors.Body),
             maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.widthIn(max = 1000.mpx).padding(top = 12.mpx, bottom = 20.mpx),
@@ -638,6 +640,34 @@ internal fun GuideDayMenu(days: List<Long>, currentDay: Long, onPick: (Long) -> 
                 text = guideDayLabel(day), icon = OwnTVIcon.CALENDAR, checked = day == currentDay,
                 onClick = { onPick(day); onDismiss() },
                 modifier = if (day == currentDay) Modifier.focusRequester(focus) else Modifier,
+            )
+        }
+    }
+}
+
+/** glcn: the Type filter's menu — everything, or one kind with how many channels show it now; kinds nothing shows are left out. */
+@Composable
+internal fun GuideTypeMenu(
+    current: tv.own.owntv.ui.components.ChannelGenre?,
+    counts: Map<tv.own.owntv.ui.components.ChannelGenre, Int>,
+    onPick: (tv.own.owntv.ui.components.ChannelGenre?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    GuideMenuHost(x = 720f, top = 520.mpx, width = 430.mpx, onDismiss = onDismiss) {
+        StageMenuHeader(title = stringResource(R.string.glcn_guide_type_title), subtitle = stringResource(R.string.glcn_guide_type_hint))
+        StageMenuItem(
+            text = stringResource(R.string.glcn_guide_type_all), icon = OwnTVIcon.EPG, checked = current == null,
+            onClick = { onPick(null); onDismiss() },
+            modifier = if (current == null) Modifier.focusRequester(focus) else Modifier,
+        )
+        tv.own.owntv.glcn.GuideTypes.all.forEach { type ->
+            val n = counts[type] ?: 0
+            if (n > 0 || type == current) StageMenuItem(
+                text = stringResource(type.displayLabelRes), value = n.toString(), checked = type == current,
+                onClick = { onPick(type); onDismiss() },
+                modifier = if (type == current) Modifier.focusRequester(focus) else Modifier,
             )
         }
     }

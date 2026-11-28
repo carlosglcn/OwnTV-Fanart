@@ -697,7 +697,7 @@ fun StageSettingRow(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.mpx), verticalAlignment = Alignment.CenterVertically) {
                     Text(title, style = stageText(21, 700), color = if (enabled) StageColors.Text else StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (pinned) Box(Modifier.size(7.mpx).background(a.accent, CircleShape))
-                    badges.forEach { (text, filled) -> StageRowBadge(text, filled, focused) }
+                    badges.forEach { (text, filled) -> StageRowBadge(text, filled, tv.own.owntv.ui.stage.stageLit(focused)) }
                 }
                 if (!desc.isNullOrBlank()) {
                     Text(
@@ -709,7 +709,7 @@ fun StageSettingRow(
                 }
             }
             // A disabled row's "−" / "+" must not change it either.
-            if (value != null) androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.stage.LocalStageLit provides focused) { SettingValueView(value, onStep.takeIf { enabled }) }
+            if (value != null) androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.stage.LocalStageLit provides tv.own.owntv.ui.stage.stageLit(focused)) { SettingValueView(value, onStep.takeIf { enabled }) }
         }
     }
 }
@@ -941,9 +941,9 @@ fun StageFieldRow(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
     /** The panel text while focused; null in a popup, which has no panel. */
     help: SettingHelp? = null,
-    modifier: Modifier = Modifier,
     placeholder: String = "",
     password: Boolean = false,
     keyboardType: androidx.compose.ui.text.input.KeyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
@@ -973,6 +973,11 @@ fun StageFieldRow(
         if (editing) {
             imeWatcher?.onImeRequested()
             runCatching { fieldFocus.requestFocus() }
+            // The field's input session starts on the frame after it takes focus. Asked for in the same
+            // frame, the keyboard inside a popup's own window either never opened or opened without
+            // focus, greyed out behind the D-pad.
+            androidx.compose.runtime.withFrameNanos { }
+            kotlinx.coroutines.delay(50)
             keyboard?.show()
             kotlinx.coroutines.delay(120)
             runCatching { bring.bringIntoView() }

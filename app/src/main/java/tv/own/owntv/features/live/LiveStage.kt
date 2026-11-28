@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -113,9 +114,10 @@ private val Tabular = "tnum"
 
 /** "Live TV" 46/800, then the crumb: "‹ **Sky Cinema** · 9 channels" (no ‹ when the column is on screen). */
 @Composable
-internal fun LiveHeader(category: String, count: Int?, showChevron: Boolean, modifier: Modifier = Modifier) {
+internal fun LiveHeader(category: String, count: Int?, showChevron: Boolean, modifier: Modifier = Modifier, showTitle: Boolean = true) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(22.mpx), verticalAlignment = Alignment.Bottom) {
-        Text(stringResource(R.string.common_nav_live_tv), style = stageText(46, 800, (-1).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // glcn: Cinematic leaves the section's name to the menu (it stood again, large, in the middle of the page).
+        if (showTitle) Text(stringResource(R.string.common_nav_live_tv), style = stageText(46, 800, (-1).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(
             Modifier.padding(bottom = 3.mpx),
             horizontalArrangement = Arrangement.spacedBy(12.mpx),
@@ -153,6 +155,7 @@ internal fun LiveStageRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
+    nowMs: Long = System.currentTimeMillis(),
     trailing: (@Composable () -> Unit)? = null,
     /** glcn: what follows on this channel — shown under the programme on the focused row only. */
     next: XtEpgEntry? = null,
@@ -221,7 +224,7 @@ internal fun LiveStageRow(
             if (isFavorite) OwnTVIcon(OwnTVIcon.FAVORITE, stageAccent.ink, Modifier.size(22.mpx), filled = true)
             mark?.let { StagePlaylistMark(it) }
             // glcn: how much is left as a small ring with the minutes in it, instead of a cut-off "quedan …" and a thin line.
-            if (now != null) TimeLeftRing(progressOf(now), minutesLeft(now), focused)
+            if (now != null) TimeLeftRing(progressOf(now, nowMs), minutesLeft(now, nowMs), focused)
         }
     }
 }
@@ -297,11 +300,29 @@ internal fun LivePlate(
     }
 }
 
-internal fun minutesLeft(p: XtEpgEntry): Long = ((p.stopMs - System.currentTimeMillis()).coerceAtLeast(0) + 59_999) / 60_000
+internal fun minutesLeft(p: XtEpgEntry, nowMs: Long = System.currentTimeMillis()): Long =
+    ((p.stopMs - nowMs).coerceAtLeast(0) + 59_999) / 60_000
 
-internal fun progressOf(p: XtEpgEntry): Float {
+internal fun progressOf(p: XtEpgEntry, nowMs: Long = System.currentTimeMillis()): Float {
     val span = (p.stopMs - p.startMs).coerceAtLeast(1)
-    return ((System.currentTimeMillis() - p.startMs).toFloat() / span).coerceIn(0f, 1f)
+    return ((nowMs - p.startMs).toFloat() / span).coerceIn(0f, 1f)
+}
+
+/**
+ * The wall clock, ticking on each minute boundary. A row's time left and progress read the clock only
+ * when it recomposes, and a row whose programme has not changed is skipped — so without a ticking
+ * input they freeze at the moment the list was drawn.
+ */
+@Composable
+internal fun rememberMinuteClock(): Long {
+    var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(60_000 - (System.currentTimeMillis() % 60_000))
+            nowMs = System.currentTimeMillis()
+        }
+    }
+    return nowMs
 }
 
 /** "18:45 – 20:30 · Horror · 2026 · FSK 16": the time range, then only the details the feed carries. */
@@ -443,25 +464,26 @@ internal fun LiveStagePane(
     @Composable
     fun Info(infoModifier: Modifier, tall: Boolean, showTop: Boolean = true, showSchedule: Boolean = true, rowSchedule: Boolean = false) {
         val now = nowNext?.now
+        val clockMs = rememberMinuteClock()
         Box(infoModifier) {
         Column(Modifier.fillMaxWidth().then(if (tall || rowSchedule) Modifier.fillMaxHeight() else Modifier).padding(start = 4.mpx, end = 4.mpx, top = if (tall || !showTop) 0.mpx else if (rowSchedule) 22.mpx else 34.mpx)) {
         if (showTop) Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             if (now != null) {
-                if (!tall) Text(now.title, style = stageText(if (rowSchedule) 30 else 42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = if (rowSchedule) 1 else 2, overflow = TextOverflow.Ellipsis)
+                if (!tall) Text(tv.own.owntv.glcn.guideTitle(now.title, now.sourceId), style = stageText(if (rowSchedule) 30 else 42, 800, (-0.5).mpxSp), color = StageColors.Text, maxLines = if (rowSchedule) 1 else 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     listOfNotNull(
                         detailsLine(now, nowNext.nowDetails).takeIf { it.isNotBlank() },
                         // glcn: Ficha — the time left sits with the times, not alone at the end of the bar.
-                        timeLeftText(minutesLeft(now)).takeIf { rowSchedule },
+                        timeLeftText(minutesLeft(now, clockMs)).takeIf { rowSchedule },
                         tv.own.owntv.ui.components.rememberTmdbRating(now.title, nowNext.nowDetails?.categories),
                     ).joinToString("  ·  "),
                     style = stageText(if (rowSchedule) 17 else 19, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = if (tall) 0.mpx else if (rowSchedule) 6.mpx else 8.mpx, bottom = if (rowSchedule) 12.mpx else 16.mpx),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
-                    StageProgress(progressOf(now), Modifier.weight(1f))
-                    if (!rowSchedule) Text(timeLeftText(minutesLeft(now)), style = stageText(17, 400).copy(fontFeatureSettings = Tabular), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    StageProgress(progressOf(now, clockMs), Modifier.weight(1f))
+                    if (!rowSchedule) Text(timeLeftText(minutesLeft(now, clockMs)), style = stageText(17, 400).copy(fontFeatureSettings = Tabular), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -475,9 +497,11 @@ internal fun LiveStagePane(
             kotlinx.coroutines.delay(300)
             value = runCatching { resolver.detailsFor(n.title, null) }.getOrNull()?.overview
         }
-        if (showTop) (now?.description?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
+        // glcn: without the genres some guides repeat in brackets at the start (the line above already has them).
+        if (showTop) (now?.description?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.glcn.SynopsisText.withoutGenres(it, nowNext?.nowDetails?.categories) }?.takeIf { it.isNotBlank() } ?: lentOverview)?.let {
             tv.own.owntv.features.shell.components.DriftingSynopsis(
                 it,
+                sourceId = now?.sourceId ?: 0L,
                 modifier = Modifier.padding(top = 14.mpx).then(if (rowSchedule) Modifier.weight(1f) else if (tall) Modifier.weight(1f, fill = false) else Modifier), // glcn: Ficha — the synopsis takes all the room down to the cards at the foot
                 // glcn: Ficha — a little smaller and as many lines as the room under the video holds, so it reads at once.
                 style = if (rowSchedule) stageText(17, 400).copy(lineHeight = (17 * 1.4f).mpxSp) else stageText(19, 400).copy(lineHeight = (19 * 1.55f).mpxSp),
@@ -603,6 +627,30 @@ private fun LiveScheduleItem(
 
 private const val LATER_ART_SETTLE_MS = 350L
 private const val LATER_CARD_RATIO = 2.1f
+
+/**
+ * glcn: fixed focus — every step scrolls the list so the focused channel comes back to one height
+ * ([tv.own.owntv.glcn.FIXED_FOCUS_PIVOT]); the highlight, sliding with the same spring, stays put while the channels
+ * pass under it. At the list's ends there is nothing to scroll and the highlight walks to the first and last rows.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+internal val fixedFocusSpec = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
+    override val scrollAnimationSpec: androidx.compose.animation.core.AnimationSpec<Float>
+        get() = if (tv.own.owntv.glcn.SmoothScroll.still) androidx.compose.animation.core.snap()
+        else androidx.compose.animation.core.spring(
+            dampingRatio = if (tv.own.owntv.ui.stage.GlcnMotion.subtle) 1f else tv.own.owntv.glcn.FIXED_FOCUS_DAMPING,
+            stiffness = tv.own.owntv.glcn.FIXED_FOCUS_STIFFNESS,
+        )
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        if (tv.own.owntv.glcn.ListWheel.active) return 0f
+        return offset - (containerSize - size).coerceAtLeast(0f) * tv.own.owntv.glcn.FIXED_FOCUS_PIVOT
+    }
+}
+
+/** glcn: Live TV's channel list — fixed focus when asked for (Settings › Layout), else scrolling at its edges. */
+internal val channelListSpec: androidx.compose.foundation.gestures.BringIntoViewSpec
+    @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+    get() = if (tv.own.owntv.glcn.ListFocusPref.fixed) fixedFocusSpec else edgeScrollSpec
 
 /** Scroll only as far as the focused item, plus one row of room, needs (the TV default pins it a third down). */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -951,8 +999,13 @@ internal fun LiveCategories(
             }
         }
         // Edge-only scrolling, as the channel list (no double step on ▼).
-        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
-        tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxWidth().weight(1f).edgeGive()) {
+        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides channelListSpec) {
+        val fixedFocus = tv.own.owntv.glcn.ListFocusPref.fixed
+        tv.own.owntv.glcn.SlideFocusHost(
+            Modifier.fillMaxWidth().weight(1f).edgeGive(),
+            stiffness = if (fixedFocus) tv.own.owntv.glcn.FIXED_FOCUS_STIFFNESS else 700f,
+            damping = if (fixedFocus) tv.own.owntv.glcn.FIXED_FOCUS_DAMPING else 1f,
+        ) {
         LazyColumn(
             state = listState,
             modifier = Modifier

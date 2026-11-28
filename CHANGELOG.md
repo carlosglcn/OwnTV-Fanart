@@ -10,15 +10,64 @@
 ## v5.2.3 — unreleased
 
 ### ✨ New features
+- **⏭️ Skip intro, recap, end credits and preview, from TheIntroDB**
+- **🎬 Next-episode countdown starts with the end credits**
+- **🔑 Settings › Content & metadata › TheIntroDB, with an optional API key**
+- **🔍 "Check TheIntroDB" in the long-press menu of films, series and episodes**
 - **📅 TV Guide keeps the category you left, and CH+/CH− step through its list after you pick a channel** (community PR #370 by @Quad-Plex)
 - **⏭️ CH+/CH− page the programme list and the catch-up list (#373)**
+- **📼 "Prefer HLS for catch-up" on each Xtream playlist (#364)**
+- **🎓 Sports: college teams and games (#377)**
+- **📊 Sports: standings columns per sport, "Standings" and "Games" tabs outside football**
+- **🌍 Ukrainian and Central Kurdish**
+- **🔤 Search and A–Z ignore letter case in every alphabet (#375)**
+- **👤 Zoom, text size and recent searches per profile (#368)**
+- **📂 Subtitles: "Find in folder", with automatic loading of the matching file (#355)**
+- **⏳ "Performing database migration" screen on the first start after an update**
+- **🗄️ Archive: a catch-up channel's past days and their programmes on one page** (community PR #379 by @Sekator778)
+- **📼 "Prefer HLS for catch-up" on M3U playlists too: Flussonic catch-up shows its full length and can be sought** (community PR #93 by @Sekator778)
+- **🎮 D-pad Up/Down in the live player: change channel, controls and recently watched, or nothing** (community PR #382 by @Pax24fr)
+- **🎬 Home: hold OK or press Menu on a trending poster for its menu** (community PR #386 by @Pax24fr)
+- **⏺️ Downloads opens on Recordings (#384)**
+- **🖼️ Episode tiles show the provider's own picture of each episode (#367)**
+- **🖥️ Player zoom: Force 20:9 (#378)**
+- **🔄 Playlist menu: Re-sync first (#385)**
+- **🗑️ Customize: Delete in the side panel of a category you created**
+
+- **❤️ Remote shortcuts "Add or remove favorite" and "Record or download"** (rebuilt from community PR #389 by @Pax24fr)
+- **⬅️ Move window: ◀ goes to Cancel, ▶ to Save**
+- **📊 Settings: TheIntroDB's daily allowance beside its row; TMDB with your own key says "No daily limit"**
+- **🔐 DRM: the newer Kodi `drm` and `drm_legacy` playlist lines (#393)**
 
 ### 🐛 Fixes
+- **📺 Channel list over the player keeps "now playing" and progress up to date**
+- **📏 Player top bar: "Live next" is readable instead of cut to a few letters**
+- **🎬 Stalker films play on portals that need the film's file first, and say so when a film cannot open (#390)**
+- **🔄 Local sync: synced episodes and films show in Continue Watching straight away (#394)**
+- **🛟 No "restore did not finish" flash during a local sync (#394)**
+- **💬 Short notices show on every screen, not only in the player**
+- **🌐 Update check asks again when GitHub briefly fails**
+- **⌨️ Text fields in popups open the keyboard with focus every time**
+- **🔒 A Merge restore or a sync with the phone no longer removes a category lock**
+- **🔍 Search picked on the rail keeps focus on the rail, like every other section**
+- **🏆 Sports: the floating menu no longer opens over a match page while you move between its tabs (#387)**
+- **📅 Guide: the "ids don't match" notice says to use Auto-match EPG, then Match EPG**
+- **🧭 Home: focus follows the channel or film you just watched to the front of Keep watching**
+- **📼 Catch-up: no more stutter after a programme that failed to open (#357)**
+- **📅 Guide: a channel matched by hand gets its programmes and past days even when the downloaded guide is old** (reported in PR #380 by @Sekator778)
+- **📼 Catch-up: a channel's past days fill in from the provider's archive when the downloaded guide stopped early**
+- **📼 Catch-up: a programme ExoPlayer could not start no longer puts later catch-up on mpv into software decoding**
+- **📼 Catch-up: switching a programme from mpv to ExoPlayer starts it at once, in hardware, instead of after 12 seconds in software**
+- **📅 Match EPG: ▶ jumps from the guide list straight to Clear match and Close**
+- **🎙️ Voice search no longer asks which app every time (#358)**
+- **🏒 Sports: "Starting soon" shows today's games after midnight**
+- **🏈 Sports: US team pages list their games, college tables show the real record**
 - **➖ Zoom and other steppers: tapping "−" lowers the value instead of raising it (#359)**
 - **🏆 Sports: the last-channel pill no longer covers the tabs, and is shorter everywhere**
 - **🗂️ Favorites and History show their sort as "Newest first", greyed out** (rebuilt from community PR #369 by @Quad-Plex)
 - **🏠 Live TV: Home or the screensaver while a channel opens no longer plays it behind the home screen; it comes back on return**
 - **🧭 Home: the channel or film you just watched is shown first in Keep watching, not hidden off-screen**
+- **🔤 Local subtitles: UTF-8 files no longer show Chinese characters**
 
 ## v5.2.2 — 2026-11-09
 

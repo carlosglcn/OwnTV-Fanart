@@ -23,6 +23,9 @@ import kotlin.math.sin
 object UiSounds {
 
     private const val RATE = 44_100
+    private const val EMBER = 7
+    private const val EMBER_TICKS = 4
+    private const val PAD_PARTIALS = 5
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     /**
      * glcn: the sounds are started on their own quiet thread, never on the main one — stopping and restarting an
@@ -44,7 +47,7 @@ object UiSounds {
             field = value
         }
 
-    /** 0 classic, 1 crystal, 2 wood, 3 bubble, 4 soft, 5 kalimba, 6 natural (recorded: Kenney UI sounds, CC0; the opening chime is our own). Changing it drops the cached sounds so the next ones are built in the new style. */
+    /** 0 classic, 1 crystal, 2 wood, 3 bubble, 4 soft, 5 kalimba, 6 natural (recorded: Kenney UI sounds, CC0; the opening chime is our own), 7 ember (warm and low, made for the Brasa style). Changing it drops the cached sounds so the next ones are built in the new style. */
     @Volatile var style: Int = 0
         set(value) {
             if (value == field) return
@@ -52,11 +55,15 @@ object UiSounds {
             dropTracks()
         }
 
+    // Ember's takes of its move sound; touched on the sounds' thread only.
+    private val takes = arrayOfNulls<AudioTrack>(EMBER_TICKS)
+    private var lastTake = 0
+
     private fun dropTracks() {
         // On the sounds' own thread, after anything still being played there.
         soundHandler.post {
-            listOf(move, select, back).forEach { runCatching { it?.release() } }
-            move = null; select = null; back = null
+            (listOf(move, select, back) + takes).forEach { runCatching { it?.release() } }
+            move = null; select = null; back = null; takes.fill(null)
         }
     }
 
@@ -99,7 +106,7 @@ object UiSounds {
                 Season.NEW_YEAR -> newYear()
                 Season.CARNIVAL -> carnival()
                 Season.VALENTINE -> valentine()
-                Season.NONE -> (if (style == NATURAL) raw(tv.own.owntv.R.raw.glcn_snd_open) else null) ?: chime()
+                Season.NONE -> (if (style == NATURAL) raw(tv.own.owntv.R.raw.glcn_snd_open) else null) ?: if (style == EMBER) emberChime() else chime()
             }
             val track = trackOf(pcm, gain = 0.5f) ?: return@launch
             runCatching { track.play() }
@@ -116,14 +123,21 @@ object UiSounds {
     private enum class Kind { MOVE, SELECT, BACK }
 
     private fun trackFor(kind: Kind): AudioTrack? = when (kind) {
-        Kind.MOVE -> move ?: build { tick() }.also { move = it }
+        // glcn: Ember moves through a few takes of its knock, never the same twice running.
+        Kind.MOVE -> if (style == EMBER) {
+            val take = (lastTake + 1 + (SystemClock.uptimeMillis() % (EMBER_TICKS - 1)).toInt()) % EMBER_TICKS
+            // The take before is cut short, as one kept sound would be: two takes ringing over each other read as an echo.
+            runCatching { takes[lastTake]?.takeIf { it.playState == AudioTrack.PLAYSTATE_PLAYING }?.stop() }
+            lastTake = take
+            takes[take] ?: build { emberTick(take).pcm() }.also { takes[take] = it }
+        } else move ?: build { tick() }.also { move = it }
         Kind.SELECT -> select ?: build { pop() }.also { select = it }
         Kind.BACK -> back ?: build { swoosh() }.also { back = it }
     }
 
     private fun forget(kind: Kind) {
         when (kind) {
-            Kind.MOVE -> { runCatching { move?.release() }; move = null }
+            Kind.MOVE -> { runCatching { move?.release() }; move = null; takes.forEach { runCatching { it?.release() } }; takes.fill(null) }
             Kind.SELECT -> { runCatching { select?.release() }; select = null }
             Kind.BACK -> { runCatching { back?.release() }; back = null }
         }
@@ -231,6 +245,114 @@ object UiSounds {
             }
         }
 
+        /**
+         * glcn: a struck wooden bar, as a marimba's — what makes a made sound pass for a real one: partials that are not
+         * exact multiples (1, 3.93, 9.6) and die at their own speed (the high ones first, so the note mellows as it
+         * rings), a second voice a hair out of tune (the slow shimmer of a real bar), a pitch that settles in the first
+         * instants, and the mallet's own soft thud and breath at the start.
+         */
+        fun struck(atSec: Double, freq: Double, durSec: Double, amp: Double, decay: Double, hard: Double = 1.0, seed: Long = 3, open: Double = 0.0) {
+            val start = (atSec * RATE).toInt()
+            val n = (durSec * RATE).toInt()
+            val ratios = doubleArrayOf(1.0, 3.93, 9.6)
+            // [open] (0–1) lets more of the upper partials and of the mallet's click through, and less of its low thud:
+            // a short knock with them held back sounds shut in, as if heard through a bottle.
+            val levels = doubleArrayOf(1.0, (0.22 + 0.2 * open) * hard, (0.07 + 0.09 * open) * hard)
+            val decays = doubleArrayOf(decay, decay * 2.7, decay * 5.5)
+            val phases = DoubleArray(3)
+            var twin = 0.0
+            var thud = 0.0
+            val rnd = java.util.Random(seed)
+            val lp = 1 - exp(-2 * PI * (2600.0 + 4400.0 * open) / RATE)
+            var noise = 0.0
+            for (i in 0 until n) {
+                val idx = start + i
+                if (idx >= buf.size) break
+                val t = i.toDouble() / RATE
+                // The bar is a touch sharp while the mallet is still on it.
+                val f = freq * (1 + 0.012 * exp(-t / 0.012))
+                var v = 0.0
+                for (k in 0 until 3) {
+                    phases[k] += 2 * PI * f * ratios[k] / RATE
+                    v += levels[k] * exp(-decays[k] * t) * sin(phases[k])
+                }
+                twin += 2 * PI * f * 1.0035 / RATE
+                v += 0.32 * exp(-decay * 0.9 * t) * sin(twin)
+                // The mallet: a low thud and a little filtered noise, gone in a few milliseconds.
+                thud += 2 * PI * f * 0.5 / RATE
+                v += 0.3 * (1 - 0.7 * open) * hard * exp(-t / 0.006) * sin(thud)
+                noise += lp * ((rnd.nextDouble() * 2 - 1) - noise)
+                v += 0.5 * hard * exp(-t / 0.004) * noise
+                val attack = (t / 0.0025).coerceAtMost(1.0)
+                buf[idx] += (amp * attack * v).toFloat()
+            }
+        }
+
+        /**
+         * glcn: a short, dry tap — for a sound heard dozens of times in a row. One clear note with a little of its
+         * octave, gone in a few hundredths of a second, and the fingertip's click at its start (noise with its low part
+         * taken out, so it ticks rather than thumps). Nothing under the note and nothing after it: a low thud, a second
+         * voice or a room's echoes, in so short a sound, are what make it seem to come from inside a bottle.
+         */
+        fun tap(freq: Double, durSec: Double, amp: Double, decay: Double, click: Double, seed: Long) {
+            val n = (durSec * RATE).toInt().coerceAtMost(buf.size)
+            val rnd = java.util.Random(seed)
+            val lp = 1 - exp(-2 * PI * 1800.0 / RATE)
+            var low = 0.0
+            var phase = 0.0
+            for (i in 0 until n) {
+                val t = i.toDouble() / RATE
+                phase += 2 * PI * freq * (1 + 0.006 * exp(-t / 0.008)) / RATE
+                val white = rnd.nextDouble() * 2 - 1
+                low += lp * (white - low)
+                val note = exp(-decay * t) * (sin(phase) + 0.2 * exp(-decay * t) * sin(2 * phase))
+                val tick = click * exp(-t / 0.0022) * (white - low)
+                buf[i] += (amp * (t / 0.0015).coerceAtMost(1.0) * (note + tick)).toFloat()
+            }
+        }
+
+        /**
+         * glcn: a held, swelling note, as a film score's strings or low brass — two voices a hair apart (the width of a
+         * section playing together), each a handful of soft harmonics, rising slowly over [attack] seconds and letting
+         * go over [release]. Nothing is struck: it is the sound of a cinema's logo, not of a bell.
+         */
+        fun pad(atSec: Double, freq: Double, durSec: Double, amp: Double, attack: Double, release: Double, bright: Double = 0.5) {
+            val start = (atSec * RATE).toInt()
+            val n = (durSec * RATE).toInt()
+            val voices = doubleArrayOf(0.9985, 1.0015)
+            val phases = Array(voices.size) { DoubleArray(PAD_PARTIALS) }
+            for (i in 0 until n) {
+                val idx = start + i
+                if (idx >= buf.size) break
+                val t = i.toDouble() / RATE
+                val up = (t / attack).coerceAtMost(1.0)
+                val down = ((durSec - t) / release).coerceIn(0.0, 1.0)
+                // Smooth both ends (no click) and open up a little as it swells, the way a section grows louder.
+                val env = up * up * (3 - 2 * up) * down * down * (3 - 2 * down)
+                var v = 0.0
+                for (vi in voices.indices) for (k in 0 until PAD_PARTIALS) {
+                    phases[vi][k] += 2 * PI * freq * voices[vi] * (k + 1) / RATE
+                    v += Math.pow(bright * (0.6 + 0.4 * up), k.toDouble()) / (k + 1) * sin(phases[vi][k])
+                }
+                buf[idx] += (amp * env * v * 0.5).toFloat()
+            }
+        }
+
+        /** glcn: a small room around what is in the buffer — a few early, duller echoes, so it does not sound dry. */
+        fun room(amount: Double = 1.0) {
+            val dry = buf.copyOf()
+            val taps = listOf(0.0113 to 0.2, 0.0171 to 0.14, 0.0237 to 0.1, 0.0319 to 0.06)
+            val lp = (1 - exp(-2 * PI * 2200.0 / RATE)).toFloat()
+            for ((delay, gain) in taps) {
+                val d = (delay * RATE).toInt()
+                var y = 0f
+                for (i in d until buf.size) {
+                    y += lp * (dry[i - d] - y)
+                    buf[i] += (gain * amount).toFloat() * y
+                }
+            }
+        }
+
         /** A sliding tone with vibrato — the theremin of an old horror film. */
         fun glide(atSec: Double, from: Double, to: Double, durSec: Double, amp: Double) {
             val start = (atSec * RATE).toInt()
@@ -295,8 +417,21 @@ object UiSounds {
         4 -> Mix(0.06).apply { bell(0.0, 520.0, 0.06, 0.24, decay = 55.0, partials = doubleArrayOf(1.0, 0.06), attack = 0.007) }
         // 5 — kalimba: a plucked tine, a soft fundamental with a little of its fourth harmonic.
         5 -> Mix(0.09).apply { bell(0.0, 880.0, 0.09, 0.2, decay = 48.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003) }
+        // 7 — ember: a low, soft knock on wood (see emberTick).
+        7 -> emberTick(0)
         else -> Mix(0.03).apply { bell(0.0, 1900.0, 0.03, 0.18, decay = 160.0, partials = doubleArrayOf(1.0)) }
     }.pcm()
+
+    /**
+     * glcn: Ember's tap, in one of [EMBER_TICKS] takes: no two strikes of a real thing sound alike, and the
+     * same sample at every step of a long list is what gives a made sound away. Each take is a shade higher or lower
+     * and a shade harder or softer.
+     */
+    private fun emberTick(take: Int): Mix {
+        val tune = doubleArrayOf(1.0, 0.985, 1.018, 0.996)[take % EMBER_TICKS]
+        val hard = doubleArrayOf(1.0, 0.8, 0.9, 1.15)[take % EMBER_TICKS]
+        return Mix(0.09).apply { tap(440.0 * tune, 0.085, 0.3, decay = 70.0, click = 0.22 * hard, seed = 11L + take) }
+    }
 
     private fun synthPop() = when (style) {
         1 -> Mix(0.22).apply { bell(0.0, 1568.0, 0.2, 0.2, decay = 24.0, partials = doubleArrayOf(1.0, 0.25)); bell(0.05, 2349.0, 0.17, 0.17, decay = 28.0, partials = doubleArrayOf(1.0, 0.2)) }
@@ -304,6 +439,14 @@ object UiSounds {
         3 -> Mix(0.12).apply { drop(0.0, 600.0, 1500.0, 0.1, 0.32, decay = 26.0) }
         4 -> Mix(0.3).apply { bell(0.0, 523.0, 0.28, 0.26, decay = 16.0, partials = doubleArrayOf(1.0, 0.06), attack = 0.009); bell(0.07, 659.0, 0.22, 0.22, decay = 18.0, partials = doubleArrayOf(1.0, 0.05), attack = 0.009) }
         5 -> Mix(0.4).apply { bell(0.0, 659.0, 0.36, 0.3, decay = 11.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003); bell(0.07, 988.0, 0.32, 0.26, decay = 13.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003) }
+        // Ember: a cinema's "confirm", kept clean — a soft low knock and two round notes a fifth apart (D, A) that
+        // bloom and fade. Nearly pure tones, no echoes and no noise: the first try (detuned voices, a deep sub and a
+        // room) came out metallic and distorted on the TV's speakers.
+        7 -> Mix(0.45).apply {
+            drop(0.0, 120.0, 74.0, 0.16, 0.26, decay = 16.0)
+            bell(0.0, 293.66, 0.42, 0.22, decay = 7.5, partials = doubleArrayOf(1.0, 0.1), attack = 0.018)
+            bell(0.03, 440.0, 0.4, 0.13, decay = 8.5, partials = doubleArrayOf(1.0, 0.06), attack = 0.022)
+        }
         else -> Mix(0.09).apply { bell(0.0, 1250.0, 0.09, 0.3, decay = 45.0); bell(0.012, 1870.0, 0.07, 0.15, decay = 60.0) }
     }.pcm()
 
@@ -313,6 +456,12 @@ object UiSounds {
         3 -> Mix(0.12).apply { drop(0.0, 1300.0, 520.0, 0.1, 0.28, decay = 26.0) }
         4 -> Mix(0.26).apply { bell(0.0, 440.0, 0.24, 0.26, decay = 18.0, partials = doubleArrayOf(1.0, 0.06), attack = 0.009); bell(0.07, 349.0, 0.2, 0.22, decay = 20.0, partials = doubleArrayOf(1.0, 0.05), attack = 0.009) }
         5 -> Mix(0.34).apply { bell(0.0, 784.0, 0.3, 0.26, decay = 13.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003); bell(0.07, 523.0, 0.28, 0.24, decay = 14.0, partials = doubleArrayOf(1.0, 0.0, 0.0, 0.16), attack = 0.003) }
+        // Ember: the same warmth falling away.
+        7 -> Mix(0.34).apply {
+            struck(0.0, 440.0, 0.26, 0.26, decay = 16.0, hard = 0.8, seed = 8)
+            struck(0.06, 293.66, 0.26, 0.28, decay = 14.0, hard = 0.7, seed = 9)
+            room()
+        }
         else -> Mix(0.09).apply { glide(0.0, 1100.0, 650.0, 0.09, 0.22) }
     }.pcm()
 
@@ -324,6 +473,16 @@ object UiSounds {
     }.pcm()
 
     /** Halloween: a low minor chord and a theremin that rises and wavers. */
+    /** glcn: Ember's own opening: the lights going down in a cinema — one chord that swells and fades. */
+    private fun emberChime() = Mix(3.4).apply {
+        // "Sala" (chosen by ear from three): only the chord — D, A, D, A, D, F♯ from the bottom up, each voice coming
+        // in a little after the one below — swelling slowly and dying away. Nothing is struck.
+        listOf(
+            Triple(73.42, 0.17, 0.0), Triple(110.0, 0.12, 0.1), Triple(146.83, 0.12, 0.25),
+            Triple(220.0, 0.1, 0.4), Triple(293.66, 0.08, 0.55), Triple(369.99, 0.06, 0.7),
+        ).forEach { (f, amp, at) -> pad(at, f, 3.3 - at, amp, attack = 1.3, release = 1.5, bright = 0.28) }
+    }.pcm()
+
     private fun halloween() = Mix(2.2).apply {
         bell(0.0, note(-24), 2.0, 0.22, decay = 1.6) // A2
         bell(0.05, note(-21), 2.0, 0.16, decay = 1.6) // C3

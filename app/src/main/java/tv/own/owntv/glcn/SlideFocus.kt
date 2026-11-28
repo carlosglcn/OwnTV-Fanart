@@ -1,5 +1,7 @@
 package tv.own.owntv.glcn
 
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
@@ -31,6 +33,7 @@ import tv.own.owntv.ui.stage.StageFocus
 import tv.own.owntv.ui.stage.drawStageFocus
 import tv.own.owntv.ui.theme.LocalStagePalette
 import tv.own.owntv.ui.theme.StageAccent
+import tv.own.owntv.ui.theme.mpx
 import tv.own.owntv.ui.theme.ownTvTween
 import tv.own.owntv.ui.theme.stageAccent
 
@@ -60,6 +63,13 @@ class SlideFocusState {
     var damping = 1f
     /** glcn: the box stretches as it goes — its leading edge gets there first, the trailing one follows (menu bars). */
     var stretch = false
+    /**
+     * glcn: the box keeps its place and the cards pass under it (Home's rows, as on Prime Video) instead of gliding
+     * from card to card. While [anchor] is set the box is drawn there; once the row has come to rest, whatever gap is
+     * left to the focused card (the row's last cards, where it cannot scroll further) is glided as usual.
+     */
+    var pinned = false
+    var anchor by mutableStateOf<Rect?>(null)
     /** glcn: the box came over from another host: it shows at once (no fade in) while it glides in. */
     var arrived = false
     /**
@@ -70,6 +80,26 @@ class SlideFocusState {
 }
 
 val LocalSlideFocus = compositionLocalOf<SlideFocusState?> { null }
+
+/** glcn: rows under a pinned box bring the focused card to their first place (Home); elsewhere they scroll as before. */
+val LocalPinnedRows = compositionLocalOf { false }
+
+/**
+ * glcn: [padding] with room after the last card for it to come to the first place too. Without it a short row (five
+ * posters that all fit) had nowhere to scroll and the box walked along it, while a long row kept it still — one
+ * behaviour for every row now, as on Prime Video: the row's end simply leaves the screen empty to its right.
+ */
+@Composable
+fun pinnedRowPadding(padding: androidx.compose.foundation.layout.PaddingValues): androidx.compose.foundation.layout.PaddingValues {
+    val dir = androidx.compose.ui.platform.LocalLayoutDirection.current
+    val screen = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
+    val start = padding.calculateStartPadding(dir)
+    val end = maxOf(padding.calculateEndPadding(dir), androidx.compose.ui.unit.Dp(screen.toFloat()) - start - PIN_LAST_CARD.mpx)
+    return androidx.compose.foundation.layout.PaddingValues(start = start, top = padding.calculateTopPadding(), end = end, bottom = padding.calculateBottomPadding())
+}
+
+/** The narrowest card a row holds, about: the room after the last card is the screen less this. */
+private const val PIN_LAST_CARD = 120
 
 /**
  * glcn: where the last sliding box on screen was drawn, and when — across all hosts. When focus jumps from one list
@@ -86,9 +116,15 @@ object SlideFocusTrail {
 
 /** Wraps a list or a menu: draws the sliding box behind [content] and tells its items to leave focus drawing to it. */
 @Composable
-fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, stretch: Boolean = false, damping: Float = 1f, content: @Composable () -> Unit) {
+fun SlideFocusHost(
+    modifier: Modifier = Modifier, stiffness: Float = 700f, stretch: Boolean = false, damping: Float = 1f,
+    /** glcn: the box stays put and the cards come to it (see [SlideFocusState.pinned]). */
+    pinned: Boolean = false,
+    content: @Composable () -> Unit,
+) {
     if (LowRam.on) { content(); return }
     val st = remember { SlideFocusState() }
+    st.pinned = pinned
     st.stiffness = stiffness
     st.stretch = stretch
     st.damping = damping
@@ -105,11 +141,12 @@ fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, stret
             val live = st.live
             if (a <= 0.01f || accent == null || live == Rect.Zero) return@Canvas
             val g = st.glide.value
-            var l = live.left + st.gap.left * g - st.origin.x
-            var t = live.top + st.gap.top * g - st.origin.y
-            var w = live.width + st.gap.width * g
-            var h = live.height + st.gap.height * g
-            if (st.stretch && g > 0f) {
+            val held = st.anchor
+            var l = (held?.left ?: (live.left + st.gap.left * g)) - st.origin.x
+            var t = (held?.top ?: (live.top + st.gap.top * g)) - st.origin.y
+            var w = held?.width ?: (live.width + st.gap.width * g)
+            var h = held?.height ?: (live.height + st.gap.height * g)
+            if (held == null && st.stretch && g > 0f) {
                 // The edge it travels towards arrives first (g²), the other trails (g^0.7): a drop that stretches.
                 val lead = g * g
                 val trail = Math.pow(g.toDouble(), 0.7).toFloat()
@@ -131,7 +168,7 @@ fun SlideFocusHost(modifier: Modifier = Modifier, stiffness: Float = 700f, stret
                 }
             }
         }
-        CompositionLocalProvider(LocalSlideFocus provides st) { content() }
+        CompositionLocalProvider(LocalSlideFocus provides st, LocalPinnedRows provides pinned) { content() }
     }
 }
 
@@ -155,6 +192,7 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
     var rect by remember { mutableStateOf(Rect.Zero) }
     val anim = tv.own.owntv.ui.theme.animationsOn
     val scope = rememberCoroutineScope()
+    val crossMax = with(androidx.compose.ui.platform.LocalDensity.current) { CROSS_MAX_MPX.mpx.toPx() }
     if (region != null) {
         androidx.compose.runtime.SideEffect {
             if (rect == Rect.Zero) rect = region.rect
@@ -167,7 +205,10 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
                 // The gap from where the box was drawn to this item, so it starts where it is and glides in.
                 val visible = st.current != null || st.alpha.value > 0.05f
                 // glcn: coming from another host's box (just drawn somewhere else on screen): set off from there.
-                val crossing = if (!visible && !LowRam.on && anim) SlideFocusTrail.fresh() else null
+                // Only from nearby: across half the screen (Home's "Watch now" up to the top bar) the box was seen
+                // sweeping over the picture — there it simply comes on where focus lands.
+                val crossing = (if (!visible && !LowRam.on && anim) SlideFocusTrail.fresh() else null)
+                    ?.takeIf { rect == Rect.Zero || (it.center - rect.center).getDistance() <= crossMax }
                 if (crossing != null) st.arrived = true
                 val from = crossing ?: st.drawn
                 val visible2 = visible || crossing != null
@@ -177,8 +218,33 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
                 st.style = style; st.radius = radius; st.accent = accent
                 st.current = id
                 if (rect != Rect.Zero) st.live = rect
+                // glcn: a pinned box, between cards of one size: it waits where it is while the row brings the card
+                // under it, and only then glides whatever is left.
+                val hold = st.pinned && anim && crossing == null && visible && from != Rect.Zero && rect != Rect.Zero &&
+                    kotlin.math.abs(from.width - rect.width) <= rect.width * PIN_SAME_SIZE &&
+                    kotlin.math.abs(from.height - rect.height) <= rect.height * PIN_SAME_SIZE &&
+                    // …along one row: between rows the box glides down or up at once, as it always did.
+                    kotlin.math.abs(from.top - rect.top) <= rect.height * PIN_SAME_ROW
+                st.anchor = if (hold) from else null
                 scope.launch(start = CoroutineStart.UNDISPATCHED) {
                     st.glide.snapTo(1f)
+                    if (hold) {
+                        var last = st.live
+                        var still = 0
+                        val began = android.os.SystemClock.uptimeMillis()
+                        while (st.current === id && st.anchor != null) {
+                            androidx.compose.runtime.withFrameNanos { }
+                            val now = st.live
+                            still = if (now == last) still + 1 else 0
+                            last = now
+                            val waited = android.os.SystemClock.uptimeMillis() - began
+                            if ((still >= PIN_STILL_FRAMES && waited >= PIN_MIN_MS) || waited >= PIN_MAX_MS) break
+                        }
+                        if (st.current !== id) return@launch
+                        val at = st.live
+                        st.gap = Rect(from.left - at.left, from.top - at.top, from.left - at.left + (from.width - at.width), from.top - at.top + (from.height - at.height))
+                        st.anchor = null
+                    }
                     // glcn: Animations Off — the box is simply there; Subtle — it slides and stops, without give.
                     if (anim) st.glide.animateTo(0f, spring(dampingRatio = if (tv.own.owntv.ui.stage.GlcnMotion.subtle) 1f else st.damping, stiffness = st.stiffness))
                     else st.glide.snapTo(0f)
@@ -188,7 +254,7 @@ fun Modifier.slideFocusReport(st: SlideFocusState, style: StageFocus, radius: Dp
                     st.pop.snapTo(1f)
                     if (pop != 1f && anim) st.pop.animateTo(pop, spring(dampingRatio = POP_DAMPING, stiffness = POP_STIFFNESS))
                 }
-            } else if (st.current === id) st.current = null
+            } else if (st.current === id) { st.current = null; st.anchor = null }
         }
         .then(
             if (region != null) Modifier else Modifier.onGloballyPositioned {
@@ -210,6 +276,14 @@ const val CHANNEL_FOCUS_STIFFNESS = 760f
 const val CHANNEL_FOCUS_DAMPING = 0.76f
 
 /** glcn: a launcher-like pop — a small overshoot (about 6 % past the step), settled in a quarter of a second. */
+/** glcn: the farthest (in design px) a box travels from one list or menu to another; beyond it, no journey. */
+private const val CROSS_MAX_MPX = 300
+/** glcn: a pinned box holds only between cards of (nearly) one size, for at least / at most this long. */
+private const val PIN_SAME_SIZE = 0.08f
+private const val PIN_SAME_ROW = 0.25f
+private const val PIN_STILL_FRAMES = 3
+private const val PIN_MIN_MS = 90L
+private const val PIN_MAX_MS = 700L
 private const val POP_DAMPING = 0.55f
 private const val POP_STIFFNESS = 420f
 

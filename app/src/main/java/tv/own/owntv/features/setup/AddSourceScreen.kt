@@ -12,7 +12,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.input.key.type
@@ -86,8 +86,10 @@ fun AddSourceScreen(
         series: SyncScopeChoice,
         isDefault: Boolean,
         preferHls: Boolean,
+        catchupPreferHls: Boolean,
     ) -> Unit,
-    onStartM3u: (name: String, url: String, userAgent: String, referer: String, epgUrl: String, autoRefresh: PlaylistRefresh, isDefault: Boolean) -> Unit,
+    onStartM3u: (name: String, url: String, userAgent: String, referer: String, epgUrl: String, autoRefresh: PlaylistRefresh, isDefault: Boolean, catchupPreferHls: Boolean) -> Unit,
+    modifier: Modifier = Modifier,
     // The last submission from the Remote companion screen, retained as a StateFlow so it survives the
     // Remote → Manual hand-off (this screen mounts after the remote browser posted). When present, the matching
     // type is selected and the fields pre-filled; the user then presses Start Import. Consumed once via
@@ -95,7 +97,6 @@ fun AddSourceScreen(
     remotePayload: kotlinx.coroutines.flow.StateFlow<CompanionPayload?>? = null,
     onRemotePayloadConsumed: () -> Unit = {},
     onBack: () -> Unit,
-    modifier: Modifier = Modifier,
     initial: SourceEntity? = null,
     initialAutoRefresh: PlaylistRefresh = PlaylistRefresh.OFF,
     initialIsDefault: Boolean = false,
@@ -184,6 +185,7 @@ fun AddSourceScreen(
     var autoRefresh by remember(initialAutoRefresh) { mutableStateOf(initialAutoRefresh) }
     var isDefault by remember(initialIsDefault) { mutableStateOf(initialIsDefault) }
     var preferHls by remember(initial) { mutableStateOf(initial?.preferHls == true) }
+    var catchupPreferHls by remember(initial) { mutableStateOf(initial?.catchupPreferHls == true) }
     // Edit: On(=Now)/Off from persisted flags. Add: default all Now for Xtream; Stalker defaults
     // Live Now + Movies/Series Later when the kind switches (see LaunchedEffect below).
     var syncLive by remember(initial) {
@@ -476,9 +478,9 @@ fun AddSourceScreen(
     // panel, reached with ▶ from any row.
     val submit = {
         when (kind) {
-            SourceKind.XTREAM -> onStartXtream(name, server, username, password, userAgent, referer, epgUrl, autoRefresh, syncLive, syncMovies, syncSeries, isDefault, preferHls)
-            SourceKind.M3U -> onStartM3u(name, m3uUrl, userAgent, referer, epgUrl, autoRefresh, isDefault)
-            SourceKind.SMB -> onStartM3u(name, smbLink(), "", "", "", autoRefresh, isDefault)
+            SourceKind.XTREAM -> onStartXtream(name, server, username, password, userAgent, referer, epgUrl, autoRefresh, syncLive, syncMovies, syncSeries, isDefault, preferHls, catchupPreferHls)
+            SourceKind.M3U -> onStartM3u(name, m3uUrl, userAgent, referer, epgUrl, autoRefresh, isDefault, catchupPreferHls)
+            SourceKind.SMB -> onStartM3u(name, smbLink(), "", "", "", autoRefresh, isDefault, false)
             SourceKind.STALKER -> onStartStalker?.invoke(
                 name, portalUrl, mac, stalkerSerialNumber, stalkerDeviceId, stalkerDeviceId2,
                 stalkerSignature, userAgent, referer, autoRefresh, isDefault, syncLive, syncMovies, syncSeries,
@@ -703,7 +705,7 @@ fun AddSourceScreen(
         if (kind == SourceKind.XTREAM) {
             val hlsTitle = stringResource(if (hlsTest is HlsTestUi.Testing) R.string.setup_hls_testing else R.string.setup_hls_test_support)
             val hlsLine = when (val t = hlsTest) {
-                is HlsTestUi.Complete -> t.test.displayText(LocalContext.current.resources)
+                is HlsTestUi.Complete -> t.test.displayText(LocalResources.current)
                 is HlsTestUi.Failed -> stringResource(R.string.setup_hls_test_failed, t.rawMessage)
                 else -> null
             }
@@ -733,6 +735,21 @@ fun AddSourceScreen(
                 onClick = { preferHls = !preferHls },
                 modifier = toSubmit,
                 help = help(preferTitle, preferDesc, switchKeys),
+            )
+        }
+        // Xtream and M3U: on an M3U playlist it changes only Flussonic catch-up, whose finished
+        // programmes it opens as a seekable HLS playlist.
+        if (kind == SourceKind.XTREAM || kind == SourceKind.M3U) {
+            val catchupTitle = stringResource(R.string.setup_prefer_hls_catchup)
+            val catchupDesc = stringResource(R.string.setup_prefer_hls_catchup_description)
+            StageSettingRow(
+                icon = OwnTVIcon.LIVE_TV,
+                title = catchupTitle,
+                desc = catchupDesc,
+                value = SettingValue.Switch(catchupPreferHls),
+                onClick = { catchupPreferHls = !catchupPreferHls },
+                modifier = toSubmit,
+                help = help(catchupTitle, catchupDesc, switchKeys),
             )
         }
 

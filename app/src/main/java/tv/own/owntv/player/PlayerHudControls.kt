@@ -70,6 +70,7 @@ import tv.own.owntv.ui.stage.StageSurface
 import tv.own.owntv.ui.components.OwnTVIcon
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import tv.own.owntv.ui.theme.animationsOn
 import tv.own.owntv.ui.theme.ownTvTween
 import androidx.compose.animation.AnimatedContent
@@ -105,7 +106,7 @@ internal fun mmss(sec: Int): String = tv.own.owntv.ui.components.formatTimestamp
 internal fun hudFocus(ring: Color) = tv.own.owntv.ui.theme.StageAccent(hudAccent, hudOnAccent, ring)
 
 @Composable
-internal fun CircleButton(icon: OwnTVIcon, size: Int, primary: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
+internal fun CircleButton(icon: OwnTVIcon, size: Int, modifier: Modifier = Modifier, primary: Boolean = false, onClick: () -> Unit) {
     // Focus fills the button with the accent and rings it in a white hairline. The glyph takes
     // onAccentOnVideo rather than a fixed dark, so a deep custom accent still gets a readable icon —
     // that role is already derived from the seed's luminance, which is the check this needs.
@@ -212,6 +213,9 @@ internal fun LiveStateBadge(offsetSec: Int?) {
             label = "liveDotAlpha",
         ).value
     }
+    // glcn: the player's chrome is light under a light style — there the badge's pale red words on a pale red wash
+    // could not be read at all; they turn a deep red.
+    val edgeInk = if (tv.own.owntv.ui.theme.LocalStagePalette.current.isLight) LIVE_EDGE_INK_LIGHT else LIVE_EDGE_INK
     Row(
         // glcn: at the live edge there is nothing to do — a quiet red; behind it, the strong colour that calls for a press.
         Modifier.clip(RoundedCornerShape(7.dp)).background(tint.copy(alpha = if (behind) 0.85f else LIVE_EDGE_ALPHA)).padding(horizontal = 9.dp, vertical = 3.dp),
@@ -220,14 +224,14 @@ internal fun LiveStateBadge(offsetSec: Int?) {
     ) {
         OwnTVIcon(
             OwnTVIcon.LIVE_DOT,
-            tint = (if (behind) Color.White else LIVE_EDGE_INK).copy(alpha = if (behind) 1f else pulse),
+            tint = (if (behind) Color.White else edgeInk).copy(alpha = if (behind) 1f else pulse),
             filled = true,
             modifier = Modifier.size(10.dp),
         )
         Text(
             if (behind) stringResource(R.string.player_live_offset, mmss(offsetSec)) else stringResource(R.string.player_live),
             style = tv.own.owntv.ui.theme.stageText(20, 500).copy(textDirection = TextDirection.Content),
-            color = if (behind) Color.White else LIVE_EDGE_INK,
+            color = if (behind) Color.White else edgeInk,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -261,6 +265,7 @@ internal fun GoLivePill(enabled: Boolean, onClick: () -> Unit) {
 /** glcn: the live-edge badge — a soft red wash with light red words. */
 private const val LIVE_EDGE_ALPHA = 0.26f
 private val LIVE_EDGE_INK = Color(0xFFFFA4A4)
+private val LIVE_EDGE_INK_LIGHT = Color(0xFFB71C1C)
 
 /** Wide enough for the longest translation of "Go live" at the 14-character ceiling, so the pill is
  *  the same size in every language rather than sized by whichever word it happens to hold. */
@@ -489,6 +494,8 @@ internal fun SeekBar(
     marks: List<Long> = emptyList(),
     /** glcn: a thumbnail of the picture at a time (the server's seek previews), shown above the playhead while seeking. */
     preview: (@Composable (Long) -> Unit)? = null,
+    /** Where Up goes from the bar: the skip button sits above its right end, out of the way of focus search. */
+    upFocus: FocusRequester? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -508,6 +515,7 @@ internal fun SeekBar(
     Box(
         modifier = Modifier.fillMaxWidth().height(24.dp)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .then(if (upFocus != null) Modifier.focusProperties { up = upFocus } else Modifier)
             .onKeyEvent { e ->
                 // Physical by design: left rewinds and right advances media time in every locale.
                 if (e.type == KeyEventType.KeyDown) when (e.key) {

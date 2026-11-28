@@ -359,7 +359,7 @@ internal fun ChannelCard(player: PlaybackEngine, modifier: Modifier = Modifier, 
  *  accepting digits" and the bar along the bottom drains over the auto-submit window, so the wait is
  *  visible instead of mysterious. [error] turns it into the failure readout for the same number. */
 @Composable
-internal fun ChannelNumberCard(digits: String, error: String? = null, modifier: Modifier = Modifier) {
+internal fun ChannelNumberCard(digits: String, modifier: Modifier = Modifier, error: String? = null) {
     // Animations Off: a steady caret, with no infinite transition started (never a 0 ms one).
     val caretAlpha = if (!animationsOn) 1f else {
         val caret = rememberInfiniteTransition(label = "tuneCaret")
@@ -376,7 +376,8 @@ internal fun ChannelNumberCard(digits: String, error: String? = null, modifier: 
     LaunchedEffect(digits, error) {
         if (error != null) { countdown.snapTo(0f); return@LaunchedEffect }
         countdown.snapTo(1f)
-        countdown.animateTo(0f, tween(DIRECT_TUNE_TIMEOUT_MS.toInt(), easing = LinearEasing))
+        // glcn: a wait, kept at its real length whatever the app's pace.
+        countdown.animateTo(0f, tween(tv.own.owntv.glcn.Pace.slow(DIRECT_TUNE_TIMEOUT_MS.toInt()), easing = LinearEasing))
     }
     val track = hudInk.copy(alpha = 0.08f)
     Column(
@@ -470,6 +471,9 @@ internal fun BottomBar(
     player: PlaybackEngine, isLive: Boolean, position: () -> Long, duration: Long,
     volume: Int, audioCount: Int, subCount: Int, zoomMode: ZoomMode, speedLabel: String,
     onScrubLive: ((Int) -> Unit)?, timeshiftOffset: () -> Int?, onGoToLive: (() -> Unit)?, onOpenJumpBack: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    // The catch-up button opens the channel's archive page rather than the "Go back to…" list, and says so.
+    jumpBackIsArchive: Boolean = false,
     liveProgrammes: List<LiveProgramme> = emptyList(),
     liveGaps: () -> List<LongRange> = { emptyList() },
     compatMode: Boolean?, onToggleCompatMode: (() -> Unit)?,
@@ -486,7 +490,9 @@ internal fun BottomBar(
     onMultiview: (() -> Unit)? = null, onRecordThis: (() -> Unit)? = null, recordingThis: Boolean = false,
     /** Given to whichever timeline is drawn, so Left/Right with the controls hidden can land on it. */
     seekFocus: FocusRequester? = null,
-    onBack: () -> Unit, modifier: Modifier = Modifier,
+    /** The skip button, while it shows: Up from a film's timeline goes to it. */
+    seekUpFocus: FocusRequester? = null,
+    onBack: () -> Unit,
     /** glcn: a row at the top of the dock — live TV puts the channel there (logo, name, stream chips). */
     header: (@Composable () -> Unit)? = null,
     /** glcn: live TV — the programme on air, at the dock's right. */
@@ -570,7 +576,7 @@ internal fun BottomBar(
                         // transport button beside it, and a plain clock would not say which of the
                         // two time controls this is.
                         PlayerControl.CATCH_UP -> if (onOpenJumpBack != null) {
-                            CtrlButton(OwnTVIcon.CATCHUP, label = stringResource(R.string.player_tool_catchup)) { onOpenJumpBack() }
+                            CtrlButton(OwnTVIcon.CATCHUP, label = stringResource(if (jumpBackIsArchive) R.string.content_channel_archive else R.string.player_tool_catchup)) { onOpenJumpBack() }
                         }
                         // Back to the channel watched before; present only once there is one.
                         PlayerControl.PREVIOUS_CHANNEL -> if (onPreviousChannel != null) {
@@ -782,7 +788,7 @@ internal fun BottomBar(
                 Spacer(Modifier.height(10.dp))
             }
             !isLive && duration > 0 -> {
-                VodTimeline(player, position, duration, seekFocus)
+                VodTimeline(player, position, duration, seekFocus, seekUpFocus)
                 Spacer(Modifier.height(10.dp))
             }
             // A live channel with no archive has no timeline to scrub, but it still has a state to
@@ -813,7 +819,7 @@ private fun volumeIcon(volume: Int): OwnTVIcon = when {
 /** A film's seek bar and its two time caps — the only part of the dock that needs the position, so the
  *  only part that recomposes as it ticks. */
 @Composable
-private fun VodTimeline(player: PlaybackEngine, position: () -> Long, duration: Long, seekFocus: FocusRequester?) {
+private fun VodTimeline(player: PlaybackEngine, position: () -> Long, duration: Long, seekFocus: FocusRequester?, upFocus: FocusRequester?) {
     val seekStep by player.seekStepMs.collectAsStateWithLifecycle() // Settings -> Seek step
     val buffered by player.bufferedMs.collectAsStateWithLifecycle()
     val pos = position()
@@ -821,7 +827,7 @@ private fun VodTimeline(player: PlaybackEngine, position: () -> Long, duration: 
         TimeCap(formatTime(pos), Alignment.Start)
         Spacer(Modifier.width(12.dp))
         Box(Modifier.weight(1f)) {
-            SeekBar(positionMs = pos, durationMs = duration, bufferedMs = buffered, stepMs = seekStep, onSeek = { player.seekBy(it) }, focusRequester = seekFocus)
+            SeekBar(positionMs = pos, durationMs = duration, bufferedMs = buffered, stepMs = seekStep, onSeek = { player.seekBy(it) }, focusRequester = seekFocus, upFocus = upFocus)
         }
         Spacer(Modifier.width(12.dp))
         TimeCap(stringResource(R.string.player_time_remaining, formatTime((duration - pos).coerceAtLeast(0))), Alignment.End)
@@ -839,6 +845,8 @@ internal fun NextEpisodeCard(
     onPlayNow: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
+    /** At the start of the end credits, staying means watching them: "Watch credits" instead of Cancel. */
+    atCredits: Boolean = false,
 ) {
     Column(
         modifier = modifier
@@ -871,7 +879,7 @@ internal fun NextEpisodeCard(
                 tinted = true,
             )
             tv.own.owntv.ui.stage.StageButton(
-                stringResource(R.string.common_cancel),
+                stringResource(if (atCredits) R.string.player_watch_credits else R.string.common_cancel),
                 onClick = onCancel,
                 icon = OwnTVIcon.CLOSE,
             )
@@ -882,3 +890,58 @@ internal fun NextEpisodeCard(
 
 /** glcn: the share of the bar the programme card (and, under it, the live badge and the tools) takes, beside the channel. */
 private const val SIDE_CARD_FRACTION = 0.55f
+/** The skip button: "Skip intro", "Skip credits", "Next episode"… — one press does what it says. */
+@Composable
+internal fun SkipPill(
+    action: tv.own.owntv.player.SkipAction,
+    focus: FocusRequester,
+    onSkip: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    tv.own.owntv.ui.stage.StageButton(
+        stringResource(
+            when (action) {
+                tv.own.owntv.player.SkipAction.SKIP_INTRO -> R.string.player_skip_intro
+                tv.own.owntv.player.SkipAction.SKIP_RECAP -> R.string.player_skip_recap
+                tv.own.owntv.player.SkipAction.SKIP_CREDITS -> R.string.player_skip_credits
+                tv.own.owntv.player.SkipAction.SKIP_PREVIEW -> R.string.player_skip_preview
+                tv.own.owntv.player.SkipAction.NEXT_EPISODE -> R.string.content_action_next_episode
+            },
+        ),
+        onClick = onSkip,
+        modifier = modifier.focusRequester(focus),
+        icon = OwnTVIcon.SKIP_NEXT,
+        tinted = true,
+    )
+}
+
+/** The 3-second notice at the end credits when they are skipped automatically: any key stays on them. */
+@Composable
+internal fun NextEpisodeNotice(title: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .widthIn(max = 360.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(hudShade(0.82f))
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+    ) {
+        Text(
+            stringResource(R.string.content_action_next_episode),
+            style = tv.own.owntv.ui.theme.stageText(25, 600),
+            color = hudAccent,
+            fontWeight = FontWeight.Bold,
+        )
+        if (title.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                title,
+                style = tv.own.owntv.ui.theme.stageText(25, 500),
+                color = hudInk,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(stringResource(R.string.player_keep_credits), style = tv.own.owntv.ui.theme.stageText(20, 500), color = hudInk)
+    }
+}

@@ -41,7 +41,7 @@ fun Modifier.staggerIn(delayMs: Int, fromRight: Boolean = false, gate: StaggerGa
     val p = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         delay(delayMs.toLong())
-        p.animateTo(1f, tween(520, easing = StaggerEase))
+        p.animateTo(1f, tween(Pace.entrance(520), easing = StaggerEase))
     }
     return this.graphicsLayer {
         alpha = p.value

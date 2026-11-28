@@ -113,9 +113,10 @@ class SetupViewModel(
         movies: SyncScopeChoice = SyncScopeChoice.Now,
         series: SyncScopeChoice = SyncScopeChoice.Now,
         preferHls: Boolean = false,
+        catchupPreferHls: Boolean = false,
         httpReferer: String = "",
     ) = runImport {
-        importer.xtream(name, server, username, password, userAgent, epgUrl, autoRefresh, live, movies, series, preferHls, httpReferer = httpReferer)
+        importer.xtream(name, server, username, password, userAgent, epgUrl, autoRefresh, live, movies, series, preferHls, catchupPreferHls, httpReferer = httpReferer)
     }
 
     fun startStalker(
@@ -141,8 +142,8 @@ class SetupViewModel(
         )
     }
 
-    fun startM3u(name: String, url: String, userAgent: String = "", epgUrl: String = "", autoRefresh: PlaylistRefresh = PlaylistRefresh.OFF, httpReferer: String = "") =
-        runImport { importer.m3u(name, url, userAgent, epgUrl, autoRefresh, httpReferer = httpReferer) }
+    fun startM3u(name: String, url: String, userAgent: String = "", epgUrl: String = "", autoRefresh: PlaylistRefresh = PlaylistRefresh.OFF, httpReferer: String = "", catchupPreferHls: Boolean = false) =
+        runImport { importer.m3u(name, url, userAgent, epgUrl, autoRefresh, httpReferer = httpReferer, catchupPreferHls = catchupPreferHls) }
 
     /**
      * Runs one import in the activity-scoped [viewModelScope] so "Run in background" can walk away

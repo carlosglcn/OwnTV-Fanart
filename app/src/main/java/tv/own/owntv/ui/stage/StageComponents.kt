@@ -162,6 +162,28 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocusInner
         )
         return
     }
+    // glcn: a style with a second accent (Brasa) — see EmberFocus.
+    tv.own.owntv.glcn.EmberFocus.second?.let { second ->
+        val sweep = Brush.horizontalGradient(tv.own.owntv.glcn.EmberFocus.sweepOf(a.accent, second))
+        when (style) {
+            StageFocus.FX -> {
+                drawBoxShadow(a.accent.copy(alpha = 0.18f), 30 * px, r, dy = 6 * px)
+                drawRoundRect(Brush.horizontalGradient(listOf(a.accent.copy(alpha = 0.16f), second.copy(alpha = 0.06f))), cornerRadius = CornerRadius(r))
+                drawEmberRing(sweep, EMBER_RING * px, r)
+            }
+            StageFocus.FILLED, StageFocus.PRIMARY -> {
+                drawBoxShadow(second.copy(alpha = if (style == StageFocus.PRIMARY) 0.42f else 0.3f), 32 * px, r, dy = 10 * px)
+                drawRoundRect(sweep, cornerRadius = CornerRadius(r))
+            }
+            StageFocus.POSTER -> {
+                drawBoxShadow(a.accent.copy(alpha = 0.3f), 50 * px, r, dy = 20 * px)
+                // Set off from the picture by a page-coloured gap, as a frame.
+                drawOuterRing(palette.page, 3 * px, r)
+                drawEmberRing(sweep, 3.5f * px, r, outset = 3 * px + 1.75f * px)
+            }
+        }
+        return
+    }
     if (palette.isLight) {
         // `.mine.light`: the accent is the ring, set off from the item by a page-coloured gap.
         when (style) {
@@ -215,6 +237,19 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawStageFocusInner
     }
 }
 
+/** glcn: a ring in the accent's gradient — inside the bounds, or [outset] px outside them (a poster's frame). */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawEmberRing(brush: Brush, width: Float, radius: Float, outset: Float = -width / 2f) {
+    drawRoundRect(
+        brush,
+        topLeft = androidx.compose.ui.geometry.Offset(-outset, -outset),
+        size = androidx.compose.ui.geometry.Size(size.width + 2 * outset, size.height + 2 * outset),
+        cornerRadius = CornerRadius((radius + outset).coerceAtLeast(0f)),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(width),
+    )
+}
+
+private const val EMBER_RING = 3f
+
 /**
  * The focusable base every Stage control is built on: D-pad focus and click wiring (a held OK calls
  * [onLongClick]), the [focusStyle] treatment while focused, [idle] (a fill or [stageGlass]) otherwise.
@@ -244,11 +279,12 @@ fun StageSurface(
     val focused = real || highlighted
     val palette = LocalStagePalette.current
     // glcn: inside a list or menu with a sliding focus box, the item leaves the focus drawing to it.
-    val slide = tv.own.owntv.glcn.LocalSlideFocus.current?.takeIf { focusDecor && (focusStyle == StageFocus.FILLED || focusStyle == StageFocus.FX) }
+    val slide = tv.own.owntv.glcn.LocalSlideFocus.current?.takeIf { focusDecor && (focusStyle == StageFocus.FILLED || focusStyle == StageFocus.FX || (it.pinned && focusStyle == StageFocus.POSTER)) }
     val sliding = slide != null && real
     Box(
         modifier = modifier
-            .stageLift(focused, focusStyle)
+            // glcn: under a pinned box a poster card does not grow — the box behind it would be hidden by it.
+            .stageLift(focused && !(slide != null && focusStyle == StageFocus.POSTER), focusStyle)
             .then(if (slide != null) Modifier.slideFocusReport(slide, focusStyle, radius, accent) else Modifier)
             .then(if (focused && focusDecor && !sliding) Modifier.stageFocusDecor(focusStyle, radius, accent, palette) else if (focused) Modifier else idle)
             .stageClickable(interaction, enabled, onClick, onLongClick),
@@ -728,7 +764,7 @@ fun StageGroupLabel(text: String, sheet: Boolean = false) {
     Text(
         text,
         style = if (sheet) stageText(13, 800, 0.12.em) else stageText(12.5f, 800, 0.13.em),
-        color = StageColors.Dim,
+        color = tv.own.owntv.ui.theme.stageLabelInk,
         maxLines = 1, overflow = TextOverflow.Ellipsis,
         modifier = if (sheet) {
             Modifier.padding(start = 16.mpx, end = 16.mpx, top = 14.mpx, bottom = 6.mpx)
@@ -843,7 +879,7 @@ fun StageSheetItem(
                 }
             }
             if (count != null) Text(count, style = stageText(16, 600), color = on ?: StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            androidx.compose.runtime.CompositionLocalProvider(LocalStageLit provides focused) { trailing?.invoke(this, focused) }
+            androidx.compose.runtime.CompositionLocalProvider(LocalStageLit provides stageLit(focused)) { trailing?.invoke(this, focused) }
         }
     }
 }
@@ -992,7 +1028,8 @@ fun StagePoster(
                 )
                 .pressSink(pressed)
                 .clip(RoundedCornerShape(r))
-                .posterWait(),
+                .posterWait()
+                .specularEdge(focused, r),
         ) {
             FocusArtFx(focused) { artwork() }
             if (rating != null) StageRatingChip(rating, Modifier.padding(8.mpx), small = compact)
@@ -1127,7 +1164,8 @@ fun StageStill(
                     },
                 )
                 .clip(RoundedCornerShape(r))
-                .posterWait(),
+                .posterWait()
+                .specularEdge(focused, r),
         ) {
             FocusArtFx(focused) { artwork() }
             if (progress != null && progress > 0f) {
@@ -1357,6 +1395,13 @@ fun StageStepper(value: String, onStep: ((Int) -> Unit)? = null) {
         }
     }
 }
+
+/**
+ * glcn: whether a focused row is "lit" — filled with the accent, so what sits on it turns to the accent's ink. A style
+ * that outlines its focused rows (Brasa, Alba) leaves them dark: there the values keep their idle colours, or they
+ * vanished into the row.
+ */
+fun stageLit(focused: Boolean): Boolean = focused && !tv.own.owntv.glcn.EmberFocus.on
 
 /** glcn: true inside a focused (accent-filled) row: what sits on it draws in the accent's own ink, not in the accent. */
 val LocalStageLit = androidx.compose.runtime.compositionLocalOf { false }

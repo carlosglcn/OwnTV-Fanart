@@ -205,14 +205,14 @@ class LocalSyncViewModel(
             when (current.direction) {
                 SyncDirection.SEND -> sync.send(current.device, sections)
                     .onSuccess { step = Step.Result(received = null, sent = true) }
-                    .onFailure { error = reason() }
+                    .onFailure { error = reason(); noteFailure(current.direction, it) }
                 SyncDirection.RECEIVE, SyncDirection.MERGE -> sync.fetch(current.device, sections)
                     .onSuccess { payload ->
                         step = Step.Confirm(
                             current.device, current.direction, payload.file, payload.preview, sections, payload.password,
                         )
                     }
-                    .onFailure { error = reason() }
+                    .onFailure { error = reason(); noteFailure(current.direction, it) }
             }
             busy = false
         }
@@ -249,7 +249,11 @@ class LocalSyncViewModel(
     override fun onCleared() {
         discovery?.cancel()
         sync.stopHosting()
-        super.onCleared()
+    }
+
+    /** glcn: a sync that failed, in the report — which way it went, the reason shown and what the connection said. */
+    private fun noteFailure(direction: SyncDirection, cause: Throwable) {
+        tv.own.owntv.player.LiveDiagnosticsLog.event("local sync failed · $direction · ${error?.javaClass?.simpleName} · ${cause.javaClass.simpleName}: ${cause.message}")
     }
 
     private fun reason(): SyncFailure =

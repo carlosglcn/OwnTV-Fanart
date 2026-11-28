@@ -105,6 +105,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -162,9 +163,9 @@ import tv.own.owntv.core.live.LiveKey
 fun SeriesScreen(
     onFullscreen: () -> Unit,
     onChildFocused: () -> Unit,
+    modifier: Modifier = Modifier,
     restoreFocus: Boolean = false,
     onRestored: () -> Unit = {},
-    modifier: Modifier = Modifier,
     /**
      * Pins the grid to one folder and takes the category rail away — how More → Favourites and
      * More → History show shows without a second copy of this grid existing.
@@ -192,6 +193,8 @@ fun SeriesScreen(
     // The show itself, not "the selected one": the grid's way in can focus the first poster before
     // the opened one is laid out, and that makes the first poster the selected show.
     var returnToShowId by remember { mutableStateOf<Long?>(null) }
+    // glcn: kept here, above the titles, which leave the screen while a show's page is open.
+    val gridMemory = remember { GridMemory() }
     LaunchedEffect(openedSeries) { openedSeries?.let { returnToShowId = it.id } }
     // Where that show sat in the titles, when it was opened from them: the list reloads from its
     // first page on the way back, so a show further down is found only after scrolling there again.
@@ -215,6 +218,7 @@ fun SeriesScreen(
             onChildFocused = onChildFocused,
             restoreShowId = returnToShowId,
             restoreShowIndex = returnToIndex,
+            memory = gridMemory,
             onOpenAt = { returnToIndex = it },
             onRestoredSelected = { returnToShowId = null; returnToIndex = -1 },
             lockedKey = lockedKey,
@@ -239,6 +243,7 @@ private fun SeriesGrid(
     onChildFocused: () -> Unit,
     restoreShowId: Long? = null,
     restoreShowIndex: Int = -1,
+    memory: GridMemory = remember { GridMemory() },
     onOpenAt: (Int) -> Unit = {},
     onRestoredSelected: () -> Unit = {},
     /** Non-null while this grid is a More screen's stage — see [SeriesScreen]. */
@@ -265,6 +270,7 @@ private fun SeriesGrid(
     val context = androidx.compose.ui.platform.LocalContext.current
     val toast = rememberInAppToast()
     val series = vm.series.collectAsLazyPagingItems()
+    tv.own.owntv.glcn.SectionReady(series.itemCount > 0)
     val moveState by vm.moveState.collectAsStateWithLifecycle()
     val categoryMoveState by vm.categoryMoveState.collectAsStateWithLifecycle()
     var contextCategory by remember { mutableStateOf<LiveRailItem?>(null) }
@@ -311,7 +317,9 @@ private fun SeriesGrid(
     val vodLayout by settingsVm.vodLayout.collectAsStateWithLifecycle()
     // Cinematic is the browse section's; More → Favourites / History pin the plain Separate list.
     val runway = vodLayout == SettingsRepository.VodLayout.RUNWAY && lockedKey == null
-    val cinematic = (vodLayout == SettingsRepository.VodLayout.CINEMATIC || runway) && lockedKey == null
+    // glcn: Shelves is Cinematic with rows above the posters of All.
+    val shelvesOn = vodLayout == SettingsRepository.VodLayout.SHELVES && lockedKey == null
+    val cinematic = (vodLayout == SettingsRepository.VodLayout.CINEMATIC || runway || shelvesOn) && lockedKey == null
     val cinematicDetailsPct by settingsVm.cinematicDetailsHeight(PanelSection.SERIES).collectAsStateWithLifecycle()
     // Cinematic is grid-only. The stored choice is deliberately not rewritten, so switching back to
     // Separate restores the user's List.
@@ -327,6 +335,12 @@ private fun SeriesGrid(
     val perCategoryGrid = remember { mutableStateMapOf<LiveKey, androidx.compose.foundation.lazy.grid.LazyGridState>() }
     val perCategoryList = remember { mutableStateMapOf<LiveKey, androidx.compose.foundation.lazy.LazyListState>() }
     val perCategorySeriesIds = remember { mutableStateMapOf<LiveKey, Long>() }
+    // glcn: the last title focused in the posters themselves, per category — Keep watching above them also makes its
+    // show the selected one, and the posters used to follow it (jumping to that show) instead of staying put.
+    val gridTitleIds = memory.titles
+    // glcn: the Keep watching card a show was opened from; Back from its page returns there, not to the posters.
+    // glcn: the Keep watching card a show was opened from; Back from its page returns there, not to the posters.
+    var stripOpenAt by memory::stripOpenAt
     // NOTE: plain constructors, not remember*State() — these are created lazily inside getOrPut, so a
     // @Composable/rememberSaveable call here would register slots conditionally and corrupt the slot table.
     val glideScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -352,9 +366,42 @@ private fun SeriesGrid(
     remember { tv.own.owntv.glcn.StripDismissed.ensure(context) }
     val showStrip = tv.own.owntv.glcn.StripPref.on && stripShows.isNotEmpty() && selectedKey == LiveKey.All && searchQuery.isBlank() && lockedKey == null
     val showStripNow by androidx.compose.runtime.rememberUpdatedState(showStrip)
-    val stripOffset = if (showStrip && !runway) 1 else 0
+    val stripShowsNow by androidx.compose.runtime.rememberUpdatedState(stripShows)
+    // glcn: before anything has had the focus the header already shows a series — the one ▼ from the menu lands on
+    // (the first of Keep watching, else the first poster), not an empty top half.
+    LaunchedEffect(selectedSeries == null, series.itemCount > 0, showStrip) {
+        if (selectedSeries != null || series.itemCount == 0) return@LaunchedEffect
+        val first = stripShows.firstOrNull()?.takeIf { showStrip }?.series
+        if (first != null) memory.stripId = first.id
+        (first ?: series.peek(0))?.let { vm.onSeriesFocused(it) }
+    }
+    // glcn: the shelves (see VodShelves) — rows of the grid, after Keep watching and before the posters.
+    val shelfData by (if (shelvesOn) vm.shelves else remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList<tv.own.owntv.glcn.Shelf<tv.own.owntv.core.database.entity.SeriesEntity>>()) })
+        .collectAsStateWithLifecycle()
+    val shelves = if (shelvesOn && selectedKey == LiveKey.All && searchQuery.isBlank()) shelfData else emptyList()
+    val shelfFocus = remember { List(tv.own.owntv.glcn.ShelfKind.entries.size) { tv.own.owntv.glcn.StripFocus() } }
+    // The shelf the focus was on last (-1: on a poster). It opens on the first shelf, and coming back from a show's page
+    // it returns to its shelf — not to that show's poster, far down the list.
+    var shelfAt by androidx.compose.runtime.saveable.rememberSaveable(selectedKey, shelvesOn) { androidx.compose.runtime.mutableIntStateOf(if (shelvesOn && selectedKey == LiveKey.All) 0 else -1) }
+    var shelfMenu by remember { androidx.compose.runtime.mutableIntStateOf(-1) }
+    val shelfAsk = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
+    val stripRows = if (showStrip && !runway) 1 else 0
+    val stripOffset = stripRows + shelves.size
+    val shelvesNow by androidx.compose.runtime.rememberUpdatedState(shelves)
+    suspend fun toShelfRow(k: Int) {
+        runCatching {
+            if (tv.own.owntv.glcn.SmoothScroll.still) effectiveGridState.scrollToItem(stripRows + k) else effectiveGridState.animateScrollToItem(stripRows + k)
+        }
+    }
+    /** The shelf that had the focus takes it again; false when the focus was on a poster (or there are no shelves). */
+    fun shelfFocusNow(): Boolean {
+        val f = shelfFocus.getOrNull(shelfAt)?.takeIf { shelfAt in shelves.indices } ?: return false
+        if (!f.focusNow() && shelfAsk[0]?.isActive != true) { val k = shelfAt; shelfAsk[0] = scope.launch { runCatching { effectiveGridState.scrollToItem(stripRows + k) }; withFrameNanos { }; f.focus() } }
+        return true
+    }
     suspend fun scrollToIndex(i: Int) {
         if (runway) { runwayAt = i; return }
+        if (shelfAt in shelves.indices) { runCatching { effectiveGridState.scrollToItem(stripRows + shelfAt) }; return }
         runCatching { if (usesList) effectiveListState.scrollToItem(i + stripOffset) else effectiveGridState.scrollToItem(i + stripOffset) }
     }
     val stepper = remember { VodStepper(scope) { effectiveListState } }
@@ -370,6 +417,15 @@ private fun SeriesGrid(
     val catListState = androidx.compose.foundation.lazy.rememberLazyListState()
     var gridPaneFocused by remember { mutableStateOf(false) }
     var railPaneFocused by remember { mutableStateOf(false) }
+    // glcn: the shelves are read a moment after the posters: still at the top, the focus moves up to the first shelf.
+    LaunchedEffect(shelves.isNotEmpty()) {
+        if (shelves.isNotEmpty() && shelfAt >= 0 && effectiveGridState.firstVisibleItemIndex <= SHELF_TOP_REACH) {
+            val k = shelfAt.coerceAtMost(shelves.lastIndex)
+            runCatching { effectiveGridState.scrollToItem(stripRows + k) }
+            withFrameNanos { }
+            if (gridPaneFocused) shelfFocus[k].focus()
+        }
+    }
     // Tiles the provider gave no artwork for: ask for the TMDB poster already cached from an earlier
     // focus, so the placeholder is only shown when nothing at all is known (mirrors Movies).
     val cachedPosters by vm.cachedPosters.collectAsStateWithLifecycle()
@@ -391,6 +447,35 @@ private fun SeriesGrid(
     LaunchedEffect(restoreShowId, series.itemCount) {
         val showId = restoreShowId ?: return@LaunchedEffect
         if (series.itemCount == 0) return@LaunchedEffect
+        // glcn: opened from Keep watching: back to that card; the posters below keep the place they had. The strip
+        // is read again when the titles come back, a moment after them — wait for it rather than fall to the posters.
+        if (stripOpenAt >= 0 && !showStripNow) {
+            kotlinx.coroutines.withTimeoutOrNull(STRIP_WAIT_MS) { androidx.compose.runtime.snapshotFlow { showStripNow }.first { it } }
+        }
+        if (stripOpenAt >= 0 && showStripNow) {
+            // By the show: the one just watched may have moved to the front of the strip.
+            stripFocus.index = stripShowsNow.indexOfFirst { it.series.id == showId }.takeIf { it >= 0 } ?: stripOpenAt.coerceIn(0, stripShowsNow.lastIndex.coerceAtLeast(0))
+            stripOpenAt = -1
+            if (shelves.isNotEmpty()) runCatching { effectiveGridState.scrollToItem(0) }
+            withFrameNanos { }
+            stripFocus.hold()
+            for (attempt in 0 until STRIP_FOCUS_TRIES) {
+                if (stripFocus.focus() || stripHasFocus) break
+                withFrameNanos { }
+            }
+            onRestoredSelected()
+            return@LaunchedEffect
+        }
+        stripOpenAt = -1
+        // glcn: opened from a shelf: back to that shelf.
+        if (shelfAt in shelves.indices) {
+            scrollToIndex(0)
+            withFrameNanos { }
+            shelfFocus[shelfAt].focus()
+            repeat(SHELF_BACK_FRAMES) { withFrameNanos { }; if (!gridPaneFocused) shelfFocusNow() }
+            onRestoredSelected()
+            return@LaunchedEffect
+        }
         // By position, placeholders included: `items` drops pages not loaded yet and shifts the index.
         var idx = series.itemSnapshotList.indexOfFirst { it?.id == showId }
         if (idx < 0 && restoreShowIndex in 0 until series.itemCount) {
@@ -454,6 +539,21 @@ private fun SeriesGrid(
         // this effect re-runs when the whole flow closes and restores the row below.
         if (moveItem != null || creatingCategory || moveState != null) return@LaunchedEffect
 
+        // glcn: a menu opened from a shelf gives the focus back to that shelf.
+        if (shelfMenu >= 0) {
+            val f = shelfFocus.getOrNull(shelfMenu)
+            shelfMenu = -1
+            if (f != null && shelvesNow.isNotEmpty()) {
+                withFrameNanos { }
+                var got = false
+                for (attempt in 0 until STRIP_FOCUS_TRIES) {
+                    if (shelvesNow.isEmpty()) break
+                    if (f.focus()) { got = true; break }
+                    withFrameNanos { }
+                }
+                if (got) { contextSeriesIndex = -1; return@LaunchedEffect }
+            }
+        }
         // glcn: a menu opened from Keep watching gives the focus back to the strip (the card it was on, or the first
         // when that one left) — it went to the show's poster further down the row, a long way from the start.
         if (stripMenu != null) {
@@ -501,6 +601,7 @@ private fun SeriesGrid(
     // The show the cursor was on: after a long-press it carries contextFocus instead of gridSelFocus
     // (gridFocusTarget prefers it), so both are tried before the first show (fix playbook 6).
     fun focusCurrentTitleNow(): Boolean =
+        shelfFocusNow() ||
         runCatching { gridSelFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { contextFocus.requestFocus() }.getOrDefault(false) ||
             runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
@@ -508,7 +609,7 @@ private fun SeriesGrid(
         // glcn: Runway — only the posters around the centre exist, so the remembered title (coming back from its page
         // or the player) may not be there yet: centre the row on it first, then focus it a frame or two later.
         if (runway && series.itemCount > 0) {
-            val tid = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: selectedSeries?.id else selectedSeries?.id
+            val tid = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedSeries?.id?.takeIf { it != memory.stripId } else gridTitleIds[selectedKey] ?: selectedSeries?.id?.takeIf { it != memory.stripId }
             val idx = tid?.let { id -> series.itemSnapshotList.items.indexOfFirst { it.id == id } } ?: -1
             if (idx >= 0 && idx != runwayAt) {
                 runwayAt = idx
@@ -520,7 +621,7 @@ private fun SeriesGrid(
     }
     // From the categories to the shows: the remembered one, else the first; a locked one's Enter PIN button; else the search field.
     fun focusTitles() {
-        val targetId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: selectedSeries?.id else selectedSeries?.id
+        val targetId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedSeries?.id?.takeIf { it != memory.stripId } else gridTitleIds[selectedKey] ?: selectedSeries?.id?.takeIf { it != memory.stripId }
         scope.launch {
             if (series.itemCount > 0) {
                 val targetIdx = targetId?.let { id -> series.itemSnapshotList.items.indexOfFirst { it.id == id }.takeIf { it >= 0 } } ?: 0
@@ -531,7 +632,7 @@ private fun SeriesGrid(
                 // 0.7 s and take focus back whenever the titles lost it.
                 repeat(40) {
                     if (!gridPaneFocused) {
-                        if (!(targetId != null && focusCurrentTitle())) runCatching { firstItemFocus.requestFocus() }
+                        if (!shelfFocusNow() && !(targetId != null && focusCurrentTitle())) runCatching { firstItemFocus.requestFocus() }
                     }
                     withFrameNanos { }
                 }
@@ -625,7 +726,7 @@ private fun SeriesGrid(
             }
         }
     }
-    val targetSeriesId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: selectedSeries?.id else selectedSeries?.id
+    val targetSeriesId = if (rememberSeries) perCategorySeriesIds[selectedKey] ?: gridTitleIds[selectedKey] ?: selectedSeries?.id?.takeIf { it != memory.stripId } else gridTitleIds[selectedKey] ?: selectedSeries?.id?.takeIf { it != memory.stripId }
     // glcn: Runway — the row centres on the remembered title once the list is there, so restoring focus to it
     // finds it composed (only the posters around the centre exist).
     androidx.compose.runtime.LaunchedEffect(runway, selectedKey, series.itemCount > 0) {
@@ -637,6 +738,9 @@ private fun SeriesGrid(
     val openMenu: (tv.own.owntv.core.database.entity.SeriesEntity, Int) -> Unit = { show, index -> if (index >= 0) stripMenu = null; contextSeries = show; contextSeriesId = show.id; contextSeriesIndex = index }
     val onShowFocus: (tv.own.owntv.core.database.entity.SeriesEntity) -> Unit = { show ->
         vm.onSeriesFocused(show)
+        gridTitleIds[selectedKey] = show.id
+        stripOpenAt = -1
+        memory.stripId = null
         if (rememberSeries) perCategorySeriesIds[selectedKey] = show.id
     }
     val stripCards = stripShows.map { st ->
@@ -652,7 +756,12 @@ private fun SeriesGrid(
         if (!showStrip && stripFocus.holding) { withFrameNanos { }; focusCurrentTitleNow() }
     }
     val toStrip: () -> Boolean = {
-        if (!showStrip || runway) false else {
+        // glcn: with shelves, ▲ from the first posters goes to the last of them.
+        if (shelves.isNotEmpty()) {
+            val k = shelves.lastIndex
+            scope.launch { toShelfRow(k); withFrameNanos { }; shelfFocus[k].focus() }
+            true
+        } else if (!showStrip || runway) false else {
             scope.launch {
                 runCatching {
                     if (tv.own.owntv.glcn.SmoothScroll.still) { if (usesList) effectiveListState.scrollToItem(0) else effectiveGridState.scrollToItem(0) }
@@ -667,11 +776,15 @@ private fun SeriesGrid(
     val continueStrip: @Composable (androidx.compose.ui.unit.Dp, androidx.compose.ui.unit.Dp) -> Unit = { start, end ->
         tv.own.owntv.glcn.ContinueStrip(
             stripCards, start, end,
-            onFocus = { i -> stripShows.getOrNull(i)?.let { vm.onSeriesFocused(it.series) } },
+            onFocus = { i ->
+                stripShows.getOrNull(i)?.let { memory.stripId = it.series.id; vm.onSeriesFocused(it.series) }
+                // glcn: above the shelves the strip is scrolled away: it comes back into view with the focus.
+                if (shelves.isNotEmpty()) scope.launch { runCatching { if (tv.own.owntv.glcn.SmoothScroll.still) effectiveGridState.scrollToItem(0) else effectiveGridState.animateScrollToItem(0) } }
+            },
             // OK opens the show's page, where Play goes on with the episode it stands at.
-            onClick = { i -> stripShows.getOrNull(i)?.let { vm.openSeries(it.series) } },
+            onClick = { i -> stripShows.getOrNull(i)?.let { stripOpenAt = i; vm.openSeries(it.series) } },
             onLongClick = { i -> stripShows.getOrNull(i)?.let { stripMenu = it; openMenu(it.series, -1) } },
-            modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus },
+            modifier = Modifier.padding(bottom = 18.mpx).onFocusChanged { stripHasFocus = it.hasFocus; if (it.hasFocus) memory.onPosters = false },
             focus = stripFocus,
         )
     }
@@ -709,6 +822,7 @@ private fun SeriesGrid(
                 // (gridFocusTarget keys on selectedSeries.id), and request focus after one frame.
                 scope.launch {
                     val item = series.itemSnapshotList.items.getOrNull(idx)
+                    shelfAt = -1
                     scrollToIndex(idx)
                     withFrameNanos { }
                     if (item != null) {
@@ -724,7 +838,7 @@ private fun SeriesGrid(
         )
         .focusProperties {
             onEnter = {
-                val landed = (targetSeriesId != null && focusCurrentTitle()) || runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
+                val landed = shelfFocusNow() || (targetSeriesId != null && focusCurrentTitle()) || runCatching { firstItemFocus.requestFocus() }.getOrDefault(false)
                 // Landed on a title: stop the default entry, which would go on to the search field.
                 if (landed) cancelFocusChange()
             }
@@ -799,7 +913,7 @@ private fun SeriesGrid(
                         VodSortTool(sortMode, selectedKey.hasFixedOrder, Modifier.focusRequester(sortFocus)) { sortOpen = true }
                         StageTool(text = stringResource(R.string.content_category_browser_title), icon = OwnTVIcon.LIST, onClick = { categoriesOpen = true })
                         Spacer(Modifier.weight(1f))
-                        StageKeyHints(listOf(playHint, optionsHint))
+                        StageKeyHints(listOf(playHint, optionsHint), overArt = true)
                     }
                     if (series.itemCount == 0) {
                         tv.own.owntv.features.categorylock.CategoryEmptyState(emptyText, sealed, onEnterPin, firstItemFocus, Modifier.padding(start = fx(84), top = 60.mpx), onNavigateLeft = { openCategories() })
@@ -815,7 +929,8 @@ private fun SeriesGrid(
                         val glide = remember(effectiveGridState) { tv.own.owntv.glcn.GlideScroller(effectiveGridState, glideScope) }
                         if (runway) {
                             Spacer(Modifier.height(10.mpx))
-                            tv.own.owntv.glcn.RunwayPageFollow(runwayScroll, showStrip && stripHasFocus)
+                            // glcn: Keep watching stays in view until the posters take the focus: it is where ▼ from the menu lands.
+                            tv.own.owntv.glcn.RunwayPageFollow(runwayScroll, showStrip && !memory.onPosters)
                             Column(Modifier.weight(1f).fillMaxWidth().runwayPage(runwayScroll)) {
                             if (showStrip) continueStrip(fx(84), fx(64))
                             tv.own.owntv.glcn.PosterRunway(
@@ -844,7 +959,7 @@ private fun SeriesGrid(
                                                 selectedId = targetSeriesId, selectedFocus = gridSelFocus,
                                                 firstItemFocus = firstItemFocus,
                                             )
-                                            .onFocusChanged { if (it.isFocused) { onShowFocus(show); runwayAt = index } }
+                                            .onFocusChanged { if (it.isFocused) { memory.onPosters = true; onShowFocus(show); runwayAt = index } }
                                             .onPreviewKeyEvent { e ->
                                                 if (e.type == KeyEventType.KeyDown && e.key == Key.Menu) { openMenu(show, index); true }
                                                 else e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp && index < columns && toStrip()
@@ -879,6 +994,39 @@ private fun SeriesGrid(
                                             layout(c.maxWidth, pl.height) { pl.place(-fx(84).roundToPx(), 0) }
                                         }) { continueStrip(fx(84), fx(64)) }
                                     }
+                                    shelves.forEachIndexed { k, shelf ->
+                                        item(key = SHELF_KEY + shelf.kind.name, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }, contentType = STRIP_KEY) {
+                                            val upright = remember(shelf) { tv.own.owntv.glcn.VodShelves.upright(shelf.items) { it.backdropUrl } }
+                                            val cards = shelf.items.map { m ->
+                                                tv.own.owntv.glcn.StripCard(
+                                                    key = m.id, title = m.name,
+                                                    image = if (upright) posterOf(m) else m.backdropUrl ?: runwayBackdrops[m.id] ?: posterOf(m),
+                                                    line = listOfNotNull(m.rating?.takeIf { it > 0 }?.let { SHELF_STAR + vodRating(it) }, (m.year ?: m.parsedYear)?.toString()).joinToString(SHELF_DOT).ifBlank { null },
+                                                    progress = seriesProgress[m.id],
+                                                )
+                                            }
+                                            Box(Modifier.layout { m, c ->
+                                                val bleed = (fx(84) + fx(64)).roundToPx()
+                                                val pl = m.measure(c.copy(minWidth = c.maxWidth + bleed, maxWidth = c.maxWidth + bleed))
+                                                layout(c.maxWidth, pl.height) { pl.place(-fx(84).roundToPx(), 0) }
+                                            }) {
+                                                tv.own.owntv.glcn.ContinueStrip(
+                                                    cards, fx(84), fx(64),
+                                                    onFocus = { i ->
+                                                        shelfAt = k
+                                                        shelf.items.getOrNull(i)?.let { vm.onSeriesFocused(it) }
+                                                        scope.launch { toShelfRow(k) }
+                                                    },
+                                                    onClick = { i -> shelf.items.getOrNull(i)?.let { vm.openSeries(it) } },
+                                                    onLongClick = { i -> shelf.items.getOrNull(i)?.let { shelfMenu = k; openMenu(it, -1) } },
+                                                    modifier = Modifier.padding(bottom = 18.mpx),
+                                                    focus = shelfFocus[k],
+                                                    title = stringResource(shelf.kind.title),
+                                                    upright = upright,
+                                                )
+                                            }
+                                        }
+                                    }
                                     items(count = series.itemCount, key = series.itemKey { it.id }, contentType = series.itemContentType { "series" }) { index ->
                                         // glcn: a poster still on its way shows its shape, shimmering, instead of a gap.
                                         val show = series[index] ?: run { tv.own.owntv.glcn.SkeletonPoster(); return@items }
@@ -899,7 +1047,7 @@ private fun SeriesGrid(
                                                     selectedId = targetSeriesId, selectedFocus = gridSelFocus,
                                                     firstItemFocus = firstItemFocus,
                                                 )
-                                                .onFocusChanged { if (it.isFocused) { onShowFocus(show); glide.focused(index + stripOffset) } }
+                                                .onFocusChanged { if (it.isFocused) { if (shelves.isNotEmpty()) shelfAt = -1; onShowFocus(show); glide.focused(index + stripOffset) } }
                                                 .onPreviewKeyEvent { e ->
                                                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                                     when (e.key) {
@@ -1175,6 +1323,14 @@ private fun SeriesGrid(
             add(MenuAction("download", stringResource(R.string.content_download_all_episodes), OwnTVIcon.DOWNLOADS, group = VodGroupLibrary) {
                 vm.askBulkDownload(s, null); contextSeries = null
             })
+            // glcn: the whole show as seen — or back to not seen — straight from its poster (from Keep watching the
+            // same action is already at the top).
+            if (fromStrip == null) {
+                val showSeen = s.id in completedSeries
+                add(MenuAction("mark_show", stringResource(if (showSeen) R.string.glcn_mark_series_unwatched else R.string.glcn_mark_series_watched), OwnTVIcon.CHECK, group = VodGroupLibrary) {
+                    vm.markShowWatched(s, !showSeen); contextSeries = null
+                })
+            }
             add(MenuAction("remove_history", stringResource(R.string.content_remove_history), OwnTVIcon.HISTORY, group = VodGroupLibrary) {
                 vm.removeFromHistory(s.id); contextSeries = null
             })
@@ -1210,6 +1366,9 @@ private fun SeriesGrid(
                     contextSeries = null; setTmdbNameSeries = s
                 })
             }
+            add(MenuAction(tv.own.owntv.core.menu.CHECK_THEINTRODB_ACTION, stringResource(R.string.content_check_theintrodb), OwnTVIcon.SKIP_NEXT, group = VodGroupDetails) {
+                contextSeries = null; tv.own.owntv.features.settings.TheIntroDbCheckRequests.series(s)
+            })
         }
         VodOptionsMenu(
             title = s.name,
@@ -1446,6 +1605,7 @@ private fun buildEpisodeDetails(
     tmdbWins: Boolean,
 ): tv.own.owntv.features.shell.components.MediaDetailsUi {
     val still = tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath ?: meta?.posterPath)
+        ?: ep.imageUrl?.takeIf { it.isNotBlank() }
     val title = if (tmdbWins) meta?.title?.takeIf { it.isNotBlank() } ?: episodeDisplayTitle(ep) else episodeDisplayTitle(ep)
     val plot = if (tmdbWins) meta?.overview ?: ep.plot else ep.plot?.takeIf { it.isNotBlank() } ?: meta?.overview
     val metaLine = listOfNotNull(
@@ -1893,7 +2053,7 @@ private fun EpisodeView(
                                 onLongClick = { openMenu(ep) },
                                 width = tileW, height = tileW * (189f / 336f),
                                 modifier = epModifierFor(index, ep),
-                            ) { filter -> EpisodeStill(episodeStillUrl(meta, series, "w780", ep.streamUrl), filter) }
+                            ) { filter -> EpisodeStill(episodeStillUrl(ep, meta, series, "w780"), filter) }
                         }
                     }
                 }
@@ -1920,7 +2080,7 @@ private fun EpisodeView(
                                 modifier = epModifierFor(index, ep).fillMaxWidth(),
                             ) { focused ->
                                 Box(Modifier.size(224.mpx, 126.mpx).clip(RoundedCornerShape(14.mpx))) {
-                                    EpisodeStill(episodeStillUrl(meta, series, "w300", ep.streamUrl), null)
+                                    EpisodeStill(episodeStillUrl(ep, meta, series, "w300"), null)
                                 }
                                 Column(Modifier.weight(1f)) {
                                     Text(
@@ -2039,6 +2199,9 @@ private fun EpisodeView(
                     vm.refetchEpisodeMeta(series, ep)
                 })
             }
+            add(MenuAction(tv.own.owntv.core.menu.CHECK_THEINTRODB_ACTION, stringResource(R.string.content_check_theintrodb), OwnTVIcon.SKIP_NEXT, group = VodGroupDetails) {
+                contextEpisode = null; tv.own.owntv.features.settings.TheIntroDbCheckRequests.series(series, ep)
+            })
             add(MenuAction("delete_subtitles", stringResource(R.string.content_delete_subtitles), OwnTVIcon.SUBTITLE, group = VodGroupDetails) {
                 if (contextEpisodeSubs.isNotEmpty()) showEpisodeDeleteSubs = true
             })
@@ -2047,7 +2210,7 @@ private fun EpisodeView(
         VodOptionsMenu(
             title = stringResource(R.string.content_episode_numbered, localizedInteger(ep.episodeNumber, grouping = false), title),
             subtitle = series.name + " · " + if (ep.seasonNumber == 0) stringResource(R.string.content_season_specials) else stringResource(R.string.content_season, ep.seasonNumber),
-            posterUrl = episodeStillUrl(seasonMeta[ep.id], series, "w300", ep.streamUrl),
+            posterUrl = episodeStillUrl(ep, seasonMeta[ep.id], series, "w300"),
             x = 1290f,
             menu = ContentMenu.EPISODE,
             actions = actions,
@@ -2115,6 +2278,9 @@ private fun EpisodeView(
                     openWindow(); setTmdbName = true
                 })
             }
+            add(MenuAction(tv.own.owntv.core.menu.CHECK_THEINTRODB_ACTION, stringResource(R.string.content_check_theintrodb), OwnTVIcon.SKIP_NEXT, group = VodGroupDetails) {
+                close(); tv.own.owntv.features.settings.TheIntroDbCheckRequests.series(series)
+            })
         }
         VodOptionsMenu(
             title = series.name,
@@ -2277,17 +2443,18 @@ private fun EpisodesBackdrop(url: String?, modifier: Modifier = Modifier) {
 }
 
 /**
- * An episode's picture: TMDB's still, else the show's backdrop (16:9 like the still), else its poster.
- * The provider stores no episode image, so the show's art only stands in for a missing still.
+ * An episode's picture: TMDB's still, else the provider's own picture of the episode, else the show's
+ * backdrop (16:9 like the still), else its poster. The show's art only stands in for a missing still.
  */
 private fun episodeStillUrl(
+    ep: EpisodeEntity,
     meta: tv.own.owntv.core.database.entity.MetadataCacheEntity?,
     series: SeriesEntity,
     size: String,
-    streamUrl: String? = null,
 ): String? = tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath, size = size)
     // glcn: an Emby episode has its own still on the server.
-    ?: tv.own.owntv.core.emby.EmbyPlayback.imageFor(streamUrl, if (size == "w780") 780 else 400)
+    ?: tv.own.owntv.core.emby.EmbyPlayback.imageFor(ep.streamUrl, if (size == "w780") 780 else 400)
+    ?: ep.imageUrl?.takeIf { it.isNotBlank() }
     ?: series.backdropUrl?.takeIf { it.isNotBlank() } ?: series.posterUrl?.takeIf { it.isNotBlank() }
 
 @Composable
@@ -2317,6 +2484,24 @@ private val SEASON_GHOST_START = 1260.mpx
 
 /** glcn: the Keep watching strip's key in the lists (never a show id). */
 private const val STRIP_KEY = "glcn_strip"
+private const val SHELF_KEY = "glcn_shelf_"
+private const val SHELF_STAR = "★ "
+private const val SHELF_DOT = " · "
+private const val SHELF_TOP_REACH = 12
+private const val SHELF_BACK_FRAMES = 20
 
 /** glcn: frames the strip is asked for the focus after its menu closes (about half a second). */
 private const val STRIP_FOCUS_TRIES = 30
+
+/** glcn: what the titles remember across a show's page (the grid leaves the screen meanwhile): the poster last focused
+ *  in each category, and whether the show was opened from Keep watching (which card, and which show it holds). */
+internal class GridMemory {
+    val titles = androidx.compose.runtime.mutableStateMapOf<LiveKey, Long>()
+    var stripOpenAt by androidx.compose.runtime.mutableIntStateOf(-1)
+    var stripId by mutableStateOf<Long?>(null)
+    /** The posters (not Keep watching above them) had the focus last: the Pasarela page then stands on them. */
+    var onPosters by mutableStateOf(false)
+}
+
+/** glcn: how long Back from a show's page waits for Keep watching to be there again before giving up on it. */
+private const val STRIP_WAIT_MS = 1_500L

@@ -43,6 +43,7 @@ import tv.own.owntv.core.util.classifySyncFailure
 import tv.own.owntv.core.sync.work.CatalogSyncState
 import tv.own.owntv.core.sync.work.CatalogSyncScheduler
 import tv.own.owntv.core.database.dao.resolveExistingProfileId
+import tv.own.owntv.core.database.entity.nameKeyOf
 import tv.own.owntv.core.launcher.LauncherIntegrationRepository
 import tv.own.owntv.core.settings.ChNavLimits
 import tv.own.owntv.core.settings.EpgRefresh
@@ -93,6 +94,7 @@ class SettingsViewModel(
     // Adding a playlist is core's sequence, not a copy of it — see [importState].
     private val importer: SourceImporter,
     private val sourceEditor: SourceEditor,
+    private val theIntroDb: tv.own.owntv.core.skip.TheIntroDbAccount,
 ) : ViewModel() {
     companion object {
         private const val TAG = "OwnTVHome"
@@ -126,6 +128,8 @@ class SettingsViewModel(
     val remoteOpenSubtitlesConfigs get() = companion.openSubtitlesConfigs
 
     fun startRemoteTmdbConfigListener(port: Int) = companion.startForTmdbConfig(port)
+    val remoteTheIntroDbConfigs get() = companion.theIntroDbConfigs
+    fun startRemoteTheIntroDbConfigListener(port: Int) = companion.startForTheIntroDbConfig(port)
     fun startRemoteOpenSubtitlesConfigListener(port: Int) = companion.startForOpenSubtitlesConfig(port)
 
     // Semi-auto EPG: after a playlist import, if the playlist has a guide URL we offer to sync the EPG now
@@ -679,7 +683,7 @@ class SettingsViewModel(
             customizations.hiddenCategories,
             isKids,
         )
-        return channelDao.searchList(query.trim(), sourceIds, 500)
+        return channelDao.searchList(nameKeyOf(query.trim()), sourceIds, 500)
             .asSequence()
             .filter { tv.own.owntv.core.customize.CustomizeKeys.channel(it) !in customizations.hiddenItems }
             .filter { it.categoryId == null || it.categoryId !in hiddenCategoryIds }
@@ -1042,6 +1046,12 @@ class SettingsViewModel(
     val autoSkipIntro: StateFlow<Boolean> = settings.autoSkipIntro.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
     val glcnStyle: StateFlow<tv.own.owntv.core.theme.GlcnStyle?> = settings.glcnStyle.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     fun applyGlcnStyle(style: tv.own.owntv.core.theme.GlcnStyle?) { viewModelScope.launch { settings.applyGlcnStyle(style) } }
+    // glcn: Appearance — theme, mode and background.
+    val glcnStyleMode: StateFlow<Int?> = settings.glcnStyleMode.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val glcnBackdrop: StateFlow<Int> = settings.glcnBackdrop.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), tv.own.owntv.core.theme.GLCN_BACKDROP_THEME)
+    fun applyGlcnTheme(theme: tv.own.owntv.core.theme.GlcnTheme) { viewModelScope.launch { settings.applyGlcnTheme(theme) } }
+    fun setGlcnStyleMode(mode: Int) { viewModelScope.launch { settings.setGlcnStyleMode(mode) } }
+    fun setGlcnBackdrop(mode: Int) { viewModelScope.launch { settings.setGlcnBackdrop(mode) } }
     fun toggleAutoSkipIntro() { viewModelScope.launch { settings.setAutoSkipIntro(!autoSkipIntro.value) } }
     val homeCover: StateFlow<Int> = settings.homeCover.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     fun cycleHomeCover() { viewModelScope.launch { settings.setHomeCover((homeCover.value + 1) % 3) } }
@@ -1215,6 +1225,7 @@ class SettingsViewModel(
         syncMovies: Boolean = true,
         syncSeries: Boolean = true,
         preferHls: Boolean = false,
+        catchupPreferHls: Boolean = false,
         httpReferer: String = "",
     ) {
         viewModelScope.launch {
@@ -1241,6 +1252,7 @@ class SettingsViewModel(
                 syncMovies = syncMovies,
                 syncSeries = syncSeries,
                 preferHls = preferHls,
+                catchupPreferHls = catchupPreferHls,
             )
             sourceEditor.save(existing, updated)
             settings.setPlaylistAutoRefresh(id, autoRefresh)
@@ -1314,13 +1326,14 @@ class SettingsViewModel(
         series: SyncScopeChoice = SyncScopeChoice.Now,
         isDefault: Boolean = false,
         preferHls: Boolean = false,
+        catchupPreferHls: Boolean = false,
         httpReferer: String = "",
     ) = runImport {
         importer.xtream(
             name = name, server = server, username = user, password = pass,
             userAgent = userAgent, epgUrl = epgUrl, autoRefresh = autoRefresh,
             live = live, movies = movies, series = series,
-            preferHls = preferHls, makeDefault = isDefault, httpReferer = httpReferer,
+            preferHls = preferHls, catchupPreferHls = catchupPreferHls, makeDefault = isDefault, httpReferer = httpReferer,
         )
     }
 
@@ -1439,8 +1452,8 @@ class SettingsViewModel(
         )
     }
 
-    fun addM3u(name: String, url: String, userAgent: String = "", epgUrl: String = "", autoRefresh: PlaylistRefresh = PlaylistRefresh.OFF, isDefault: Boolean = false, httpReferer: String = "") = runImport {
-        importer.m3u(name, url, userAgent, epgUrl, autoRefresh, makeDefault = isDefault, httpReferer = httpReferer)
+    fun addM3u(name: String, url: String, userAgent: String = "", epgUrl: String = "", autoRefresh: PlaylistRefresh = PlaylistRefresh.OFF, isDefault: Boolean = false, httpReferer: String = "", catchupPreferHls: Boolean = false) = runImport {
+        importer.m3u(name, url, userAgent, epgUrl, autoRefresh, makeDefault = isDefault, httpReferer = httpReferer, catchupPreferHls = catchupPreferHls)
     }
 
     /**
@@ -1728,6 +1741,41 @@ class SettingsViewModel(
     val tmdbApiKey: StateFlow<String> =
         settings.tmdbApiKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
     fun setTmdbApiKey(key: String) { viewModelScope.launch { settings.setTmdbApiKey(key) } }
+
+    // ---- Skip intro & credits (TheIntroDB) ----
+    val skipChoices: StateFlow<tv.own.owntv.core.skip.SkipChoices> =
+        settings.skipChoices.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), tv.own.owntv.core.skip.SkipChoices())
+    fun setSkipMode(kind: tv.own.owntv.core.skip.SkipKind, mode: tv.own.owntv.core.skip.SkipMode) {
+        viewModelScope.launch { settings.setSkipMode(kind, mode) }
+    }
+    fun setSkipButtonShow(show: tv.own.owntv.core.skip.SkipButtonShow) {
+        viewModelScope.launch { settings.setSkipButtonShow(show) }
+    }
+    val theIntroDbApiKey: StateFlow<String> =
+        settings.theIntroDbApiKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+    /** The allowance the last lookup or check reported, so the row shows it without a call. */
+    val theIntroDbQuota get() = theIntroDb.quota
+    private val _theIntroDbStatus = MutableStateFlow<tv.own.owntv.core.skip.TheIntroDbAccount.Status?>(null)
+    /** The last Check result; null until one ran on this screen. */
+    val theIntroDbStatus: StateFlow<tv.own.owntv.core.skip.TheIntroDbAccount.Status?> = _theIntroDbStatus.asStateFlow()
+    private val _theIntroDbChecking = MutableStateFlow(false)
+    val theIntroDbChecking: StateFlow<Boolean> = _theIntroDbChecking.asStateFlow()
+
+    /** Saves [key] (blank = keyless) and checks it straight away. */
+    fun saveTheIntroDbKey(key: String) {
+        viewModelScope.launch {
+            settings.setTheIntroDbApiKey(key)
+            checkTheIntroDbNow()
+        }
+    }
+
+    fun checkTheIntroDb() { viewModelScope.launch { checkTheIntroDbNow() } }
+
+    private suspend fun checkTheIntroDbNow() {
+        _theIntroDbChecking.value = true
+        _theIntroDbStatus.value = runCatching { theIntroDb.check() }.getOrNull()
+        _theIntroDbChecking.value = false
+    }
 
     val metadataServerUrl: StateFlow<String> =
         settings.metadataServerUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")

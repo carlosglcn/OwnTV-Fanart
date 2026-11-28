@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -95,6 +96,14 @@ import tv.own.owntv.core.model.HomeTrendingStyle
 import tv.own.owntv.core.trending.ProviderVariantParser
 import tv.own.owntv.features.shell.components.MediaDetailsScreen
 import tv.own.owntv.features.shell.components.MediaDetailsUi
+import tv.own.owntv.features.shell.components.VodOptionsMenu
+import tv.own.owntv.features.shell.components.VodGroupWatch
+import tv.own.owntv.features.shell.components.VodGroupLibrary
+import tv.own.owntv.features.shell.components.VodGroupDetails
+import tv.own.owntv.core.model.ContentMenu
+import tv.own.owntv.ui.components.MenuAction
+import tv.own.owntv.features.movies.MovieViewModel
+import tv.own.owntv.features.series.SeriesViewModel
 import tv.own.owntv.player.HeroPreviewEngine
 import tv.own.owntv.ui.components.BrandLockup
 import tv.own.owntv.ui.components.InAppToast
@@ -142,6 +151,9 @@ private val NoHeroTop = 110.mpx
 @Composable
 fun HomeScreen(
     vm: HomeViewModel,
+    /** The shell's own Movies and Series view models: the trending menu downloads through them. */
+    movieVm: MovieViewModel,
+    seriesVm: SeriesViewModel,
     onPlayMovie: (movieId: Long, positionMs: Long) -> Unit,
     onPlayEpisode: (seriesId: Long, episodeId: Long, positionMs: Long) -> Unit,
     onPlayChannel: (channelId: Long, zapChannels: List<ChannelEntity>) -> Unit,
@@ -153,6 +165,7 @@ fun HomeScreen(
     onOpenContinueSeries: ((Long) -> Unit)? = null,
     onOpenTrendingSearch: (String) -> Unit,
     onChildFocused: () -> Unit,
+    modifier: Modifier = Modifier,
     restoreFocus: Boolean = false,
     restoreTrendingSearchFocus: Boolean = false,
     onRestored: () -> Unit = {},
@@ -169,7 +182,6 @@ fun HomeScreen(
     seasonActive: Boolean = true,
     /** Sports Hub: ▶ on a Live sports card opens its match page. */
     onOpenMatch: (tv.own.owntv.core.sports.model.Match) -> Unit = {},
-    modifier: Modifier = Modifier,
     sportsVm: tv.own.owntv.features.sports.SportsViewModel = org.koin.androidx.compose.koinViewModel(),
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
@@ -196,6 +208,10 @@ fun HomeScreen(
     var trailerVideoKey by remember { mutableStateOf<String?>(null) }
     var trailerTitle by remember { mutableStateOf<String?>(null) }
     var detailsItem by remember { mutableStateOf<TrendingHomeItem?>(null) }
+    // A trending poster's long-press menu (OK held, or the Menu key).
+    var contextTrendingItem by remember { mutableStateOf<TrendingHomeItem?>(null) }
+    val movieDownloads by movieVm.downloadStates.collectAsStateWithLifecycle()
+    val alreadyDownloadedMessage = stringResource(R.string.content_already_downloaded)
     var detailsMetadata by remember { mutableStateOf<MetadataCacheEntity?>(null) }
     var detailsTmdbWins by remember { mutableStateOf(false) }
     // Focus is on the hero (its buttons or pager): the list must not scroll, and the hero stays unfolded.
@@ -514,7 +530,7 @@ fun HomeScreen(
                 androidx.compose.animation.core.tween(if (CinemaTrailer.lightsDown) 1_600 else 350), label = "cinemaRowsLights",
             )
             // glcn: one focus box for the whole page — it glides from card to card, along a row and between rows.
-            tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxSize(), stiffness = HOME_GLIDE_STIFFNESS, damping = HOME_GLIDE_DAMPING) {
+            tv.own.owntv.glcn.SlideFocusHost(Modifier.fillMaxSize(), stiffness = HOME_GLIDE_STIFFNESS, damping = HOME_GLIDE_DAMPING, pinned = true) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -603,6 +619,7 @@ fun HomeScreen(
                                             vm.refresh()
                                         }
                                     },
+                                    onLongClick = { item -> contextTrendingItem = item },
                                     onFocus = onNonHeroFocused,
                                     firstItemFocusRequester = firstItemFocusRequester ?: trendingPrimaryFocus,
                                     track = track,
@@ -867,6 +884,7 @@ fun HomeScreen(
                                             vm.refresh()
                                         }
                                     },
+                                    onLongClick = { item -> contextTrendingItem = item },
                                     onFocus = onNonHeroFocused,
                                     firstItemFocusRequester = firstItemFocusRequester,
                                     track = track,
@@ -1012,6 +1030,74 @@ fun HomeScreen(
                 runCatching { trendingDetailsFocus.requestFocus() }
             }
         })
+    }
+    contextTrendingItem?.let { ci ->
+        val isMovie = ci is TrendingHomeItem.Movie
+        val title = ci.snapshot.localizedTitle
+        val posterUrl = when (ci) {
+            is TrendingHomeItem.Movie -> ci.movie.posterUrl
+            is TrendingHomeItem.Series -> ci.series.posterUrl
+        }
+        val isFavorite = when (ci) {
+            is TrendingHomeItem.Movie -> ci.movie.id in favoriteMovies
+            is TrendingHomeItem.Series -> ci.series.id in favoriteSeries
+        }
+        val trailerKey = ci.snapshot.trailerKey?.takeIf { it.isNotBlank() }
+        // The same steps as the hero's own buttons, and the same Download as the Movies and Series menus.
+        val actions = buildList {
+            if (trailerKey != null) {
+                add(MenuAction("play_trailer", stringResource(R.string.content_play_trailer), OwnTVIcon.PLAY_CIRCLE, group = VodGroupWatch) {
+                    contextTrendingItem = null
+                    vm.stopPreview()
+                    trailerTitle = title
+                    trailerVideoKey = trailerKey
+                })
+            }
+            add(MenuAction("favourite", stringResource(if (isFavorite) R.string.content_remove_favourite else R.string.content_add_favourite), OwnTVIcon.FAVORITE, group = VodGroupLibrary) {
+                vm.toggleTrendingFavorite(ci)
+                contextTrendingItem = null
+            })
+            add(MenuAction("download", stringResource(if (isMovie) R.string.content_download else R.string.content_download_all_episodes), OwnTVIcon.DOWNLOADS, group = VodGroupLibrary) {
+                contextTrendingItem = null
+                when (ci) {
+                    is TrendingHomeItem.Movie ->
+                        if (movieDownloads[ci.movie.id] != null) trendingToast.show(alreadyDownloadedMessage) else movieVm.download(ci.movie)
+                    is TrendingHomeItem.Series -> seriesVm.askBulkDownload(ci.series, null)
+                }
+            })
+            add(MenuAction("tmdb_details", stringResource(if (isMovie) R.string.content_movie_details else R.string.content_series_details), OwnTVIcon.INFO, group = VodGroupDetails) {
+                contextTrendingItem = null
+                vm.stopPreview()
+                homeScope.launch {
+                    val current = vm.revalidateTrendingItem(ci) ?: return@launch trendingToast.show(trendingUnavailableMessage)
+                    val resolved = vm.resolveTrendingDetails(current)
+                    detailsMetadata = resolved.cache
+                    detailsTmdbWins = resolved.tmdbWins
+                    detailsItem = current
+                }
+            })
+        }
+        VodOptionsMenu(
+            title = title,
+            subtitle = null,
+            posterUrl = posterUrl,
+            x = 1300f,
+            menu = if (isMovie) ContentMenu.MOVIE else ContentMenu.SERIES,
+            actions = actions,
+            disabled = emptySet(),
+            onDismiss = { contextTrendingItem = null },
+            firstFocusKey = if (trailerKey != null) "play_trailer" else "favourite",
+        )
+    }
+    // "Download all episodes" from the trending menu asks first, as it does on the Series page.
+    seriesVm.bulkDownloadAsk.collectAsStateWithLifecycle().value?.let { ask ->
+        tv.own.owntv.features.settings.ConfirmDialog(
+            title = pluralStringResource(R.plurals.content_download_episodes_confirm, ask.episodes, ask.episodes),
+            message = stringResource(R.string.content_download_episodes_confirm_message),
+            onConfirm = { seriesVm.answerBulkDownload(true) },
+            onDismiss = { seriesVm.answerBulkDownload(false) },
+            confirmLabel = R.string.content_download,
+        )
     }
     InAppToast(trendingToast)
 }
@@ -1435,16 +1521,22 @@ private fun KeepWatchingRow(
     // A keyed row keeps its scroll on the first card it showed. When what was just watched moves to the
     // front, that left the new first card off-screen to the left and focus on the second: the channel the
     // user came back from looked gone from the row. A new first card brings the row back to its start.
+    // Focus goes with it: coming back from the player, Home focuses the first card before the row has
+    // reordered, so focus stayed on that card wherever the reorder moved it, not on what was just watched.
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val firstKey = items.firstOrNull()?.heroKey()
-    LaunchedEffect(firstKey) { if (listState.firstVisibleItemIndex != 0) listState.scrollToItem(0) }
+    var rowHasFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(firstKey) {
+        if (listState.firstVisibleItemIndex != 0) listState.scrollToItem(0)
+        if (rowHasFocus) runCatching { firstFocusRequester.requestFocus() }
+    }
     Column(modifier) {
         HomeRowHeader(title, small = if (big) null else items.size.toString(), start = start, big = big)
         HomeLazyRow(
             state = listState,
             horizontalArrangement = Arrangement.spacedBy((if (big) 24 else 20).mpx),
             contentPadding = PaddingValues(start = start, end = 64.mpx),
-            modifier = Modifier.focusRestorer().focusGroup(),
+            modifier = Modifier.onFocusChanged { rowHasFocus = it.hasFocus }.focusRestorer().focusGroup(),
         ) {
             itemsIndexed(items, key = { _, item -> item.heroKey() }) { index, item ->
                 val meta = metadata[item.heroKey()]
@@ -1703,6 +1795,7 @@ private fun TrendingPosterRow(
     items: List<TrendingHomeItem>,
     start: Dp,
     onItemClick: (TrendingHomeItem) -> Unit,
+    onLongClick: (TrendingHomeItem) -> Unit,
     onFocus: () -> Unit,
     firstItemFocusRequester: FocusRequester?,
     track: (FocusRequester) -> Unit,
@@ -1725,12 +1818,17 @@ private fun TrendingPosterRow(
                         is TrendingHomeItem.Series -> item.series.name
                     },
                     onClick = { onItemClick(item) },
+                    onLongClick = { onLongClick(item) },
                     width = 196.mpx,
                     height = 294.mpx,
                     rating = item.snapshot.rating?.let(::ratingText),
                     modifier = Modifier
                         .then(if (index == 0 && firstItemFocusRequester != null) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
                         .tracked(track = track)
+                        // Held OK is StagePoster's own long click; the Menu key opens the same menu.
+                        .onPreviewKeyEvent { e ->
+                            (e.key == Key.Menu && e.type == KeyEventType.KeyDown).also { if (it) onLongClick(item) }
+                        }
                         .onFocusChanged {
                             if (it.hasFocus) {
                                 onItemFocused(index)
@@ -2030,11 +2128,17 @@ private fun Modifier.rowFitFade(state: androidx.compose.foundation.lazy.LazyList
         val cutBelow = (item.offset + item.size - info.viewportEndOffset).coerceAtLeast(0)
         val cutAbove = (top - item.offset).coerceAtLeast(0f)
         val cut = (cutBelow + cutAbove) / item.size
-        val t = (cut / ROW_CUT_GONE).coerceIn(0f, 1f)
+        // glcn: a tall row (the billboard) keeps its picture while most of it is still on screen and only goes with its
+        // last part — faded like a short row it left the top half of the page empty while the next rows came up.
+        val tall = item.size > (info.viewportEndOffset - info.viewportStartOffset) * ROW_TALL
+        val t = if (tall) ((cut - ROW_TALL_FROM) / (ROW_TALL_GONE - ROW_TALL_FROM)).coerceIn(0f, 1f) else (cut / ROW_CUT_GONE).coerceIn(0f, 1f)
         alpha = 1f - (1f - ROW_CUT_MIN) * t * t * (3f - 2f * t)
     }
 
 private const val ROW_CUT_GONE = 0.35f
+private const val ROW_TALL = 0.45f
+private const val ROW_TALL_FROM = 0.55f
+private const val ROW_TALL_GONE = 0.9f
 private const val ROW_CUT_MIN = 0.12f
 
 /** glcn: the height of a row's heading over its cards, kept clear of the top bar when a row is brought down. */

@@ -53,6 +53,11 @@ fun FrameMeter(screen: String, modifier: Modifier = Modifier) {
     val lock = remember { Any() }
     var line by remember { mutableStateOf("") }
     var memLine by remember { mutableStateOf("") }
+    // glcn: while the meter shows, what keeps the app's thread busy is timed too, for the report (FrameWatch).
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        FrameWatch.watchMainThread(true)
+        onDispose { FrameWatch.watchMainThread(false) }
+    }
     // A new screen starts its own count.
     LaunchedEffect(screen) {
         synchronized(lock) {

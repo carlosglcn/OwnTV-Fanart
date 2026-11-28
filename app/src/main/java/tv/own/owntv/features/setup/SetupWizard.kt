@@ -174,15 +174,15 @@ fun Onboarding(firstRun: Boolean, onDone: (Long?) -> Unit, onCancel: () -> Unit,
                 onBack = { vm.stopRemoteListener(); step = Step.ADD_CONTENT },
             )
             Step.ADD_SOURCE -> AddSourceScreen(
-                onStartXtream = { name, server, user, pass, ua, ref, epg, refresh, live, movies, series, _, preferHls ->
+                onStartXtream = { name, server, user, pass, ua, ref, epg, refresh, live, movies, series, _, preferHls, catchupPreferHls ->
                     importName = name.ifBlank { defaultIptvName }
-                    vm.startXtream(importName!!, server, user, pass, ua, epg, refresh, live, movies, series, preferHls, httpReferer = ref)
+                    vm.startXtream(importName!!, server, user, pass, ua, epg, refresh, live, movies, series, preferHls, catchupPreferHls, httpReferer = ref)
                     importOrigin = Step.ADD_SOURCE
                     step = Step.IMPORTING
                 },
-                onStartM3u = { name, url, ua, ref, epg, refresh, _ ->
+                onStartM3u = { name, url, ua, ref, epg, refresh, _, catchupPreferHls ->
                     importName = name.ifBlank { defaultPlaylistName }
-                    vm.startM3u(importName!!, url, ua, epg, refresh, httpReferer = ref)
+                    vm.startM3u(importName!!, url, ua, epg, refresh, httpReferer = ref, catchupPreferHls = catchupPreferHls)
                     importOrigin = Step.ADD_SOURCE
                     step = Step.IMPORTING
                 },
@@ -480,7 +480,7 @@ private fun ProfileStep(onCreate: (name: String, avatarId: Int, isKids: Boolean,
         next = WizardAction(stringResource(R.string.setup_create_profile), { if (valid) onCreate(name.ifBlank { defaultName }, avatarId, isKids, pin.takeIf { it.isNotBlank() }, picture) }, enabled = valid),
     ) {
         StageFieldRow(
-            OwnTVIcon.PENCIL, nameLabel, name, { name = it }, SettingHelp(nameLabel, fieldHelp),
+            OwnTVIcon.PENCIL, nameLabel, name, { name = it }, help = SettingHelp(nameLabel, fieldHelp),
             placeholder = stringResource(R.string.profiles_name_hint), modifier = Modifier.focusRequester(nameFocus),
         )
         val ids = (-1 until OwnTVAvatars.COUNT).toList()
@@ -508,7 +508,7 @@ private fun ProfileStep(onCreate: (name: String, avatarId: Int, isKids: Boolean,
             onClick = { isKids = !isKids },
         )
         StageFieldRow(
-            OwnTVIcon.PENCIL, pinLabel, pin, { if (it.length <= 6 && it.all(Char::isDigit)) pin = it }, SettingHelp(pinLabel, fieldHelp),
+            OwnTVIcon.PENCIL, pinLabel, pin, { if (it.length <= 6 && it.all(Char::isDigit)) pin = it }, help = SettingHelp(pinLabel, fieldHelp),
             placeholder = stringResource(R.string.profiles_pin_digits), password = true, keyboardType = KeyboardType.NumberPassword,
         )
     }
@@ -632,7 +632,7 @@ private fun ImportBackupStep(
                 extraLeft = if (state.sealed) emptyList() else listOf(WizardAction(stringResource(R.string.setup_skip_no_passwords), { onPassword(state.file, null) })),
             ) {
                 StageFieldRow(
-                    OwnTVIcon.PENCIL, label, password, { password = it }, SettingHelp(label, ""),
+                    OwnTVIcon.PENCIL, label, password, { password = it }, help = SettingHelp(label, ""),
                     password = true, modifier = Modifier.focusRequester(first),
                 )
             }

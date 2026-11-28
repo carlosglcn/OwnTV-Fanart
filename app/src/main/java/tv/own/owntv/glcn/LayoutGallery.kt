@@ -178,6 +178,19 @@ private val vodRunway: DrawScope.(Color, Color, Color) -> Unit = { ink, accent, 
     repeat(4) { i -> box(w * (0.39f + i * 0.145f), h * 0.50f, w * 0.125f, h * 0.40f, t[(i + 1) % 5].copy(alpha = 0.7f), 7f) }
 }
 
+/** Shelves: the artwork and details above, then rows — each with its name — of wide cards. */
+private val vodShelves: DrawScope.(Color, Color, Color) -> Unit = { ink, accent, _ ->
+    val w = size.width; val h = size.height
+    art(0f, 0f, w, h, Coral, accent, alpha = 0.55f, r = 14f)
+    fade(w, h)
+    bars(w * 0.07f, h * 0.10f, listOf(w * 0.36f, w * 0.22f), 8f, Color.White.copy(alpha = 0.92f))
+    val t = tintsOf(accent)
+    repeat(2) { r ->
+        box(w * 0.07f, h * (0.40f + r * 0.30f), w * 0.16f, 5f, Color.White.copy(alpha = 0.8f), 2.5f)
+        tiles(w * 0.07f, h * (0.46f + r * 0.30f), 4, w * 0.20f, h * 0.19f, w * 0.018f, t, first = r * 2)
+    }
+}
+
 @Composable
 fun LiveLayoutGallery(current: SettingsRepository.LiveLayout, onPick: (SettingsRepository.LiveLayout) -> Unit, onDismiss: () -> Unit) =
     GalleryPopup(
@@ -198,6 +211,7 @@ fun VodLayoutGallery(current: SettingsRepository.VodLayout, onPick: (SettingsRep
             GalleryOption(SettingsRepository.VodLayout.SEPARATE.name, R.string.settings_vod_layout_separate, R.string.settings_vod_layout_separate_description, vodSeparate),
             GalleryOption(SettingsRepository.VodLayout.CINEMATIC.name, R.string.settings_vod_layout_cinematic, R.string.settings_vod_layout_cinematic_description, vodCinematic),
             GalleryOption(SettingsRepository.VodLayout.RUNWAY.name, R.string.settings_vod_layout_runway, R.string.settings_vod_layout_runway_description, vodRunway),
+            GalleryOption(SettingsRepository.VodLayout.SHELVES.name, R.string.glcn_vod_layout_shelves, R.string.glcn_vod_layout_shelves_description, vodShelves),
         ),
         current = current.name, onPick = { onPick(SettingsRepository.VodLayout.valueOf(it)) }, onDismiss = onDismiss,
     )

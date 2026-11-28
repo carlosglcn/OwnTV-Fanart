@@ -269,7 +269,7 @@ fun MetadataSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             val urlLabel = stringResource(R.string.glcn_badges_url)
             StageFieldRow(
                 OwnTVIcon.PENCIL, urlLabel, packUrl, { packUrl = it },
-                SettingHelp(urlLabel, stringResource(R.string.glcn_badges_help)),
+                help = SettingHelp(urlLabel, stringResource(R.string.glcn_badges_help)),
                 placeholder = BADGE_URL_PLACEHOLDER,
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri,
                 onDone = { badgeScope.launch { tv.own.owntv.glcn.BadgePack.choose(logoCtx, tv.own.owntv.glcn.BadgePack.Mode.CUSTOM, packUrl.trim()) } },
@@ -462,7 +462,7 @@ private fun MetadataTestLabel(state: SettingsViewModel.MetadataTestState) {
 }
 
 /** Show only the tail of a secret: enough to tell two keys apart, useless to a shoulder-surfer. */
-private fun maskSecret(secret: String): String {
+internal fun maskSecret(secret: String): String {
     val trimmed = secret.trim()
     if (trimmed.length <= 4) return "\u2022".repeat(4)
     return "\u2022".repeat(8) + trimmed.takeLast(4)

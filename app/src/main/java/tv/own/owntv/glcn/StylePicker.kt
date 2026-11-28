@@ -26,6 +26,12 @@ import tv.own.owntv.ui.theme.mpx
 @Composable
 fun GlcnStyle.label(): String = stringResource(
     when (this) {
+        GlcnStyle.RIA_NOCHE -> R.string.glcn_style_ria_noche
+        GlcnStyle.RIA_DIA -> R.string.glcn_style_ria_dia
+        GlcnStyle.ESTUDIO_DIA -> R.string.glcn_style_estudio_dia
+        GlcnStyle.NEON_DIA -> R.string.glcn_style_neon_dia
+        GlcnStyle.BRASA -> R.string.glcn_style_brasa
+        GlcnStyle.ALBA -> R.string.glcn_style_alba
         GlcnStyle.LUMEN_NOCHE -> R.string.glcn_style_lumen_noche
         GlcnStyle.LUMEN_DIA -> R.string.glcn_style_lumen_dia
         GlcnStyle.ATARDECER -> R.string.glcn_style_atardecer
@@ -40,6 +46,21 @@ fun GlcnStyle.label(): String = stringResource(
         GlcnStyle.CREPUSCULO -> R.string.glcn_style_crepusculo
         GlcnStyle.OCEANO -> R.string.glcn_style_oceano
         GlcnStyle.FANART_VIVO -> R.string.glcn_style_fanart_vivo
+    },
+)
+
+/** glcn: a theme's name (Appearance). */
+@Composable
+fun tv.own.owntv.core.theme.GlcnTheme.label(): String = stringResource(
+    when (this) {
+        tv.own.owntv.core.theme.GlcnTheme.RIA -> R.string.glcn_theme_ria
+        tv.own.owntv.core.theme.GlcnTheme.BRASA -> R.string.glcn_theme_brasa
+        tv.own.owntv.core.theme.GlcnTheme.LUMEN -> R.string.glcn_theme_lumen
+        tv.own.owntv.core.theme.GlcnTheme.AURORA -> R.string.glcn_theme_aurora
+        tv.own.owntv.core.theme.GlcnTheme.CREPUSCULO -> R.string.glcn_theme_crepusculo
+        tv.own.owntv.core.theme.GlcnTheme.ESTUDIO -> R.string.glcn_theme_estudio
+        tv.own.owntv.core.theme.GlcnTheme.NEON -> R.string.glcn_theme_neon
+        tv.own.owntv.core.theme.GlcnTheme.VITRINA -> R.string.glcn_theme_vitrina
     },
 )
 

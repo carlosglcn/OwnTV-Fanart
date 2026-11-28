@@ -79,6 +79,7 @@ import tv.own.owntv.features.customize.MoveTarget
 import tv.own.owntv.core.customize.CategoryRestorePlan
 import tv.own.owntv.core.customize.planCategoryRestore
 import tv.own.owntv.core.customize.restoreCategoryToDefault
+import tv.own.owntv.core.database.entity.nameKeyOf
 import tv.own.owntv.features.live.LiveRailItem
 import tv.own.owntv.core.repository.activeProfileSources
 import tv.own.owntv.core.settings.SettingsRepository
@@ -114,6 +115,8 @@ class SeriesViewModel(
     private val externalPlayerLauncher: tv.own.owntv.core.player.ExternalPlayerLauncher,
     private val streamUrlResolver: tv.own.owntv.core.stalker.StreamUrlResolver,
     private val subtitleController: tv.own.owntv.core.subtitles.SubtitleController,
+    /** Leaving during the end credits saves the episode as finished. */
+    private val skip: tv.own.owntv.player.SkipSegmentController,
 ) : ViewModel() {
 
     /** The categories' search text, held here so it survives the player (see LiveViewModel). */
@@ -405,6 +408,9 @@ class SeriesViewModel(
 
     private var playingEpisodeRef: PlayingEpisodeRef? = null
 
+    /** The episode in the player, for the remote's Download shortcut. */
+    fun playingEpisode(): EpisodeEntity? = playingEpisodeRef?.episode
+
     init {
         listOf(_selectedSeries, _openedSeries).forEach { viewModelScope.clearWhenSealed(it, sealedCategoryIds) { s -> s.categoryId } }
         // Periodically persist the playing episode's resume position (same cadence as movies).
@@ -412,7 +418,7 @@ class SeriesViewModel(
         // This is the crash backstop; the real saves are on pause and on leaving the player.
         viewModelScope.launch {
             while (isActive) {
-                delay(10_000)
+                delay(SAVE_TICK_MS)
                 saveEpisodeProgressNow()
             }
         }
@@ -461,6 +467,10 @@ class SeriesViewModel(
             player.queueItemChanged.collect { index ->
                 val q = playingQueue ?: return@collect
                 val ep = q.episodes.getOrNull(index) ?: return@collect
+                // glcn: "Play now" on the next-episode card, or the countdown, leaves the outgoing episode in its
+                // credits — its last save (up to 10 s old) is read back, and if it was in the credits it is watched.
+                val creditsWere = tv.own.owntv.glcn.IntroSkip.creditsAt.value
+                playingEpisodeRef?.takeIf { it.episode.id != ep.id }?.let { finishIfInCredits(it, creditsWere) }
                 // The auto-advanced episode is now the one progress is saved against. No flush of the
                 // outgoing one here: the player already loaded the new item, so its position has been
                 // reset and saving now would overwrite a finished episode with ~0.
@@ -520,8 +530,12 @@ class SeriesViewModel(
         val ref = playingEpisodeRef ?: return
         val ep = ref.episode
         if (player.isLiveContent || !playerIsOn(ref)) return
-        val pos = player.position.value
+        val raw = player.position.value
         val dur = player.duration.value
+        // In the end credits the episode is watched — saved as finished, so every "watched" check agrees. Upstream's
+        // skip knows where they start when TheIntroDB says; glcn: else the file's own credits chapter, else our tail rule.
+        val credits = tv.own.owntv.glcn.IntroSkip.creditsAt.value
+        val pos = if (inCredits(raw, dur) || (credits > 0 && raw >= credits)) dur else skip.savedPosition(raw, dur)
         if (pos > 0 && dur > 0) {
             viewModelScope.launch {
                 // The position belongs to the profile that started playback. If the user switched
@@ -540,6 +554,30 @@ class SeriesViewModel(
                 }
                 launcherIntegrationRepository.publishEpisodeProgress(pid, ep.id, pos, dur)
             }
+        }
+    }
+
+    /**
+     * glcn: the end credits — the last 7 % of an episode, never under a minute and a half. Leaving there, or going on
+     * to the next one, counts as having watched it (before, only the last 5 % did, which most credits start before).
+     */
+    private fun inCredits(pos: Long, dur: Long): Boolean =
+        dur > 0 && pos > 0 && dur - pos <= maxOf(CREDITS_MIN_MS, (dur * CREDITS_SHARE).toLong())
+
+    /** glcn: the episode the player just left for the next: watched if its last saved place was in the credits. */
+    private fun finishIfInCredits(ref: PlayingEpisodeRef, creditsAt: Long) {
+        viewModelScope.launch {
+            runCatching {
+                val last = progressDao.get(ref.profileId, MediaType.EPISODE, ref.episode.id) ?: return@runCatching
+                if (last.durationMs <= 0 || last.positionMs >= last.durationMs) return@runCatching
+                // The save is up to one tick old: that much more is allowed.
+                val reached = (last.positionMs + SAVE_TICK_MS).coerceAtMost(last.durationMs - 1)
+                if (!inCredits(reached, last.durationMs) && !(creditsAt > 0 && reached >= creditsAt)) return@runCatching
+                val done = PlaybackProgressEntity(profileId = ref.profileId, mediaType = MediaType.EPISODE, itemId = ref.episode.id, positionMs = last.durationMs, durationMs = last.durationMs)
+                progressDao.save(done)
+                if (!isEpisodeCompleted(last)) traktEpisode(ref.profileId, ref.episode)
+                Log.d(TAG, "finishIfInCredits episodeId=${ref.episode.id} marked watched")
+            }.onFailure { Log.w(TAG, "finishIfInCredits failed episodeId=${ref.episode.id}", it) }
         }
     }
 
@@ -611,6 +649,33 @@ class SeriesViewModel(
         .cachedIn(viewModelScope)
 
     private data class Args(val key: LiveKey, val ctx: Ctx, val query: String, val sort: SettingsRepository.SortMode)
+
+    /** glcn: the rows above All in the Shelves layout — only read while that layout shows them. */
+    val shelves: StateFlow<List<tv.own.owntv.glcn.Shelf<SeriesEntity>>> = combine(ctx, hiddenCategoryIds, sealedCategoryIds) { c, hidden, sealed -> c to (hidden + sealed).toList() }
+        .distinctUntilChanged()
+        .flatMapLatest { (c, out) ->
+            if (c.profileId < 0 || c.sourceIds.isEmpty()) flowOf(emptyList())
+            else {
+                val shelf = tv.own.owntv.glcn.VodShelves
+                val same: (SeriesEntity) -> Any = { (it.titleSignature.ifBlank { it.name.lowercase() }) to it.parsedYear }
+                combine(
+                    seriesDao.observeShelfRated(c.sourceIds, out, shelf.RATED_FLOOR, shelf.FETCH),
+                    seriesDao.observeShelfRecent(c.sourceIds, out, shelf.fromYear(), shelf.FETCH),
+                    seriesDao.observeShelfPopular(c.sourceIds, out, shelf.FETCH),
+                    seriesDao.observeShelfAdded(c.sourceIds, out, shelf.addedSince(), shelf.FETCH),
+                    seriesDao.observeShelf4k(c.sourceIds, out, shelf.FETCH),
+                ) { rated, recent, popular, added, uhd ->
+                    listOfNotNull(
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.POPULAR, popular, same),
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.ADDED, added, same),
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.RECENT, recent, same),
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.UHD, uhd, same),
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.RATED, rated, same),
+                    )
+                }.throttleLatest()
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val count: StateFlow<Int> = combine(_selected, ctx, hiddenCategoryIds, sealedCategoryIds) { key, c, hidden, sealed -> countFlow(key, c, hidden, sealed) }
         .flatMapLatest { it.throttleLatest() } // Cap live COUNT re-runs during bulk sync
@@ -697,11 +762,18 @@ class SeriesViewModel(
         }
     }
 
-    /** glcn: the whole show seen, from its card in Keep watching. */
-    fun markShowWatched(show: SeriesEntity) {
+    /**
+     * glcn: the whole show seen (or not seen), from its card in Keep watching or its poster's menu. A show never
+     * opened has no episodes stored yet: they are fetched first, as opening it would.
+     */
+    fun markShowWatched(show: SeriesEntity, watched: Boolean = true) {
         viewModelScope.launch {
-            val all = runCatching { seriesDao.episodesBySeries(show.id).first() }.getOrDefault(emptyList())
-            if (all.isNotEmpty()) markEpisodesWatched(all, true)
+            var all = runCatching { seriesDao.episodesBySeries(show.id).first() }.getOrDefault(emptyList())
+            if (all.isEmpty()) {
+                runCatching { seriesRepository.loadEpisodes(show) }
+                all = runCatching { seriesDao.episodesBySeries(show.id).first() }.getOrDefault(emptyList())
+            }
+            if (all.isNotEmpty()) markEpisodesWatched(all, watched)
         }
     }
 
@@ -783,7 +855,7 @@ class SeriesViewModel(
 
     /** glcn: an episode watched → the profile's Trakt history (its series looked up for the TMDB id). */
     private suspend fun traktEpisode(profileId: Long, episode: EpisodeEntity) {
-        if (!tv.own.owntv.core.trakt.Trakt.available || !tv.own.owntv.core.trakt.Trakt.connected(profileId)) return
+        // glcn: no Trakt check here — TraktSync makes it, and for an Emby/Jellyfin episode tells the server instead.
         val series = _selectedSeries.value?.takeIf { it.id == episode.seriesId }
             ?: runCatching { seriesDao.getSeriesById(episode.seriesId) }.getOrNull() ?: return
         tv.own.owntv.core.trakt.TraktSync.watchedEpisode(profileId, series, episode)
@@ -1135,6 +1207,25 @@ class SeriesViewModel(
         }
     }
 
+    /** glcn: an episode played in VLC / MX Player — where it stopped is saved like the app's own player saves it, and
+     *  the end credits or the end count as watched. Before, nothing came back: no progress bar, never watched. */
+    private fun saveExternalEpisode(pid: Long, episode: EpisodeEntity, outcome: tv.own.owntv.core.player.ExternalPlayerLauncher.Outcome) {
+        viewModelScope.launch {
+            val dur = outcome.durationMs
+            if (dur <= 0) return@launch
+            val pos = if (outcome.finished || inCredits(outcome.positionMs, dur)) dur else outcome.positionMs
+            if (pos <= 0) return@launch
+            Log.d(TAG, "saveExternalEpisode episodeId=${episode.id} positionMs=$pos durationMs=$dur finished=${outcome.finished}")
+            runCatching {
+                val before = runCatching { progressDao.get(pid, MediaType.EPISODE, episode.id) }.getOrNull()
+                val now = PlaybackProgressEntity(profileId = pid, mediaType = MediaType.EPISODE, itemId = episode.id, positionMs = pos, durationMs = dur)
+                progressDao.save(now)
+                if (isEpisodeCompleted(now) && (before == null || !isEpisodeCompleted(before))) traktEpisode(pid, episode)
+            }.onFailure { t -> Log.w(TAG, "saveExternalEpisode failed episodeId=${episode.id}", t) }
+            launcherIntegrationRepository.publishEpisodeProgress(pid, episode.id, pos, dur)
+        }
+    }
+
     fun playEpisodeExternal(episode: EpisodeEntity) {
         _lastPlayedEpisodeId.value = episode.id
         viewModelScope.launch {
@@ -1151,6 +1242,7 @@ class SeriesViewModel(
                 userAgent = source?.userAgent,
                 httpHeaders = tv.own.owntv.core.settings.SourceOverrides.headersWithReferer(episode.httpHeaders, source),
                 startPositionMs = savedPositionMs(episode),
+                onResult = { outcome -> if (pid != null) saveExternalEpisode(pid, episode, outcome) },
             )
             if (pid != null) {
                 runCatching {
@@ -1195,6 +1287,7 @@ class SeriesViewModel(
                     userAgent = source?.userAgent,
                     httpHeaders = tv.own.owntv.core.settings.SourceOverrides.headersWithReferer(episode.httpHeaders, source),
                     startPositionMs = startPositionMs, // the screen's Resume / Start over answer
+                    onResult = { outcome -> if (pid != null) saveExternalEpisode(pid, episode, outcome) },
                 )
                 if (pid != null) {
                     runCatching {
@@ -1553,15 +1646,15 @@ class SeriesViewModel(
             }
         } else when (key) {
             LiveKey.All, LiveKey.Catchup ->
-                if (dateAdded) seriesDao.searchAllDateAdded(query, ids)
-                else seriesDao.searchAll(query, ids)
-            LiveKey.Favorites -> seriesDao.searchFavorites(query, c.profileId, ids)
-            LiveKey.History -> seriesDao.searchHistory(query, c.profileId, ids)
-            LiveKey.Continue -> seriesDao.searchContinue(query, c.profileId, ids)
-            is LiveKey.Custom -> customCategoryDao.searchSeries(query, c.profileId, key.id, ids)
+                if (dateAdded) seriesDao.searchAllDateAdded(nameKeyOf(query), ids)
+                else seriesDao.searchAll(nameKeyOf(query), ids)
+            LiveKey.Favorites -> seriesDao.searchFavorites(nameKeyOf(query), c.profileId, ids)
+            LiveKey.History -> seriesDao.searchHistory(nameKeyOf(query), c.profileId, ids)
+            LiveKey.Continue -> seriesDao.searchContinue(nameKeyOf(query), c.profileId, ids)
+            is LiveKey.Custom -> customCategoryDao.searchSeries(nameKeyOf(query), c.profileId, key.id, ids)
             is LiveKey.Folder ->
-                if (dateAdded) seriesDao.searchInCategoryDateAdded(query, key.id)
-                else seriesDao.searchInCategory(query, key.id)
+                if (dateAdded) seriesDao.searchInCategoryDateAdded(nameKeyOf(query), key.id)
+                else seriesDao.searchInCategory(nameKeyOf(query), key.id)
         }
     }
 
@@ -1629,3 +1722,10 @@ class SeriesViewModel(
 
 /** glcn: how many shows the Keep watching strip shows at most (the category lists them all). */
 private const val STRIP_MAX = 20
+
+/** glcn: the end credits ([SeriesViewModel.inCredits]): at least this long, or this share of the episode. */
+private const val CREDITS_MIN_MS = 90_000L
+private const val CREDITS_SHARE = 0.07
+
+/** glcn: how often the playing episode's place is saved. */
+private const val SAVE_TICK_MS = 10_000L

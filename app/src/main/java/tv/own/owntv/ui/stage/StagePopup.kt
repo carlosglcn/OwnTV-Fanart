@@ -140,13 +140,13 @@ fun StageConfirm(
     confirm: String,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
     cancel: String = androidx.compose.ui.res.stringResource(tv.own.owntv.R.string.common_cancel),
     focusCancel: Boolean = false,
     eyebrow: String? = LocalPopupEyebrow.current,
     width: Dp = 760.mpx,
     /** What Back does, when it is not the same as [cancel] (the resume prompt: Back closes, Start over restarts). */
     onBack: () -> Unit = onCancel,
-    modifier: Modifier = Modifier,
 ) {
     val first = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
     // A popup opened by a long press is still under the finger: the OK being released would otherwise
@@ -261,7 +261,7 @@ fun StagePopupOption(
             if (value != null) {
                 Text("$value ›", style = stageText(18, 700), color = a.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            androidx.compose.runtime.CompositionLocalProvider(LocalStageLit provides focused) { trailing?.invoke(this, focused) }
+            androidx.compose.runtime.CompositionLocalProvider(LocalStageLit provides stageLit(focused)) { trailing?.invoke(this, focused) }
         }
     }
 }

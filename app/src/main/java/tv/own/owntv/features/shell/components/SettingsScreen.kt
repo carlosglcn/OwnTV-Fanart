@@ -108,7 +108,7 @@ import tv.own.owntv.ui.theme.primary
 
 internal enum class TileTone { PRIMARY, SECONDARY, TERTIARY }
 
-private enum class SettingsTab { ROOT, LANGUAGE, SOURCES, EPG, BACKUP, LOCAL_SYNC, CUSTOMIZE, HOME, NETWORK, DNS, METADATA, OPEN_SUBTITLES, WEATHER, CH_NAV, PANEL_WIDTH, GUIDE_WIDTH, GLASS_EFFECT, CONTENT_MENUS, FONTS, BROWSING, SUBTITLE_STYLE, SPORTS }
+private enum class SettingsTab { ROOT, LANGUAGE, SOURCES, EPG, BACKUP, LOCAL_SYNC, CUSTOMIZE, HOME, NETWORK, DNS, METADATA, THEINTRODB, OPEN_SUBTITLES, WEATHER, CH_NAV, PANEL_WIDTH, GUIDE_WIDTH, GLASS_EFFECT, CONTENT_MENUS, FONTS, BROWSING, SUBTITLE_STYLE, SPORTS }
 
 @Composable
 private fun epgShiftLabel(minutes: Int): String {
@@ -332,7 +332,6 @@ fun SettingsScreen(
     val zapViews by settingsVm.zapViews.collectAsStateWithLifecycle()
     val backToWindow by settingsVm.backToWindow.collectAsStateWithLifecycle()
     val safeArea by settingsVm.safeArea.collectAsStateWithLifecycle()
-    val autoSkipIntro by settingsVm.autoSkipIntro.collectAsStateWithLifecycle()
     val habitLearning by settingsVm.habitLearning.collectAsStateWithLifecycle()
     val frameMeter by settingsVm.frameMeter.collectAsStateWithLifecycle()
     val osdSeconds by settingsVm.osdSeconds.collectAsStateWithLifecycle()
@@ -341,6 +340,7 @@ fun SettingsScreen(
     val homeCoverDim by settingsVm.homeCoverDim.collectAsStateWithLifecycle()
     val glcnStyle by settingsVm.glcnStyle.collectAsStateWithLifecycle()
     var showGlcnStyle by remember { mutableStateOf(false) }
+    var showLook by remember { mutableStateOf(false) }
     var showHomeLayout by remember { mutableStateOf(false) }
     var showSoundStyle by remember { mutableStateOf(false) }
     var showResetAppearance by remember { mutableStateOf(false) }
@@ -454,6 +454,7 @@ fun SettingsScreen(
         SettingsTab.NETWORK -> { tv.own.owntv.features.settings.NetworkSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
         SettingsTab.DNS -> { tv.own.owntv.features.settings.DnsSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
         SettingsTab.METADATA -> { tv.own.owntv.features.settings.MetadataSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
+        SettingsTab.THEINTRODB -> { tv.own.owntv.features.settings.TheIntroDbSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
         SettingsTab.OPEN_SUBTITLES -> { tv.own.owntv.features.settings.OpenSubtitlesAccountScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
         SettingsTab.WEATHER -> { tv.own.owntv.features.settings.WeatherSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
         SettingsTab.CH_NAV -> { tv.own.owntv.features.settings.ChNavSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
@@ -533,15 +534,7 @@ fun SettingsScreen(
         ),
         // glcn: everything this version adds, on one page.
         RootGroup("group_fanart", stringResource(R.string.glcn_fanart_group), OwnTVIcon.IMAGE, stringResource(R.string.glcn_fanart_summary)),
-        RootRow(
-            "glcn_style", TileTone.PRIMARY, OwnTVIcon.PALETTE,
-            heading = stringResource(R.string.glcn_part_home),
-            title = stringResource(R.string.glcn_style_title),
-            desc = stringResource(R.string.glcn_style_desc),
-            chip = glcnStyle?.label() ?: stringResource(R.string.glcn_style_none),
-            chipTone = if (glcnStyle != null) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { showGlcnStyle = true },
-        ),
+        glcnLookRow(glcnStyle) { showLook = true },
         glcnAccessibleRow(accessibleContext),
         glcnEmbyGroupsRow(accessibleContext),
         glcnCategoryIconsRow(accessibleContext),
@@ -551,20 +544,7 @@ fun SettingsScreen(
         if (tv.own.owntv.glcn.TvProfiles.activeIsTv) glcnTvHomeRow(accessibleContext) else glcnHomeBackdropRow(homeBackdrop) { showHomeLayout = true },
         // glcn: picture, own image and dimming are one row now — "Home background" — with its three choices in a popup.
         if (tv.own.owntv.glcn.TvProfiles.activeIsTv) null else glcnHomeBgRow(homeCover, homeCoverDim) { showHomeBg = true },
-        RootRow(
-            "glcn_season", TileTone.SECONDARY, OwnTVIcon.THEME,
-            title = stringResource(R.string.glcn_season_title),
-            desc = stringResource(R.string.glcn_season_desc),
-            chip = stringResource(
-                when (seasonMode) {
-                    1 -> R.string.glcn_season_details
-                    2 -> R.string.glcn_season_animated
-                    else -> R.string.common_off
-                },
-            ),
-            chipTone = if (seasonMode > 0) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { settingsVm.cycleSeasonMode() },
-        ),
+        glcnSeasonRow(seasonMode, settingsVm::cycleSeasonMode),
         RootRow(
             "glcn_safe_area", TileTone.SECONDARY, OwnTVIcon.LIST_GRID,
             title = stringResource(R.string.glcn_safe_area_title),
@@ -581,14 +561,6 @@ fun SettingsScreen(
             chip = stringResource(if (backToWindow) R.string.glcn_back_window else R.string.glcn_back_stop),
             chipTone = TileTone.PRIMARY,
             onClick = { settingsVm.toggleBackToWindow() },
-        ),
-        RootRow(
-            "glcn_auto_skip_intro", TileTone.SECONDARY, OwnTVIcon.SERIES,
-            title = stringResource(R.string.glcn_auto_skip_title),
-            desc = stringResource(R.string.glcn_auto_skip_desc),
-            chip = stringResource(if (autoSkipIntro) R.string.common_on else R.string.common_off),
-            chipTone = if (autoSkipIntro) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { settingsVm.toggleAutoSkipIntro() },
         ),
         RootRow(
             "glcn_osd", TileTone.SECONDARY, OwnTVIcon.CLOCK,
@@ -680,6 +652,7 @@ fun SettingsScreen(
                     4 -> R.string.glcn_ui_sound_style_soft
                     5 -> R.string.glcn_ui_sound_style_air
                     6 -> R.string.glcn_ui_sound_style_natural
+                    7 -> R.string.glcn_ui_sound_style_ember
                     else -> R.string.glcn_ui_sound_style_classic
                 },
             ),
@@ -882,6 +855,10 @@ fun SettingsScreen(
             onClick = { saveScroll(); dialogReturn = vodLayoutRowFocus; showVodLayout = true },
         ),
         keepWatchingStripRow(),
+        fixedFocusRow(),
+        briskRow(),
+        topBarShapeRow(),
+        railShapeRow(),
         RootRow(
             tabRowKey(SettingsTab.PANEL_WIDTH), TileTone.PRIMARY, OwnTVIcon.PANEL_WIDTH,
             title = stringResource(R.string.settings_panel_width),
@@ -937,13 +914,23 @@ fun SettingsScreen(
         ),
         RootRow(
             tabRowKey(SettingsTab.METADATA), TileTone.PRIMARY, OwnTVIcon.IMAGE,
-            title = stringResource(R.string.settings_metadata), desc = stringResource(R.string.settings_metadata_root_description),
+            title = stringResource(R.string.settings_tmdb), desc = stringResource(R.string.settings_metadata_root_description),
             focus = rowFocus.getValue(SettingsTab.METADATA),
             onClick = { open(SettingsTab.METADATA) },
+            // Two services feed the library's details: TMDB (posters, plots, cast) and TheIntroDB (skip
+            // times). Each has its own screen under one heading.
+            heading = stringResource(R.string.settings_heading_metadata),
+        ),
+        RootRow(
+            tabRowKey(SettingsTab.THEINTRODB), TileTone.PRIMARY, OwnTVIcon.SKIP_NEXT,
+            title = stringResource(R.string.settings_theintrodb), desc = stringResource(R.string.settings_theintrodb_root_description),
+            focus = rowFocus.getValue(SettingsTab.THEINTRODB),
+            onClick = { open(SettingsTab.THEINTRODB) },
         ),
         RootRow(
             tabRowKey(SettingsTab.OPEN_SUBTITLES), TileTone.PRIMARY, OwnTVIcon.SUBTITLE,
             title = stringResource(R.string.settings_open_subtitles), desc = stringResource(R.string.settings_open_subtitles_description),
+            heading = stringResource(R.string.player_subtitles),
             focus = rowFocus.getValue(SettingsTab.OPEN_SUBTITLES),
             onClick = { open(SettingsTab.OPEN_SUBTITLES) },
         ),
@@ -1225,6 +1212,8 @@ fun SettingsScreen(
         SettingsSearchEntry(stringResource(R.string.settings_group_layout), stringResource(R.string.settings_browsing_lists), stringResource(R.string.settings_search_keywords_browsing), OwnTVIcon.LIST_GRID, TileTone.PRIMARY) { open(SettingsTab.BROWSING) },
             SettingsSearchEntry(stringResource(R.string.settings_group_layout), stringResource(R.string.settings_home_root), stringResource(R.string.settings_search_keywords_home), OwnTVIcon.HOME, TileTone.SECONDARY) { open(SettingsTab.HOME) },
             SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_metadata), stringResource(R.string.settings_search_keywords_metadata), OwnTVIcon.IMAGE, TileTone.PRIMARY) { open(SettingsTab.METADATA) },
+            SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_tmdb), stringResource(R.string.settings_search_keywords_metadata), OwnTVIcon.IMAGE, TileTone.PRIMARY) { open(SettingsTab.METADATA) },
+            SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_theintrodb), stringResource(R.string.settings_theintrodb_root_description), OwnTVIcon.SKIP_NEXT, TileTone.PRIMARY) { open(SettingsTab.THEINTRODB) },
             // No entries for the download folder, Backup, Local sync or Clear history. They
             // are not in Settings any more, and a result for something that is not here is a lie
             // about where it lives. The no-results state deliberately says nothing else either.
@@ -1592,6 +1581,16 @@ fun SettingsScreen(
     }
     if (showHomeLayout) {
         tv.own.owntv.glcn.HomeLayoutPicker(homeBackdrop, onPick = settingsVm::setHomeBackdropStyle, onDismiss = { showHomeLayout = false })
+    }
+    if (showLook) LookPopupHost(settingsVm) { which ->
+        when (which) {
+            LOOK_ACCENT -> { saveScroll(); dialogReturn = accentRowFocus; showAccent = true }
+            LOOK_FOCUS -> showFocusHighlight = true
+            LOOK_SOUNDS -> showSoundStyle = true
+            LOOK_OLDER -> showGlcnStyle = true
+            LOOK_GLASS -> { showLook = false; open(SettingsTab.GLASS_EFFECT) }
+            else -> showLook = false
+        }
     }
     if (showGlcnStyle) {
         tv.own.owntv.glcn.StylePickerPopup(glcnStyle, onPick = { st -> settingsVm.applyGlcnStyle(st); if (st == null) { chainAccent = true; showTheme = true } }, onDismiss = { showGlcnStyle = false })
@@ -2101,6 +2100,7 @@ private fun vodLayoutLabelRes(layout: tv.own.owntv.core.settings.SettingsReposit
     when (layout) {
         tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC -> R.string.settings_vod_layout_cinematic
         tv.own.owntv.core.settings.SettingsRepository.VodLayout.RUNWAY -> R.string.settings_vod_layout_runway
+        tv.own.owntv.core.settings.SettingsRepository.VodLayout.SHELVES -> R.string.glcn_vod_layout_shelves
         else -> R.string.settings_vod_layout_separate
     }
 
@@ -2827,6 +2827,9 @@ private fun subScreenSearchEntries(open: (SettingsTab) -> Unit): List<SettingsSe
         SettingsSearchEntry(stringResource(R.string.settings_group_appearance), stringResource(R.string.settings_custom_location), stringResource(R.string.settings_search_keywords_weather), OwnTVIcon.WEATHER, TileTone.SECONDARY) { open(SettingsTab.WEATHER) },
         SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_metadata_source), stringResource(R.string.settings_search_keywords_metadata), OwnTVIcon.IMAGE, TileTone.SECONDARY) { open(SettingsTab.METADATA) },
         SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_metadata_language), stringResource(R.string.settings_search_keywords_metadata), OwnTVIcon.IMAGE, TileTone.SECONDARY) { open(SettingsTab.METADATA) },
+        SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_skip_group), stringResource(R.string.settings_skip_part_description), OwnTVIcon.SKIP_NEXT, TileTone.SECONDARY) { open(SettingsTab.THEINTRODB) },
+        SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_skip_button_show), stringResource(R.string.settings_skip_group), OwnTVIcon.SKIP_NEXT, TileTone.SECONDARY) { open(SettingsTab.THEINTRODB) },
+        SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_theintrodb_account), stringResource(R.string.settings_skip_group), OwnTVIcon.PERSON, TileTone.SECONDARY) { open(SettingsTab.THEINTRODB) },
         SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.player_subtitles_search_language), stringResource(R.string.settings_search_keywords_subtitle_appearance), OwnTVIcon.SUBTITLE, TileTone.SECONDARY) { open(SettingsTab.OPEN_SUBTITLES) },
         SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.player_subtitles_filter_title), stringResource(R.string.settings_search_keywords_subtitle_appearance), OwnTVIcon.SUBTITLE, TileTone.SECONDARY) { open(SettingsTab.OPEN_SUBTITLES) },
         SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.player_subtitles_stay_signed_in), stringResource(R.string.settings_search_keywords_subtitle_appearance), OwnTVIcon.SUBTITLE, TileTone.SECONDARY) { open(SettingsTab.OPEN_SUBTITLES) },
@@ -3055,7 +3058,7 @@ private fun stageRowExtras(
     val liveLayouts = tv.own.owntv.core.settings.SettingsRepository.LiveLayout.entries
     val liveViews = tv.own.owntv.core.settings.SettingsRepository.LiveView.entries
     // Cinematic first.
-    val vodLayouts = listOf(tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC, tv.own.owntv.core.settings.SettingsRepository.VodLayout.RUNWAY, tv.own.owntv.core.settings.SettingsRepository.VodLayout.SEPARATE)
+    val vodLayouts = listOf(tv.own.owntv.core.settings.SettingsRepository.VodLayout.CINEMATIC, tv.own.owntv.core.settings.SettingsRepository.VodLayout.RUNWAY, tv.own.owntv.core.settings.SettingsRepository.VodLayout.SHELVES, tv.own.owntv.core.settings.SettingsRepository.VodLayout.SEPARATE)
     val presets = tv.own.owntv.core.theme.AccentColor.entries
     val presetColors = presets.map { it.primary(true) }
     val current = tv.own.owntv.ui.theme.stageAccent.accent
@@ -3171,6 +3174,11 @@ private fun serviceRowExtras(vm: SettingsViewModel): Map<String, RowExtra> {
     LaunchedEffect(tier) { if (tier == tv.own.owntv.core.metadata.MetadataConfig.Tier.DEFAULT_WORKER) vm.refreshMetadataBudget() }
     val osVm: tv.own.owntv.features.settings.OpenSubtitlesViewModel = org.koin.androidx.compose.koinViewModel()
     val os by osVm.state.collectAsStateWithLifecycle()
+    val introKey by vm.theIntroDbApiKey.collectAsStateWithLifecycle()
+    val introStatus by vm.theIntroDbStatus.collectAsStateWithLifecycle()
+    val introQuota by vm.theIntroDbQuota.collectAsStateWithLifecycle()
+    // The allowance is only known once the service has answered; ask once if nothing has this session.
+    LaunchedEffect(Unit) { if (vm.theIntroDbQuota.value == null && vm.theIntroDbStatus.value == null) vm.checkTheIntroDb() }
     val proxy by vm.proxyConfig.collectAsStateWithLifecycle()
     val dns by vm.dnsConfig.collectAsStateWithLifecycle()
     val on = stringResource(R.string.common_on)
@@ -3217,10 +3225,21 @@ private fun serviceRowExtras(vm: SettingsViewModel): Map<String, RowExtra> {
                         tv.own.owntv.core.metadata.MetadataConfig.Tier.OWN_KEY -> R.string.settings_tier_key
                         tv.own.owntv.core.metadata.MetadataConfig.Tier.SELF_HOST -> R.string.settings_tier_self_host
                     }))
-                    // The shared service has a daily allowance; an own key or self-host has none to show.
-                    if (tier == tv.own.owntv.core.metadata.MetadataConfig.Tier.DEFAULT_WORKER && b != null) {
-                        line(stringResource(R.string.settings_allowance_day), pluralStringResource(R.plurals.settings_allowance_value, b.remainingDay, b.remainingDay, b.limitDay))
+                    // The shared service has a daily allowance. An own key or self-host has none from OwnTV,
+                    // and TMDB publishes no usage figure for a personal key, so that is what it says.
+                    if (tier == tv.own.owntv.core.metadata.MetadataConfig.Tier.DEFAULT_WORKER) {
+                        if (b != null) line(stringResource(R.string.settings_allowance_day), pluralStringResource(R.plurals.settings_allowance_value, b.remainingDay, b.remainingDay, b.limitDay))
+                    } else {
+                        line(stringResource(R.string.settings_allowance_day), stringResource(R.string.settings_allowance_unlimited))
                     }
+                }
+            },
+        ),
+        "tab_THEINTRODB" to RowExtra(
+            SettingValue.Opens(if (introKey.isBlank()) stringResource(R.string.settings_shared) else tv.own.owntv.features.settings.maskSecret(introKey)),
+            extra = {
+                Column(Modifier.padding(top = 8.mpx)) {
+                    tv.own.owntv.features.settings.TheIntroDbStatusLines(introStatus, introKey, introQuota)
                 }
             },
         ),
@@ -3406,3 +3425,98 @@ private fun keepWatchingStripRow(): RootRow = RootRow(
     chipTone = if (tv.own.owntv.glcn.StripPref.on) TileTone.PRIMARY else TileTone.SECONDARY,
     onClick = { tv.own.owntv.glcn.StripPref.set(!tv.own.owntv.glcn.StripPref.on) },
 )
+
+/** glcn: the interface's pace — brisk (everything that moves after a key takes half the time) or as gentle as it was. */
+@Composable
+private fun briskRow(): RootRow = RootRow(
+    "glcn_brisk", TileTone.PRIMARY, OwnTVIcon.PLAY,
+    title = stringResource(R.string.glcn_brisk_title),
+    desc = stringResource(R.string.glcn_brisk_desc),
+    chip = stringResource(if (tv.own.owntv.glcn.PacePref.brisk) R.string.common_on else R.string.common_off),
+    chipTone = if (tv.own.owntv.glcn.PacePref.brisk) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = { tv.own.owntv.glcn.PacePref.set(!tv.own.owntv.glcn.PacePref.brisk) },
+)
+
+/** glcn: how the side menu is drawn — each press moves on to the next shape. */
+@Composable
+private fun railShapeRow(): RootRow = RootRow(
+    "glcn_rail_shape", TileTone.PRIMARY, OwnTVIcon.LIST,
+    title = stringResource(R.string.glcn_rail_shape_title),
+    desc = stringResource(R.string.glcn_rail_shape_desc),
+    chip = stringResource(tv.own.owntv.glcn.RailPref.shape.label),
+    chipTone = TileTone.PRIMARY,
+    onClick = { tv.own.owntv.glcn.RailPref.next() },
+)
+
+/** glcn: how the top bar is drawn — each press moves on to the next shape, and the bar above shows it at once. */
+@Composable
+private fun topBarShapeRow(): RootRow = RootRow(
+    "glcn_top_bar_shape", TileTone.PRIMARY, OwnTVIcon.TILES,
+    title = stringResource(R.string.glcn_top_bar_shape_title),
+    desc = stringResource(R.string.glcn_top_bar_shape_desc),
+    chip = stringResource(tv.own.owntv.glcn.TopBarPref.shape.label),
+    chipTone = TileTone.PRIMARY,
+    onClick = { tv.own.owntv.glcn.TopBarPref.next() },
+)
+
+/** glcn: Live TV's channel list with the highlight fixed and the channels passing under it. */
+@Composable
+private fun fixedFocusRow(): RootRow = RootRow(
+    "glcn_fixed_focus", TileTone.PRIMARY, OwnTVIcon.LIVE_TV,
+    title = stringResource(R.string.glcn_fixed_focus_title),
+    desc = stringResource(R.string.glcn_fixed_focus_desc),
+    chip = stringResource(if (tv.own.owntv.glcn.ListFocusPref.fixed) R.string.common_on else R.string.common_off),
+    chipTone = if (tv.own.owntv.glcn.ListFocusPref.fixed) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = { tv.own.owntv.glcn.ListFocusPref.set(!tv.own.owntv.glcn.ListFocusPref.fixed) },
+)
+
+/** glcn: seasonal touches (moved out of the screen's body, which is near the size a method may have). */
+@Composable
+private fun glcnSeasonRow(seasonMode: Int, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_season", TileTone.SECONDARY, OwnTVIcon.THEME,
+    title = stringResource(R.string.glcn_season_title),
+    desc = stringResource(R.string.glcn_season_desc),
+    chip = stringResource(
+        when (seasonMode) {
+            1 -> R.string.glcn_season_details
+            2 -> R.string.glcn_season_animated
+            else -> R.string.common_off
+        },
+    ),
+    chipTone = if (seasonMode > 0) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = onClick,
+)
+
+/** glcn: Appearance's row — the theme's name, or the earlier style's, or "My own colours". */
+@Composable
+private fun glcnLookRow(style: tv.own.owntv.core.theme.GlcnStyle?, onClick: () -> Unit): RootRow = RootRow(
+    "glcn_style", TileTone.PRIMARY, OwnTVIcon.PALETTE,
+    heading = stringResource(R.string.glcn_part_home),
+    title = stringResource(R.string.glcn_look_title),
+    desc = stringResource(R.string.glcn_look_desc),
+    chip = style?.let { st -> tv.own.owntv.core.theme.GlcnTheme.of(st)?.label() ?: st.label() } ?: stringResource(R.string.glcn_style_none),
+    chipTone = if (style != null) TileTone.PRIMARY else TileTone.SECONDARY,
+    onClick = onClick,
+)
+
+private const val LOOK_CLOSE = 0
+private const val LOOK_ACCENT = 1
+private const val LOOK_FOCUS = 2
+private const val LOOK_SOUNDS = 3
+private const val LOOK_OLDER = 4
+private const val LOOK_GLASS = 5
+
+/** glcn: Appearance's popup, on its own so the settings screen's body stays within the size a method may have.
+ *  [onOpen] gets what to open next (LOOK_*), or LOOK_CLOSE when it closes. */
+@Composable
+private fun LookPopupHost(settingsVm: tv.own.owntv.features.settings.SettingsViewModel, onOpen: (Int) -> Unit) {
+    val style by settingsVm.glcnStyle.collectAsStateWithLifecycle()
+    val mode by settingsVm.glcnStyleMode.collectAsStateWithLifecycle()
+    val backdrop by settingsVm.glcnBackdrop.collectAsStateWithLifecycle()
+    tv.own.owntv.glcn.LookPopup(
+        style = style, mode = mode, backdrop = backdrop,
+        onTheme = settingsVm::applyGlcnTheme, onMode = settingsVm::setGlcnStyleMode, onBackdrop = settingsVm::setGlcnBackdrop,
+        onAccent = { onOpen(LOOK_ACCENT) }, onFocus = { onOpen(LOOK_FOCUS) }, onSounds = { onOpen(LOOK_SOUNDS) }, onOlder = { onOpen(LOOK_OLDER) }, onGlass = { onOpen(LOOK_GLASS) },
+        onDismiss = { onOpen(LOOK_CLOSE) },
+    )
+}

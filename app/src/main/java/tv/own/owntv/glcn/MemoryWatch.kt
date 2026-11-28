@@ -35,6 +35,11 @@ object MemoryWatch {
     @Volatile private var lastPong = SystemClock.uptimeMillis()
     private val pong = Runnable { lastPong = SystemClock.uptimeMillis() }
 
+    /** glcn: optional work holds back for a while (a heavy film is starting); lifted by the minute check as usual. */
+    fun holdBack() {
+        tight = true
+    }
+
     fun start(context: Context) {
         if (started) return
         started = true
@@ -87,6 +92,7 @@ object MemoryWatch {
             nextSample = now + SAMPLE_MS
             // glcn: how smoothly the last minute was drawn, per screen (nothing when nothing was drawn).
             FrameWatch.drain().takeIf { it.isNotEmpty() }?.let { LiveDiagnosticsLog.event("frames · $it") }
+            FrameWatch.drainBusy().takeIf { it.isNotEmpty() }?.let { LiveDiagnosticsLog.event("busy · $it") }
             val m = MemoryBreakdown.read() ?: continue
             // glcn: the whole box too — the trailer's web page and other apps use memory this process's figure never
             // shows; when the box runs short the app suffers even with a small figure of its own.
@@ -103,7 +109,10 @@ object MemoryWatch {
                 lastLoggedMb = mb
                 lastLineAt = now
             }
-            if ((mb >= brakeMb || boxShort) && now - lastBrakeAt >= BRAKE_GAP_MS) {
+            // glcn: with the box at ease (plenty free) the app may run a little past its mark before anything is let
+            // go — on a SHIELD the brake came on at 497 MB with 880 MB free, and browsing then loaded its pictures again.
+            val limitMb = if (!boxShort && freeMb >= FREE_EASY_MB) brakeMb * EASY_PCT / 100 else brakeMb
+            if ((mb >= limitMb || boxShort) && now - lastBrakeAt >= BRAKE_GAP_MS) {
                 lastBrakeAt = now
                 brake(app, mb, brakeMb, boxShort)
             } else if (tight && !boxShort && mb < brakeMb * 85 / 100) {
@@ -131,11 +140,14 @@ object MemoryWatch {
         tight = true
         main.post {
             tv.own.owntv.ui.components.TrailerPool.free()
-            runCatching { SingletonImageLoader.get(app).memoryCache?.clear() }
+            // a quarter stays (the screen on show), so the brake is not seen as everything loading again
+            runCatching { SingletonImageLoader.get(app).memoryCache?.let { it.trimToSize(it.maxSize / 4) } }
         }
         LiveDiagnosticsLog.event("memory brake at $mb MB (limit $brakeMb)${if (boxShort) ", box short" else ""}: pictures in memory, trailer and prefetch let go")
     }
 
+    private const val FREE_EASY_MB = 600
+    private const val EASY_PCT = 130
     private const val TICK_MS = 1_000L
     private const val STALL_MS = 3_000L
     private const val STACK_LINES = 12

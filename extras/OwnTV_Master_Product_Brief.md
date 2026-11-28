@@ -123,6 +123,7 @@ Each engine is chosen automatically by content type, with fallback between them.
 | Text (SRT/ASS) | Drawn by the app on the direct render path |
 | Image (PGS/VOBSUB/DVB) | Handed to a second ExoPlayer layer, keeping video on the zero-copy/HDR path |
 | Closed captions (CEA-608/708) | Decoded from the video stream into a selectable track |
+| Local files | One file picked by hand, or **Find in folder**: a folder chosen once, best match first, optional automatic loading of the one exact match |
 
 Independent **font, scale, colour, position and background** across mpv, ExoPlayer and the app-drawn
 overlay; *Default* preserves authored styling. **Preferred audio/subtitle language** (per profile, 50
@@ -133,10 +134,15 @@ multiplier at visibly different sizes.
 External subtitles come from **OpenSubtitles** (own account, remote sign-in by QR + PIN) or a
 **local file**, with a timing row in the Subtitles menu (◀ ▶ 0.1 s, OK = back to zero).
 
+**Skip intro, recap, end credits and preview** come from **TheIntroDB** (by the title's TMDB id, asked
+from the device, optional personal key, kept in memory only). Per part: Off, a button, or skip
+automatically; known end credits start the next-episode card and count the title as watched. "Check
+TheIntroDB" in the film, series and episode long-press menus shows what the service has for a title.
+
 ### 2.5 Player HUD
 
 Scrubbable seek bar · previous/next through the episode queue · play/pause · audio, subtitle and
-speed pickers · zoom and aspect (Fit · Fill · Stretch · Original · Force 16:9 · Force 4:3 — a press steps to the next, hold OK for the list) · **Sources** (the same channel in another quality, category or playlist, from core) · volume
+speed pickers · zoom and aspect (Fit · Fill · Stretch · Original · Force 16:9 · Force 4:3 · Force 20:9 — a press steps to the next, hold OK for the list) · **Sources** (the same channel in another quality, category or playlist, from core) · volume
 with mute · favourite the current item · **stream info overlay** (codec, resolution, fps, bit depth,
 HDR type, interlacing on mpv, bitrate, decoder, audio, buffer, dropped frames, masked source URL) · a **clock** in every
 mode, becoming *Programme time* + *Current time* during a replay · auto-hiding controls, with **Back**
@@ -188,7 +194,7 @@ default **Full-bleed** layout it is one title over its dissolving backdrop — r
 title, year, genres, runtime or seasons, rating, synopsis, and Play / Trailer / All versions (with a
 count) / details / favourite — with a pager underneath (◀ ▶ change the title; auto-advance pauses while
 the hero has focus). Moving into the rows folds the hero to a single line; ▲ from the first row
-unfolds it. **Posters only** makes the trending titles the first poster row instead.
+unfolds it. **Posters only** makes the trending titles the first poster row instead; held OK or Menu on a poster opens its menu.
 
 **Keep watching** follows: partly-watched films, episodes and recent channels as 16:9 stills (TMDB
 backdrop → provider backdrop → poster → channel logo on a plate) with progress and time left; resting
@@ -219,13 +225,14 @@ Live TV* (Browsing & lists, off by default) gives the TV Guide Live TV's remembe
 Library / Organise / Details). A **series page** carries the backdrop, Resume/Play, Favourite,
 **Download season** (it asks first with the episode count; gone for a profile with downloads off) and series options, season tabs with counts (Specials last and uncounted; an
 unstarted show plays from Season 1 Episode 1 and auto-play reaches the Specials after the finale),
-Grid | List and an Episode order menu (oldest/newest, hide watched); episode titles are cleaned of
+Grid | List and an Episode order menu (oldest/newest, hide watched); episode pictures are TMDB's still, else the
+provider's own picture of that episode (database v57), else the show's backdrop; episode titles are cleaned of
 "Show – S01E03 –" prefixes, with TMDB's title filling a gap. Page and hero headlines drop a leading
 provider tag such as "|MULTI|"; poster labels keep the provider's spelling. **Trailers** play in an in-app player
 (OK pauses, ◀ ▶ skip 10 s) that tries the next stored trailer when one is blocked, then offers to open
 YouTube.
 
-**Downloads** — Movies / Series / Recordings tabs with counts, the volume's name and free space, and
+**Downloads** — Recordings / Movies / Series tabs (opens on Recordings) with counts, the volume's name and free space, and
 the folder each tab saves to; rows grouped Downloading / On this TV with picture, details, full file
 path and live "64% · 12.4 MB/s · 3 min left"; actions appear on the focused row only. A Recordings card
 shows the next scheduled recording. A channel's menu also schedules a recording by day, start and end
@@ -355,8 +362,11 @@ again on every wake.
   screen including the player, or switches, or only notifies.
 - The grid reloads only once a guide sync finishes, instead of rebuilding every ~25 s during one.
 - **Catch-up TV** — replay programmes that already aired, up to 7 days, seekable. **Live rewind**
-  scrubs the live stream on archive-capable channels. **Go back to…** jumps straight to a time, with
-  an exact day/hour/minute picker clamped to the archive window — and works with **no guide at all**.
+  scrubs the live stream on archive-capable channels. A channel's **Archive** (channel menu, or the
+  player's catch-up button) is its Program details page with a days panel reaching as far back as the
+  archive, each past programme playable from its start. On a channel with **no guide at all** the same
+  entries open **Go back to…**, which jumps straight to a time, with an exact day/hour/minute picker
+  clamped to the archive window.
   A **Catch-up category** in Live TV lists every channel that advertises an archive.
 - **Pause and rewind live TV** (local timeshift, opt-in) — a channel without catch-up is saved on the
   device while it is watched full screen (15–60 min, always ≥ 1 GB free) and played from that copy, so it
@@ -367,6 +377,8 @@ again on every wake.
 - **Auto-match EPG** links channels to guide data when `tvg-id` is missing or wrong, scanning only the
   playlist(s) the guide is showing (a 400-channel playlist in about 3 s); confident matches
   apply automatically and the rest go to a review list. Matches are per profile and survive re-syncs.
+  Every match (Live TV, the Guide, Auto-match, review) goes through core's `GuideMatches`: it fills from the
+  cached guide and re-syncs only the feeds that list the id when that cannot.
   A **guide time offset** corrects a feed published in another time zone, globally or per channel.
 - **Several XMLTV feeds:** the order in EPG Sources is the guide priority — where two feeds list one
   channel, the higher one is drawn and a lower one only fills its gaps.
@@ -458,7 +470,7 @@ their group.
 | **Sources & guide** | Playlists, EPG sources · EPG time offset, Programme reminders, Reminder time, Guide days to keep, Catch-up time zone (+ per playlist) |
 | **Appearance** | Theme, Accent color, Focus highlight, Glass & background, Ambient Glow (Dark + Glass off only), Fonts & text size, Popup size, UI zoom, Animations, Date, time & weather — with a live Home preview |
 | **Layout** | Navigation, Live TV layout, Live TV opens in, Movies & Series layout, Panel widths, Guide column widths, Browsing & lists, Home screen, Long-press menus, Remote shortcuts |
-| **Content & metadata** | Customize categories & items, Metadata (TMDB), OpenSubtitles |
+| **Content & metadata** | Customize categories & items; Metadata: TMDB, TheIntroDB; Subtitles: OpenSubtitles |
 | **Player** | Live TV / Movies & Series player (+ per playlist), saved choices, External player · Film buffer, Network timeout, Reconnect attempts |
 | **Picture** | Hardware decoding, Prefer SDR, Maximum video quality, Tunneled playback, Default zoom, saved zoom · Auto frame rate, Pause during the switch, Match resolution |
 | **Sound & subtitles** | Default volume, Surround, Dolby/DTS passthrough, Night mode, Volume leveling, Audio sync (+ saved) · Preferred audio / subtitle language, Subtitle appearance |
@@ -483,7 +495,8 @@ their group.
 - **Remote Shortcuts** — short and long presses of spare colour, number, channel and media keys
   mapped to 26 actions. Essential keys stay protected; the shipped CH+/− paging remains the default.
   **Player buttons** on the same page: what holding or pressing OK opens in the full-screen player,
-  swapped channel up/down, and number keys on or off; every default is the player's own behaviour.
+  swapped channel up/down, number keys on or off, and what D-pad Up/Down do (change channel, controls and
+  recently watched, or nothing); every default is the player's own behaviour.
 - **Stage defaults** are written once at the first start of v5.1.0 (core `applyStageDefaults`); a
   value the user already stored is kept.
 - **Developer** (dev-tools builds only) lives under More, not Settings.

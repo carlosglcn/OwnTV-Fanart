@@ -12,6 +12,13 @@ import androidx.compose.runtime.setValue
  */
 object CinemaStage {
     var panelOpen by mutableStateOf(false)
+
+    /**
+     * glcn: a 4K or HDR picture stays full size behind the side panel. Shrinking it while it plays (the panel's slide
+     * to the left) closed the app on a SHIELD with a 4K HDR episode — the decoder's surface torn down and rebuilt at
+     * another size; the panel then goes over the picture, as it did before the slide.
+     */
+    var keepFullPicture by mutableStateOf(false)
 }
 
 /** What the cinema banner and its Info tab show about the film or episode playing. */

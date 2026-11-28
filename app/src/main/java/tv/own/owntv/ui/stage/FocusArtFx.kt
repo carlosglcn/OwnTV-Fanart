@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.launch
+import tv.own.owntv.ui.theme.mpx
 
 /**
  * glcn: the focused card's picture comes alive — it drifts slowly closer (a Ken Burns push-in) and a
@@ -63,6 +64,70 @@ internal class TiltAnims(val amp: Animatable<Float, *>, val phase: Animatable<Fl
 internal object FocusTilt {
     var active by androidx.compose.runtime.mutableStateOf<TiltAnims?>(null)
 }
+
+/**
+ * glcn: the edge of a picture card, after iOS 27's glass — a darker rim along the foot sets it off from a bright
+ * page, and while it holds focus a thin catch of light runs along its top. The light lands on the side the focus
+ * came from and settles at the upper left, so the card seems to turn towards you. Drawn over the picture, inside
+ * its clip; nothing recomposes as it moves.
+ */
+@Composable
+internal fun Modifier.specularEdge(focused: Boolean, radius: androidx.compose.ui.unit.Dp): Modifier {
+    val animate = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
+    val lit = remember { Animatable(0f) }
+    val spot = remember { Animatable(SPEC_REST) }
+    LaunchedEffect(focused, animate) {
+        if (!focused) { lit.animateTo(0f, tween(SPEC_OUT_MS)); return@LaunchedEffect }
+        if (!animate) { lit.snapTo(1f); spot.snapTo(SPEC_REST); return@LaunchedEffect }
+        // The light starts on the side the focus came from (◀ leaves it on the right) and slides home.
+        spot.snapTo((SPEC_REST - FocusMotion.dx * SPEC_SWING).coerceIn(0f, 1f))
+        launch { lit.animateTo(1f, tween(SPEC_IN_MS)) }
+        spot.animateTo(SPEC_REST, androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 90f))
+    }
+    return drawWithContent {
+        drawContent()
+        val r = radius.toPx()
+        val px = 1.mpx.toPx()
+        val corner = androidx.compose.ui.geometry.CornerRadius(r)
+        // The darker foot, always there: from nothing at mid-height to a soft shade along the bottom edge.
+        val dark = 2.5f * px
+        drawRoundRect(
+            Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = SPEC_DARK)),
+            topLeft = Offset(dark / 2f, dark / 2f),
+            size = androidx.compose.ui.geometry.Size(size.width - dark, size.height - dark),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius((r - dark / 2f).coerceAtLeast(0f)),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(dark),
+        )
+        val l = lit.value
+        if (l <= 0.01f) return@drawWithContent
+        // The catch of light: brightest where it lands on the top edge, fading round the corners.
+        val w = 2f * px
+        val cx = size.width * spot.value
+        drawRoundRect(
+            Brush.radialGradient(
+                listOf(Color.White.copy(alpha = SPEC_LIGHT * l), Color.White.copy(alpha = 0.18f * l), Color.Transparent),
+                center = Offset(cx, 0f),
+                radius = size.width * 0.75f,
+            ),
+            topLeft = Offset(w / 2f, w / 2f),
+            size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius((r - w / 2f).coerceAtLeast(0f)),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(w),
+        )
+        // A faint glow just under the brightest point, as light caught in the top of a pane of glass.
+        drawRoundRect(
+            Brush.radialGradient(listOf(Color.White.copy(alpha = 0.10f * l), Color.Transparent), center = Offset(cx, 0f), radius = size.height * 0.55f),
+            cornerRadius = corner,
+        )
+    }
+}
+
+private const val SPEC_REST = 0.28f
+private const val SPEC_SWING = 0.45f
+private const val SPEC_LIGHT = 0.75f
+private const val SPEC_DARK = 0.32f
+private const val SPEC_IN_MS = 220
+private const val SPEC_OUT_MS = 260
 
 @Composable
 internal fun BoxScope.FocusArtFx(focused: Boolean, content: @Composable BoxScope.() -> Unit) {

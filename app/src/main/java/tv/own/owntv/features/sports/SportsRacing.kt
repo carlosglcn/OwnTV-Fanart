@@ -1,7 +1,9 @@
 package tv.own.owntv.features.sports
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -153,10 +155,12 @@ internal fun PlayerRankLine(r: tv.own.owntv.core.sports.model.RankingRow) {
 
 /** glcn: a racing session's order while it runs — every driver, position by position. */
 @Composable
-internal fun LiveOrderLine(pos: Int, c: tv.own.owntv.core.sports.model.Competitor) {
+internal fun LiveOrderLine(pos: Int, c: tv.own.owntv.core.sports.model.Competitor, followed: Boolean = false, onFollow: (() -> Unit)? = null) {
     var on by remember { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().onFocusChanged { on = it.isFocused }.focusable()
+        Modifier.fillMaxWidth().onFocusChanged { on = it.isFocused }
+            // glcn: OK on a driver or rider follows them (or stops following).
+            .then(if (onFollow != null) Modifier.clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = onFollow) else Modifier.focusable())
             .background(if (on) StageColors.Ink.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(10.mpx))
             .padding(vertical = 6.mpx, horizontal = 10.mpx),
         horizontalArrangement = Arrangement.spacedBy(16.mpx), verticalAlignment = Alignment.CenterVertically,
@@ -164,6 +168,10 @@ internal fun LiveOrderLine(pos: Int, c: tv.own.owntv.core.sports.model.Competito
         Text(pos.toString(), style = stageText(20, 800), color = if (pos <= 3) tv.own.owntv.ui.theme.stageAccent.accent else StageColors.Muted, textAlign = TextAlign.End, modifier = Modifier.width(44.mpx))
         Crest(c.team, 40)
         Text(c.team.name, style = stageText(20, 700), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        if (followed) tv.own.owntv.ui.components.OwnTVIcon(tv.own.owntv.ui.components.OwnTVIcon.STAR, tv.own.owntv.ui.theme.stageAccent.ink, Modifier.size(18.mpx), filled = true)
+        else if (on && onFollow != null) Text(stringResource(R.string.sports_follow), style = stageText(15, 600), color = StageColors.Muted, maxLines = 1)
         c.team.country?.let { Text(it, style = stageText(15, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        // glcn: a classified session — the winner's time, the others' gap to it.
+        c.score?.text?.takeIf { it.isNotBlank() }?.let { Text(it, style = stageText(18, 700), color = StageColors.Body, maxLines = 1) }
     }
 }

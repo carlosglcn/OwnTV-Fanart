@@ -99,6 +99,7 @@ import tv.own.owntv.glcn.fanartAmbience
 import tv.own.owntv.ui.theme.LocalGlass
 import tv.own.owntv.core.theme.ThemeMode
 import tv.own.owntv.core.live.LiveKey
+import tv.own.owntv.core.live.displayText
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
@@ -124,6 +125,7 @@ fun OwnTVShell(
     onSetFontCustomization: (tv.own.owntv.core.theme.FontCustomization) -> Unit,
     avatarId: Int,
     onSetAvatar: (Int) -> Unit,
+    modifier: Modifier = Modifier,
     // The active profile's own picture, and the two things that can be done to it. Blank = none.
     avatarPath: String = "",
     onSetCustomAvatar: (java.io.File) -> Unit = {},
@@ -143,7 +145,6 @@ fun OwnTVShell(
     isOffline: Boolean = false,
     onExitApp: () -> Unit,
     onSwitchProfile: () -> Unit,
-    modifier: Modifier = Modifier,
     // Called once the profile's start-up choice has been applied; the splash waits for it.
     onStartupSettled: () -> Unit = {},
 ) {
@@ -233,7 +234,12 @@ fun OwnTVShell(
     val shellContentFocus = remember { FocusRequester() }
     // Stage navigation (P1, P1b): where the rail sits, what it shows, its length, the floating hide delay.
     val backToWindow by settingsRepo.backToWindow.collectAsStateWithLifecycle(initialValue = false)
-    val autoSkipIntro by settingsRepo.autoSkipIntro.collectAsStateWithLifecycle(initialValue = false)
+    // glcn: our intro/credits fallback (file chapters, a learned jump) follows the core's skip: its choices, and only
+    // while it has no times of its own for what is playing.
+    val skipCore = org.koin.compose.koinInject<tv.own.owntv.player.SkipSegmentController>()
+    val skipHasTimes by skipCore.hasTimes.collectAsStateWithLifecycle()
+    val skipIntroMode by skipCore.introMode.collectAsStateWithLifecycle()
+    val skipCreditsMode by skipCore.creditsMode.collectAsStateWithLifecycle()
     var hudControlsVisible by remember { mutableStateOf(true) }
     var introSkipVisible by remember { mutableStateOf(false) }
     val introContext = androidx.compose.ui.platform.LocalContext.current
@@ -262,6 +268,10 @@ fun OwnTVShell(
     var guideEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
     var vodEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
     var downloadsEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
+    var searchEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
+    // Search opened from the rail leaves focus there, like every section; the remote's Search key,
+    // Home's trending search and the way back from a "Go to" go straight into it.
+    var searchTakesFocus by remember { mutableStateOf(true) }
     var moreEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
     var sportsEntry by remember { mutableStateOf<(() -> Boolean)?>(null) }
     // Home's Live sports row opens a match page through the same request the player's Match button uses.
@@ -288,7 +298,12 @@ fun OwnTVShell(
     val navSections = if (tv.own.owntv.glcn.TvProfiles.isTv(activeProfileId)) visibleSections - setOf(MainSection.MOVIES, MainSection.SERIES, MainSection.DOWNLOADS) else visibleSections
     // glcn: measured again when the text size changes (accessible mode makes the names a quarter larger): the bar
     // only folds to icons while it truly does not fit, and opens up again once it does.
-    var topCompactForced by remember(topSize, visibleSections, tv.own.owntv.glcn.Accessible.on, androidx.compose.ui.platform.LocalDensity.current.fontScale) { mutableStateOf(false) }
+    // glcn: …and when the bar's shape changes — a wide shape that did not fit left the next one folded to icons too,
+    // names gone for good ("Normal" size, yet only icons), until the app was opened again.
+    var topCompactForced by remember(topSize, visibleSections, tv.own.owntv.glcn.Accessible.on, androidx.compose.ui.platform.LocalDensity.current.fontScale, tv.own.owntv.glcn.TopBarPref.shape) { mutableStateOf(false) }
+    // glcn: before folding to icons the bar tries itself a size smaller, names and all — folded, only the open section
+    // is named and the bar changes width at every step along it.
+    var topTight by remember(topSize, visibleSections, tv.own.owntv.glcn.Accessible.on, androidx.compose.ui.platform.LocalDensity.current.fontScale, tv.own.owntv.glcn.TopBarPref.shape) { mutableStateOf(false) }
     val topGapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 16.mpx.toPx() }
     LaunchedEffect(topBarBounds, playlistPillBounds, navStyle, topCompactForced) {
         val bar = topBarBounds
@@ -296,14 +311,26 @@ fun OwnTVShell(
         if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.TOP && bar != null && pl != null &&
             !topCompactForced && topSize != tv.own.owntv.core.settings.SettingsRepository.NavSize.COMPACT &&
             bar.right > pl.left - topGapPx
-        ) topCompactForced = true
+        ) {
+            if (!topTight) topTight = true
+            else {
+                // Still over the chips once the smaller bar has settled (this starts again while its width moves).
+                kotlinx.coroutines.delay(TOP_TIGHT_SETTLE_MS)
+                topCompactForced = true
+            }
+        }
     }
     var miniHasFocus by remember { mutableStateOf(false) }
     val subtitleController = koinInject<tv.own.owntv.core.subtitles.SubtitleController>()
     val subtitleContext by subtitleController.current.collectAsStateWithLifecycle()
+    val subtitleFolder by settingsRepo.subtitleFolder.collectAsStateWithLifecycle(null)
     var showSubtitleSearch by remember { mutableStateOf(false) }
     // Local subtitle-file picker — the same TV-safe in-app browser local M3U import uses.
     var showLocalSubPicker by remember { mutableStateOf(false) }
+    // "Find in folder": the folder's subtitle list, and the folder browser that chooses it (first use, or
+    // "Change folder"). Two separate windows — a popup opened inside another loses the popup theme.
+    var showFolderSubs by remember { mutableStateOf(false) }
+    var showSubFolderPicker by remember { mutableStateOf(false) }
     val localSubToast = tv.own.owntv.ui.components.rememberInAppToast()
     // Metadata allowance: tell the user ONCE per app start that their daily share of the shared
     // metadata service is gone, rather than letting posters and plots quietly stop appearing. Lives in
@@ -945,6 +972,16 @@ fun OwnTVShell(
             railIdleHidden = true
         }
     }
+    // glcn: the top bar that stays (not Floating) folds to the open section once focus has settled in the content,
+    // the way iOS shrinks its tab bar while you scroll: the picture gets the room, ▲ opens the bar whole again.
+    var topFolded by remember { mutableStateOf(false) }
+    LaunchedEffect(navStyle, topFloating, topBarFocused) {
+        topFolded = false
+        if (navStyle == tv.own.owntv.core.settings.SettingsRepository.NavStyle.TOP && !topFloating && !topBarFocused) {
+            kotlinx.coroutines.delay(TOP_FOLD_MS)
+            topFolded = true
+        }
+    }
     // Docked always shows its Size; Floating rests as the capsule, opens at its Size while it holds
     // focus and hides once focus has been in the content for the delay. Compact stays the capsule —
     // except Docked + Compact with Widen on focus, which opens at that size over the content (the content
@@ -1002,17 +1039,79 @@ fun OwnTVShell(
             searchVm.setQuery("")
             trendingSearchActive = false
             restoreTrendingSearchFocus = false
+            searchTakesFocus = true
         }
         onSelectSection(section)
         // A shortcut may be fired by a control inside the destination being replaced (most notably
         // Settings). Once that screen leaves composition its focused node disappears, so hand focus
-        // to the persistent sidebar after the new destination has rendered.
-        scope.launch {
+        // to the persistent sidebar after the new destination has rendered. Search takes it itself.
+        if (section != MainSection.SEARCH) scope.launch {
             withFrameNanos { }
             focusRail()
         }
     }
     val allPlaylistsLabel = stringResource(R.string.content_all_playlists)
+    // The remote's Favorite and Record keys act on what the user is looking at: the picture when the
+    // player is full screen, else the row under the cursor (the Live list's preview follows it, and the
+    // film and show lists keep theirs). Each says what it did, since a key press has no menu to show it.
+    val shortcutRes = androidx.compose.ui.platform.LocalContext.current.resources
+    val shortcutSection = if (playerMode == PlayerMode.FULLSCREEN) zapSource else selectedSection
+    val favoriteByShortcut: () -> Unit = {
+        val full = playerMode == PlayerMode.FULLSCREEN
+        val target: Triple<String, Boolean, () -> Unit>? = when (shortcutSection) {
+            MainSection.LIVE_TV -> previewChannel?.let { ch -> Triple(ch.name, ch.id in liveFavoriteIds) { liveVm.toggleFavorite(ch) } }
+            MainSection.MOVIES -> (if (full) playingMovie else movieVm.selectedMovie.value)
+                ?.let { m -> Triple(m.name, m.id in movieFavoriteIds) { movieVm.toggleFavorite(m) } }
+            MainSection.SERIES -> (if (full) playingSeries else seriesVm.selectedSeries.value)
+                ?.let { s -> Triple(s.name, s.id in seriesFavoriteIds) { seriesVm.toggleFavorite(s) } }
+            else -> null
+        }
+        target?.let { (name, wasFavorite, toggle) ->
+            toggle()
+            val said = if (wasFavorite) R.string.content_favourite_removed_named else R.string.content_favourite_added_named
+            localSubToast.show(shortcutRes.getString(said, tv.own.owntv.core.live.ProviderTags.parse(name).name))
+        }
+    }
+    val recordOrDownloadByShortcut: () -> Unit = {
+        val full = playerMode == PlayerMode.FULLSCREEN
+        when (shortcutSection) {
+            MainSection.LIVE_TV -> previewChannel?.let { ch ->
+                scope.launch {
+                    val name = tv.own.owntv.core.live.ProviderTags.parse(ch.name).name
+                    when (val r = liveVm.toggleRecordingNow(ch)) {
+                        tv.own.owntv.features.live.LiveViewModel.RecordToggle.Started ->
+                            localSubToast.show(shortcutRes.getString(R.string.recording_pill_line, name))
+                        tv.own.owntv.features.live.LiveViewModel.RecordToggle.Stopped ->
+                            localSubToast.show(shortcutRes.getString(R.string.recording_stopped_named, name))
+                        is tv.own.owntv.features.live.LiveViewModel.RecordToggle.Refused ->
+                            localSubToast.show(r.grant.displayText(shortcutRes))
+                        tv.own.owntv.features.live.LiveViewModel.RecordToggle.Failed -> Unit
+                    }
+                }
+            }
+            MainSection.MOVIES -> (if (full) playingMovie else movieVm.selectedMovie.value)?.let { m ->
+                scope.launch {
+                    if (!resumeSettings.activeDownloadsAllowed.first()) return@launch
+                    movieVm.download(m)
+                    localSubToast.show(shortcutRes.getString(R.string.sync_status_download, m.name))
+                }
+            }
+            // In the player, the episode on screen; in the list, the show — which asks first, saying how
+            // many files that is, as its own Download all does.
+            MainSection.SERIES -> scope.launch {
+                if (!resumeSettings.activeDownloadsAllowed.first()) return@launch
+                if (full) {
+                    seriesVm.playingEpisode()?.let { ep ->
+                        seriesVm.downloadEpisode(ep)
+                        localSubToast.show(shortcutRes.getString(R.string.sync_status_download, ep.name.ifBlank { playingSeries?.name.orEmpty() }))
+                    }
+                } else {
+                    seriesVm.selectedSeries.value?.let { seriesVm.askBulkDownload(it, null) }
+                }
+            }
+            else -> Unit
+        }
+    }
     val dispatchRemoteShortcut: (RemoteShortcutAction) -> Unit = { action ->
         when (action) {
             RemoteShortcutAction.OPEN_HOME -> openShortcutSection(MainSection.HOME)
@@ -1054,7 +1153,10 @@ fun OwnTVShell(
                 }
                 else -> openShortcutSection(MainSection.LIVE_TV)
             }
-            RemoteShortcutAction.TOGGLE_FAVORITE -> if (playerMode != PlayerMode.NONE && zapSource == MainSection.LIVE_TV) previewChannel?.let { liveVm.toggleFavorite(it) }
+            // From upstream: Favorite and Record/Download act on what is on screen (the picture, or the row under the
+            // cursor in Live TV, Films and Series) and say what they did.
+            RemoteShortcutAction.TOGGLE_FAVORITE -> favoriteByShortcut()
+            RemoteShortcutAction.RECORD_OR_DOWNLOAD -> recordOrDownloadByShortcut()
             // glcn: the player's own actions, from the mini player or Audio Mode, bring the player up.
             RemoteShortcutAction.CHANNEL_NEXT,
             RemoteShortcutAction.CHANNEL_PREVIOUS,
@@ -1207,6 +1309,7 @@ fun OwnTVShell(
     // so for a series the return follows the show closing.
     fun returnToSearch() {
         searchReturn = null
+        searchTakesFocus = true
         onSelectSection(MainSection.SEARCH)
     }
     LaunchedEffect(selectedSection) {
@@ -1508,6 +1611,7 @@ fun OwnTVShell(
                   trendingSearchActive = false
                   restoreTrendingSearchFocus = false
               }
+              if (section == MainSection.SEARCH) searchTakesFocus = false
               onSelectSection(section)
           }
           // Audio Mode: the now-playing bar — in the top bar left of the weather chip, or in the Stage
@@ -1601,18 +1705,27 @@ fun OwnTVShell(
                 val sectionAnim = tv.own.owntv.ui.theme.animationsOn && !tv.own.owntv.glcn.LowRam.on
                 // glcn: a title opened from Home grows into its page instead of rising in (TitleZoom).
                 var sectionZoom by remember { mutableStateOf(false) }
+                var sectionHeld by remember { mutableStateOf(false) }
                 LaunchedEffect(selectedSection) {
                     sectionZoom = tv.own.owntv.glcn.TitleZoom.take()
+                    // glcn: the page waits behind a curtain until its first content is in, then comes in whole. (Set
+                    // on every change: a wait cut short by the next section must not leave that one hidden.)
+                    sectionHeld = sectionAnim && tv.own.owntv.glcn.SectionCurtain.waits(selectedSection.name)
                     if (!sectionAnim) return@LaunchedEffect
                     sectionIn.snapTo(0f)
-                    sectionIn.animateTo(1f, androidx.compose.animation.core.tween(SECTION_IN_MS, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                    if (sectionHeld) {
+                        tv.own.owntv.glcn.SectionCurtain.await()
+                        sectionHeld = false
+                    }
+                    // glcn: an entrance keeps its pace with Brisk response, and settles softly (no blow at the end).
+                    sectionIn.animateTo(1f, androidx.compose.animation.core.tween(tv.own.owntv.glcn.Pace.entrance(SECTION_IN_MS), easing = SECTION_EASE))
                 }
                 val sectionRise = with(androidx.compose.ui.platform.LocalDensity.current) { SECTION_RISE.toPx() }
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth()
                         .graphicsLayer {
                             val k = sectionIn.value
-                            alpha = 0.25f + 0.75f * k
+                            alpha = if (sectionHeld) 0f else 0.15f + 0.85f * k
                             if (sectionZoom) {
                                 val z = tv.own.owntv.glcn.TitleZoom.FROM + (1f - tv.own.owntv.glcn.TitleZoom.FROM) * k
                                 scaleX = z; scaleY = z
@@ -1794,6 +1907,8 @@ fun OwnTVShell(
                         selectedSection == MainSection.HOME -> HomeScreen(
                             vm = homeVm,
                             seasonActive = playerMode != PlayerMode.FULLSCREEN,
+                            movieVm = movieVm,
+                            seriesVm = seriesVm,
                             // Skip the fullscreen player when the global external-player toggle is on
                             // (mounting it spins up mpv even though playback went to the external app).
                             onPlayMovie = { id, pos -> scope.launch { if (movieVm.playByIdAsync(id, pos) && !movieVm.externalPlayerOn.value) openFullscreen(MainSection.MOVIES) } },
@@ -1842,6 +1957,7 @@ fun OwnTVShell(
                                 searchVm.setQuery(query)
                                 trendingSearchActive = true
                                 restoreTrendingSearchFocus = false
+                                searchTakesFocus = true
                                 onSelectSection(MainSection.SEARCH)
                             },
                             onChildFocused = { focusedLayer = ShellLayer.CONTENT },
@@ -1898,6 +2014,8 @@ fun OwnTVShell(
                                 restoreFocus = false
                                 onSelectSection(MainSection.HOME)
                             },
+                            focusOnOpen = searchTakesFocus,
+                            onEntryHook = { searchEntry = it },
                             modifier = Modifier.fillMaxSize(),
                         )
 
@@ -1996,7 +2114,7 @@ fun OwnTVShell(
             if (showRecentDrop) tv.own.owntv.features.shell.components.RecentChannelsDrop(
                 load = { liveVm.historyChannels() },
                 loadNow = { liveVm.nowFull(it) },
-                onPlay = { ch -> showRecentDrop = false; scope.launch { if (liveVm.ensurePlayingByIdAsync(ch.id)) openFullscreen(MainSection.LIVE_TV) } },
+                onPlay = { ch -> showRecentDrop = false; scope.launch { if (liveVm.ensurePlayingByIdAsync(ch.id, fromHistory = true)) openFullscreen(MainSection.LIVE_TV) } },
                 onDismiss = { showRecentDrop = false },
             )
             tv.own.owntv.features.shell.components.StageStatusCluster(
@@ -2057,8 +2175,11 @@ fun OwnTVShell(
                 nowPlaying = nowPlayingRail,
                 onNowPlaying = enterNowPlaying,
                 onBarBounds = { topBarBounds = it },
+                freeRight = playlistPillBounds?.left?.minus(topGapPx),
                 size = if (topCompactForced) tv.own.owntv.core.settings.SettingsRepository.NavSize.COMPACT else topSize,
+                tight = topTight && !topCompactForced,
                 hidden = railIdleHidden,
+                folded = topFolded,
             ) else tv.own.owntv.features.shell.components.StageRail(
                 state = railState,
                 size = railSize,
@@ -2089,6 +2210,7 @@ fun OwnTVShell(
                     MainSection.EPG, MainSection.LIVE_TV -> guideEntry
                     MainSection.MOVIES, MainSection.SERIES -> vodEntry
                     MainSection.DOWNLOADS -> downloadsEntry
+                    MainSection.SEARCH -> searchEntry
                     MainSection.MORE -> moreEntry
                     MainSection.SPORTS -> sportsEntry
                     else -> null
@@ -2177,6 +2299,7 @@ fun OwnTVShell(
                       title = zapOverlayTitle,
                       showNumbers = directTuneEnabled,
                       nowProgrammes = overlayProgrammes,
+                      onMinute = liveVm::refreshNowPlaying,
                       favoriteIds = overlayFavoriteIds,
                       playlistMarks = overlayPlaylistMarks,
                       alignEnd = true,
@@ -2242,7 +2365,7 @@ fun OwnTVShell(
             } else {
                 // glcn: the cinema side panel slides the film to the left, still playing.
                 val cinemaShift by androidx.compose.animation.core.animateFloatAsState(
-                    if (isFull && !inPip && tv.own.owntv.glcn.CinemaStage.panelOpen) 1f else 0f,
+                    if (isFull && !inPip && tv.own.owntv.glcn.CinemaStage.panelOpen && !tv.own.owntv.glcn.CinemaStage.keepFullPicture) 1f else 0f,
                     androidx.compose.animation.core.tween(if (tv.own.owntv.glcn.DeviceClass.richMotion) CINEMA_SHIFT_MS else 0),
                     label = "cinemaShift",
                 )
@@ -2278,7 +2401,7 @@ fun OwnTVShell(
             // dropping the only line of dialogue there made subtitles look broken. Scaled to the box.
             if (!liveOnExo && !inPip) {
                 tv.own.owntv.player.SubtitleOverlay(
-                    player = player, modifier = Modifier.fillMaxSize().cinemaInset(if (tv.own.owntv.glcn.CinemaStage.panelOpen && isFull) 1f else 0f),
+                    player = player, modifier = Modifier.fillMaxSize().cinemaInset(if (tv.own.owntv.glcn.CinemaStage.panelOpen && isFull && !tv.own.owntv.glcn.CinemaStage.keepFullPicture) 1f else 0f),
                     // Tied to the chosen mini size, but nudged up and floored: a strictly proportional
                     // line would be unreadable in the smallest box.
                     sizeScale = if (isFull) 1f else {
@@ -2344,6 +2467,13 @@ fun OwnTVShell(
                     if (!isTunedLive) return@produceState
                     value = runCatching { liveVm.copiesOf(ch) }.getOrDefault(emptyList())
                 }
+                // Names the catch-up button; the press asks again.
+                val archiveHasGuide by produceState(false, previewChannel?.id, catchupActive) {
+                    value = catchupActive || previewChannel?.takeIf { it.catchup }?.let { liveVm.hasGuideData(it) } == true
+                }
+                var archiveFor by remember { mutableStateOf<tv.own.owntv.core.database.entity.ChannelEntity?>(null) }
+                // The programme on screen when the page was opened from an archive replay; null opens on yesterday.
+                var archiveFocusMs by remember { mutableStateOf<Long?>(null) }
                 var goalToast by remember { mutableStateOf<tv.own.owntv.core.sports.MatchAlert?>(null) }
                 LaunchedEffect(isTunedLive) { if (isTunedLive) sportsPlayback.goals().collect { goalToast = it } }
                 LaunchedEffect(goalToast) { if (goalToast != null) { kotlinx.coroutines.delay(GOAL_TOAST_MS); goalToast = null } }
@@ -2385,7 +2515,7 @@ fun OwnTVShell(
                     onAudioMode = toAudioMode,
                     // The channel-list overlay draws ABOVE the HUD; while it's open the HUD goes inert so
                     // its hide/error focus grabs can't yank D-pad focus off the overlay.
-                    inert = showChannelList || showQuickGuide || showHistoryList || showCategoryBrowser || showSubtitleSearch || showLocalSubPicker || showOtherChannels || showCopies || showProgramInfo,
+                    inert = showChannelList || showQuickGuide || showHistoryList || showCategoryBrowser || showSubtitleSearch || showLocalSubPicker || showFolderSubs || showSubFolderPicker || showOtherChannels || showCopies || showProgramInfo || archiveFor != null,
                     onChannelUp = zap?.let { z -> { z(-1) } },
                     onChannelDown = zap?.let { z -> { z(1) } },
                     onOpenChannelList = if (isTunedLive && liveCanZap) { { showChannelList = true } } else null,
@@ -2419,6 +2549,16 @@ fun OwnTVShell(
                     // bar and the buttons, and must not show a catch-up control on a channel without catch-up.
                     jumpBackOptions = if (isTunedLive && previewChannel?.catchup == true) liveVm::currentJumpOptions else null,
                     onJumpBack = if (isTunedLive && previewChannel?.catchup == true) liveVm::jumpBackTo else null,
+                    // False when the channel has no guide: the HUD then opens "Go back to…" as before.
+                    onOpenArchive = if ((isTunedLive || catchupActive) && previewChannel?.catchup == true) {
+                        {
+                            val ch = previewChannel
+                            if (ch != null && (catchupActive || liveVm.hasGuideData(ch))) {
+                                archiveFocusMs = liveVm.currentCatchupProgrammeStartMs(); archiveFor = ch; true
+                            } else false
+                        }
+                    } else null,
+                    catchupOpensArchive = archiveHasGuide,
                     onPreviousChannel = if (isTunedLive && previousLiveChannel != null) liveVm::previousChannel else null,
                     jumpBackWindowSec = if (isTunedLive && previewChannel?.catchup == true) liveVm::currentCatchupWindowSec else null,
                     jumpBackProgrammeStart = if (isTunedLive && previewChannel?.catchup == true) liveVm::currentProgrammeStart else null,
@@ -2456,6 +2596,10 @@ fun OwnTVShell(
                     // Local subtitle file: same movie/episode gating, no account needed.
                     onSelectLocalSubtitle = if (!isLiveStream && !isLiveChannel && subtitleContext != null) {
                         { showLocalSubPicker = true }
+                    } else null,
+                    // Subtitles from the chosen folder: the folder browser first while none is chosen.
+                    onFindSubtitleInFolder = if (!isLiveStream && !isLiveChannel && subtitleContext != null) {
+                        { if (subtitleFolder == null) showSubFolderPicker = true else showFolderSubs = true }
                     } else null,
                     // In-stream favorite toggle for the current channel/movie/series.
                     favorite = favActive,
@@ -2617,9 +2761,11 @@ fun OwnTVShell(
                 if (!isLiveChannel) tv.own.owntv.glcn.IntroSkip.Chip(
                     engine = if (liveOnExo) liveVm.previewEngine else mpvEngine,
                     controlsHidden = !hudControlsVisible,
-                    autoSkip = autoSkipIntro,
+                    // The core's skip (TheIntroDB) comes first; ours only where it has no times, under the same choices.
+                    autoSkip = skipIntroMode == tv.own.owntv.core.skip.SkipMode.AUTO,
+                    introOn = !skipHasTimes && skipIntroMode != tv.own.owntv.core.skip.SkipMode.OFF,
+                    creditsOn = !skipHasTimes && skipCreditsMode != tv.own.owntv.core.skip.SkipMode.OFF,
                     onVisible = { introSkipVisible = it },
-                    lookup = cinemaInfo?.let { i -> i.tmdbId?.let { t -> i.season?.let { se -> i.episode?.let { ep -> Triple(t, se, ep) } } } },
                     modifier = Modifier.fillMaxSize(),
                 )
                 goalToast?.let { a ->
@@ -2648,6 +2794,17 @@ fun OwnTVShell(
                         playingId = previewChannel?.id,
                         onPick = { ch -> liveVm.ensurePlaying(ch); showCopies = false },
                         onDismiss = { showCopies = false },
+                    )
+                }
+                archiveFor?.let { ch ->
+                    tv.own.owntv.features.epg.ProgrammeDayPage(
+                        vm = epgVm,
+                        channel = ch,
+                        focusStartMs = archiveFocusMs,
+                        startDay = -1,
+                        onWatch = { if (timeshifted || catchupActive) liveVm.goToLive() },
+                        onPlayFromStart = { p -> liveVm.playCatchupProgramme(ch, p) },
+                        onDismiss = { archiveFor = null },
                     )
                 }
                 if (showOtherChannels) {
@@ -2688,7 +2845,27 @@ fun OwnTVShell(
                         onDismiss = { showLocalSubPicker = false },
                     )
                 }
-                tv.own.owntv.ui.components.InAppToast(localSubToast)
+                if (showFolderSubs) {
+                    tv.own.owntv.features.subtitles.FolderSubtitleScreen(
+                        onChangeFolder = { showFolderSubs = false; showSubFolderPicker = true },
+                        onFailed = { localSubToast.show(subtitleLoadFailed) },
+                        onDismiss = { showFolderSubs = false },
+                    )
+                }
+                if (showSubFolderPicker) {
+                    tv.own.owntv.ui.components.StorageBrowser(
+                        title = stringResource(R.string.player_subtitle_folder_choose),
+                        mode = tv.own.owntv.ui.components.BrowseMode.FOLDER,
+                        onPick = { dir ->
+                            showSubFolderPicker = false
+                            scope.launch {
+                                settingsRepo.setSubtitleFolder(dir.absolutePath)
+                                showFolderSubs = true
+                            }
+                        },
+                        onDismiss = { showSubFolderPicker = false },
+                    )
+                }
                 // Programme reminders: when one comes up, ask to switch, switch, or only say so (the
                 // Programme reminders setting) — over whatever is on screen, the player included.
                 val reminderManager = koinInject<tv.own.owntv.core.reminder.ReminderManager>()
@@ -2729,18 +2906,6 @@ fun OwnTVShell(
                         keyHint = if (playerMode == PlayerMode.FULLSCREEN) "OK" else "\u23EF",
                         onDismiss = { scope.launch { reminderManager.dismiss(dueReminder.id) } },
                     )
-                }
-                // A catch-up pick that could not be resolved. Raised from Live TV wherever an archive
-                // URL comes back null — "Watch from start", "Go back to…" and the external hand-off —
-                // all of which used to fail in complete silence.
-                val catchupUnavailable = stringResource(R.string.content_epg_catchup_unavailable)
-                LaunchedEffect(liveVm) {
-                    liveVm.catchupUnavailable.collect { localSubToast.show(catchupUnavailable) }
-                }
-                // glcn: a channel that failed was swapped for the same one elsewhere in its playlist.
-                val failoverFmt = stringResource(R.string.glcn_failover_toast, "\u0000")
-                LaunchedEffect(liveVm) {
-                    liveVm.failoverNotice.collect { name -> localSubToast.show(failoverFmt.replace("\u0000", name)) }
                 }
                 // Back on a channel whose saved copy was kept: continue from there, or stay live.
                 val timeshiftResumeAt by liveVm.timeshiftResumeAt.collectAsStateWithLifecycle()
@@ -2804,6 +2969,7 @@ fun OwnTVShell(
                             loadSchedule = { liveVm.scheduleFor(it) },
                             onArmCategory = { liveVm.loadChannelsForCategory(it) },
                             onHideCategory = { liveVm.hideCategory(it) },
+                            searchChannels = { liveVm.deckSearch(it) },
                             onTune = { liveVm.ensurePlaying(it); showChannelList = false },
                             onDismiss = { showChannelList = false },
                             modifier = Modifier.fillMaxSize(),
@@ -2843,6 +3009,7 @@ fun OwnTVShell(
                             currentId = previewChannel?.id,
                             nowPlaying = overlayNowPlaying,
                             nowProgrammes = overlayProgrammes,
+                            onMinute = liveVm::refreshNowPlaying,
                             favoriteIds = overlayFavoriteIds,
                             playlistMarks = overlayPlaylistMarks,
                             title = zapOverlayTitle,
@@ -2864,13 +3031,14 @@ fun OwnTVShell(
                         currentId = previewChannel?.id,
                         nowPlaying = historyNowPlaying,
                         nowProgrammes = overlayProgrammes,
+                        onMinute = liveVm::refreshNowPlaying,
                         favoriteIds = overlayFavoriteIds,
                         playlistMarks = overlayPlaylistMarks,
                         watchedAt = historyWatchedAt,
                         title = stringResource(R.string.content_category_recently_watched),
                         showNumbers = directTuneEnabled,
                         alignEnd = true,
-                        onSelect = { liveVm.ensurePlaying(it); showHistoryList = false },
+                        onSelect = { liveVm.watchFromHistory(it); showHistoryList = false },
                         onDismiss = { showHistoryList = false },
                         onForget = { liveVm.removeFromHistory(it.id) },
                         onForgetAll = { liveVm.clearLiveHistory(); showHistoryList = false },
@@ -2910,6 +3078,10 @@ fun OwnTVShell(
 
     // The Settings PIN before a long-press change, when the Settings lock asks for it.
     tv.own.owntv.features.settings.lock.MenuChangeGateHost()
+    // "Check TheIntroDB" from any film, series or episode long-press menu.
+    tv.own.owntv.features.settings.TheIntroDbCheckHost()
+    // glcn: favourite channels lost with a replaced playlist, offered back once when the new one has them.
+    tv.own.owntv.glcn.PortableFavorites.Host()
     if (showExit) {
         ExitDialog(onConfirm = onExitApp, onDismiss = { showExit = false })
     }
@@ -2971,6 +3143,27 @@ fun OwnTVShell(
     }
     tv.own.owntv.ui.components.InAppToast(epgMatchToast)
 
+    // The shell's own notices — subtitle loads, a refused recording, the remote's Favorite and Record
+    // keys, a film or catch-up that could not be opened — on this layer, which is on screen everywhere,
+    // the player included. Drawn inside the full-screen player, they were lost on every other screen.
+    // A catch-up pick that could not be resolved. Raised from Live TV wherever an archive URL comes
+    // back null — "Watch from start", "Go back to…" and the external hand-off.
+    val catchupUnavailable = stringResource(R.string.content_epg_catchup_unavailable)
+    LaunchedEffect(liveVm) {
+        liveVm.catchupUnavailable.collect { localSubToast.show(catchupUnavailable) }
+    }
+    // glcn: a channel that failed was swapped for the same one elsewhere in its playlist.
+    val failoverFmt = stringResource(R.string.glcn_failover_toast, "\u0000")
+    LaunchedEffect(liveVm) {
+        liveVm.failoverNotice.collect { name -> localSubToast.show(failoverFmt.replace("\u0000", name)) }
+    }
+    // A film whose playable link the portal would not give: said, not a silent no-op.
+    val filmOpenFailed = stringResource(R.string.player_external_could_not_open)
+    LaunchedEffect(movieVm) {
+        movieVm.openFailed.collect { localSubToast.show(filmOpenFailed) }
+    }
+    tv.own.owntv.ui.components.InAppToast(localSubToast)
+
     // Automatic update check (GitHub Releases) shortly after launch, once per session: a small
         // top-right status card shows "Checking… / up to date" (auto-hides) or stays with
         // Update now / Later when a release is newer. Hidden while in Settings (its manual
@@ -2978,12 +3171,15 @@ fun OwnTVShell(
         // Interrupted restore: the marker outlives the process, so if it's still set at launch
         // the last restore didn't complete. Acknowledging clears it.
         val restoreSettings = koinInject<tv.own.owntv.core.settings.SettingsRepository>()
-    val incompleteRestore by restoreSettings.restoreInProgress.collectAsStateWithLifecycle(initialValue = null)
+    // The marker as this launch found it, not live: every local auto-sync import sets and clears it too.
+    val incompleteRestore by produceState<String?>(null) { value = restoreSettings.restoreMarkerAtLaunch() }
     var restoreNoticeDismissed by remember { mutableStateOf(false) }
+    // glcn: the new style, offered once to who already had the app — never over the player.
+    if (incompleteRestore == null) tv.own.owntv.glcn.StyleInviteOffer(restoreSettings, quiet = playerMode != PlayerMode.FULLSCREEN)
     incompleteRestore?.takeIf { !restoreNoticeDismissed }?.let { description ->
         val dismissRestoreNotice: () -> Unit = {
             restoreNoticeDismissed = true
-            scope.launch { restoreSettings.clearRestoreMarker() }
+            scope.launch { restoreSettings.dismissLaunchRestoreMarker() }
         }
         IncompleteRestoreDialog(
                 description = description,
@@ -3068,6 +3264,9 @@ private fun railDetail(section: MainSection, d: RailDetails): String? = when (se
 /** How recently ◀ / ▶ or [focusRail] must have happened for a rail visit to open the rail. */
 private const val RAIL_KEY_WINDOW_MS = 400L
 
+/** glcn: how long focus stays in the content before the top bar folds to the open section. */
+private const val TOP_FOLD_MS = 900L
+
 /** glcn: how long Back is held in the full-screen player to close it rather than leave it in the window. */
 
 /** glcn: a second stop after a held Back, once the closing has settled. */
@@ -3131,8 +3330,11 @@ private fun Modifier.cinemaInset(p: Float): Modifier = if (p <= 0f) this else th
 }
 
 /** glcn: a section's way in — how long, and from how far below. */
-private const val SECTION_IN_MS = 260
-private val SECTION_RISE = 18.mpx
+private const val TOP_TIGHT_SETTLE_MS = 500L
+private const val SECTION_IN_MS = 380
+private val SECTION_RISE = 22.mpx
+/** glcn: a long, gentle settle — quick to show, slow to come to rest. */
+private val SECTION_EASE = androidx.compose.animation.core.CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
 
 /**
  * glcn: the synopsis for an episode in the film player — the richest one there is. Lists often give an episode a

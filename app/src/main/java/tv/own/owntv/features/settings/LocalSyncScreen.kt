@@ -96,8 +96,8 @@ import tv.own.owntv.ui.theme.stageText
  */
 @Composable
 fun LocalSyncScreen(
-    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
     /** More › Local sync: what OK / ▶ on the sheet focuses. Settings passes none and gets focus on open. */
     entry: FocusRequester? = null,
 ) {
@@ -388,7 +388,7 @@ fun SetupLocalSyncScreen(onRestored: () -> Unit, onBack: () -> Unit, modifier: M
                 val addressLabel = stringResource(R.string.local_sync_manual_address_label)
                 StageFieldRow(
                     OwnTVIcon.PENCIL, addressLabel, manual, { manual = it },
-                    SettingHelp(addressLabel, stringResource(R.string.settings_form_field_help)),
+                    help = SettingHelp(addressLabel, stringResource(R.string.settings_form_field_help)),
                     placeholder = stringResource(R.string.setup_device_address_hint),
                 )
             }
@@ -545,31 +545,17 @@ private fun lastSyncedText(at: Long): String = if (at <= 0) {
  */
 @Composable
 private fun HostingCard(state: CompanionServerState.Listening, deviceName: String) {
-    Column(
+    // glcn: the QR beside the name, the hint and the PIN, not under them — stacked, the card ran past the foot of the
+    // screen and the QR was cut off (the card is not focusable, so the page never scrolled to it).
+    Row(
         modifier = Modifier
             .width(HOSTING_CARD_WIDTH)
             .clip(RoundedCornerShape(26.mpx))
             .background(StageColors.Ink.copy(alpha = 0.05f))
             .padding(horizontal = 14.dp, vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(deviceName, style = tv.own.owntv.ui.theme.stageText(26, 600), color = tv.own.owntv.ui.theme.StageColors.Text)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            stringResource(R.string.local_sync_host_hint),
-            style = tv.own.owntv.ui.theme.stageText(18, 400),
-            color = tv.own.owntv.ui.theme.StageColors.Muted,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            state.pin,
-            style = tv.own.owntv.ui.theme.stageText(42, 700),
-            fontWeight = FontWeight.Bold,
-            color = tv.own.owntv.ui.theme.stageAccent.accent,
-            letterSpacing = 8.sp,
-        )
-        Spacer(Modifier.height(12.dp))
         state.qr?.let { qr ->
             Image(
                 bitmap = qr.asImageBitmap(),
@@ -577,15 +563,26 @@ private fun HostingCard(state: CompanionServerState.Listening, deviceName: Strin
                 modifier = Modifier.size(QR_SIZE).clip(RoundedCornerShape(14.dp)).background(Color.White).padding(9.dp),
                 contentScale = ContentScale.Fit,
             )
-            Spacer(Modifier.height(10.dp))
         }
-        state.urls.forEach { url ->
+        Column(Modifier.weight(1f)) {
+            Text(deviceName, style = tv.own.owntv.ui.theme.stageText(24, 600), color = tv.own.owntv.ui.theme.StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(4.dp))
             Text(
-                url,
-                style = tv.own.owntv.ui.theme.stageText(17, 400),
+                stringResource(R.string.local_sync_host_hint),
+                style = tv.own.owntv.ui.theme.stageText(15, 400),
                 color = tv.own.owntv.ui.theme.StageColors.Muted,
-                textAlign = TextAlign.Center,
             )
+            Text(
+                state.pin,
+                style = tv.own.owntv.ui.theme.stageText(36, 700),
+                fontWeight = FontWeight.Bold,
+                color = tv.own.owntv.ui.theme.stageAccent.accent,
+                letterSpacing = 6.sp,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            state.urls.forEach { url ->
+                Text(url, style = tv.own.owntv.ui.theme.stageText(14, 400), color = tv.own.owntv.ui.theme.StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }
@@ -729,11 +726,17 @@ private fun SectionsBlock(vm: LocalSyncViewModel, step: LocalSyncViewModel.Step.
                 onClick = { sections = if (section in sections) sections - section else sections + section },
             )
         }
+        // glcn: the work and its failure are said here, in the popup. They were only written on the page behind it, so
+        // Continue seemed to do nothing: no "working", and a device that could not be reached left no word at all.
+        if (vm.busy) BusyRow()
+        vm.error?.let { failure ->
+            Text(stringResource(failure.messageRes()), style = stageText(18, 600), color = StageColors.Danger, modifier = Modifier.padding(top = 12.mpx))
+        }
         Row(Modifier.fillMaxWidth().padding(top = 22.mpx), horizontalArrangement = Arrangement.spacedBy(14.mpx, Alignment.End)) {
-            tv.own.owntv.ui.stage.StagePopupButton(stringResource(R.string.common_cancel), onClick = vm::cancel, primary = false)
+            tv.own.owntv.ui.stage.StagePopupButton(stringResource(R.string.common_cancel), onClick = { vm.dismissError(); vm.cancel() }, primary = false)
             tv.own.owntv.ui.stage.StagePopupButton(
                 stringResource(R.string.settings_backup_continue),
-                onClick = { if (sections.isNotEmpty()) vm.start(sections) },
+                onClick = { if (sections.isNotEmpty() && !vm.busy) { vm.dismissError(); vm.start(sections) } },
             )
         }
     }
@@ -860,10 +863,10 @@ private fun portOf(address: String): Int =
 private val DestructiveRed = Color(0xFFEF4444)
 
 /**
- * Wide enough for [QR_SIZE] plus the card's padding, and no wider — the list beside it is what the
- * screen is for. The QR keeps its size: it is read by a phone camera from across the room.
+ * The QR and, beside it, the name, hint and PIN — no wider than that: the list beside it is what the screen is for.
+ * The QR keeps its size: it is read by a phone camera from across the room.
  */
-private val HOSTING_CARD_WIDTH = 230.dp
+private val HOSTING_CARD_WIDTH = 440.dp
 private val QR_SIZE = 140.dp
 
 private const val PIN_LENGTH = 6

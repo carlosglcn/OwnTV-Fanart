@@ -77,7 +77,7 @@ private fun VoiceSearchButton(onQuery: (String) -> Unit, modifier: Modifier = Mo
     val asked = VoiceTrigger.pending.intValue
     LaunchedEffect(asked) {
         if (VoiceTrigger.consume()) {
-            try { launcher.launch(VoiceSearch.intent(prompt, language)) } catch (_: ActivityNotFoundException) { available = false }
+            try { launcher.launch(VoiceSearch.intent(context, prompt, language)) } catch (_: ActivityNotFoundException) { available = false }
         }
     }
     StageTool(
@@ -88,7 +88,7 @@ private fun VoiceSearchButton(onQuery: (String) -> Unit, modifier: Modifier = Mo
             // Resolving is not a promise: the recogniser can be disabled between the check and OK.
             // The recogniser is a screen OwnTV opens itself, so it must not open picture-in-picture.
             try {
-                tv.own.owntv.features.pip.startAsHandOff(VoiceSearch.intent(prompt, language)) { launcher.launch(it) }
+                tv.own.owntv.features.pip.startAsHandOff(VoiceSearch.intent(context, prompt, language)) { launcher.launch(it) }
             } catch (_: ActivityNotFoundException) {
                 available = false
             }

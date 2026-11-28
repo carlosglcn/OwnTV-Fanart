@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import tv.own.owntv.ui.stage.specularEdge
 import tv.own.owntv.ui.stage.stageTilt
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +46,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
@@ -189,10 +191,10 @@ internal fun LiveBadge(modifier: Modifier = Modifier) {
     Text(
         stringResource(R.string.glcn_live_badge),
         style = stageText(13, 800),
-        color = Color.White,
+        color = tv.own.owntv.ui.theme.stageOnLive,
         modifier = modifier
             .clip(RoundedCornerShape(6.mpx))
-            .background(Color(0xFFE5243B))
+            .background(tv.own.owntv.ui.theme.stageLive)
             .padding(horizontal = 10.mpx, vertical = 3.mpx),
     )
 }
@@ -274,7 +276,7 @@ internal fun ArtLiveCard(
                 shine.animateTo(1.6f, androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing))
             } else shine.snapTo(-1f)
         }
-        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(StageRadii.Row))) {
+        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(StageRadii.Row)).specularEdge(focused, StageRadii.Row)) {
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -1178,7 +1180,7 @@ internal fun HomeLazyRow(
     val startPx = with(density) { contentPadding.calculateStartPadding(layoutDir).toPx() }
     val endPx = with(density) { contentPadding.calculateEndPadding(layoutDir).toPx() }
     val gapPx = with(density) { horizontalArrangement.spacing.toPx() }
-    val spec = androidx.compose.runtime.remember(startPx, endPx, gapPx) { tv.own.owntv.glcn.WholeCardScroll(startPx, endPx, gapPx) }
+    val spec = tv.own.owntv.glcn.LocalPinnedRows.current.let { fixed -> androidx.compose.runtime.remember(startPx, endPx, gapPx, fixed) { tv.own.owntv.glcn.WholeCardScroll(startPx, endPx, gapPx, fixed = fixed) } }
     // glcn: nothing is drawn left of the first card's place (bar its focus ring), so no sliver of the card before it.
     // Up to just short of the gap before the first card: room for its ring, none for the card before it.
     val clipLeft = startPx - (gapPx - with(density) { 2.mpx.toPx() }).coerceIn(0f, with(density) { 14.mpx.toPx() })
@@ -1225,6 +1227,9 @@ internal fun HomeLazyRow(
                     val b = backAnim.value
                     if (b > 0f) drawRect(veil.copy(alpha = ROW_SIT_BACK_VEIL * b))
                 }
+                // glcn: ▶ on the last card stays on it. Left to itself the search went on past the row's end and took
+                // whatever lay to the right anywhere on screen — the "Last channel" button at the top of Home.
+                .focusProperties { onExit = { if (requestedFocusDirection == androidx.compose.ui.focus.FocusDirection.Right) cancelFocusChange() } }
                 .onKeyEvent { e ->
                     if (!motion || e.key != Key.DirectionRight || e.type != KeyEventType.KeyDown) return@onKeyEvent false
                     if (focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right)) return@onKeyEvent true
@@ -1241,7 +1246,7 @@ internal fun HomeLazyRow(
                 } else androidx.compose.ui.Modifier,
             ),
             state = state,
-            contentPadding = contentPadding,
+            contentPadding = if (tv.own.owntv.glcn.LocalPinnedRows.current) tv.own.owntv.glcn.pinnedRowPadding(contentPadding) else contentPadding,
             horizontalArrangement = horizontalArrangement,
             content = content,
         )

@@ -12,6 +12,7 @@ import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.allowRgb565
 import coil3.request.crossfade
+import coil3.request.transitionFactory
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -135,6 +136,10 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // and what was logged before that never reached it (a report then showed the day before).
         tv.own.owntv.player.LiveDiagnosticsLog.init(this)
         tv.own.owntv.glcn.StripPref.init(this)
+        tv.own.owntv.glcn.TopBarPref.init(this)
+        tv.own.owntv.glcn.RailPref.init(this)
+        tv.own.owntv.glcn.PacePref.init(this)
+        tv.own.owntv.glcn.ListFocusPref.init(this)
         // This app's own releases, which the in-app updater asks about. Core defaults to exactly
         // this value, so the line changes nothing today — it is here so the television names its own
         // repository instead of relying on core to guess it, the same as the phone app does. A
@@ -149,6 +154,15 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // Fixed for this process before any player exists: the setting applies only after a restart.
         tv.own.owntv.core.player.FfmpegAudioSetting.load(this)
         tv.own.owntv.glcn.CategoryIcons.ensure(this) // glcn: category icons and the ones chosen by hand
+        // glcn: before a 4K / HDR / Dolby Vision film takes its memory, the trailer and most pictures in memory go.
+        tv.own.owntv.player.HeavyPlayback.onStart = {
+            android.os.Handler(mainLooper).post {
+                tv.own.owntv.ui.components.TrailerPool.free()
+                runCatching { SingletonImageLoader.get(this).memoryCache?.let { it.trimToSize(it.maxSize / 3) } }
+                tv.own.owntv.glcn.MemoryWatch.holdBack()
+            }
+            tv.own.owntv.player.LiveDiagnosticsLog.event("4K / HDR film starting: trailer and most pictures in memory let go")
+        }
         tv.own.owntv.glcn.MemoryWatch.start(this) // glcn: memory diary, stall watch and memory brake (one sleeping thread)
         tv.own.owntv.glcn.LiveBanner.ensure(this) // glcn: the live banner's style
         tv.own.owntv.glcn.PlayerGlass.ensure(this) // glcn: see-through level of the panels over the video
@@ -156,6 +170,7 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         tv.own.owntv.glcn.DeckWidths.ensure(this) // glcn: widths of the player's channel list
         tv.own.owntv.glcn.Labs.ensure(this) // glcn: test features (switched on with a key sequence in Settings)
         tv.own.owntv.glcn.AppShortcuts.ensure(this)
+        tv.own.owntv.ui.theme.LowResScreen.detect(this) // glcn: lighter small bold type on 720p screens
         tv.own.owntv.glcn.LiveListFilter.init(this) // glcn: the Live TV playlist picked in the category sheet
         tv.own.owntv.glcn.EmbyGroupsPref.load(this) // glcn: how Emby / Jellyfin libraries are split into categories
         // First thing after the context exists: a crash from here on leaves a trace on disk that the
@@ -195,6 +210,8 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
             runCatching {
                 GlobalContext.get().get<tv.own.owntv.core.settings.SettingsRepository>().applyStageDefaults()
             }
+            // glcn: after the Stage's, so a new install's top bar, Cinema Home and Runway are not written over.
+            runCatching { tv.own.owntv.glcn.FreshDefaults.apply(this@OwnTVApp, GlobalContext.get().get()) }
         }
         // glcn: the logins of home-network shares, for playing their files (kept up to date as sources change).
         appScope.launch {
@@ -270,10 +287,12 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
                     .maxSizeBytes(imageDiskCacheBytes())
                     .build()
             }
-            // Opaque poster art doesn't need an alpha channel; RGB_565 halves bitmap memory
-            // under the deliberately small memory cap.
-            .allowRgb565(true)
-            .crossfade(if (tv.own.owntv.glcn.LowRam.on || lowRam) 0 else if (tv.own.owntv.glcn.DeviceClass.modest) 120 else 220)
+            // glcn: full colour. RGB_565 halved bitmap memory but showed as grain and banding in dark posters and
+            // gradients; the cache is capped in bytes, so full colour only means fewer pictures kept. Boxes Android
+            // calls low-RAM, and Light mode, keep the saving.
+            .allowRgb565(lowRam || tv.own.owntv.glcn.LowRam.on)
+            // glcn: fade in only what comes from the network (NetworkFade); a picture read again from the disk just appears.
+            .let { b -> (if (tv.own.owntv.glcn.LowRam.on || lowRam) 0 else if (tv.own.owntv.glcn.DeviceClass.modest) 120 else 220).let { ms -> if (ms > 0) b.transitionFactory(tv.own.owntv.glcn.NetworkFade(ms)) else b.crossfade(0) } }
             .build()
     }
 
@@ -304,8 +323,11 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         // TRIM_MEMORY_RUNNING_LOW is deprecated on API 34+ but still the only signal on TV devices
         // running older Android, so keep honouring it.
         @Suppress("DEPRECATION")
-        if (level >= TRIM_MEMORY_RUNNING_LOW) {
+        if (level >= TRIM_MEMORY_RUNNING_CRITICAL) {
             runCatching { SingletonImageLoader.get(this).memoryCache?.clear() }
+        } else if (level >= TRIM_MEMORY_RUNNING_LOW) {
+            // glcn: low, not yet critical — keep a quarter (the screen on show), so coming back does not redraw it all.
+            runCatching { SingletonImageLoader.get(this).memoryCache?.let { it.trimToSize(it.maxSize / 4) } }
         } else if (level >= TRIM_MEMORY_RUNNING_MODERATE) {
             // glcn: the first warning halves the picture cache instead of waiting for the one that empties it.
             runCatching { SingletonImageLoader.get(this).memoryCache?.let { it.trimToSize(it.maxSize / 2) } }
@@ -318,9 +340,12 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
                 GlobalContext.getOrNull()?.getOrNull<tv.own.owntv.core.sync.SyncActivityTracker>()?.active?.value?.values
                     ?.joinToString(", ") { a -> a.sourceName }
             }.getOrNull()?.takeIf { it.isNotBlank() }
+            // glcn: what the app was busy with at that moment — big transient loads (Java swinging 35↔350 MB every few
+            // seconds on a 40k-channel list) left no other trace. Obfuscated; read back with the build's R8 mapping.
+            val busy = busyFrames()
             Thread {
                 tv.own.owntv.player.MemoryBreakdown.read()?.let {
-                    tv.own.owntv.player.LiveDiagnosticsLog.event("memory warning (level $level) · " + it.line() + (syncing?.let { s -> " · syncing $s" } ?: ""))
+                    tv.own.owntv.player.LiveDiagnosticsLog.event("memory warning (level $level) · " + it.line() + (syncing?.let { s -> " · syncing $s" } ?: "") + (busy?.let { b -> " · busy $b" } ?: ""))
                 }
             }.start()
         }
@@ -330,6 +355,22 @@ class OwnTVApp : Application(), SingletonImageLoader.Factory, androidx.work.Conf
         runCatching { GlobalContext.getOrNull()?.getOrNull<tv.own.owntv.player.PlaybackEngines>()?.onTrimMemory(level) }
     }
 }
+
+/** glcn: up to three running threads and the first app frame each is in — framework, Kotlin and library frames skipped. */
+internal fun busyFrames(): String? = runCatching {
+    val self = Thread.currentThread()
+    Thread.getAllStackTraces().asSequence()
+        .filter { (t, _) -> t !== self && t.state == Thread.State.RUNNABLE }
+        .mapNotNull { (t, frames) ->
+            frames.firstOrNull { f -> FRAMEWORK_PREFIXES.none { f.className.startsWith(it) } }
+                ?.let { f -> t.name.take(24) + ":" + f.className + "." + f.methodName + ":" + f.lineNumber }
+        }
+        .take(3)
+        .joinToString(" | ")
+        .takeIf { it.isNotEmpty() }
+}.getOrNull()
+
+private val FRAMEWORK_PREFIXES = listOf("java.", "javax.", "kotlin.", "kotlinx.", "android.", "androidx.", "dalvik.", "libcore.", "sun.", "com.android.", "org.apache.", "okio.", "okhttp3.", "io.ktor.")
 
 /** 15% of the heap, capped at 64 MB; low-RAM devices keep 10%. */
 internal fun imageMemoryCacheBytes(heapBytes: Long, lowRam: Boolean): Long {

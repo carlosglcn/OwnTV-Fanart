@@ -222,6 +222,7 @@ fun EpgScreen(
     // Live TV's view model: its preview player (no second decoder), its category list and playlist marks.
     val liveVm: LiveViewModel = koinViewModel()
     val state by vm.state.collectAsStateWithLifecycle()
+    tv.own.owntv.glcn.SectionReady(!state.loading)
     val liveNow by produceState(initialValue = System.currentTimeMillis()) {
         while (true) {
             delay(30_000L)
@@ -462,6 +463,11 @@ fun EpgScreen(
     var matchingChannel by remember { mutableStateOf<ChannelEntity?>(null) }
     var offsetChannel by remember { mutableStateOf<ChannelEntity?>(null) }
     var orderOpen by remember { mutableStateOf(false) }
+    // glcn: the Type filter (films, sport, series… on now).
+    var typeOpen by remember { mutableStateOf(false) }
+    val typeTool = remember { FocusRequester() }
+    val typeFilter by vm.typeFilter.collectAsStateWithLifecycle()
+    val typeCounts by vm.typeCounts.collectAsStateWithLifecycle()
     var dayOpen by remember { mutableStateOf(false) }
     var sheetOpen by remember { mutableStateOf(false) }
     var sheetHadFocus by remember { mutableStateOf(false) }
@@ -471,7 +477,7 @@ fun EpgScreen(
     // Where focus goes back to when an overlay closes: the control or button that opened it.
     var returnTo by remember { mutableStateOf<(() -> Unit)?>(null) }
     val anyOverlay = menuFor != null || detailsFor != null || channelMenuFor != null || recordMenuFor != null || askPlayerFor != null || matchingChannel != null ||
-        offsetChannel != null || orderOpen || dayOpen || review.isNotEmpty()
+        offsetChannel != null || orderOpen || dayOpen || typeOpen || review.isNotEmpty()
     var hadOverlay by remember { mutableStateOf(false) }
     LaunchedEffect(anyOverlay) {
         if (anyOverlay) { hadOverlay = true; return@LaunchedEffect }
@@ -618,12 +624,7 @@ fun EpgScreen(
         )
         // … and the programme under the cursor, with what it can do.
         Box(Modifier.weight(1f).fillMaxHeight()) {
-            // glcn: the channel's logo, large, grey and faint, behind the programme's words on the right (Ghosts).
-            tv.own.owntv.glcn.GhostLogo(
-                topChannel?.displayLogoUrl,
-                Modifier.align(Alignment.CenterEnd).padding(end = 24.mpx, top = 20.mpx).size(width = GUIDE_GHOST_W, height = GUIDE_GHOST_H),
-                alpha = tv.own.owntv.glcn.Ghosts.ALPHA,
-            )
+            // glcn: no faint channel logo behind the programme's words here — in the Guide it read as a watermark.
             if (topChannel != null) {
                 val chName = ProviderTags.displayName(topChannel.name)
                 GuideProgrammeBlock(
@@ -634,8 +635,10 @@ fun EpgScreen(
                         val rating = tv.own.owntv.ui.components.rememberTmdbRating(shown.title, shown.categories)
                         listOfNotNull(programmeDetailsLine(shown)?.takeIf { it.isNotBlank() }, rating).joinToString("  ·  ").ifBlank { null }
                     },
-                    synopsis = shown?.description,
+                    // glcn: without the "(Genre, Genre)" the guide opens its text with — the line above already says it.
+                    synopsis = shown?.description?.let { tv.own.owntv.glcn.SynopsisText.withoutGenres(it, shown?.categories) },
                     modifier = Modifier.padding(start = 46.mpx, top = 76.mpx).widthIn(max = 1080.mpx),
+                    sourceId = shown?.sourceId ?: 0L,
                 )
             }
             // The key hints at the bottom right of the top area, level with the video's bottom edge.
@@ -666,6 +669,11 @@ fun EpgScreen(
                 text = null, icon = OwnTVIcon.LIST, value = categoryLabel, valueAccent = true, trailingIcon = OwnTVIcon.CHEVRON_DOWN,
                 onClick = { sheetOpen = true },
                 modifier = Modifier.focusRequester(categoryTool).widthIn(max = 380.mpx),
+            )
+            StageTool(
+                text = null, icon = OwnTVIcon.MOVIES, value = stringResource(typeFilter?.displayLabelRes ?: R.string.glcn_guide_type_title), valueAccent = typeFilter != null, trailingIcon = OwnTVIcon.CHEVRON_DOWN,
+                onClick = { returnTo = { runCatching { typeTool.requestFocus() } }; typeOpen = true },
+                modifier = Modifier.focusRequester(typeTool),
             )
             StageTool(
                 text = null, icon = OwnTVIcon.SORT, value = guideSortLabel(sortGuide), trailingIcon = OwnTVIcon.CHEVRON_DOWN,
@@ -706,7 +714,7 @@ fun EpgScreen(
 
         // glcn: the search also looks through every programme of every day kept — listed here, above the grid; OK on
         // one takes the guide to it (its channel, its day and its hour).
-        val guideMatches by vm.guideMatches.collectAsStateWithLifecycle()
+        val guideMatches by vm.guideFinds.collectAsStateWithLifecycle()
         if (query.isNotBlank() && guideMatches.isNotEmpty()) {
             val dayFmt = remember {
                 java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(java.util.Locale.getDefault(), DAY_TIME_SKELETON), java.util.Locale.getDefault())
@@ -989,6 +997,7 @@ fun EpgScreen(
             onDismiss = { askPlayerFor = null },
         )
     }
+    if (typeOpen) GuideTypeMenu(current = typeFilter, counts = typeCounts, onPick = vm::setTypeFilter, onDismiss = { typeOpen = false })
     if (orderOpen) {
         val showEmpty by vm.showEmpty.collectAsStateWithLifecycle()
         GuideOrderMenu(

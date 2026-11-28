@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,6 +39,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -86,6 +89,12 @@ import tv.own.owntv.ui.theme.stageText
 private const val CARD_W = 400
 private const val CARD_H = 225
 private const val WINDOW_HOURS = 6L
+/** glcn: with the menu on top, how much lower the rows sit (the room goes to the words above). */
+private const val HERO_SPARE = 56
+private const val HERO_FOOT = 10
+/** glcn: the width over which the words' wash fades out towards the preview box (the gap between them). */
+private const val WASH_FADE = 44
+private const val SYNOPSIS_LINES = 4
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -148,13 +157,23 @@ internal fun LiveCinematicPane(
     LaunchedEffect(previewChannel?.id, focusTitle) {
         if (focusTitle == null) { similar = emptyList(); return@LaunchedEffect }
         delay(500)
-        similar = runCatching { loadSimilar(focusTitle, focusCategories, focusYear, previewChannel?.id, previewChannel?.name) }.getOrDefault(emptyList())
+        val found = runCatching { loadSimilar(focusTitle, focusCategories, focusYear, previewChannel?.id, previewChannel?.name) }.getOrDefault(emptyList())
+        // glcn: a channel already on show in the row of cards above is not a suggestion — the strip is for what is
+        // elsewhere. (Unless that would leave it empty: then the plain answer stays.)
+        val snapshot = channels.itemSnapshotList
+        val onShow = listState.layoutInfo.visibleItemsInfo.mapNotNull { snapshot.getOrNull(it.index) }
+            .map { tv.own.owntv.core.live.SimilarNow.family(it.name) }.toSet()
+        similar = found.filter { tv.own.owntv.core.live.SimilarNow.family(it.channel.name) !in onShow }.ifEmpty { found }
     }
     val similarFirst = remember { androidx.compose.ui.focus.FocusRequester() }
     // ▲ from a suggestion goes back to the card of the channel the strip was built for.
     val returnTo = remember { androidx.compose.ui.focus.FocusRequester() }
     // The strip may have been scrolled, so its first card may not exist yet: scroll back, wait a frame, then focus it.
     val similarState = androidx.compose.foundation.lazy.rememberLazyListState()
+    // glcn: a new set of suggestions starts at its first card. The row kept the place of the card it was showing
+    // (by its key), so after zapping it could stand part-way along, its first card stuck to the screen's edge.
+    var similarHasFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(similar.map { it.programme.id }) { if (!similarHasFocus) runCatching { similarState.scrollToItem(0) } }
     val enterScope = androidx.compose.runtime.rememberCoroutineScope()
     val enterSimilar: () -> Unit = {
         enterScope.launch {
@@ -174,7 +193,10 @@ internal fun LiveCinematicPane(
         // the chips no longer need, and the rows with it, so "You may like" is whole at the bottom.
         val short = (1080.mpx - maxHeight).coerceAtLeast(0.mpx)
         val heroTop = (100.mpx - short).coerceAtLeast(16.mpx)
-        val rowsTop = 450.mpx - (100.mpx - heroTop)
+        // glcn: with the menu on top the cards carry no "up next" boxes, which left an empty band at the foot of the
+        // page: the rows sit a little lower there and the words above get that room (the synopsis ran into the tools).
+        val spare = if (short > 0.mpx) HERO_SPARE.mpx else 0.mpx
+        val rowsTop = 450.mpx - (100.mpx - heroTop) + spare
         // The picture fills the top right and dissolves into the page, as Movies' Cinematic does.
         tv.own.owntv.ui.components.ArtTint(heroArt, Modifier.matchParentSize())
         VodCinematicBackdrop(heroArt, series = true, Modifier.align(Alignment.TopEnd))
@@ -186,6 +208,7 @@ internal fun LiveCinematicPane(
             previewEngine = previewEngine,
             showVideo = showVideo,
             singleSessionBlocked = singleSessionBlocked,
+            room = rowsTop - heroTop - HERO_FOOT.mpx,
             // glcn: low enough to clear the top bar's chips ("Last channel", the playlist picker).
             modifier = Modifier.padding(start = 64.mpx, top = heroTop, end = 64.mpx),
         )
@@ -199,7 +222,17 @@ internal fun LiveCinematicPane(
                     style = stageText(20, 500), color = StageColors.Muted,
                     modifier = Modifier.padding(start = 64.mpx, top = 40.mpx),
                 )
-            } else {
+            } else tv.own.owntv.glcn.SlideFocusHost(pinned = true) { Column {
+                // glcn: the focus keeps its place — the first card, right under the words that describe it — and the
+                // channels pass under it (as Home's rows do); at the row's end, where it cannot scroll, it walks.
+                val pinnedRows = tv.own.owntv.glcn.LocalPinnedRows.current
+                val rowDensity = androidx.compose.ui.platform.LocalDensity.current
+                val channelScroll = remember(pinnedRows, rowDensity) {
+                    if (pinnedRows) with(rowDensity) { tv.own.owntv.glcn.WholeCardScroll(64.mpx.toPx(), 64.mpx.toPx(), 26.mpx.toPx(), fixed = true) } else edgeScrollSpec
+                }
+                val similarScroll = remember(pinnedRows, rowDensity) {
+                    if (pinnedRows) with(rowDensity) { tv.own.owntv.glcn.WholeCardScroll(64.mpx.toPx(), 64.mpx.toPx(), 18.mpx.toPx(), fixed = true) } else edgeScrollSpec
+                }
                 val cardsGate = tv.own.owntv.glcn.rememberStaggerGate()
                 // glcn: ▶ on the last channel goes round to the first. ◀ on the first goes round to the last only with the
                 // menu on top — with the side menu, ◀ there opens the menu, as in every list.
@@ -208,11 +241,11 @@ internal fun LiveCinematicPane(
                 val wrapFocus = remember { androidx.compose.ui.focus.FocusRequester() }
                 var wrapTo by remember { mutableStateOf(-1) }
                 val wrapScope = androidx.compose.runtime.rememberCoroutineScope()
-                CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides edgeScrollSpec) {
+                CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides channelScroll) {
                     LazyRow(
                         state = listState,
                         horizontalArrangement = Arrangement.spacedBy(26.mpx),
-                        contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 8.mpx, bottom = 6.mpx),
+                        contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 8.mpx, bottom = 6.mpx).let { if (pinnedRows) tv.own.owntv.glcn.pinnedRowPadding(it) else it },
                         modifier = Modifier.fillMaxWidth().focusGroup(),
                     ) {
                         items(
@@ -277,11 +310,12 @@ internal fun LiveCinematicPane(
                         // glcn: clear of the focused card above, which grows when it takes focus.
                         modifier = Modifier.padding(start = 64.mpx, top = 26.mpx),
                     )
+                    CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides similarScroll) {
                     LazyRow(
                         state = similarState,
                         horizontalArrangement = Arrangement.spacedBy(18.mpx),
-                        contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 6.mpx, bottom = 24.mpx),
-                        modifier = Modifier.fillMaxWidth().focusGroup(),
+                        contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 6.mpx, bottom = 24.mpx).let { if (pinnedRows) tv.own.owntv.glcn.pinnedRowPadding(it) else it },
+                        modifier = Modifier.fillMaxWidth().onFocusChanged { similarHasFocus = it.hasFocus }.focusGroup(),
                     ) {
                         items(count = similar.size, key = { similar[it].programme.id }) { i ->
                             val e = similar[i]
@@ -298,8 +332,9 @@ internal fun LiveCinematicPane(
                             )
                         }
                     }
+                    }
                 }
-            }
+            } }
         }
     }
 }
@@ -372,11 +407,12 @@ private fun LiveCinematicHero(
     previewEngine: tv.own.owntv.player.LivePreviewEngine,
     showVideo: Boolean,
     singleSessionBlocked: Boolean,
+    room: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(44.mpx)) {
-        // glcn: the box is for the video. Without one the backdrop already shows the picture, so a
-        // second copy of it here only repeated it — the words take the room instead.
+        // glcn: the box is for the video. Until it plays it shows the channel's logo on black: the backdrop beside it
+        // already shows the programme's picture, and a second copy here only repeated it.
         if (showVideo) {
             LiveCinematicVideo(
                 channel = channel,
@@ -392,23 +428,43 @@ private fun LiveCinematicHero(
         // glcn: a soft wash of the page colour behind the words, strongest where they start and gone past their end,
         // so title and synopsis read over a bright picture (the picture itself fades in only further right).
         val wash = StageColors.Wash
+        // glcn: how many lines the title took — a two-line title leaves the synopsis one line less, so the words never
+        // reach the tools below them.
+        var titleLines by remember { androidx.compose.runtime.mutableIntStateOf(1) }
         Column(
-            Modifier.width(if (showVideo) 1000.mpx else 1100.mpx).padding(top = 6.mpx)
+            Modifier.width(if (showVideo) 1000.mpx else 1100.mpx).heightIn(max = room).padding(top = 6.mpx)
                 .drawBehind {
                     // glcn: a soft oval of the page colour, no edges anywhere: strongest behind the words, fading out
                     // well past them on every side (a radial glow stretched to the text's shape).
                     val cx = size.width * 0.42f
                     val cy = size.height * 0.5f
-                    val rx = size.width * 0.78f
-                    val ry = size.height * 0.95f
-                    scale(scaleX = rx / ry, scaleY = 1f, pivot = androidx.compose.ui.geometry.Offset(cx, cy)) {
-                        drawCircle(
-                            Brush.radialGradient(
-                                0f to wash.copy(alpha = 0.80f), 0.55f to wash.copy(alpha = 0.6f), 1f to wash.copy(alpha = 0f),
-                                center = androidx.compose.ui.geometry.Offset(cx, cy), radius = ry,
-                            ),
-                            radius = ry, center = androidx.compose.ui.geometry.Offset(cx, cy),
-                        )
+                    val rx = size.width * 0.92f
+                    val ry = size.height * 1.05f
+                    // glcn: never over the preview box to the left of the words (it lay on its black as a pale glow) — and
+                    // with no edge either: the wash fades out across the gap between the box and the words. A plain
+                    // clip there left a line down the page.
+                    val fade = WASH_FADE.mpx.toPx()
+                    val bounds = androidx.compose.ui.geometry.Rect(-fade, -size.height, size.width * 2f, size.height * 2f)
+                    drawIntoCanvas { canvas ->
+                        canvas.saveLayer(bounds, androidx.compose.ui.graphics.Paint())
+                        clipRect(left = bounds.left, top = bounds.top, right = bounds.right, bottom = bounds.bottom) {
+                            scale(scaleX = rx / ry, scaleY = 1f, pivot = androidx.compose.ui.geometry.Offset(cx, cy)) {
+                                drawCircle(
+                                    Brush.radialGradient(
+                                        0f to wash.copy(alpha = 0.92f), 0.6f to wash.copy(alpha = 0.78f), 1f to wash.copy(alpha = 0f),
+                                        center = androidx.compose.ui.geometry.Offset(cx, cy), radius = ry,
+                                    ),
+                                    radius = ry, center = androidx.compose.ui.geometry.Offset(cx, cy),
+                                )
+                            }
+                            drawRect(
+                                Brush.horizontalGradient(0f to Color.Transparent, 1f to Color.Black, startX = -fade, endX = 0f),
+                                topLeft = androidx.compose.ui.geometry.Offset(-fade, bounds.top),
+                                size = androidx.compose.ui.geometry.Size(fade, bounds.height),
+                                blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                            )
+                        }
+                        canvas.restore()
                     }
                 },
         ) {
@@ -426,25 +482,25 @@ private fun LiveCinematicHero(
             }
             if (now != null) {
                 Text(
-                    tv.own.owntv.core.live.SportsNow.displayTitle(now.title), style = stageText(44, 800, (-0.5).mpxSp), color = StageColors.Text,
+                    tv.own.owntv.glcn.guideTitle(tv.own.owntv.core.live.SportsNow.displayTitle(now.title), now.sourceId), style = stageText(44, 800, (-0.5).mpxSp), color = StageColors.Text,
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { titleLines = it.lineCount },
                 )
                 Text(
+                    // glcn: the time left sits with the times it belongs to, not loose beside the bar.
                     listOfNotNull(
                         detailsLine(now, nowNext.nowDetails).takeIf { it.isNotBlank() },
+                        timeLeftText(minutesLeft(now)).takeIf { it.isNotBlank() },
                         tv.own.owntv.ui.components.rememberTmdbRating(now.title, nowNext.nowDetails?.categories),
                     ).joinToString("  ·  "),
                     style = stageText(19, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 8.mpx, bottom = 14.mpx),
                 )
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
-                    StageProgress(progressOf(now), Modifier.width(420.mpx))
-                    Text(timeLeftText(minutesLeft(now)), style = stageText(17, 500), color = StageColors.Muted, maxLines = 1)
-                }
-                now.description?.takeIf { it.isNotBlank() }?.let {
+                StageProgress(progressOf(now), Modifier.width(420.mpx))
+                now.description?.takeIf { it.isNotBlank() }?.let { tv.own.owntv.glcn.SynopsisText.withoutGenres(it, nowNext.nowDetails?.categories) }?.takeIf { it.isNotBlank() }?.let {
                     Text(
-                        it, style = stageText(19, 400).copy(lineHeight = (19 * 1.5f).mpxSp), color = StageColors.Text,
-                        maxLines = 4, overflow = TextOverflow.Ellipsis,
+                        tv.own.owntv.glcn.guideSynopsis(it, now.sourceId), style = stageText(19, 400).copy(lineHeight = (19 * 1.5f).mpxSp), color = StageColors.Text,
+                        maxLines = if (titleLines > 1) SYNOPSIS_LINES - 1 else SYNOPSIS_LINES, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 16.mpx).widthIn(max = 820.mpx),
                     )
                 }

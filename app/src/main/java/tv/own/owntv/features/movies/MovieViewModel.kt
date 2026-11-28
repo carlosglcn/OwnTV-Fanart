@@ -72,6 +72,7 @@ import tv.own.owntv.features.customize.MoveTarget
 import tv.own.owntv.core.customize.CategoryRestorePlan
 import tv.own.owntv.core.customize.planCategoryRestore
 import tv.own.owntv.core.customize.restoreCategoryToDefault
+import tv.own.owntv.core.database.entity.nameKeyOf
 import tv.own.owntv.features.live.LiveRailItem
 import tv.own.owntv.core.download.DownloadManager
 import tv.own.owntv.core.storage.StorageAccess
@@ -108,6 +109,8 @@ class MovieViewModel(
     private val externalPlayerLauncher: tv.own.owntv.core.player.ExternalPlayerLauncher,
     private val streamUrlResolver: tv.own.owntv.core.stalker.StreamUrlResolver,
     private val subtitleController: tv.own.owntv.core.subtitles.SubtitleController,
+    /** Leaving during the end credits saves the film as finished. */
+    private val skip: tv.own.owntv.player.SkipSegmentController,
 ) : ViewModel() {
 
     /** The categories' search text, held here so it survives the player (see LiveViewModel). */
@@ -504,6 +507,33 @@ class MovieViewModel(
 
     private data class Args(val key: LiveKey, val ctx: Ctx, val query: String, val sort: SettingsRepository.SortMode)
 
+    /** glcn: the rows above All in the Shelves layout — only read while that layout shows them. */
+    val shelves: StateFlow<List<tv.own.owntv.glcn.Shelf<MovieEntity>>> = combine(ctx, hiddenCategoryIds, sealedCategoryIds) { c, hidden, sealed -> c to (hidden + sealed).toList() }
+        .distinctUntilChanged()
+        .flatMapLatest { (c, out) ->
+            if (c.profileId < 0 || c.sourceIds.isEmpty()) flowOf(emptyList())
+            else {
+                val shelf = tv.own.owntv.glcn.VodShelves
+                val same: (MovieEntity) -> Any = { (it.titleSignature.ifBlank { it.name.lowercase() }) to it.parsedYear }
+                combine(
+                    movieDao.observeShelfRated(c.sourceIds, out, shelf.RATED_FLOOR, shelf.FETCH),
+                    movieDao.observeShelfRecent(c.sourceIds, out, shelf.fromYear(), shelf.FETCH),
+                    movieDao.observeShelfPopular(c.sourceIds, out, shelf.FETCH),
+                    movieDao.observeShelfAdded(c.sourceIds, out, shelf.addedSince(), shelf.FETCH),
+                    movieDao.observeShelf4k(c.sourceIds, out, shelf.FETCH),
+                ) { rated, recent, popular, added, uhd ->
+                    listOfNotNull(
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.POPULAR, popular, same),
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.ADDED, added, same),
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.RECENT, recent, same),
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.UHD, uhd, same),
+                        shelf.row(tv.own.owntv.glcn.ShelfKind.RATED, rated, same),
+                    )
+                }.throttleLatest()
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val count: StateFlow<Int> = combine(_selected, ctx, hiddenCategoryIds, sealedCategoryIds) { key, c, hidden, sealed -> countFlow(key, c, hidden, sealed) }
         .flatMapLatest { it.throttleLatest() } // Cap live COUNT re-runs during bulk sync
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
@@ -717,16 +747,42 @@ class MovieViewModel(
     val externalPlayerOn: StateFlow<Boolean> = settings.externalPlayerMovies
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    private val _openFailed = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /** A film whose playable link could not be made (a Stalker portal that would not answer). */
+    val openFailed: kotlinx.coroutines.flow.SharedFlow<Unit> = _openFailed
+
     /** Stalker movies resolve to a real URL at play time; anything else returns streamUrl as-is.
-     *  Null = resolve failed (portal/auth error) — the caller should not start playback. */
+     *  Null = resolve failed (portal/auth error), already reported — the caller should not start playback. */
     private suspend fun resolvedUrlOrNull(movie: MovieEntity): String? {
         val source = sourceDao.getById(movie.sourceId)
         if (!streamUrlResolver.needsResolve(source)) return movie.streamUrl
         return try {
-            streamUrlResolver.resolve(source!!, movie.streamUrl, vod = true)
+            streamUrlResolver.resolve(source!!, movie.streamUrl, vod = true, movieId = movie.remoteId)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "stalker resolve failed movieId=${movie.id}", e)
+            _openFailed.tryEmit(Unit)
             null
+        }
+    }
+
+    /** glcn: a film played in VLC / MX Player — where it stopped is saved like the app's own player saves it; played
+     *  to the end counts as watched. Before, nothing came back: no progress bar, never watched. */
+    private fun saveExternalMovie(pid: Long, movie: MovieEntity, outcome: tv.own.owntv.core.player.ExternalPlayerLauncher.Outcome) {
+        viewModelScope.launch {
+            val dur = outcome.durationMs
+            if (dur <= 0) return@launch
+            val pos = if (outcome.finished) dur else outcome.positionMs
+            if (pos <= 0) return@launch
+            Log.d(TAG, "saveExternalMovie movieId=${movie.id} positionMs=$pos durationMs=$dur finished=${outcome.finished}")
+            runCatching {
+                val before = runCatching { progressDao.get(pid, MediaType.MOVIE, movie.id) }.getOrNull()
+                val done = PlaybackProgressEntity(profileId = pid, mediaType = MediaType.MOVIE, itemId = movie.id, positionMs = pos, durationMs = dur)
+                progressDao.save(done)
+                if (isMovieCompleted(done) && (before == null || !isMovieCompleted(before))) tv.own.owntv.core.trakt.TraktSync.watchedMovie(pid, movie)
+            }.onFailure { t -> Log.w(TAG, "saveExternalMovie failed movieId=${movie.id}", t) }
+            launcherIntegrationRepository.publishMovieProgress(pid, movie.id, pos, dur)
         }
     }
 
@@ -744,6 +800,7 @@ class MovieViewModel(
                 userAgent = source?.userAgent,
                 httpHeaders = SourceOverrides.headersWithReferer(movie.httpHeaders, source),
                 startPositionMs = savedPositionMs(movie),
+                onResult = { outcome -> if (pid != null) saveExternalMovie(pid, movie, outcome) },
             )
             if (pid != null) {
                 runCatching {
@@ -774,6 +831,7 @@ class MovieViewModel(
                     userAgent = source?.userAgent,
                     httpHeaders = SourceOverrides.headersWithReferer(movie.httpHeaders, source),
                     startPositionMs = startPositionMs, // the screen's Resume / Start over answer
+                    onResult = { outcome -> if (pid != null) saveExternalMovie(pid, movie, outcome) },
                 )
                 if (pid != null) {
                     runCatching {
@@ -786,16 +844,7 @@ class MovieViewModel(
             val sourceUa = source?.userAgent
             // Stalker: mint the playable URL right before playback (create_link, type=vod). The stored
             // streamUrl stays the cmd — it's the item's identity (engine pins, downloads, history).
-            val playUrl = if (streamUrlResolver.needsResolve(source)) {
-                try {
-                    streamUrlResolver.resolve(source!!, movie.streamUrl, vod = true)
-                } catch (e: Exception) {
-                    Log.w(TAG, "stalker resolve failed movieId=${movie.id}", e)
-                    return@launch
-                }
-            } else {
-                movie.streamUrl
-            }
+            val playUrl = resolvedUrlOrNull(movie) ?: return@launch
             Log.d(TAG, "play movieId=${movie.id} profile=$pid startPositionMs=$startPositionMs")
             val pinKey = tv.own.owntv.core.player.enginePinKey(movie.sourceId, "MOVIE", movie.remoteId)
             player.play(
@@ -821,7 +870,7 @@ class MovieViewModel(
                 // clears any provider the previous item left on the player.
                 reconnectProvider = if (streamUrlResolver.needsResolve(source)) {
                     tv.own.owntv.core.stalker.ReconnectUrlProvider {
-                        runCatching { streamUrlResolver.resolve(source!!, movie.streamUrl, vod = true) }
+                        runCatching { streamUrlResolver.resolve(source!!, movie.streamUrl, vod = true, movieId = movie.remoteId) }
                             .onFailure { Log.w(TAG, "stalker VOD reconnect resolve failed movieId=${movie.id}", it) }
                             .getOrNull()
                     }
@@ -1018,8 +1067,8 @@ class MovieViewModel(
         val ref = playingRef ?: return
         val m = ref.movie
         if (player.isLiveContent || !playerIsOn(ref)) return
-        val pos = player.position.value
         val dur = player.duration.value
+        val pos = skip.savedPosition(player.position.value, dur)
         if (pos > 0 && dur > 0) {
             viewModelScope.launch {
                 // The position belongs to the profile that started playback. If the user switched
@@ -1157,15 +1206,15 @@ class MovieViewModel(
             }
         } else when (key) {
             LiveKey.All, LiveKey.Catchup ->
-                if (dateAdded) movieDao.searchAllDateAdded(query, ids)
-                else movieDao.searchAll(query, ids)
-            LiveKey.Favorites -> movieDao.searchFavorites(query, c.profileId, ids)
-            LiveKey.History -> movieDao.searchHistory(query, c.profileId, ids)
-            LiveKey.Continue -> movieDao.searchContinue(query, c.profileId, ids)
-            is LiveKey.Custom -> customCategoryDao.searchMovies(query, c.profileId, key.id, ids)
+                if (dateAdded) movieDao.searchAllDateAdded(nameKeyOf(query), ids)
+                else movieDao.searchAll(nameKeyOf(query), ids)
+            LiveKey.Favorites -> movieDao.searchFavorites(nameKeyOf(query), c.profileId, ids)
+            LiveKey.History -> movieDao.searchHistory(nameKeyOf(query), c.profileId, ids)
+            LiveKey.Continue -> movieDao.searchContinue(nameKeyOf(query), c.profileId, ids)
+            is LiveKey.Custom -> customCategoryDao.searchMovies(nameKeyOf(query), c.profileId, key.id, ids)
             is LiveKey.Folder ->
-                if (dateAdded) movieDao.searchInCategoryDateAdded(query, key.id)
-                else movieDao.searchInCategory(query, key.id)
+                if (dateAdded) movieDao.searchInCategoryDateAdded(nameKeyOf(query), key.id)
+                else movieDao.searchInCategory(nameKeyOf(query), key.id)
         }
     }
 

@@ -31,7 +31,7 @@ import tv.own.owntv.ui.theme.stageText
 fun SoundStylePicker(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
     // glcn: (style, name) — Natural (6, recorded sounds) first, then the synthesised ones in their own order.
     val names = listOf(
-        6 to R.string.glcn_ui_sound_style_natural,
+        6 to R.string.glcn_ui_sound_style_natural, 7 to R.string.glcn_ui_sound_style_ember,
         0 to R.string.glcn_ui_sound_style_classic, 1 to R.string.glcn_ui_sound_style_crystal, 2 to R.string.glcn_ui_sound_style_wood,
         3 to R.string.glcn_ui_sound_style_bubble, 4 to R.string.glcn_ui_sound_style_soft, 5 to R.string.glcn_ui_sound_style_air,
     )
@@ -48,11 +48,12 @@ fun SoundStylePicker(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit)
                     modifier = Modifier.fillMaxWidth()
                         .then(if (style == current || (names.none { it.first == current } && style == 6)) Modifier.focusRequester(first) else Modifier)
                         .onFocusChanged { if (it.hasFocus) { UiSounds.style = style; UiSounds.preview() } },
-                ) { _ ->
+                ) { focused ->
                     Text(
                         stringResource(name),
                         style = stageText(22, if (style == current) 800 else 600),
-                        color = if (style == current) stageAccent.accent else StageColors.Text,
+                        // glcn: on the focused fill the ink that reads on it — the accent there was the fill's own colour.
+                        color = if (focused) stageAccent.onAccent else if (style == current) stageAccent.accent else StageColors.Text,
                         modifier = Modifier.padding(horizontal = 18.mpx, vertical = 12.mpx),
                     )
                 }

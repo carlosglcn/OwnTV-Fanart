@@ -169,7 +169,16 @@ fun StageSearchField(
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun StageKeyHints(hints: List<Pair<String, String>>, modifier: Modifier = Modifier, textSize: Int = 17) {
+fun StageKeyHints(
+    hints: List<Pair<String, String>>, modifier: Modifier = Modifier, textSize: Int = 17,
+    /** glcn: the hints sit over a picture (a title's backdrop): the words take the page's text colour and a soft halo
+     *  of the page behind them — muted grey on a busy picture could not be read. */
+    overArt: Boolean = false,
+) {
+    val labelStyle = if (overArt) stageText(textSize, 600).copy(
+        shadow = androidx.compose.ui.graphics.Shadow(StageColors.Wash.copy(alpha = 0.9f), blurRadius = 10f),
+    ) else stageText(textSize, 400)
+    val labelColor = if (overArt) StageColors.Text else StageColors.Muted
     androidx.compose.foundation.layout.FlowRow(
         modifier,
         horizontalArrangement = Arrangement.spacedBy(26.mpx),
@@ -189,7 +198,7 @@ fun StageKeyHints(hints: List<Pair<String, String>>, modifier: Modifier = Modifi
                     contentAlignment = Alignment.Center,
                 ) { Text(key, style = stageText(14, 800), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 Box(Modifier.size(8.mpx, 1.mpx))
-                Text(label, style = stageText(textSize, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(label, style = labelStyle, color = labelColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -198,7 +207,7 @@ fun StageKeyHints(hints: List<Pair<String, String>>, modifier: Modifier = Modifi
 /** `.live`: the red-dot LIVE badge on a video, 15/800 +0.08em on black 55%. */
 @Composable
 fun StageLiveBadge(text: String) {
-    val red = Color(0xFFFF4D4D)
+    val red = tv.own.owntv.ui.theme.stageLive
     Row(
         Modifier.background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(10.mpx)).padding(horizontal = 12.mpx, vertical = 6.mpx),
         horizontalArrangement = Arrangement.spacedBy(8.mpx),

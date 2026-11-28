@@ -1,55 +1,59 @@
-## What's new — Programme info, cast pages and Keep watching
+## What's new — Themes, skip intro, a calmer focus and a much bigger Sports
 
-### ℹ️ Programme info
-- ℹ️ **The programme page opens already filled** and no longer waits for the guide; ◀ ▶ and CH± walk the channels smoothly, and the page follows the clock when a programme ends
-- 🔘 **Real buttons** fixed at the foot (Watch, Record, Cast, Technical data); the synopsis uses all the room above them
-- ⚽ **A match shows both crests, the score and the minute** (hidden with spoiler-free on)
-- 🎭 **Cast as faces** when the guide names it, with a Cast button that opens the cast page
-- 🔴 **"LIVE" only for a real live broadcast**; anything else on now says "ON AIR" — in programme info, the guide, the player and the banners
+### 🎨 Look
+- 🎨 **Appearance, simplified** (Settings › Fanart › Appearance): three choices — **Theme** (eight, each with a night and a day side), **Mode** (Automatic by the hour, Dark or Light) and **Background** (Plain, the theme's own, or Fanart)
+- 🔥 **New themes Brasa, Alba and Ría:** an accent that runs as a gradient and an outlined focus; panels, labels and row names take the theme's own tone
+- 🧭 **Top bar in five shapes and side menu in four** (Settings › Layout); the top bar folds around the open section while you browse and no longer jumps as you move along it
+- 📚 **Films and Series: a new layout, Shelves** — rows above the posters: Popular now, Recent releases, Top rated, Added this week and In 4K
+- 🔔 A new menu sound pack, Brasa, with its own opening tone
+- 🖼️ Posters and backdrops in full colour (no more banding in dark pictures), crisper small type on 720p screens, and easier-to-read faint text in light themes
 
-### 🎭 Cast pages
-- 👥 **OK on a film's cast opens a cast page:** large portraits, the Wikipedia summary in your language with a QR code, birth date and age, and that person's films in your playlists and servers
-- 🎭 The Cine pause screen and its Info tab show who is in the film or episode as faces
+### 🎯 Motion
+- 🎬 **The focus stays put, the row moves:** along Home's rows and Live TV's Cinematic layout the highlight keeps its place and the cards pass under it
+- 🎭 **Sections come in whole:** Films, Series, Live TV and the Guide wait a moment for their first content and appear in one piece instead of filling in steps
+- ⚡ **Brisk response** (Settings › Layout, on by default): focus, lists and menus settle in half the time
+- 🧱 ▶ on a row's last card stays there; the focus no longer flies across the screen between far-apart menus
 
-### ▶️ Films and Series
-- ▶️ **New "Keep watching" category:** films not finished and shows with an episode half seen or the next one waiting
-- 🎛️ **Optional "Keep watching" strip above the posters** (Settings › Layout, off by default): wide cards with the time left or the next episode; hold OK to mark the whole series watched or remove it for good
-- ✅ **Mark a whole season or a whole show** as watched or unwatched (hold OK on an episode)
-- 💬 **The kind of subtitle you pick is remembered** with its language — "Spanish (full)" comes back on the next episode
-- 🏷️ **Quality badges** also show IMAX, the source (BluRay, WEB-DL) and the sound format (DTS:X, TrueHD…), and can be pictures from a badge pack (Elite Badges or another by its address)
-- 🎬 Dolby Vision shows its profile, and says "HDR10" when the device cannot decode it; an episode's synopsis is the richest there is
-- 🪟 Film and series pages grow out of the poster you pressed; posters still loading shimmer instead of leaving a gap
-- 🎞️ Trakt: anyone can sign in now (accounts connected before sign in again once); the watchlist row also finds films by name and year
+### ⏭️ Films and Series
+- ⏭️ **Skip intro, recap, end credits and preview** with TheIntroDB's times, as a button or automatically (Settings › TheIntroDB); the next-episode card comes at the start of the credits. Where TheIntroDB has nothing, the file's own chapters and the jump learned for the series still work
+- ✅ **Episodes count as watched in the end credits**, and "Mark the whole series as watched" is on a series' poster menu
+- 🖼️ Episode tiles show the provider's own picture when TMDB has none
+- 📼 **VLC and MX Player report back:** progress and "watched" are kept for what you play in an external player
+- 📺 **Emby / Jellyfin:** the server now sees what you play, and what you finish is marked watched there (so its Trakt plugin picks it up)
+- 🛟 **4K / HDR / Dolby Vision films no longer close the app**, and opening Info or Audio & subtitles keeps the picture in place
 
 ### 📺 Live TV and the player
-- 🕰️ **A slim pill at the top** — time · date · weather — that adds the sleep timer, "Recording" and the score of a team you follow while it plays
-- 🗂️ **Player channel list:** the channel you are watching is marked with moving bars, the card takes the picture's colour, and ◀ ◀ ◀ opens a Playlists panel with each playlist's colour, contents and expiry (hold OK switches one off)
-- ⏩ Holding ▲ ▼ in the channel list speeds up sooner, with a rail that shows where you are; hold OK in Recently watched removes a channel
-- 🗓️ **Guide:** CH+ / CH− move a day forward or back, and search looks through every programme of every day
-- 📋 The Live TV playlist you pick is remembered after a restart
-- 🔊 FFmpeg audio for ExoPlayer is on by default: AC-3, E-AC-3, DTS and MP2 channels play their main audio
-- 📼 Channels the hardware decoder refuses (MPEG-2 on a SHIELD, some Amlogic boxes) go straight to software decoding; streams that end every half minute reopen at once
-- 🎬 Cine banner: long titles take two lines; Compact banner: a wider programme card, clear of the rewind buttons
+- 🔎 **Quick search in the player's channel list** (▲ from the first channel), across every active playlist
+- 🔄 Channel lists keep the time: time left and the programme on air refresh each minute while a list stays open
+- 📺 **Channels whose subtitles run ahead of the picture (Antena 3 UHD) open on ExoPlayer every time**
+- 💬 Teletext subtitles picked on mpv switch the channel to ExoPlayer, which can draw them
+- 🗂️ A channel's **Archive** page with its past days; catch-up on Flussonic servers; "Prefer HLS for catch-up" per playlist
+- 🩹 Live TV no longer closes while a playlist updates; Amlogic boxes no longer freeze the picture after a channel change
+- ⭐ Remote shortcuts: Favourite and Record / Download act on what is on screen and say what they did
+- ⭐ **Favourite channels outlive their playlist:** replace a playlist and, when the new one carries the same channels, the app asks once whether to mark them as favourites again — never by itself, exact matches only
+- 🌈 The player's channel list shows its focused row in the theme's gradient
 
-### 🎨 Look and motion
-- 🔤 Big titles use a display face (Oswald), so long names fit and read as headlines
-- 🎚️ **Channel lists settle softly:** the bounce at each step is a third of what it was, with a small give at the list's ends; with Animations off, lists and the focus are immediate
-- 🏷️ Light theme: white channel logos are shaded so they no longer vanish, and coloured logos keep their colours
-- 🎨 Pale or white accent colours stay readable everywhere
-- 🧊 Glass off means solid everywhere, the player's panels included; popups float with a soft shadow
-- 🌅 Empty pages show a small sunset drawing; messages use the app's own glass pill
-- 🧭 The open side menu shows a small picture of what waits in Live TV, Films and Series
+### 🗓️ Guide
+- 🌈 **Guides with colour:** Kodi-style colour guides are read; season and episode, the episode's title and the synopsis labels are tinted — in any guide
+- 🎬 **Filter by type:** films, sport, series, documentaries, news or children's programmes on now
+- ⚡ The Guide opens without a stall, and your playlist's own channel ids are kept
 
-### 🏀 Sports
-- 🏀 Three more basketball leagues: EuroCup, Primera FEB and Lega Basket Serie A, with calendar, results and table
+### 🏟️ Sports
+- 🏟️ **Match cards and pages redrawn:** each side's own colour beside its crest, the competition's logo, where it is played, and a countdown in the last three hours
+- 🎾 **Tennis:** the court's surface, tournament logos, and the **Davis Cup** with the rubber on court, its players and sets
+- 🏁 **Motorsport:** MotoGP standings, results and the whole weekend; the **Dakar** and **WRC**
+- ⭐ **Follow a tennis player, a driver or a rider**, not only teams
+- 📜 League tables scroll to their end; a **Finished** row; a match under way no longer disappears after reopening the app
+- 🏠 Home's Dock shows a live match with its minute, competition, venue and your own channel
 
-### 🌌 More
-- 🌌 Fanart screensaver: OK opens what is on screen, and Settings › App has a row to choose it as the TV's screensaver
-- 🗓️ Big playlists: the guide of groups hidden in every profile is no longer downloaded — the Guide, Home and the lists are lighter
-- 🧾 Playback report: the groups of each playlist, the start-up timeline and this session's diagnostics
+### 🧰 More
+- 📥 **Downloads, redrawn** as one page: what is coming down, recordings, films and episodes
+- 🔁 Local sync says what it is doing and why it failed; the pairing card fits the screen
+- 🧭 More and About are tidier; a Ko-fi code in About for anyone who wants to help
+- 🧾 Playback report: a smoothness meter that says where slow frames go, Emby / Jellyfin reports, and why a channel never showed a picture
 
 ### 🔄 From the original OwnTV
-- Merged the original app's latest (Nov 15–18): live tuning fixes, back by itself when the network returns, timeshift fixes, "Prefer SDR" on mpv, the Guide remembers its category, Favorites and Recent keep their own order. Thank you, ahXN00.
+- Merged the original app's work of Nov 19–28: skip intro and credits, episode pictures, the channel Archive, catch-up fixes, Force 20:9, Stalker film links, subtitles from a folder, search in any alphabet. Thank you, ahXN00.
 
 ### 🙏 Thank you
-Thank you to everyone on Telegram and Discord who tests, reports and shares ideas — the programme page, the softer lists and Keep watching in this version come from your messages.
+Thank you to everyone on Telegram and Discord who tests, reports and shares ideas — the fixed focus, the themes and the Sports pages in this version come from your messages.

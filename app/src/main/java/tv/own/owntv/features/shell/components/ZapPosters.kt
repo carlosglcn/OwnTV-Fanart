@@ -359,7 +359,10 @@ internal fun DriftingSynopsis(
     lines: Int = 3,
     /** glcn: a long text fades out at its foot instead of being cut through a line. */
     fade: Boolean = true,
+    /** glcn: the guide the text comes from, for the tint of its labels ("· País:") — see [tv.own.owntv.glcn.GuideInk]. */
+    sourceId: Long = 0L,
 ) {
+    val inked = tv.own.owntv.glcn.guideSynopsis(text, sourceId)
     val density = androidx.compose.ui.platform.LocalDensity.current
     val lineH = with(density) { style.fontSize.toDp() } * 1.4f
     val linePx = with(density) { lineH.toPx() }
@@ -406,7 +409,7 @@ internal fun DriftingSynopsis(
         Text(
             // glcn: every line exactly one step tall (no trimmed first line), so a line-at-a-time drift always rests on
             // whole lines — the first line used to show cut at the top.
-            text, style = style.copy(
+            inked, style = style.copy(
                 lineHeight = style.fontSize * 1.4f,
                 lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
                     androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center, androidx.compose.ui.text.style.LineHeightStyle.Trim.None,

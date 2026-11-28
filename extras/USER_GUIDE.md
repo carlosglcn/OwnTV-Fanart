@@ -26,9 +26,9 @@ Welcome  →  Display  →  Disclaimer  →  Set up OwnTV  →  Profile
 Every step has the same frame: step dots at the top, **Back** / **Next** at the bottom, and the keys
 for that step shown in the corner.
 
-1. **Welcome** — the language picker is on this screen: one of 26, or keep **System default**.
+1. **Welcome** — the language picker is on this screen: one of 28, or keep **System default**.
    Press **Get started**.
-2. **Display** — step UI Zoom and Font size while a sample row resizes, so you judge it from your
+2. **Display** — step UI Zoom and Font size (each profile can change its own later) while a sample row resizes, so you judge it from your
    sofa, and pick the **App icon**. Changeable later in Settings → Appearance and Settings → App.
 3. **Disclaimer** — OwnTV is a player; you bring the sources.
 4. **Set up OwnTV** — three ways to begin: **New profile**, **Restore a backup**, or
@@ -92,7 +92,8 @@ Enter the app immediately. A status pill at the bottom shows progress.
 Search, Home, Live TV, TV Guide, Movies, Series, Downloads and **⋯ More**, with the logo at the top and
 your avatar at the bottom. **Left** from anything reaches it; **Right** always goes back to exactly the
 control you left. While something plays in the mini-player or in Audio mode, a **Now playing** item
-appears under the logo.
+appears under the logo. With the mini-player open, **hold Back** from anywhere to jump into its
+controls, and hold it again to go back.
 
 **How it looks is yours to choose:** Settings → Layout → **Navigation** (see
 [Navigation](#-navigation--the-rail-your-way)).
@@ -133,12 +134,13 @@ and shows its page beside the list; **Right** enters that page; **Back** returns
 | **Back** | category list with a search typed | Clears the search and jumps to the search box. The search stays while you watch a channel |
 | **Left** | anywhere in a screen, nothing further left | Back to the rail |
 | **Back** | full-screen player | Leaves full screen (there is no exit button) |
+| **Hold Back** | mini-player open, anywhere | Into the mini-player's controls; hold again to go back to where you were |
 | **OK** | full-screen player | Shows / hides the controls |
 
 **Want different keys?** **Settings → Layout → Remote shortcuts** maps spare colour, number, channel
-and media keys to 26 actions — **Previous channel** among them. D-pad, Back, OK, volume, Home and power stay protected.
+and media keys to 28 actions — **Previous channel**, **Add or remove favorite** and **Record or download** among them. The last two act on the picture in full screen, else on the channel, film or show under the cursor; a whole show asks first. D-pad, Back, OK, volume, Home and power stay protected.
 
-**Player buttons**, on the same page, change four player keys. Every default is the behaviour above:
+**Player buttons**, on the same page, change five player keys. Every default is the behaviour above:
 
 | Option | Choices | Default |
 |---|---|---|
@@ -146,6 +148,7 @@ and media keys to 26 actions — **Previous channel** among them. D-pad, Back, O
 | **OK when the controls are hidden** | Show controls, Channel list, Guide (live channels only; films keep Show controls) | Show controls |
 | **Swap channel up/down** | CH+ and Up go to the previous channel, CH− and Down to the next | Off |
 | **Number keys tune channels** | Off stops 0–9 from typing a channel number in the player | On |
+| **D-pad Up/Down** | What Up and Down do in the full-screen live player with the controls hidden: **Change channel**; **Controls and recently watched** (Down shows the controls, Up opens Recently watched); **Off** (both do nothing). CH+/CH− always change channel | Change channel |
 
 ---
 
@@ -187,7 +190,7 @@ Per section: **Now** (import first), **Later** (background), **Off** (never fetc
 defaults to Live now, Movies/Series later, because Stalker VOD has no bulk endpoint.
 
 ### 🔄 Re-sync
-**Where:** Settings → Sources & guide → Playlists → the playlist
+**Where:** Settings → Sources & guide → Playlists → the playlist, first in its menu
 **Resync now** adds and updates. **Resync and remove missing titles** also drops what the provider
 has stopped listing. Neither touches your favourites, history, resume points or manual order.
 
@@ -212,6 +215,14 @@ for the playlist chosen (or all of them).
 **Where:** Add/Edit playlist
 Ask the panel for HLS instead of MPEG-TS. Try it if live channels are unstable. **Test HLS support**
 just above it checks whether your provider really serves it.
+
+### 📼 Prefer HLS for catch-up (Xtream and M3U)
+**Where:** Add/Edit playlist (Xtream: under Prefer HLS for Live TV)
+Ask for catch-up programmes as HLS instead of MPEG-TS. Off by default: many providers only serve
+catch-up as MPEG-TS. A programme that will not open as HLS is asked for as MPEG-TS by itself, and a
+long programme can take a few seconds more to start, because the provider builds its HLS list first.
+On an M3U playlist it changes only Flussonic catch-up channels: a finished programme then shows its
+full length and can be sought.
 
 ### 📡 Stalker portals
 **Where:** Add source → Stalker (MAC)
@@ -248,8 +259,9 @@ A full page with the channel's day: every programme on one line, grouped **Earli
 Later**, the one under the cursor opened with its times, facts, categories and whole description.
 **▲▼** move through the programmes; **Right** or **OK** goes to the opened programme's buttons —
 **Watch channel**, **Watch from start**, **Record**, **Record every showing**, **Remind me**,
-**Record from catch-up**, whichever fit it — **Left/Right** between them, **OK** runs one. **Up**
-from the first programme reaches **Yesterday · Today · Tomorrow**. **Back** closes. The next and
+**Record from catch-up**, whichever fit it — **Left/Right** between them, **OK** runs one. **Left**
+reaches the days on the left — **Tomorrow**, **Today**, **Yesterday** and, on a catch-up channel, every
+older day its archive keeps; **▲▼** change the day, **Right** or **OK** go into its programmes. **Back** closes. The next and
 later lines under the preview are for reading only.
 
 ### 🗓️ List or guide
@@ -260,7 +272,7 @@ opens in** chooses which one you start in.
 ### ⭐ Favourite, rename, hide
 **Where:** long-press **OK** (or **Menu**) on a channel
 The channel menu is grouped **Watch · Channel · Guide data · Organise** and also holds **Match EPG**,
-**Catch-up**, **Record**, **Move**, **Add to Multiview**, **Remove from this category** (inside a
+**Archive** (**Catch-up** on a channel without a guide), **Record**, **Move**, **Add to Multiview**, **Remove from this category** (inside a
 custom category) and **Play in external player**.
 
 ### ↕️ Move
@@ -268,7 +280,7 @@ custom category) and **Play in external player**.
 ⋯ More → Favourites → hold OK → **Move**
 The Move window opens with that item picked up. **▲ ▼** carry it a row, **CH+ / CH−** a page, and a
 **long press** of them to the first or last place. **OK** puts it down or picks up another, so several
-can move in one go. **Save** keeps the new order; **Cancel** or **Back** leaves it as it was.
+can move in one go. **◀** jumps to **Cancel** and **▶** to **Save**, however long the list. **Save** keeps the new order; **Cancel** or **Back** leaves it as it was.
 What you moved keeps its place in **A–Z** and **Provider** alike; everything you never moved follows
 the sort around it. **Restore to playlist default** on a category clears its moved items. Favorites and
 History always keep their own order (moved items, then newest first): their sort button reads
@@ -301,7 +313,7 @@ wait.
 
 ### 🔒 Protected (DRM) channels
 Widevine and ClearKey channels play with nothing to set up — your TV does the unlocking. That
-includes ClearKey channels whose playlist writes the key itself (`license_key=kid:key`); a playlist
+includes ClearKey channels whose playlist writes the key itself (`license_key=kid:key`), and playlists written the newer Kodi way (`inputstream.adaptive.drm` / `drm_legacy`); a playlist
 added before this update needs one refresh to pick the key up. They always
 use ExoPlayer, so the engine toggle is hidden for them. Some cheaper boxes only allow standard
 definition; that is the device's decision, not OwnTV's. Apple FairPlay channels cannot play on any
@@ -351,7 +363,8 @@ When two feeds list the same channel, the one higher on the list is used. Open a
 leaves empty.
 
 If a feed syncs but none of its channels match your playlist's, the feed says so; open the TV
-Guide, which then offers **Auto-match EPG** to pair them by name.
+Guide, which then offers **Auto-match EPG** to pair them by name. A channel still without a guide after
+that gets **Match EPG** from its own menu.
 
 > **Playlist has no channel logos?** Turn on **Use this guide's channel logos** on the feed. Logos
 > then come from the XMLTV guide instead; channels the feed has no logo for keep the playlist's one.
@@ -362,6 +375,9 @@ Auto-match does the bulk — only for the playlist(s) the guide is showing, so i
 **Logos** in the review window and every matched channel also takes the logo of the guide channel it
 is matched to. Auto-match keeps going if you leave the Guide: a message says how it went when it
 finishes, and the review window is waiting when you come back.
+A channel matched to a guide channel the downloaded guide does not hold yet gets its programmes — past days
+included on catch-up channels — from one quick download of only the guide that lists it. In the picker,
+**Right** jumps from the list to **Clear match** and **Close**.
 
 ### 📅 Guide days to keep
 **Where:** Settings → Sources & guide → **Guide days to keep**
@@ -387,11 +403,16 @@ For a provider publishing its guide in another time zone. A re-sync never undoes
 
 ### ▶️ Replay a past programme
 **Where:** Guide → a past programme → **Watch from start**
-Or long-press a channel → **Catch-up** and pick from the list. Up to 7 days, limited by what your
-provider actually keeps.
+Up to 7 days, limited by what your provider actually keeps.
+
+### 🗄️ Archive
+**Where:** long-press a channel → **Archive**, or the catch-up button in the full-screen player
+The channel's Program details page, opened on **Yesterday** (during a replay, on the programme you are
+watching), with its days on the left as far back as the archive goes. Pick a day, then a programme →
+**Watch from start**. A channel with no guide has **Catch-up** there instead, which opens **Go back to…**.
 
 ### 🕐 Go back to a time
-**Where:** full-screen player → **Go back to…**
+**Where:** full-screen player → **Go back to…** (the catch-up button, on a channel with no guide)
 Offers times counted back from now — `21:30`, `19:00`, `Sun 20:00`. The last row opens a
 day/hour/minute picker. **This works even on channels with no guide at all.** When the guide knows what
 is on, the first row is **Start of “…”** — back to the beginning of the programme on air.
@@ -495,7 +516,10 @@ chosen shows everything. The choice stays across the tabs until you close the ap
 of the top row rebuilds the sports data now; the bottom status pill says **Rebuilding sports…** while
 it runs.
 **Scores** rows: **Live now** (red LIVE mark), **Sport on your channels now** (from your guide) and
-**Starting soon**. **OK** on a match opens its page; **hold OK** offers Follow, Remind me (once Find
+**Starting soon** (today's games; tomorrow's when today has none). Tables show the columns each sport
+uses — points for football, OTL for hockey, PCT and GB for basketball and baseball — and outside
+football the tabs read **Standings** and **Games**. College teams are found in **My teams**, labelled
+with their league. **OK** on a match opens its page; **hold OK** offers Follow, Remind me (once Find
 channels has found a channel), each side's team page and the match page.
 
 ### 📅 Calendar
@@ -566,7 +590,8 @@ the categories (a sheet in Cinematic, a column in Separate panels).
 **Where:** OK on a series
 The show's backdrop, title, details and synopsis, then **Resume / Play**, **Favourite**, **Download
 season** and **⋯** (series options). Below: season tabs with episode counts (**Specials** last, when
-the show has them), **Grid | List**, and **Episode order**. Each episode shows its picture, date,
+the show has them), **Grid | List**, and **Episode order**. Each episode shows its picture (TMDB's, else the
+provider's own picture of that episode, else the show's backdrop), date,
 runtime, plot and progress; hold OK on one for its own menu.
 
 ### ▶️ Resume
@@ -577,10 +602,11 @@ Episode 1, with **Specials** after the last season.
 ### ⏭️ Auto-play next episode
 **Where:** Settings → Watching & recording → **Auto-play next episode**
 Rolls into the next season too. In the last 30 seconds a card counts down, with **Play now** and
-**Cancel**.
+**Cancel**. When TheIntroDB knows where the episode's end credits start, the card comes at the credits
+instead — see **Skip intro & credits** below.
 
 ### ✅ Watched state
-A ✓ once watched to 95%, a progress bar when part-way — on episodes and on film posters; a show's
+A ✓ once watched to 95% — or once the end credits start, when TheIntroDB knows them — a progress bar when part-way — on episodes and on film posters; a show's
 poster carries the bar of its latest part-watched episode. Long-press → **Mark as watched /
 unwatched** to correct it by hand.
 
@@ -610,7 +636,7 @@ remembers it.
 ## 🎬 TMDB metadata
 
 ### 🖼️ Posters, plots, cast, trailers
-**Where:** Settings → Content & metadata → **Metadata (TMDB)**
+**Where:** Settings → Content & metadata → Metadata → **TMDB**
 **Metadata source** picks *Provider only*, *Provider + TMDB* or *TMDB only*. **Language** sets the
 language of plots and artwork — separate from the app's own language.
 
@@ -619,7 +645,7 @@ The built-in service is shared by everyone using OwnTV, so it has minute/hour/da
 the top of the page.
 
 ### 🔑 Use your own key instead — recommended
-**Where:** Settings → Content & metadata → Metadata (TMDB) → **Get advanced TMDB info**
+**Where:** Settings → Content & metadata → Metadata → TMDB → **Get advanced TMDB info**
 A free personal TMDB key removes the shared limit. It's 32 characters, so send it from your phone by
 QR + PIN rather than typing it. A self-hosted Cloudflare Worker also works (one is in the repo).
 
@@ -627,6 +653,72 @@ QR + PIN rather than typing it. A self-hosted Cloudflare Worker also works (one 
 **Where:** long-press a film or show
 **Set TMDB name** corrects the title used for lookups; **Refetch TMDB details** forces a fresh fetch;
 **Hide** removes it everywhere; **Play Trailer** appears when TMDB has one.
+
+---
+
+## ⏭️ Skip intro & credits — TheIntroDB
+
+Films and episodes can skip their **intro**, **recap**, **end credits** and **preview** of the next
+episode. The times come from [TheIntroDB](https://theintrodb.org/), a free database filled in by
+viewers. It works with no account and no key.
+
+**It needs TMDB details:** TheIntroDB finds a title by its TMDB match, so Metadata source must not be
+*Provider only*, and the title must be matched (long-press → **Set TMDB name** fixes a wrong one).
+Live TV and catch-up are never skipped.
+
+### ⚙️ Choose what happens
+**Where:** Settings → Content & metadata → Metadata → **TheIntroDB**
+- **Intro · Recap · End credits · Preview** — each one on its own:
+  - **Off** — nothing happens.
+  - **Show a button** (default) — a **Skip intro** (Skip recap, Skip credits, Skip preview) button
+    appears above the controls; **OK** jumps to the end of that part.
+  - **Skip automatically** — the part is jumped over by itself, and a short "Intro skipped" note shows.
+- **Skip button** — how long the button stays:
+  - **First 10 seconds** (default) — at the start of the part, and again whenever you bring up the
+    controls while it is playing (press **Up** from the progress bar to reach it).
+  - **Whole part** — for as long as the part plays.
+
+### 🎬 End credits and the next episode
+- **An episode with a next one, Auto-play next episode on:**
+  - *Show a button* — when the credits start, the next-episode card counts down from 10 seconds, with
+    **Play now** and **Watch credits**.
+  - *Skip automatically* — a 3-second notice, then the next episode starts. Press any key during the
+    notice to stay and watch the credits.
+- **Auto-play off** — the button reads **Next episode**.
+- **A film, the last episode, or the sleep timer set to end of episode** — **Skip credits** finishes
+  the title as if it had played to the end; it is never done automatically.
+- **No credit times for the title** — everything works as before: the card in the last 30 seconds.
+- A title counts as **watched** once its end credits start.
+
+### 🔑 Your own key — optional
+Without a key, lookups use TheIntroDB's free daily allowance for your network. A key of your own
+gives you more lookups, counted for your account. Focusing **TheIntroDB** in Settings → Content & metadata shows today's allowance beside the row; **TMDB** there shows the shared service's allowance, or **No daily limit** with your own key.
+1. Open **theintrodb.org** on a phone or computer and **sign in** — this creates your account.
+2. Open **Docs** on the site. Your key is shown there as **Your API Key**; copy it. It starts with
+   `theintrodb:`.
+3. On the TV: Settings → Content & metadata → Metadata → TheIntroDB → **TheIntroDB account**. Paste the
+   key into **TheIntroDB API key**, or choose **Get key from another device** — scan the QR code with
+   your phone, enter the PIN, and paste the key there. The key is long, so the phone is much easier.
+4. **Check key** tests it. The line underneath shows **Connected · submissions: N** (the times your
+   account has added) and today's allowance: **Day · X / Y left · Refills HH:MM**. **Key not accepted**
+   means it was copied wrongly.
+5. **Stop using your own key?** removes it; lookups carry on without a key.
+
+A backup with a password carries the key, encrypted, like the TMDB and OpenSubtitles keys; a backup
+without a password leaves it out.
+
+### 🔍 Check TheIntroDB
+**Where:** long-press a film, a series or an episode → **Check TheIntroDB**
+Asks TheIntroDB right away and shows the title, its **TMDB ID** (and season and episode), and which
+parts it has times for — for example *TheIntroDB has skip times for: Intro · End credits*. On a series
+it checks Season 1 Episode 1; on an episode, that episode. The answer can also be that TheIntroDB knows
+the title but has no times yet, that it doesn't list the title at all, or that the title isn't matched
+with TMDB. Like every action, you can move or hide it in Settings → Layout → **Long-press menus**.
+
+### 🤝 Add the missing times yourself
+TheIntroDB doesn't have every film and series — its times come from viewers. If a title has no skip
+button, sign in at **theintrodb.org** and submit its times; once they are accepted, everyone watching it
+gets the button, in OwnTV too.
 
 ---
 
@@ -640,7 +732,8 @@ its rank, **IN YOUR PLAYLIST**, title (its title art when TMDB has it), year, ge
 episodes**), **Trailer**, **All versions** (when your playlist has several copies), details and
 favourite. **Down** reaches the pager under the buttons; **◀ ▶** there change the title. Moving into
 the rows folds the hero small; **Up** from the first row opens it again. **Posters only** shows the
-trending titles as the first poster row instead.
+trending titles as the first poster row instead; **hold OK** or press **Menu** on a poster for its menu —
+**Play trailer**, **Add to Favorites**, **Download** (a series: **Download all episodes**, asked first) and details.
 
 While a large playlist is still loading after setup, Home says **Loading your library** with the
 number of titles stored so far, and that Now Trending appears as the library fills in.
@@ -680,7 +773,7 @@ switch channel rows between **Cards** and **On now** (an inline mini-guide).
 ## 🔎 Search · 🕐 History · 📥 Downloads
 
 ### 🔎 Search
-**Where:** the rail → Search
+**Where:** the rail → Search (focus stays on the rail; **▶** enters the search box) · the remote's Search shortcut goes straight into the box
 Searches Live, Movies and Series together. Four filter buttons — **Live TV / TV Shows / Movies /
 Series**, each with its count — narrow the results: **OK** turns one on, **OK** again turns it off,
 several can be on, and none on shows everything. Every match is listed, up to 500 of each kind. Words match from their start, and a dash or other mark
@@ -690,7 +783,8 @@ results; a film or show shows its poster panel.
 — where play, download and every option live; **Back** returns to Search with your query kept.
 **TV Shows** lists programmes from the stored guide whose title matches, on now or within the next 12
 hours, with the channel and time; **OK** goes to that channel. With
-the box empty: **Jump to**, your recent searches, and Continue watching.
+the box empty: **Jump to**, your recent searches (each profile has its own), and Continue watching.
+Search and A–Z ignore letter case in every alphabet: "один" finds "Один".
 **Voice search:** the 🎤 button right of the box listens through your TV's speech recogniser and
 searches what you say. It only appears where the device has one (most Google TV and Android TV
 devices do; many Fire TV and generic boxes don't).
@@ -706,7 +800,7 @@ history**.
 
 ### 📥 Downloads
 **Where:** the rail → Downloads
-Tabs **Movies / Series / Recordings** with counts; the title shows the storage's name and free space,
+Tabs **Recordings / Movies / Series** with counts, opening on Recordings; the title shows the storage's name and free space,
 and the folder the tab saves to sits under **Download folder**. Rows are grouped **Downloading** and
 **On this TV**, each with picture, details, its file path and "64% · 12.4 MB/s · 3 min left" — or
 Queued, Paused, Failed, Ready to watch. **Pause / Resume / Retry / External / Delete** appear on the
@@ -796,7 +890,7 @@ profile with a PIN asks for it again.
 | Engine pill **⇄ MPV/EXO** | control bar |
 | **Go back to…** | control bar, catch-up channels |
 | **Sources** | control bar, live channels — the same channel in another quality, category or playlist; pick one to switch. Locked and hidden channels are left out |
-| **Aspect** | control bar — a press steps to the next mode (Fit, Fill, Stretch, Original, 16:9, 4:3) and names it; **hold OK** for the list |
+| **Aspect** | control bar — a press steps to the next mode (Fit, Fill, Stretch, Original, 16:9, 4:3, 20:9) and names it; **hold OK** for the list |
 | ⓘ **Stream info** | right-most button — codec, resolution, HDR, bitrate, decoder, audio, buffer; on mpv also **Interlacing** (none, deinterlaced by the player or by the TV, or not deinterlaced) |
 | **Record** | control bar, live channels, once enabled |
 | **Multiview** | control bar, once enabled |
@@ -807,7 +901,9 @@ profile with a PIN asks for it again.
 - **Remote transport keys** work — play/pause, next, previous, from the remote, a headset or a voice
   assistant.
 - **A notification won't pause your film** — the sound dips and comes back.
-- **Mini-player** — subtitles show in it too. Get back to it from any screen via **Now Playing**. Browsing Live TV or the Guide behind it does not change it: expanded, the player, its guide card, Record and CH± are still about the channel playing.
+- **Mini-player** — subtitles show in it too. Get back to it from any screen via **Now Playing**, or
+  **hold Back** to move straight into its controls; hold Back again to return to where you were. Every
+  remote has Back, Fire TV's included. Browsing Live TV or the Guide behind it does not change it: expanded, the player, its guide card, Record and CH± are still about the channel playing.
 - **Picture-in-picture** — with Settings → Watching & recording → **Picture-in-picture when leaving
   the app** on (off by default), pressing **Home** while a video plays full screen or in the mini-player
   keeps it playing in a small window. Open OwnTV again for full screen; close the window to stop. Not
@@ -833,6 +929,13 @@ Needs a free [opensubtitles.com](https://www.opensubtitles.com) account. Sign in
 ### 📁 Use a file you already have
 **Where:** player → Subtitles → **Select local subtitle file**
 No account, no internet. Browses USB and internal storage.
+
+### 📂 Find in folder
+**Where:** player → Subtitles → **Find in folder**
+Choose a folder once (USB or internal storage); after that it lists the subtitle files there, best
+match for the film or episode first, with a search box. **Load matching subtitle automatically**
+loads the one file whose name matches a film or episode that has no subtitle yet — when two match
+(an English and a German one), it loads neither. **Change folder** picks another.
 
 ### ⏱️ Fix subtitle timing
 **Where:** player → Subtitles → the **Subtitle timing** row

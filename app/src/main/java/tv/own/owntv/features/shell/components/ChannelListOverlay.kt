@@ -109,6 +109,7 @@ fun ChannelListOverlay(
     /** glcn: Recent only — held OK on a row offers to drop that channel from the list, or all of them. */
     onForget: ((ChannelEntity) -> Unit)? = null,
     onForgetAll: (() -> Unit)? = null,
+    onMinute: (List<ChannelEntity>) -> Unit = {},
 ) {
     // glcn: the row held OK on in Recent; while set, the "drop it or all of them" popup is up.
     var forgetFor by remember { mutableStateOf<ChannelEntity?>(null) }
@@ -147,6 +148,16 @@ fun ChannelListOverlay(
     val currentIndex = remember(channels, playingIndex) { playingIndex.coerceAtLeast(0) }
     // glcn: opens already on the current channel — scrolling there after the first frame showed the top for a blink.
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = currentIndex)
+    // From upstream: time left, progress and "watched 5 min ago" move with the clock while the list stays open, and
+    // each minute the channels on screen have their programmes read again (a programme that has since ended, or a
+    // channel that had nothing on when the list opened).
+    val nowMs = tv.own.owntv.features.live.rememberMinuteClock()
+    val openedAt = remember { nowMs }
+    LaunchedEffect(nowMs) {
+        if (nowMs == openedAt) return@LaunchedEffect
+        val onScreen = listState.layoutInfo.visibleItemsInfo.mapNotNull { channels.getOrNull(it.index) }
+        if (onScreen.isNotEmpty()) onMinute(onScreen)
+    }
     val focusTarget = remember { FocusRequester() }
     // The row that owns [focusTarget]: the current channel at first, then wherever paging jumped to.
     var targetIndex by remember(currentIndex) { mutableIntStateOf(currentIndex) }
@@ -315,8 +326,8 @@ fun ChannelListOverlay(
                 val oneSource = channels.asSequence().map { it.sourceId }.distinct().take(2).count() <= 1
                 itemsIndexed(channels, key = { _, ch -> ch.id }) { index, ch ->
                     val isPlaying = index == playingIndex
-                    val nowMs = remember { System.currentTimeMillis() }
                     LiveStageRow(
+                        nowMs = nowMs,
                         channel = ch,
                         name = ProviderTags.parse(ch.name),
                         now = nowProgrammes[ch.id],
@@ -733,6 +744,8 @@ internal fun ChannelListPanel(
     focusTarget: FocusRequester = remember { FocusRequester() },
     autoFocus: Boolean = true,
     onFocusChannel: (ChannelEntity) -> Unit = {},
+    /** Each minute, the channels whose rows are on screen, so their programmes can be read again. */
+    onMinute: (List<ChannelEntity>) -> Unit = {},
 ) {
     val layoutDirection = LocalLayoutDirection.current
     val history = watchedAt != null
@@ -746,6 +759,16 @@ internal fun ChannelListPanel(
     // channel's programme, schedule and picture again — on a long list the box fell behind and rows came up empty.
     val panelChannel = rememberSettled(channels.getOrNull(focusedIndex), PANEL_SETTLE_MS)
     val scope = rememberCoroutineScope()
+    // Time left, progress and "watched 5 min ago" move with the clock while the list stays open.
+    val nowMs = tv.own.owntv.features.live.rememberMinuteClock()
+    // Only the rows on screen: an "All channels" list can hold tens of thousands, and a channel whose
+    // guide had nothing on when the list opened must still show what starts while it stays open.
+    val openedAt = remember { nowMs }
+    LaunchedEffect(nowMs) {
+        if (nowMs == openedAt) return@LaunchedEffect
+        val onScreen = listState.layoutInfo.visibleItemsInfo.mapNotNull { channels.getOrNull(it.index) }
+        if (onScreen.isNotEmpty()) onMinute(onScreen)
+    }
     val settingsVm: SettingsViewModel = koinViewModel()
     val chNavEnabled by settingsVm.chNavEnabled.collectAsStateWithLifecycle()
     val chNavUpSkip by settingsVm.chNavUpSkip.collectAsStateWithLifecycle()
@@ -830,8 +853,8 @@ internal fun ChannelListPanel(
         ) {
             itemsIndexed(channels, key = { _, ch -> ch.id }) { index, ch ->
                 val isPlaying = index == playingIndex
-                val nowMs = remember { System.currentTimeMillis() }
                 LiveStageRow(
+                    nowMs = nowMs,
                     channel = ch,
                     name = ProviderTags.parse(ch.name),
                     now = nowProgrammes[ch.id],

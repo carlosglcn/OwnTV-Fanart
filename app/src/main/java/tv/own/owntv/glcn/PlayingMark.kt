@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -70,15 +73,22 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBars(color: Col
 @Composable
 fun Modifier.playingMark(on: Boolean): Modifier {
     if (!on) return this
-    val accent = stageAccent.accent
+    val a = stageAccent
     val phase by eqPhase()
-    return this.drawBehind {
-        drawRoundRect(accent.copy(alpha = PlayingMark.WASH), cornerRadius = CornerRadius(14.mpx.toPx()))
-        val bw = 9.mpx.toPx()
-        val bh = 16.mpx.toPx()
-        drawBars(accent, phase, Offset(3.mpx.toPx(), (size.height - bh) / 2f), Size(bw, bh))
+    // glcn: the bars are drawn over the row, clear of its edge, and in the ink that reads on a focused row: drawn
+    // behind it at the very edge they were half hidden by the focus and its outline, and accent on accent besides.
+    var focused by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val ink = if (focused && !EmberFocus.on) a.onAccent else a.accent
+    return this.onFocusChanged { focused = it.hasFocus }.drawWithContent {
+        drawRoundRect(a.accent.copy(alpha = PlayingMark.WASH), cornerRadius = CornerRadius(14.mpx.toPx()))
+        drawContent()
+        val bw = 10.mpx.toPx()
+        val bh = 18.mpx.toPx()
+        drawBars(ink, phase, Offset(BARS_INSET.mpx.toPx(), (size.height - bh) / 2f), Size(bw, bh))
     }
 }
+
+private const val BARS_INSET = 7
 
 /** Where the watched channel went, with its name: a pill at the list's top ([above]) or foot. */
 @Composable

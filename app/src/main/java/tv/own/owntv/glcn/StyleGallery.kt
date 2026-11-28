@@ -45,10 +45,12 @@ fun StylePickerPopup(current: GlcnStyle?, onPick: (GlcnStyle?) -> Unit, onDismis
     LaunchedEffect(Unit) { delay(80); runCatching { first.requestFocus() } }
     StagePopup(onDismiss = onDismiss, title = stringResource(R.string.glcn_style_title), body = stringResource(R.string.glcn_style_desc), width = 1700.mpx) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.mpx)) {
-            // glcn: two groups in the one picker — the classic styles and the gradient ones — each sketch in its real colours.
+            // glcn: three groups in the one picker — the newest look (an accent in two colours, focus drawn as an outline:
+            // Brasa, Alba), the classic styles and the ones on a gradient backdrop — each sketch in its real colours.
             var shown = 0
             listOf(
-                R.string.glcn_style_group_classic to GlcnStyle.entries.filter { !it.isGradient },
+                R.string.glcn_style_group_outline to GlcnStyle.entries.filter { it.accent2Hex != null },
+                R.string.glcn_style_group_classic to GlcnStyle.entries.filter { !it.isGradient && it.accent2Hex == null },
                 R.string.glcn_style_group_gradient to GlcnStyle.entries.filter { it.isGradient },
             ).forEach { (heading, group) ->
             tv.own.owntv.ui.stage.StageGroupLabel(stringResource(heading), sheet = true)
@@ -101,7 +103,7 @@ fun StylePickerPopup(current: GlcnStyle?, onPick: (GlcnStyle?) -> Unit, onDismis
 
 /** A Home in the style's own colours: its page, its panels (glass ones see-through), its accent and text. */
 @Composable
-private fun StyleSketch(style: GlcnStyle, focused: Boolean, modifier: Modifier) {
+internal fun StyleSketch(style: GlcnStyle, focused: Boolean, modifier: Modifier) {
     Box(modifier) {
         Canvas(Modifier.matchParentSize()) { drawStyle(style) }
     }

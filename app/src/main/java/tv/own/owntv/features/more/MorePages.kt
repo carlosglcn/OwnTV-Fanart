@@ -1,5 +1,6 @@
 package tv.own.owntv.features.more
 
+import androidx.compose.ui.layout.layout
 import tv.own.owntv.ui.theme.stageTone
 import androidx.activity.compose.BackHandler
 import tv.own.owntv.ui.components.longPressMenuGuard
@@ -140,11 +141,11 @@ internal fun StageActionRow(
     leading: @Composable (focused: Boolean) -> Unit,
     title: String,
     line: String?,
+    modifier: Modifier = Modifier,
     actions: List<RowAction> = emptyList(),
     titleSize: Int = 24,
     trailing: (@Composable () -> Unit)? = null,
     extra: @Composable (focused: Boolean) -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     var hasFocus by remember { mutableStateOf(false) }
     Box(
@@ -223,7 +224,7 @@ private val SettingsCards = listOf(
     SettingsGroupCard(OwnTVIcon.LIST, R.string.settings_group_sources, R.string.settings_card_sources, 8),
     SettingsGroupCard(OwnTVIcon.PALETTE, R.string.settings_group_appearance, R.string.settings_card_appearance, 9),
     SettingsGroupCard(OwnTVIcon.GRID, R.string.settings_group_layout, R.string.settings_card_layout, 10),
-    SettingsGroupCard(OwnTVIcon.MOVIES, R.string.settings_group_content_metadata, R.string.settings_card_content, 3),
+    SettingsGroupCard(OwnTVIcon.MOVIES, R.string.settings_group_content_metadata, R.string.settings_card_content, 4),
     SettingsGroupCard(OwnTVIcon.PLAY_CIRCLE, R.string.settings_vp_cat_player, R.string.settings_card_player, 10),
     SettingsGroupCard(OwnTVIcon.EXPAND, R.string.settings_vp_cat_picture, R.string.settings_card_picture, 9),
     SettingsGroupCard(OwnTVIcon.HEADPHONES, R.string.settings_group_sound_subtitles, R.string.settings_card_sound, 12),
@@ -415,7 +416,18 @@ internal fun FavouritesPage(
                 else -> stringResource(R.string.more_fav_movies_series)
             }
             RowHead(heading, null, top = if (showLive && lists.live.isNotEmpty()) 36.mpx else 34.mpx)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(24.mpx), contentPadding = PaddingValues(end = 24.mpx, bottom = 24.mpx)) {
+            // glcn: room inside the row for the focused poster — it grows, and with no padding at the row's start and
+            // top its left edge, its ring and the first letters of its title were cut off. The row is shifted back by
+            // the same amount, so the posters stay in line with the heading.
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(24.mpx),
+                contentPadding = PaddingValues(start = FAV_ROW_ROOM.mpx, top = FAV_ROW_ROOM.mpx, end = 24.mpx, bottom = 24.mpx),
+                modifier = Modifier.layout { measurable, constraints ->
+                    val room = FAV_ROW_ROOM.mpx.roundToPx()
+                    val placeable = measurable.measure(constraints.copy(maxWidth = constraints.maxWidth + room))
+                    layout((placeable.width - room).coerceAtLeast(0), (placeable.height - room).coerceAtLeast(0)) { placeable.place(-room, -room) }
+                },
+            ) {
                 items(vodShown, key = { (t, item) -> t.name + ((item as? tv.own.owntv.core.database.entity.MovieEntity)?.id ?: (item as tv.own.owntv.core.database.entity.SeriesEntity).id) }) { (type, item) ->
                     val movie = item as? tv.own.owntv.core.database.entity.MovieEntity
                     val series = item as? tv.own.owntv.core.database.entity.SeriesEntity
@@ -797,6 +809,16 @@ internal fun ErrorLogPage(setEntry: (() -> Boolean) -> Unit, onCountChanged: () 
 // About
 // ---------------------------------------------------------------------------------------------
 
+/** glcn: a block's name on About — small capitals in the theme's colour. */
+@Composable
+private fun AboutBlockLabel(text: String) {
+    Text(
+        text.uppercase(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]),
+        style = stageText(14, 800, 0.13.em), color = tv.own.owntv.ui.theme.stageLabelInk,
+        modifier = Modifier.padding(top = 26.mpx, bottom = 12.mpx),
+    )
+}
+
 @Composable
 internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLanguage: () -> Unit) {
     val context = LocalContext.current
@@ -846,48 +868,75 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
                 )
             }
         }
+        // glcn: three blocks — the version and what to do with it, the community, the credits.
+        Row(Modifier.padding(top = 22.mpx), horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
+            val languages = SupportedLocales.all.count { it.packaged }
+            StageTool(stringResource(R.string.settings_check_updates), onClick = { showUpdate = true }, icon = OwnTVIcon.REFRESH, boxed = true, modifier = Modifier.focusRequester(entry).focusRequester(updateFocus))
+            StageTool(pluralStringResource(R.plurals.more_about_languages, languages, languages), onClick = onOpenLanguage, icon = OwnTVIcon.LIST, boxed = true)
+            // glcn: a star on GitHub, as a QR for the phone (the TV has no browser).
+            StageTool(stringResource(R.string.glcn_star_action), onClick = { showStar = true }, icon = OwnTVIcon.STAR, boxed = true)
+            // glcn: the beta's updates come from a private repository; its token is pasted here once.
+            if (BuildConfig.GLCN_BETA) {
+                StageTool(stringResource(R.string.glcn_beta_token), onClick = { showToken = true }, icon = OwnTVIcon.PENCIL, boxed = true,
+                    value = if (manager.accessToken != null) stringResource(R.string.glcn_beta_token_saved) else null)
+            }
+        }
         Text(stringResource(R.string.more_about_description), style = stageText(18, 500).copy(lineHeight = 29.mpxSp), color = stageTone(Color(0xFFD3DCD8), StageColors.Body),
-            modifier = Modifier.padding(top = 26.mpx).widthIn(max = 860.mpx))
-        // glcn: what this version is, whose work it builds on, and where its own problems go.
-        Text(stringResource(R.string.glcn_about_fork), style = stageText(17, 500).copy(lineHeight = 27.mpxSp), color = StageColors.Muted,
-            modifier = Modifier.padding(top = 12.mpx).widthIn(max = 1000.mpx))
-        // glcn: Trakt's required notice (production access terms).
-        Text(stringResource(R.string.glcn_trakt_notice), style = stageText(15, 500), color = StageColors.Dim,
-            modifier = Modifier.padding(top = 8.mpx, bottom = 24.mpx).widthIn(max = 1000.mpx))
+            modifier = Modifier.padding(top = 22.mpx).widthIn(max = 1000.mpx))
+        AboutBlockLabel(stringResource(R.string.glcn_about_block_community))
         // glcn: this version's own Telegram group first, then the original project's — the same tile for both.
         Row(horizontalArrangement = Arrangement.spacedBy(20.mpx)) {
-            StageTile(Modifier.width(620.mpx)) {
+            StageTile(Modifier.width(ABOUT_TILE_W.mpx)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
                     // glcn: drawn like Telegram's own group codes (rounded dots, the plane in the middle, the name below).
                     Image(
                         painter = painterResource(R.drawable.telegram_qr_fanart),
                         contentDescription = stringResource(R.string.settings_telegram_qr),
-                        modifier = Modifier.size(150.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
+                        modifier = Modifier.size(ABOUT_QR.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
                     )
                     Column {
-                        Text(stringResource(R.string.glcn_about_community_fanart), style = stageText(20, 800), color = StageColors.Text)
+                        Text(stringResource(R.string.glcn_about_community_fanart), style = stageText(18, 800), color = StageColors.Text)
                         Text(GLCN_TELEGRAM_LINK, style = stageText(17, 500), color = accentInk, modifier = Modifier.padding(top = 4.mpx))
                         Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
                     }
                 }
             }
-            StageTile(Modifier.width(620.mpx)) {
+            StageTile(Modifier.width(ABOUT_TILE_W.mpx)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(R.drawable.telegram_qr),
                         contentDescription = stringResource(R.string.settings_telegram_qr),
-                        modifier = Modifier.size(150.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
+                        modifier = Modifier.size(ABOUT_QR.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
                     )
                     Column {
-                        Text(stringResource(R.string.glcn_about_community), style = stageText(20, 800), color = StageColors.Text)
+                        Text(stringResource(R.string.glcn_about_community), style = stageText(18, 800), color = StageColors.Text)
                         Text(TELEGRAM_LINK, style = stageText(17, 500), color = accentInk, modifier = Modifier.padding(top = 4.mpx))
                         Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
                     }
                 }
             }
+            // glcn: Ko-fi, for whoever wants to support the project — always here, never asked for in a prompt of its own.
+            StageTile(Modifier.width(ABOUT_TILE_W.mpx)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(20.mpx), verticalAlignment = Alignment.CenterVertically) {
+                    // glcn: drawn like the Telegram codes beside it (rounded dots in a gradient, a cup in the middle, the address below).
+                    Image(
+                        painter = painterResource(R.drawable.glcn_kofi_qr),
+                        contentDescription = stringResource(R.string.glcn_kofi_title),
+                        modifier = Modifier.size(ABOUT_QR.mpx).clip(RoundedCornerShape(14.mpx)).background(Color.White),
+                    )
+                    Column {
+                        Text(stringResource(R.string.glcn_kofi_title), style = stageText(18, 800), color = StageColors.Text)
+                        Text(tv.own.owntv.glcn.GLCN_KOFI, style = stageText(17, 500), color = accentInk, modifier = Modifier.padding(top = 4.mpx))
+                        Text(stringResource(R.string.more_about_scan), style = stageText(15.5f, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 8.mpx))
+                    }
+                }
+            }
         }
+        AboutBlockLabel(stringResource(R.string.glcn_about_block_credits))
+        Text(stringResource(R.string.glcn_about_fork), style = stageText(16, 500).copy(lineHeight = 25.mpxSp), color = StageColors.Muted,
+            modifier = Modifier.widthIn(max = 1100.mpx))
         // The links are for reading: a TV has no browser to open them in.
-        Column(Modifier.padding(top = 22.mpx), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
+        Column(Modifier.padding(top = 12.mpx), verticalArrangement = Arrangement.spacedBy(10.mpx)) {
             for ((label, repo) in listOf(
                 stringResource(R.string.glcn_about_original) + " · " + stringResource(R.string.glcn_about_by, "ahXN00") to GITHUB_REPO,
                 stringResource(R.string.glcn_about_this) + " · " + stringResource(R.string.glcn_about_by, "carlosglcn") to GLCN_REPO,
@@ -904,18 +953,8 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
         }
         // glcn: credit for the app's wallpapers.
         Text(stringResource(R.string.glcn_wall_credit), style = stageText(14, 500), color = StageColors.Muted, modifier = Modifier.padding(top = 10.mpx))
-        Row(Modifier.padding(top = 14.mpx), horizontalArrangement = Arrangement.spacedBy(10.mpx)) {
-            val languages = SupportedLocales.all.count { it.packaged }
-            StageTool(pluralStringResource(R.plurals.more_about_languages, languages, languages), onClick = onOpenLanguage, icon = OwnTVIcon.LIST, boxed = true, modifier = Modifier.focusRequester(entry))
-            StageTool(stringResource(R.string.settings_check_updates), onClick = { showUpdate = true }, icon = OwnTVIcon.REFRESH, boxed = true, modifier = Modifier.focusRequester(updateFocus))
-            // glcn: a star on GitHub, as a QR for the phone (the TV has no browser).
-            StageTool(stringResource(R.string.glcn_star_action), onClick = { showStar = true }, icon = OwnTVIcon.STAR, boxed = true)
-            // glcn: the beta's updates come from a private repository; its token is pasted here once.
-            if (BuildConfig.GLCN_BETA) {
-                StageTool(stringResource(R.string.glcn_beta_token), onClick = { showToken = true }, icon = OwnTVIcon.PENCIL, boxed = true,
-                    value = if (manager.accessToken != null) stringResource(R.string.glcn_beta_token_saved) else null)
-            }
-        }
+        // glcn: Trakt's required notice (production access terms).
+        Text(stringResource(R.string.glcn_trakt_notice), style = stageText(14, 500), color = StageColors.Dim, modifier = Modifier.padding(top = 4.mpx))
     }
     if (showUpdate) {
         UpdateDialog(onDismiss = { showUpdate = false }, checkOnOpen = true)
@@ -933,3 +972,10 @@ internal fun AboutPage(vm: MoreCountsViewModel, entry: FocusRequester, onOpenLan
         )
     }
 }
+
+/** glcn: About's three community tiles side by side, and their codes. */
+private const val ABOUT_TILE_W = 432
+private const val ABOUT_QR = 124
+
+/** glcn: the room a Favourites row keeps around its posters for the focused one to grow into. */
+private const val FAV_ROW_ROOM = 20

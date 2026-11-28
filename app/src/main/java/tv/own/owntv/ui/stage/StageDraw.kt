@@ -11,6 +11,7 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -220,9 +221,22 @@ fun Modifier.stageGlass(radius: Dp, overContent: Boolean = false, share: Float =
                 }
             }
             drawInnerRing(rim, px, r)
+            // glcn: iOS 27's glass — a darker edge along the foot gives the pane its depth against what is behind it.
+            if (on) {
+                val edge = GLASS_FOOT * px
+                drawRoundRect(
+                    Brush.verticalGradient(0.6f to Color.Transparent, 1f to Color.Black.copy(alpha = if (palette.isLight) 0.10f else 0.34f)),
+                    topLeft = Offset(edge / 2f, edge / 2f),
+                    size = Size(size.width - edge, size.height - edge),
+                    cornerRadius = CornerRadius((r - edge / 2f).coerceAtLeast(0f)),
+                    style = Stroke(edge),
+                )
+            }
         }
     }
 }
+
+private const val GLASS_FOOT = 2f
 
 
 /**

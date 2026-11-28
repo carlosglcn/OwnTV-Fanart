@@ -6,6 +6,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -116,7 +117,7 @@ data class StagePalette(
             isLight = true,
             text = Color(0xFF0F1A16),
             muted = Color(0xFF4C5A54),
-            dim = Color(0xFF77847F),
+            dim = Color(0xFF66736E),
             itemText = Color(0xFF1C2824),
             menuItemText = Color(0xFF1C2824),
             tagText = Color(0xFF3D4B45),
@@ -239,6 +240,39 @@ data class StageAccent(
     val ink: Color = accent,
 )
 
+/**
+ * glcn: the small labels' colour — section names in menus and sheets, Home's row names: the theme's own colour, so a
+ * theme shows beyond its focus. A theme with a second accent uses that one by night (Ría's green, Brasa's coral);
+ * otherwise, and by day, the accent as it reads on the page.
+ */
+val stageLabelInk: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = tv.own.owntv.glcn.EmberFocus.second?.takeIf { !LocalStagePalette.current.isLight }?.let { tv.own.owntv.glcn.EmberFocus.partner(stageAccent.accent, it) } ?: stageAccent.ink
+
+/**
+ * glcn: what says "live" (EN DIRECTO, the live dot, a running minute). Red, unless the theme's second accent is a
+ * green — Ría's — which then marks it, as a broadcaster's "on air" light does in that palette.
+ */
+val stageLive: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = tv.own.owntv.glcn.EmberFocus.second?.let { tv.own.owntv.glcn.EmberFocus.partner(stageAccent.accent, it) }?.takeIf { it.isGreenish() } ?: LIVE_RED
+
+/** The text on a [stageLive] pill: white on red and dark greens, the page's ink on a light green. */
+val stageOnLive: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = stageLive.let { if (it.luminance() > 0.35f) Color(0xFF0B1A10) else Color.White }
+
+private val LIVE_RED = Color(0xFFE5243B)
+
+private fun Color.isGreenish(): Boolean {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(toArgb(), hsv)
+    return hsv[0] in 70f..170f && hsv[1] > 0.35f
+}
+
 val stageAccent: StageAccent
     @Composable
     @ReadOnlyComposable
@@ -275,9 +309,31 @@ private const val INK_DARK_MIN = 0.06f
 fun stageText(size: Number, weight: Int, letterSpacing: TextUnit = TextUnit.Unspecified) = TextStyle(
     fontFamily = LocalMainFontFamily.current,
     fontSize = size.mpxSp,
-    fontWeight = FontWeight(weight),
+    fontWeight = FontWeight(crispWeight(size.toFloat(), weight)),
     letterSpacing = letterSpacing,
 )
+
+/**
+ * glcn: on a screen the app is drawn at 720p (many budget TVs), small heavy type has too few pixels for its strokes
+ * and comes out jagged; a step lighter it draws clean. Big type, and every 1080p and 4K screen, keep the design.
+ */
+private fun crispWeight(size: Float, weight: Int): Int =
+    if (LowResScreen.on && size <= CRISP_MAX_SIZE && weight > CRISP_WEIGHT) CRISP_WEIGHT else weight
+
+/** glcn: whether the app's window is 720p-class — set once at start from the display's height. */
+object LowResScreen {
+    var on: Boolean = false
+        private set
+
+    fun detect(context: android.content.Context) {
+        val m = context.resources.displayMetrics
+        on = minOf(m.widthPixels, m.heightPixels) in 1..LOW_RES_MAX_PX
+    }
+}
+
+private const val CRISP_MAX_SIZE = 22f
+private const val CRISP_WEIGHT = 600
+private const val LOW_RES_MAX_PX = 800
 
 
 /**

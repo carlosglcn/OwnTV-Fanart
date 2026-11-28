@@ -126,9 +126,15 @@ fun OwnTVTheme(
                 glassTint = Color(st.glassTint),
                 glassOff = Color(st.glassTint),
                 text = Color(st.text),
+                // glcn: the style's surfaces take its own tone — every flat fill is its ink at a low alpha, so a navy
+                // theme's panels are navy, a warm one's warm, instead of the same grey for all.
+                ink = if (useDark) androidx.compose.ui.graphics.lerp(Color.White, Color(st.text), 0.6f) else Color(st.text),
                 itemText = Color(st.text),
                 menuItemText = Color(st.text),
                 muted = Color(st.muted),
+                // glcn: in a light style the faintest text (times, hints, second lines) keeps close to the muted ink —
+                // the shared grey read too pale on a white page, the more so on a projector.
+                dim = if (useDark) base.dim else androidx.compose.ui.graphics.lerp(Color(st.muted), page, LIGHT_DIM_TOWARDS_PAGE),
                 navText = Color(st.muted),
                 body = Color(st.body),
             )
@@ -156,3 +162,6 @@ object OwnTVTheme {
         @ReadOnlyComposable
         get() = LocalOwnTVColors.current
 }
+
+/** glcn: how far a light style's faintest text sits from its muted ink towards the page. */
+private const val LIGHT_DIM_TOWARDS_PAGE = 0.12f
