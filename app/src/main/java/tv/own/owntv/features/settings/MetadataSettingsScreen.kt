@@ -269,7 +269,7 @@ fun MetadataSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             val urlLabel = stringResource(R.string.glcn_badges_url)
             StageFieldRow(
                 OwnTVIcon.PENCIL, urlLabel, packUrl, { packUrl = it },
-                SettingHelp(urlLabel, stringResource(R.string.glcn_badges_help)),
+                help = SettingHelp(urlLabel, stringResource(R.string.glcn_badges_help)),
                 placeholder = BADGE_URL_PLACEHOLDER,
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri,
                 onDone = { badgeScope.launch { tv.own.owntv.glcn.BadgePack.choose(logoCtx, tv.own.owntv.glcn.BadgePack.Mode.CUSTOM, packUrl.trim()) } },

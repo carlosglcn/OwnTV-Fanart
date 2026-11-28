@@ -984,20 +984,6 @@ fun HomeScreen(
                 androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(320)) { it / 3 },
             modifier = Modifier.align(Alignment.TopEnd),
         ) { HomeInfoPanel(focusArt, focusInfo) }
-        // While a large playlist keeps loading in the background, say so where Now Trending will appear:
-        // an empty top of Home with no explanation reads as broken. Only at the top of the list, so the
-        // rows never scroll under it, and gone once Trending shows or the library is whole. Trending is
-        // promised only while its row is switched on.
-        val atTop by remember(listState) {
-            derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 }
-        }
-        if (libraryLoadingTitles > 0 && state.trendingItems.size < TrendingDao.MIN_ELIGIBLE_ITEMS && atTop) {
-            LibraryLoadingBanner(
-                libraryLoadingTitles,
-                trendingOn = HomeRow.TRENDING in orderedRows,
-                modifier = Modifier.align(Alignment.TopStart).padding(start = contentStart, top = 40.mpx),
-            )
-        }
     }
 
     // The preview starts after the card has settled, so decoder setup does not compete with the focus
