@@ -245,7 +245,7 @@ internal fun LiveCinematicPane(
                     LazyRow(
                         state = listState,
                         horizontalArrangement = Arrangement.spacedBy(26.mpx),
-                        contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 8.mpx, bottom = 6.mpx),
+                        contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 8.mpx, bottom = 6.mpx).let { if (pinnedRows) tv.own.owntv.glcn.pinnedRowPadding(it) else it },
                         modifier = Modifier.fillMaxWidth().focusGroup(),
                     ) {
                         items(
@@ -314,7 +314,7 @@ internal fun LiveCinematicPane(
                     LazyRow(
                         state = similarState,
                         horizontalArrangement = Arrangement.spacedBy(18.mpx),
-                        contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 6.mpx, bottom = 24.mpx),
+                        contentPadding = PaddingValues(start = 64.mpx, end = 64.mpx, top = 6.mpx, bottom = 24.mpx).let { if (pinnedRows) tv.own.owntv.glcn.pinnedRowPadding(it) else it },
                         modifier = Modifier.fillMaxWidth().onFocusChanged { similarHasFocus = it.hasFocus }.focusGroup(),
                     ) {
                         items(count = similar.size, key = { similar[it].programme.id }) { i ->

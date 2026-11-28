@@ -1242,7 +1242,7 @@ internal fun HomeLazyRow(
                 } else androidx.compose.ui.Modifier,
             ),
             state = state,
-            contentPadding = contentPadding,
+            contentPadding = if (tv.own.owntv.glcn.LocalPinnedRows.current) tv.own.owntv.glcn.pinnedRowPadding(contentPadding) else contentPadding,
             horizontalArrangement = horizontalArrangement,
             content = content,
         )

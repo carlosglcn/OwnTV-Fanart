@@ -83,6 +83,23 @@ val LocalSlideFocus = compositionLocalOf<SlideFocusState?> { null }
 val LocalPinnedRows = compositionLocalOf { false }
 
 /**
+ * glcn: [padding] with room after the last card for it to come to the first place too. Without it a short row (five
+ * posters that all fit) had nowhere to scroll and the box walked along it, while a long row kept it still — one
+ * behaviour for every row now, as on Prime Video: the row's end simply leaves the screen empty to its right.
+ */
+@Composable
+fun pinnedRowPadding(padding: androidx.compose.foundation.layout.PaddingValues): androidx.compose.foundation.layout.PaddingValues {
+    val dir = androidx.compose.ui.platform.LocalLayoutDirection.current
+    val screen = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
+    val start = padding.calculateStartPadding(dir)
+    val end = maxOf(padding.calculateEndPadding(dir), androidx.compose.ui.unit.Dp(screen.toFloat()) - start - PIN_LAST_CARD.mpx)
+    return androidx.compose.foundation.layout.PaddingValues(start = start, top = padding.calculateTopPadding(), end = end, bottom = padding.calculateBottomPadding())
+}
+
+/** The narrowest card a row holds, about: the room after the last card is the screen less this. */
+private const val PIN_LAST_CARD = 120
+
+/**
  * glcn: where the last sliding box on screen was drawn, and when — across all hosts. When focus jumps from one list
  * or menu to another (the top bar to a row, a menu to its page) the new host's box sets off from there, so one box
  * seems to travel between them instead of one going out and another coming on.
