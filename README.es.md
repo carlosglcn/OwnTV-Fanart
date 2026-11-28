@@ -57,7 +57,7 @@ Los problemas de **esta versión** van al grupo de Fanart; el otro es para la ap
 - **Tres diseños para Películas y Series** — los tres paneles clásicos, **Cinematográfico** (la portada del título enfocado a pantalla completa) o **Pasarela**: una fila de pósters donde el enfocado se abre ancho con su fondo y los demás se deslizan a un lado.
 - **Una pantalla para lo que estás viendo** — pulsa Info en TV en directo: fanart del programa, logo, valoración, sinopsis, qué viene después y cuándo se vuelve a emitir esta semana.
 - **Valoración, año y sinopsis de TMDB** junto a películas y series en directo.
-- **Deportes** — fútbol, baloncesto (ACB, Euroliga), balonmano, tenis, ciclismo, snooker, Fórmula 1 y MotoGP con calendarios, marcadores en directo y clasificaciones.
+- **Deportes** — fútbol, baloncesto (ACB, Euroliga), balonmano, tenis (con la Copa Davis), ciclismo, snooker, Fórmula 1, MotoGP, el Dakar y el WRC con calendarios, marcadores en directo y clasificaciones.
 - **Panel de zapping y perfil TV** — ◀ en el reproductor abre grupos y canales con lo que echan; un perfil TV arranca en su último canal, con un Inicio donde el canal enfocado se ve de fondo.
 - **Fichas y reproductor de cine** — una ficha antes de ver con tráiler, versiones y extras, y un reproductor con insignias de calidad reales; cada archivo se abre con el reproductor adecuado.
 - **Carpetas de red** — películas y series directamente desde tu NAS por SMB, WebDAV o NFS.
@@ -73,6 +73,9 @@ Los problemas de **esta versión** van al grupo de Fanart; el otro es para la ap
 - **Fluida como un launcher** — listas con efecto muelle, un foco que se desliza entre filas y menús, tarjetas que resaltan y listas de canales rápidas (mantén ▲/▼ o teclea el número).
 - **Fichas del programa y del reparto** — una ficha de lo que se emite que se abre al instante, con el marcador del partido o el reparto con caras; una página del reparto con retratos, resumen de Wikipedia y las películas de esa persona en tus listas.
 - **Seguir viendo** — una categoría en Películas y Series y una tira opcional encima de los pósters, con marcar como vista una temporada o una serie entera.
+- **Temas** — ocho temas con cara de noche y de día (Ría, Brasa, Lumen, Aurora…), acento en degradado y foco con contorno, barra superior en cinco formas y menú lateral en cuatro; el foco se queda quieto mientras las filas pasan por debajo.
+- **Saltar intro y créditos** — primero los tiempos de TheIntroDB, luego los capítulos del archivo y el salto aprendido de cada serie; el siguiente episodio se ofrece al empezar los créditos.
+- **Favoritos que sobreviven a la lista** — al cambiar una lista, la app ofrece una vez volver a marcar como favoritos los mismos canales.
 
 ## ⚖️ Aviso legal
 
