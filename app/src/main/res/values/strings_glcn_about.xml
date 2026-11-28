@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- glcn: overrides of core texts (About and the first-run welcome) without the word "IPTV". Only en/es; other languages keep core's text. -->
+<resources>
+    <string name="more_about_description">Your own player for Android TV. It provides no channels or content; you bring your own legally accessible sources.</string>
+    <string name="more_about_description_mobile">Your own player for Android. It provides no channels or content; you bring your own legally accessible sources.</string>
+    <string name="setup_welcome_sub">Your own TV player. Choose a language to begin — you can change it later in Settings.</string>
+</resources>
