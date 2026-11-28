@@ -134,10 +134,15 @@ multiplier at visibly different sizes.
 External subtitles come from **OpenSubtitles** (own account, remote sign-in by QR + PIN) or a
 **local file**, with a timing row in the Subtitles menu (◀ ▶ 0.1 s, OK = back to zero).
 
+**Skip intro, recap, end credits and preview** come from **TheIntroDB** (by the title's TMDB id, asked
+from the device, optional personal key, kept in memory only). Per part: Off, a button, or skip
+automatically; known end credits start the next-episode card and count the title as watched. "Check
+TheIntroDB" in the film, series and episode long-press menus shows what the service has for a title.
+
 ### 2.5 Player HUD
 
 Scrubbable seek bar · previous/next through the episode queue · play/pause · audio, subtitle and
-speed pickers · zoom and aspect (Fit · Fill · Stretch · Original · Force 16:9 · Force 4:3 — a press steps to the next, hold OK for the list) · **Sources** (the same channel in another quality, category or playlist, from core) · volume
+speed pickers · zoom and aspect (Fit · Fill · Stretch · Original · Force 16:9 · Force 4:3 · Force 20:9 — a press steps to the next, hold OK for the list) · **Sources** (the same channel in another quality, category or playlist, from core) · volume
 with mute · favourite the current item · **stream info overlay** (codec, resolution, fps, bit depth,
 HDR type, interlacing on mpv, bitrate, decoder, audio, buffer, dropped frames, masked source URL) · a **clock** in every
 mode, becoming *Programme time* + *Current time* during a replay · auto-hiding controls, with **Back**
@@ -220,7 +225,8 @@ Live TV* (Browsing & lists, off by default) gives the TV Guide Live TV's remembe
 Library / Organise / Details). A **series page** carries the backdrop, Resume/Play, Favourite,
 **Download season** (it asks first with the episode count; gone for a profile with downloads off) and series options, season tabs with counts (Specials last and uncounted; an
 unstarted show plays from Season 1 Episode 1 and auto-play reaches the Specials after the finale),
-Grid | List and an Episode order menu (oldest/newest, hide watched); episode titles are cleaned of
+Grid | List and an Episode order menu (oldest/newest, hide watched); episode pictures are TMDB's still, else the
+provider's own picture of that episode (database v57), else the show's backdrop; episode titles are cleaned of
 "Show – S01E03 –" prefixes, with TMDB's title filling a gap. Page and hero headlines drop a leading
 provider tag such as "|MULTI|"; poster labels keep the provider's spelling. **Trailers** play in an in-app player
 (OK pauses, ◀ ▶ skip 10 s) that tries the next stored trailer when one is blocked, then offers to open
@@ -464,7 +470,7 @@ their group.
 | **Sources & guide** | Playlists, EPG sources · EPG time offset, Programme reminders, Reminder time, Guide days to keep, Catch-up time zone (+ per playlist) |
 | **Appearance** | Theme, Accent color, Focus highlight, Glass & background, Ambient Glow (Dark + Glass off only), Fonts & text size, Popup size, UI zoom, Animations, Date, time & weather — with a live Home preview |
 | **Layout** | Navigation, Live TV layout, Live TV opens in, Movies & Series layout, Panel widths, Guide column widths, Browsing & lists, Home screen, Long-press menus, Remote shortcuts |
-| **Content & metadata** | Customize categories & items, Metadata (TMDB), OpenSubtitles |
+| **Content & metadata** | Customize categories & items; Metadata: TMDB, TheIntroDB; Subtitles: OpenSubtitles |
 | **Player** | Live TV / Movies & Series player (+ per playlist), saved choices, External player · Film buffer, Network timeout, Reconnect attempts |
 | **Picture** | Hardware decoding, Prefer SDR, Maximum video quality, Tunneled playback, Default zoom, saved zoom · Auto frame rate, Pause during the switch, Match resolution |
 | **Sound & subtitles** | Default volume, Surround, Dolby/DTS passthrough, Night mode, Volume leveling, Audio sync (+ saved) · Preferred audio / subtitle language, Subtitle appearance |

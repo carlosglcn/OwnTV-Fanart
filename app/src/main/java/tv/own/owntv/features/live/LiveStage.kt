@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -154,6 +155,7 @@ internal fun LiveStageRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
+    nowMs: Long = System.currentTimeMillis(),
     trailing: (@Composable () -> Unit)? = null,
     /** glcn: what follows on this channel — shown under the programme on the focused row only. */
     next: XtEpgEntry? = null,
@@ -222,7 +224,7 @@ internal fun LiveStageRow(
             if (isFavorite) OwnTVIcon(OwnTVIcon.FAVORITE, stageAccent.ink, Modifier.size(22.mpx), filled = true)
             mark?.let { StagePlaylistMark(it) }
             // glcn: how much is left as a small ring with the minutes in it, instead of a cut-off "quedan …" and a thin line.
-            if (now != null) TimeLeftRing(progressOf(now), minutesLeft(now), focused)
+            if (now != null) TimeLeftRing(progressOf(now, nowMs), minutesLeft(now, nowMs), focused)
         }
     }
 }
@@ -298,11 +300,29 @@ internal fun LivePlate(
     }
 }
 
-internal fun minutesLeft(p: XtEpgEntry): Long = ((p.stopMs - System.currentTimeMillis()).coerceAtLeast(0) + 59_999) / 60_000
+internal fun minutesLeft(p: XtEpgEntry, nowMs: Long = System.currentTimeMillis()): Long =
+    ((p.stopMs - nowMs).coerceAtLeast(0) + 59_999) / 60_000
 
-internal fun progressOf(p: XtEpgEntry): Float {
+internal fun progressOf(p: XtEpgEntry, nowMs: Long = System.currentTimeMillis()): Float {
     val span = (p.stopMs - p.startMs).coerceAtLeast(1)
-    return ((System.currentTimeMillis() - p.startMs).toFloat() / span).coerceIn(0f, 1f)
+    return ((nowMs - p.startMs).toFloat() / span).coerceIn(0f, 1f)
+}
+
+/**
+ * The wall clock, ticking on each minute boundary. A row's time left and progress read the clock only
+ * when it recomposes, and a row whose programme has not changed is skipped — so without a ticking
+ * input they freeze at the moment the list was drawn.
+ */
+@Composable
+internal fun rememberMinuteClock(): Long {
+    var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(60_000 - (System.currentTimeMillis() % 60_000))
+            nowMs = System.currentTimeMillis()
+        }
+    }
+    return nowMs
 }
 
 /** "18:45 – 20:30 · Horror · 2026 · FSK 16": the time range, then only the details the feed carries. */
@@ -444,6 +464,7 @@ internal fun LiveStagePane(
     @Composable
     fun Info(infoModifier: Modifier, tall: Boolean, showTop: Boolean = true, showSchedule: Boolean = true, rowSchedule: Boolean = false) {
         val now = nowNext?.now
+        val clockMs = rememberMinuteClock()
         Box(infoModifier) {
         Column(Modifier.fillMaxWidth().then(if (tall || rowSchedule) Modifier.fillMaxHeight() else Modifier).padding(start = 4.mpx, end = 4.mpx, top = if (tall || !showTop) 0.mpx else if (rowSchedule) 22.mpx else 34.mpx)) {
         if (showTop) Row(Modifier.fillMaxWidth()) {
@@ -454,15 +475,15 @@ internal fun LiveStagePane(
                     listOfNotNull(
                         detailsLine(now, nowNext.nowDetails).takeIf { it.isNotBlank() },
                         // glcn: Ficha — the time left sits with the times, not alone at the end of the bar.
-                        timeLeftText(minutesLeft(now)).takeIf { rowSchedule },
+                        timeLeftText(minutesLeft(now, clockMs)).takeIf { rowSchedule },
                         tv.own.owntv.ui.components.rememberTmdbRating(now.title, nowNext.nowDetails?.categories),
                     ).joinToString("  ·  "),
                     style = stageText(if (rowSchedule) 17 else 19, 400), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = if (tall) 0.mpx else if (rowSchedule) 6.mpx else 8.mpx, bottom = if (rowSchedule) 12.mpx else 16.mpx),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.mpx)) {
-                    StageProgress(progressOf(now), Modifier.weight(1f))
-                    if (!rowSchedule) Text(timeLeftText(minutesLeft(now)), style = stageText(17, 400).copy(fontFeatureSettings = Tabular), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    StageProgress(progressOf(now, clockMs), Modifier.weight(1f))
+                    if (!rowSchedule) Text(timeLeftText(minutesLeft(now, clockMs)), style = stageText(17, 400).copy(fontFeatureSettings = Tabular), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

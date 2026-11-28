@@ -79,7 +79,7 @@ private fun PlaybackFailure.displayText(): String {
     // Resolved through the same [describe] mapping the toast renderer uses. LocalConfiguration is read
     // so a language change still recomposes this, exactly as stringResource would.
     androidx.compose.ui.platform.LocalConfiguration.current
-    val resources = androidx.compose.ui.platform.LocalContext.current.resources
+    val resources = androidx.compose.ui.platform.LocalResources.current
     return describe { id, args -> resources.getString(id, *args.toTypedArray()) }
 }
 
@@ -90,6 +90,10 @@ private const val DIRECT_TUNE_PLAYBACK_WAIT_MS = 8_000L
 private const val CREDITS_COUNTDOWN_MS = 15_000L
 private const val MAX_DIRECT_TUNE_DIGITS = 5
 private const val PLAYER_SHORTCUT_LONG_PRESS_MS = 600L
+/** "Skip button: first 10 seconds" — how long it stays after the playhead reaches the part. */
+private const val SKIP_BUTTON_FIRST_MS = 10_000L
+/** Where the skip button sits: above the controls' dock, so the two never touch. */
+private val SKIP_PILL_BOTTOM = 150.dp
 
 /** Re-poll for late-arriving audio/subtitle tracks while the track menu is open and still empty.
  *  20 × 300 ms = 6 s, comfortably past the slowest observed HDR/DTS track report, then it stops. */
@@ -129,6 +133,7 @@ private sealed interface TuneOsd {
 fun PlayerHud(
     player: PlaybackEngine,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
     onPip: (() -> Unit)? = null,
     // Switch to audio-only mode (stops video decode, surfaces the top-bar now-playing bar). Null hides it.
     onAudioMode: (() -> Unit)? = null,
@@ -265,7 +270,6 @@ fun PlayerHud(
     nextEpisodeCode: String? = null,
     // Live only: the Sources button and its list. Null hides the button.
     sources: HudSources? = null,
-    modifier: Modifier = Modifier,
 ) {
     // Nothing that ticks is read in this root scope: with the controls hidden it used to recompose
     // the whole HUD once a second for a position nobody could see. The offset, the archive clock and the
@@ -311,27 +315,39 @@ fun PlayerHud(
     val seekFocus = remember { FocusRequester() }
     var focusSeekOnShow by remember { mutableStateOf(false) }
 
-    // Next-episode countdown card (VOD queues only): appears in the last ~30s before the automatic
-    // advance (which fires at duration − 8s), counts down to it, and offers Play now / Cancel.
+    // Skip intro & credits: core decides what the button does and when the episode moves on.
+    val skip = org.koin.compose.koinInject<tv.own.owntv.player.SkipSegmentController>()
+    val activeSkip by skip.active.collectAsStateWithLifecycle()
+    val coreUpNext by skip.upNext.collectAsStateWithLifecycle()
+    val skipButtonShow by skip.buttonShow.collectAsStateWithLifecycle()
+    val skipFocus = remember { FocusRequester() }
+
+    // Next-episode countdown card (VOD queues only): appears at core's card time — 30 s before the
+    // end of the file, or at the start of the end credits when they are known — counts down to the
+    // advance, and offers Play now / Cancel. Skipping the end credits automatically shows a short
+    // notice instead, which any key turns into watching the credits.
     var autoNextDismissed by remember { mutableStateOf(false) }
     // Re-arm when the queued next episode changes (i.e. after an advance to a new item).
     LaunchedEffect(nextUpTitle, nav.hasNext) { autoNextDismissed = false }
     // Derived, so the root recomposes when the card appears or goes, not on every position tick.
-    // glcn: when the episode's end credits are known (a chapter, or TheIntroDB), the card comes with them and
-    // counts down CREDITS_COUNTDOWN_MS from there instead of waiting for the file's last seconds.
+    // glcn: where the core knows no end credits for this episode but the file's own chapters name them, the card comes
+    // with that chapter and counts down CREDITS_COUNTDOWN_MS from there (IntroSkip leaves creditsAt unset whenever
+    // the core has times of its own, or end credits are switched off).
     val creditsAt by tv.own.owntv.glcn.IntroSkip.creditsAt.collectAsStateWithLifecycle()
-    val atCredits = !isLive && creditsAt > 0L && duration > 0L
-    val advanceAt = if (atCredits) minOf(duration - 8_000L, creditsAt + CREDITS_COUNTDOWN_MS) else duration - 8_000L
-    val msToAdvance: () -> Long = { if (!isLive && duration > 0L) advanceAt - position.value else Long.MAX_VALUE }
-    val nextCardDue by remember(isLive, duration, atCredits, creditsAt) {
-        derivedStateOf {
-            if (atCredits) position.value >= creditsAt && msToAdvance() >= 0L else msToAdvance() in 0L..30_000L
-        }
+    val chapterCredits = !isLive && creditsAt > 0L && duration > 0L && !coreUpNext.coreAdvances
+    val upNext = if (chapterCredits) {
+        tv.own.owntv.player.UpNext(creditsAt, minOf(duration - 8_000L, creditsAt + CREDITS_COUNTDOWN_MS), notice = false, coreAdvances = false)
+    } else coreUpNext
+    val msToAdvance: () -> Long = { if (!isLive && duration > 0L) upNext.advanceAtMs - position.value else Long.MAX_VALUE }
+    val nextCardDue by remember(isLive, duration, upNext) {
+        derivedStateOf { !isLive && duration > 0L && position.value >= upNext.cardAtMs && msToAdvance() >= 0L }
     }
-    val showNextCard = !isLive && error == null && nav.hasNext && nextUpTitle != null && !stopsAtItemEnd &&
+    val nextDue = !isLive && error == null && nav.hasNext && nextUpTitle != null && !stopsAtItemEnd &&
         nextCardDue && !autoNextDismissed
-    // glcn: the credits countdown ran out — the next episode starts now (the engine applies auto-play next).
-    val creditsRanOut by remember(atCredits, advanceAt) { derivedStateOf { atCredits && msToAdvance() <= 0L } }
+    val showNextCard = nextDue && !upNext.notice
+    val showNextNotice = nextDue && upNext.notice
+    // glcn: that chapter's countdown ran out — the next episode starts now (the engine applies auto-play next).
+    val creditsRanOut by remember(chapterCredits, upNext) { derivedStateOf { chapterCredits && msToAdvance() <= 0L } }
     LaunchedEffect(creditsRanOut) {
         if (creditsRanOut && !autoNextDismissed && nav.hasNext && !stopsAtItemEnd && error == null) {
             autoNextDismissed = true
@@ -345,6 +361,7 @@ fun PlayerHud(
     var showInfo by remember { mutableStateOf(false) } // stream technical-info overlay
     // Used only by "Report this stream", which writes the current readout into the playback log.
     val reportContext = androidx.compose.ui.platform.LocalContext.current
+    val reportResources = androidx.compose.ui.platform.LocalResources.current
     var wakeTick by remember { mutableIntStateOf(0) }
     // glcn: the cinema chrome — films and episodes only; its side panel, while open, keeps the controls up.
     val cinemaMode = !isLive && cinema != null
@@ -390,6 +407,26 @@ fun PlayerHud(
     var engineMsg by remember { mutableStateOf<String?>(null) }
     var engineFlash by remember { mutableIntStateOf(0) }
     LaunchedEffect(engineFlash) { if (engineFlash > 0) { delay(1800); engineMsg = null } }
+
+    // The skip button: for its first seconds (and whenever the controls are up), or the whole part.
+    val skipWindowOpen by remember(activeSkip, skipButtonShow) {
+        derivedStateOf {
+            val a = activeSkip
+            a != null && (skipButtonShow == tv.own.owntv.core.skip.SkipButtonShow.WHOLE ||
+                position.value - a.enteredAtMs < SKIP_BUTTON_FIRST_MS)
+        }
+    }
+    val showSkipPill = activeSkip != null && !isLive && error == null && !showNextCard && !showNextNotice &&
+        (skipWindowOpen || controlsVisible)    // An automatic skip says so, in the same short toast the engine switch uses.
+    val skippedTexts = mapOf(
+        tv.own.owntv.core.skip.SkipKind.INTRO to stringResource(R.string.player_skipped_intro),
+        tv.own.owntv.core.skip.SkipKind.RECAP to stringResource(R.string.player_skipped_recap),
+        tv.own.owntv.core.skip.SkipKind.CREDITS to stringResource(R.string.player_skipped_credits),
+        tv.own.owntv.core.skip.SkipKind.PREVIEW to stringResource(R.string.player_skipped_preview),
+    )
+    LaunchedEffect(skip) {
+        skip.skipped.collect { kind -> engineMsg = skippedTexts[kind]; engineFlash++ }
+    }
     // A channel juddering on ExoPlayer: say once that the other engine may play it smoothly. Longer than
     // the switch confirmation — this one has to be read.
     val smoothnessHint by player.smoothnessHint.collectAsStateWithLifecycle()
@@ -532,7 +569,10 @@ fun PlayerHud(
         val hideAfter = tv.own.owntv.core.settings.OsdRules.controlsMs(osdSetting)
         if (controlsVisible && !forceShow && !inert && hideAfter != null) { delay(hideAfter); controlsVisible = false }
     }
-    LaunchedEffect(controlsVisible, error, dialog, inert, showNextCard, cinemaTab) {
+    // Keyed on the button only while the controls are hidden: with them up, the button appearing or going
+    // must not move focus — it would pull a scrub on the timeline back to Play.
+    val skipPillTakesFocus = showSkipPill && !controlsVisible
+    LaunchedEffect(controlsVisible, error, dialog, inert, showNextCard, skipPillTakesFocus, cinemaTab) {
         // Never steal focus while a dialog is open (its rows own it) or while a shell overlay is up
         // (inert — the overlay owns the D-pad); when either closes this re-runs and hands focus back.
         if (dialog != HudDialog.NONE || inert) return@LaunchedEffect
@@ -553,6 +593,9 @@ fun PlayerHud(
                 toSeek -> runCatching { seekFocus.requestFocus() }.onFailure { runCatching { playFocus.requestFocus() } }
                 else -> runCatching { playFocus.requestFocus() }
             }
+        // With the controls hidden the skip button takes focus, so OK skips; the controls keep theirs.
+        } else if (skipPillTakesFocus) {
+            runCatching { skipFocus.requestFocus() }.onFailure { runCatching { catchFocus.requestFocus() } }
         } else runCatching { catchFocus.requestFocus() }
     }
 
@@ -603,6 +646,11 @@ fun PlayerHud(
     Box(
         modifier = modifier.fillMaxSize()
             .onPreviewKeyEvent { e ->
+            // The 3-second "Next episode" notice at the end credits: any key stays on the credits.
+            if (showNextNotice && !inert && dialog == HudDialog.NONE) {
+                if (e.type == KeyEventType.KeyDown) { autoNextDismissed = true; player.cancelAutoNext() }
+                return@onPreviewKeyEvent true
+            }
             // ---- Direct-tune digit capture (before the existing KeyDown guard) ----
             // Number keys are consumed globally here, HUD visible or not: on a TV remote a digit press
             // during live playback can only mean "tune to this channel", and swallowing both KeyDown and
@@ -700,7 +748,7 @@ fun PlayerHud(
             }
             // Player buttons: OK with the controls hidden. No plan (the default) leaves OK to the code below.
             if (isPlayerOkKey(e.key) && e.type != KeyEventType.Unknown) {
-                val okPlan = if (controlsVisible || showNextCard || inert || dialog != HudDialog.NONE || digitsActive || onToastOk != null) null
+                val okPlan = if (controlsVisible || showNextCard || showSkipPill || inert || dialog != HudDialog.NONE || digitsActive || onToastOk != null) null
                     else playerOkPlan(remoteOptions, PlayerOkTargets(channelList = onOpenChannelList != null, guide = isLive, programmeInfo = isLive))
                 val ok = okPress.onKey(e.type == KeyEventType.KeyDown, e.nativeKeyEvent.repeatCount, e.nativeKeyEvent.eventTime, okPlan)
                 val doOk: (PlayerOkOutcome) -> Unit = { outcome ->
@@ -1034,6 +1082,7 @@ fun PlayerHud(
                 androidx.compose.runtime.CompositionLocalProvider(tv.own.owntv.ui.theme.LocalStagePalette provides cinePalette) {
                 BottomBar(
                     seekFocus = seekFocus,
+                    seekUpFocus = if (showSkipPill) skipFocus else null,
                     player = player, isLive = isLive, position = { position.value }, duration = duration,
                     volume = volume, audioCount = audioCount, subCount = subCount, zoomMode = zoomMode,
                     speedLabel = formatSpeed(speed),
@@ -1056,7 +1105,7 @@ fun PlayerHud(
                         // written from a coroutine. The confirmation still flashes immediately — the user
                         // pressed a button and must see it acknowledged.
                         // Read at the press, not per tick.
-                        val reportPosition = tv.own.owntv.ui.components.formatTimestamp(reportContext.resources, position.value)
+                        val reportPosition = tv.own.owntv.ui.components.formatTimestamp(reportResources, position.value)
                         hudScope.launch {
                             val snapshot = buildString {
                                 appendLine(player.streamInfo().joinToString("\n") { (k, v) -> "  $k: $v" })
@@ -1137,7 +1186,34 @@ fun PlayerHud(
                 onPlayNow = { autoNextDismissed = true; player.next() },
                 onCancel = { autoNextDismissed = true; player.cancelAutoNext() },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 28.dp, bottom = 120.dp),
+                atCredits = upNext.coreAdvances || chapterCredits,
             )
+        }
+        if (showNextNotice) {
+            NextEpisodeNotice(
+                title = nextUpTitle ?: "",
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 28.dp, bottom = 120.dp),
+            )
+        }
+        // The skip button sits where the next-episode card does, which never shows at the same time.
+        activeSkip?.let { a ->
+            if (showSkipPill) {
+                SkipPill(
+                    action = a.action,
+                    focus = skipFocus,
+                    onSkip = { skip.skip() },
+                    // With the controls hidden the button holds focus; any key but OK and Back still
+                    // brings the controls up, as it would without the button.
+                    // Clear of the controls' dock, which reaches higher than the next-episode card's spot.
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(end = 28.dp, bottom = SKIP_PILL_BOTTOM)
+                        .onKeyEvent { e ->
+                            if (!controlsVisible && e.type == KeyEventType.KeyDown && e.key != Key.Back && !isPlayerOkKey(e.key)) {
+                                controlsVisible = true
+                                true
+                            } else false
+                        },
+                )
+            }
         }
 
         // Engine-switch confirmation toast (bottom-center, semi-transparent) — shown briefly after the

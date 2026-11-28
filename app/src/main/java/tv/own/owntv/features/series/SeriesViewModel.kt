@@ -115,6 +115,8 @@ class SeriesViewModel(
     private val externalPlayerLauncher: tv.own.owntv.core.player.ExternalPlayerLauncher,
     private val streamUrlResolver: tv.own.owntv.core.stalker.StreamUrlResolver,
     private val subtitleController: tv.own.owntv.core.subtitles.SubtitleController,
+    /** Leaving during the end credits saves the episode as finished. */
+    private val skip: tv.own.owntv.player.SkipSegmentController,
 ) : ViewModel() {
 
     /** The categories' search text, held here so it survives the player (see LiveViewModel). */
@@ -406,6 +408,9 @@ class SeriesViewModel(
 
     private var playingEpisodeRef: PlayingEpisodeRef? = null
 
+    /** The episode in the player, for the remote's Download shortcut. */
+    fun playingEpisode(): EpisodeEntity? = playingEpisodeRef?.episode
+
     init {
         listOf(_selectedSeries, _openedSeries).forEach { viewModelScope.clearWhenSealed(it, sealedCategoryIds) { s -> s.categoryId } }
         // Periodically persist the playing episode's resume position (same cadence as movies).
@@ -527,10 +532,10 @@ class SeriesViewModel(
         if (player.isLiveContent || !playerIsOn(ref)) return
         val raw = player.position.value
         val dur = player.duration.value
-        // glcn: in the end credits the episode is watched — saved as finished, so every "watched" check agrees.
-        // Where the credits really start is known when the file's chapters or TheIntroDB say (the next-episode card uses it).
+        // In the end credits the episode is watched — saved as finished, so every "watched" check agrees. Upstream's
+        // skip knows where they start when TheIntroDB says; glcn: else the file's own credits chapter, else our tail rule.
         val credits = tv.own.owntv.glcn.IntroSkip.creditsAt.value
-        val pos = if (inCredits(raw, dur) || (credits > 0 && raw >= credits)) dur else raw
+        val pos = if (inCredits(raw, dur) || (credits > 0 && raw >= credits)) dur else skip.savedPosition(raw, dur)
         if (pos > 0 && dur > 0) {
             viewModelScope.launch {
                 // The position belongs to the profile that started playback. If the user switched

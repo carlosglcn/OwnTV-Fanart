@@ -34,8 +34,12 @@ import tv.own.owntv.ui.theme.stageText
  * glcn: "Skip intro" for series. Each series learns where its intro ends: the first time the viewer
  * jumps forward early in an episode (with this button or by fast-forwarding) and keeps watching from
  * there, that moment is remembered for the series, and later episodes offer — or, with Auto-skip on,
- * make — the same jump. glcn: the episode's own times from TheIntroDB come first (after the file's chapters);
- * with nothing known the button stays away — a blind jump landed in shows without an intro, or mid-scene.
+ * make — the same jump. With nothing known the button stays away — a blind jump landed in shows without an
+ * intro, or mid-scene.
+ *
+ * Since the merge with upstream's own skip (intro, recap, credits and preview from TheIntroDB, in the player's core)
+ * this is only the fallback: it acts when that has no times for what is playing — a file whose chapters name its
+ * intro or credits, a series with a learned jump — and follows the same choices (Off / Button / Automatic).
  */
 object IntroSkip {
     /** How far the very first "Skip intro" of a series jumps — a typical opening. */
@@ -48,6 +52,8 @@ object IntroSkip {
     const val SHOW_UNTIL_MS = 4 * 60_000L
     /** A jump forward of more than this counts as skipping. */
     private const val JUMP_MS = 15_000L
+    /** The fallback button waits this long into the episode, for the core's times to have arrived. */
+    private const val FALLBACK_FROM_MS = 5_000L
     /** Watching on this long after a jump confirms where the intro ended. */
     private const val SETTLE_MS = 12_000L
 
@@ -55,7 +61,7 @@ object IntroSkip {
     @Volatile var chapterEnd: Long = -1L
         private set
     /**
-     * glcn: where the end credits start in the episode playing (a chapter named so, else TheIntroDB), or -1.
+     * glcn: where the end credits start in the episode playing (a chapter named so), or -1 — only while fallback.
      * The player shows the next-episode card from there. Set by [Chip].
      */
     val creditsAt = kotlinx.coroutines.flow.MutableStateFlow(-1L)
@@ -64,10 +70,6 @@ object IntroSkip {
     fun creditsStart(chapters: List<tv.own.owntv.player.PlayerChapter>, durationMs: Long): Long =
         chapters.firstOrNull { c -> c.startMs > durationMs * 2 / 3 && c.title?.let { CREDITS_NAME.containsMatchIn(it) } == true }
             ?.startMs ?: -1L
-
-    /** glcn: the intro's end from TheIntroDB for the episode playing, or -1. Set by [Chip]. */
-    @Volatile var dbEnd: Long = -1L
-        private set
 
     /** The end of a chapter named as an intro and starting in the first minutes, from the file's chapters. */
     fun introEnd(chapters: List<tv.own.owntv.player.PlayerChapter>): Long {
@@ -91,7 +93,13 @@ object IntroSkip {
      * [controlsHidden] — the button stands in for the controls, never over them.
      */
     @Composable
-    fun Chip(engine: PlaybackEngine, controlsHidden: Boolean, autoSkip: Boolean, onVisible: (Boolean) -> Unit, modifier: Modifier = Modifier, lookup: Triple<Int, Int, Int>? = null) {
+    fun Chip(
+        engine: PlaybackEngine, controlsHidden: Boolean, autoSkip: Boolean, onVisible: (Boolean) -> Unit, modifier: Modifier = Modifier,
+        /** False while the core's own skip has times for this item, or intros are switched off: no button, no jump. */
+        introOn: Boolean = true,
+        /** The same for the end credits: false leaves the next-episode card to the core. */
+        creditsOn: Boolean = true,
+    ) {
         val context = LocalContext.current
         val meta by engine.currentMeta.collectAsStateWithLifecycle()
         val series = meta.subtitle?.takeIf { meta.episodeNumber != null && it.isNotBlank() }
@@ -102,22 +110,16 @@ object IntroSkip {
         val introChapterEnd by androidx.compose.runtime.produceState(-1L, meta, duration > 0) {
             val chapters = if (duration > 0) runCatching { engine.chapters() }.getOrDefault(emptyList()) else emptyList()
             value = if (duration > 0) introEnd(chapters) else -1L
-            chapterEnd = value
+            chapterEnd = if (introOn) value else -1L
             creditsChapter = if (duration > 0) creditsStart(chapters, duration) else -1L
         }
-        // glcn: the episode's intro from TheIntroDB (TMDB id, season, episode).
-        val db by androidx.compose.runtime.produceState<tv.own.owntv.core.metadata.IntroDb.Segments?>(null, lookup) {
-            value = lookup?.let { (t, se, ep) -> tv.own.owntv.core.metadata.IntroDb.segments(t, se, ep) }
-            dbEnd = value?.introEnd ?: -1L
-        }
-        // glcn: the end credits — the file's own chapter first, then TheIntroDB; only where it can be credits.
-        LaunchedEffect(meta, creditsChapter, db, duration) {
-            val at = creditsChapter.takeIf { it > 0 } ?: db?.creditsStart ?: -1L
+        LaunchedEffect(introOn, introChapterEnd) { chapterEnd = if (introOn) introChapterEnd else -1L }
+        // glcn: the end credits from the file's own chapter; only where it can be credits.
+        LaunchedEffect(meta, creditsChapter, duration, creditsOn) {
+            val at = creditsChapter.takeIf { creditsOn } ?: -1L
             creditsAt.value = at.takeIf { duration > 0 && it > duration / 2 && it < duration - CREDITS_TAIL_MS } ?: -1L
         }
-        androidx.compose.runtime.DisposableEffect(Unit) { onDispose { creditsAt.value = -1L } }
-        val dbStart = db?.introStart ?: 0L
-        val dbIntroEnd = db?.introEnd ?: -1L
+        androidx.compose.runtime.DisposableEffect(Unit) { onDispose { creditsAt.value = -1L; chapterEnd = -1L } }
         var learnedEnd by remember(series) { mutableLongStateOf(series?.let { learned(context, it) } ?: -1L) }
         var autoDone by remember(meta) { mutableStateOf(false) }
 
@@ -146,16 +148,17 @@ object IntroSkip {
             }
         }
 
+        // From FALLBACK_FROM_MS: the core's times for the episode arrive in its first seconds, and this must not
+        // show and then give way to the core's own button.
         val inWindow = when {
-            introChapterEnd > 0 -> position in 2_000L until (introChapterEnd - 3_000L)
-            dbIntroEnd > 0 -> position in maxOf(2_000L, dbStart) until (dbIntroEnd - 3_000L)
+            !introOn -> false
+            introChapterEnd > 0 -> position in FALLBACK_FROM_MS until (introChapterEnd - 3_000L)
             series == null -> false
-            learnedEnd > 0 -> position in 2_000L until (learnedEnd - 3_000L)
+            learnedEnd > 0 -> position in FALLBACK_FROM_MS until (learnedEnd - 3_000L)
             else -> false // glcn: nothing known — no blind jump
         }
         val exactEnd = when {
             introChapterEnd > 0 -> introChapterEnd
-            dbIntroEnd > 0 -> dbIntroEnd
             else -> learnedEnd
         }
         // Auto-skip: once per episode, only to a learned end.
@@ -187,7 +190,6 @@ object IntroSkip {
         val pos = engine.position.value
         // glcn: the intro chapter's end, when the file names one.
         chapterEnd.takeIf { it > pos }?.let { engine.seekBy(it - pos); return }
-        dbEnd.takeIf { it > pos }?.let { engine.seekBy(it - pos); return }
         val series = engine.currentMeta.value.subtitle ?: return
         val end = learned(context, series)
         if (end > pos) engine.seekBy(end - pos)

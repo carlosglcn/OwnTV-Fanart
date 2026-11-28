@@ -335,7 +335,7 @@
 1	log	app/src/main/java/tv/own/owntv/features/movies/MovieViewModel.kt	saveProgressNow movieId=${m.id} profile=$pid positionMs=$pos durationMs=$dur
 1	log	app/src/main/java/tv/own/owntv/features/movies/MovieViewModel.kt	saveProgressNow progress save failed movieId=${m.id} profile=$pid
 1	log	app/src/main/java/tv/own/owntv/features/movies/MovieViewModel.kt	stalker VOD reconnect resolve failed movieId=${movie.id}
-2	log	app/src/main/java/tv/own/owntv/features/movies/MovieViewModel.kt	stalker resolve failed movieId=${movie.id}
+1	log	app/src/main/java/tv/own/owntv/features/movies/MovieViewModel.kt	stalker resolve failed movieId=${movie.id}
 2	technical	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	delete_subtitles
 1	preference-key	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	download
 2	technical	app/src/main/java/tv/own/owntv/features/movies/MoviesScreen.kt	favourite
@@ -707,7 +707,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsStage.kt	▲ ▼
 2	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsStage.kt	▶
 3	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsStage.kt	◀ ▶
-37	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	\0
+38	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	FIT
 1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	Metadata cache wipe after language change failed: ${it.message}
 1	protocol	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	Network is unreachable
@@ -726,6 +726,9 @@
 1	log	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	setAndroidTvHomeEnabled enabled=$enabled
 1	protocol	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	timed out
 1	protocol	app/src/main/java/tv/own/owntv/features/settings/SettingsViewModel.kt	unknown host
+5	technical	app/src/main/java/tv/own/owntv/features/settings/TheIntroDbCheckPopup.kt	\0
+1	technical	app/src/main/java/tv/own/owntv/features/settings/TheIntroDbCheckPopup.kt	…
+4	empty	app/src/main/java/tv/own/owntv/features/settings/TheIntroDbSettingsScreen.kt	\0
 17	empty	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	\0
 5	technical	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	${src.name} · $value
 1	locale	app/src/main/java/tv/own/owntv/features/settings/VideoPlayerSettingsScreen.kt	,
@@ -944,6 +947,7 @@
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	tab_NETWORK
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	tab_OPEN_SUBTITLES
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	tab_SOURCES
+1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	tab_THEINTRODB
 1	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	tab_WEATHER
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	theme
 2	technical	app/src/main/java/tv/own/owntv/features/shell/components/SettingsScreen.kt	ui_zoom
@@ -1577,7 +1581,6 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	focus_highlight
 1	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	fonts
 1	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	glcn_accessible
-1	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	glcn_auto_skip_intro
 1	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	glcn_back_window
 2	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	glcn_category_icons
 1	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	glcn_dialogue
@@ -1611,7 +1614,7 @@
 1	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	group_quick
 4	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	group_sound
 4	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	group_sources
-3	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	group_watching
+2	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	group_watching
 2	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	logo_plate
 2	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	open.$group
 1	technical	app/src/main/java/tv/own/owntv/glcn/SettingsTiers.kt	popup_size
@@ -1778,7 +1781,7 @@
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	EEEdMMM
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	· $it
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerClock.kt	–
-10	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	\0
+11	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	\0
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	$k: $v
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	/ $it
 1	technical	app/src/main/java/tv/own/owntv/player/PlayerHud.kt	?

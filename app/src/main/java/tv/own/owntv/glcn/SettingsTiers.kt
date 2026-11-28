@@ -61,7 +61,6 @@ object SettingsTiers {
         "glcn_dialogue" to "group_sound",
         "glcn_mpv_passthrough" to "group_sound",
         "glcn_zap_views" to "group_live",
-        "glcn_auto_skip_intro" to "group_watching",
         "glcn_habits" to "group_watching",
         "glcn_dream" to "group_app",
     )

@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -164,6 +165,7 @@ fun HomeScreen(
     onOpenContinueSeries: ((Long) -> Unit)? = null,
     onOpenTrendingSearch: (String) -> Unit,
     onChildFocused: () -> Unit,
+    modifier: Modifier = Modifier,
     restoreFocus: Boolean = false,
     restoreTrendingSearchFocus: Boolean = false,
     onRestored: () -> Unit = {},
@@ -180,7 +182,6 @@ fun HomeScreen(
     seasonActive: Boolean = true,
     /** Sports Hub: ▶ on a Live sports card opens its match page. */
     onOpenMatch: (tv.own.owntv.core.sports.model.Match) -> Unit = {},
-    modifier: Modifier = Modifier,
     sportsVm: tv.own.owntv.features.sports.SportsViewModel = org.koin.androidx.compose.koinViewModel(),
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
@@ -983,6 +984,20 @@ fun HomeScreen(
                 androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(320)) { it / 3 },
             modifier = Modifier.align(Alignment.TopEnd),
         ) { HomeInfoPanel(focusArt, focusInfo) }
+        // While a large playlist keeps loading in the background, say so where Now Trending will appear:
+        // an empty top of Home with no explanation reads as broken. Only at the top of the list, so the
+        // rows never scroll under it, and gone once Trending shows or the library is whole. Trending is
+        // promised only while its row is switched on.
+        val atTop by remember(listState) {
+            derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 }
+        }
+        if (libraryLoadingTitles > 0 && state.trendingItems.size < TrendingDao.MIN_ELIGIBLE_ITEMS && atTop) {
+            LibraryLoadingBanner(
+                libraryLoadingTitles,
+                trendingOn = HomeRow.TRENDING in orderedRows,
+                modifier = Modifier.align(Alignment.TopStart).padding(start = contentStart, top = 40.mpx),
+            )
+        }
     }
 
     // The preview starts after the card has settled, so decoder setup does not compete with the focus

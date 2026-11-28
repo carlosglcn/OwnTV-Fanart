@@ -30,7 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
@@ -568,10 +568,10 @@ private fun SourceRow(
     val defaultText = if (isDefault) stringResource(R.string.settings_sources_default) else null
     val mark = remember(glcnVersion, source.id, index) { tv.own.owntv.core.ui.stage.PlaylistMark.forSource(source.id, source.name, index) }
     val back = rowFocus ?: remember { FocusRequester() }
-    // glcn: four at hand — edit, update (try again after a failure), more options, delete; the rest (status and
+    // glcn: four at hand — update (try again after a failure), edit, more options, delete; the rest (status and
     // connection, turn off, colour and tag, clean names) under More options.
     val actions = if (isDeleting) emptyList() else listOf(
-        StageAction(OwnTVIcon.PENCIL, stringResource(R.string.settings_sources_edit), onEdit),
+        // Re-sync first, the action used most, as on the phone. A stray press only opens its choice dialog.
         StageAction(
             OwnTVIcon.REFRESH,
             stringResource(
@@ -583,6 +583,7 @@ private fun SourceRow(
             ),
             if (syncState.isActive) onCancelSync else onResync,
         ),
+        StageAction(OwnTVIcon.PENCIL, stringResource(R.string.settings_sources_edit), onEdit),
         StageAction(OwnTVIcon.MORE, stringResource(R.string.glcn_src_more), onMore),
         StageAction(OwnTVIcon.TRASH, stringResource(R.string.settings_sources_delete), onDelete, danger = true),
     )
@@ -709,13 +710,13 @@ internal fun ConfirmDialog(
     message: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
     /**
      * What the confirming button says. Defaults to Delete because every caller was a deletion when
      * this was written — which is exactly how the connection-measurement confirmation ended up
      * offering "Delete", a word with nothing to do with what it would have done.
      */
     @StringRes confirmLabel: Int = R.string.common_delete,
-    modifier: Modifier = Modifier,
 ) {
     // Focus starts on Cancel: a mis-press must not delete anything.
     tv.own.owntv.ui.stage.StageConfirm(
@@ -808,7 +809,7 @@ internal fun SourceTestDialog(
 
 @Composable
 private fun SourceTestReport(result: SourceTestResult, limit: tv.own.owntv.core.live.ConnectionLimit?) {
-    val res = LocalContext.current.resources
+    val res = LocalResources.current
     Column(verticalArrangement = Arrangement.spacedBy(8.mpx)) {
         Text(
             result.headline(res), style = tv.own.owntv.ui.theme.stageText(20, 700),

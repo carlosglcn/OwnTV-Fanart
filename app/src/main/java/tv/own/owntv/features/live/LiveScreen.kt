@@ -120,10 +120,10 @@ import tv.own.owntv.core.live.ProviderTags
 fun LiveScreen(
     onFullscreen: () -> Unit,
     onChildFocused: () -> Unit,
+    modifier: Modifier = Modifier,
     previewEnabled: Boolean = true,
     restoreFocus: Boolean = false,
     onRestored: () -> Unit = {},
-    modifier: Modifier = Modifier,
     /**
      * Pins the list to one folder and takes the category rail away — how More → Favourites and
      * More → History show channels without a second copy of this list existing.
@@ -199,6 +199,7 @@ fun LiveScreen(
             vm.refreshNowPlaying(channels.itemSnapshotList.items.filterNotNull())
         }
     }
+    val rowClockMs = rememberMinuteClock()
     // Preview runs only when the player isn't busy (previewEnabled) AND the user hasn't turned it off.
     val effectivePreview = previewEnabled && livePreviewSetting
 
@@ -302,7 +303,7 @@ fun LiveScreen(
     val multiviewToast = tv.own.owntv.ui.components.rememberInAppToast()
     val recordingChannelIds by vm.recordingChannelIds.collectAsStateWithLifecycle()
     // Resolved through resources rather than stringResource: the count is only known inside the click.
-    val multiviewRes = androidx.compose.ui.platform.LocalContext.current.resources
+    val multiviewRes = androidx.compose.ui.platform.LocalResources.current
     var contextCategory by remember { mutableStateOf<LiveRailItem?>(null) }
     // glcn: groups inside Favourites.
     var groupingChannels by remember { mutableStateOf<List<ChannelEntity>?>(null) }
@@ -1181,6 +1182,7 @@ fun LiveScreen(
                                 }
                                 val parsed = remember(channel.name) { ProviderTags.parse(channel.name) }
                                 LiveStageRow(
+                                    nowMs = rowClockMs,
                                     channel = channel,
                                     name = parsed,
                                     // The channel under the cursor answers from the preview itself, so the row

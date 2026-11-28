@@ -163,9 +163,9 @@ import tv.own.owntv.core.live.LiveKey
 fun SeriesScreen(
     onFullscreen: () -> Unit,
     onChildFocused: () -> Unit,
+    modifier: Modifier = Modifier,
     restoreFocus: Boolean = false,
     onRestored: () -> Unit = {},
-    modifier: Modifier = Modifier,
     /**
      * Pins the grid to one folder and takes the category rail away — how More → Favourites and
      * More → History show shows without a second copy of this grid existing.
@@ -1358,6 +1358,9 @@ private fun SeriesGrid(
                     contextSeries = null; setTmdbNameSeries = s
                 })
             }
+            add(MenuAction(tv.own.owntv.core.menu.CHECK_THEINTRODB_ACTION, stringResource(R.string.content_check_theintrodb), OwnTVIcon.SKIP_NEXT, group = VodGroupDetails) {
+                contextSeries = null; tv.own.owntv.features.settings.TheIntroDbCheckRequests.series(s)
+            })
         }
         VodOptionsMenu(
             title = s.name,
@@ -1594,6 +1597,7 @@ private fun buildEpisodeDetails(
     tmdbWins: Boolean,
 ): tv.own.owntv.features.shell.components.MediaDetailsUi {
     val still = tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath ?: meta?.posterPath)
+        ?: ep.imageUrl?.takeIf { it.isNotBlank() }
     val title = if (tmdbWins) meta?.title?.takeIf { it.isNotBlank() } ?: episodeDisplayTitle(ep) else episodeDisplayTitle(ep)
     val plot = if (tmdbWins) meta?.overview ?: ep.plot else ep.plot?.takeIf { it.isNotBlank() } ?: meta?.overview
     val metaLine = listOfNotNull(
@@ -2041,7 +2045,7 @@ private fun EpisodeView(
                                 onLongClick = { openMenu(ep) },
                                 width = tileW, height = tileW * (189f / 336f),
                                 modifier = epModifierFor(index, ep),
-                            ) { filter -> EpisodeStill(episodeStillUrl(meta, series, "w780", ep.streamUrl), filter) }
+                            ) { filter -> EpisodeStill(episodeStillUrl(ep, meta, series, "w780"), filter) }
                         }
                     }
                 }
@@ -2068,7 +2072,7 @@ private fun EpisodeView(
                                 modifier = epModifierFor(index, ep).fillMaxWidth(),
                             ) { focused ->
                                 Box(Modifier.size(224.mpx, 126.mpx).clip(RoundedCornerShape(14.mpx))) {
-                                    EpisodeStill(episodeStillUrl(meta, series, "w300", ep.streamUrl), null)
+                                    EpisodeStill(episodeStillUrl(ep, meta, series, "w300"), null)
                                 }
                                 Column(Modifier.weight(1f)) {
                                     Text(
@@ -2187,6 +2191,9 @@ private fun EpisodeView(
                     vm.refetchEpisodeMeta(series, ep)
                 })
             }
+            add(MenuAction(tv.own.owntv.core.menu.CHECK_THEINTRODB_ACTION, stringResource(R.string.content_check_theintrodb), OwnTVIcon.SKIP_NEXT, group = VodGroupDetails) {
+                contextEpisode = null; tv.own.owntv.features.settings.TheIntroDbCheckRequests.series(series, ep)
+            })
             add(MenuAction("delete_subtitles", stringResource(R.string.content_delete_subtitles), OwnTVIcon.SUBTITLE, group = VodGroupDetails) {
                 if (contextEpisodeSubs.isNotEmpty()) showEpisodeDeleteSubs = true
             })
@@ -2195,7 +2202,7 @@ private fun EpisodeView(
         VodOptionsMenu(
             title = stringResource(R.string.content_episode_numbered, localizedInteger(ep.episodeNumber, grouping = false), title),
             subtitle = series.name + " · " + if (ep.seasonNumber == 0) stringResource(R.string.content_season_specials) else stringResource(R.string.content_season, ep.seasonNumber),
-            posterUrl = episodeStillUrl(seasonMeta[ep.id], series, "w300", ep.streamUrl),
+            posterUrl = episodeStillUrl(ep, seasonMeta[ep.id], series, "w300"),
             x = 1290f,
             menu = ContentMenu.EPISODE,
             actions = actions,
@@ -2263,6 +2270,9 @@ private fun EpisodeView(
                     openWindow(); setTmdbName = true
                 })
             }
+            add(MenuAction(tv.own.owntv.core.menu.CHECK_THEINTRODB_ACTION, stringResource(R.string.content_check_theintrodb), OwnTVIcon.SKIP_NEXT, group = VodGroupDetails) {
+                close(); tv.own.owntv.features.settings.TheIntroDbCheckRequests.series(series)
+            })
         }
         VodOptionsMenu(
             title = series.name,
@@ -2425,17 +2435,18 @@ private fun EpisodesBackdrop(url: String?, modifier: Modifier = Modifier) {
 }
 
 /**
- * An episode's picture: TMDB's still, else the show's backdrop (16:9 like the still), else its poster.
- * The provider stores no episode image, so the show's art only stands in for a missing still.
+ * An episode's picture: TMDB's still, else the provider's own picture of the episode, else the show's
+ * backdrop (16:9 like the still), else its poster. The show's art only stands in for a missing still.
  */
 private fun episodeStillUrl(
+    ep: EpisodeEntity,
     meta: tv.own.owntv.core.database.entity.MetadataCacheEntity?,
     series: SeriesEntity,
     size: String,
-    streamUrl: String? = null,
 ): String? = tv.own.owntv.core.metadata.MetadataImages.backdrop(meta?.backdropPath, size = size)
     // glcn: an Emby episode has its own still on the server.
-    ?: tv.own.owntv.core.emby.EmbyPlayback.imageFor(streamUrl, if (size == "w780") 780 else 400)
+    ?: tv.own.owntv.core.emby.EmbyPlayback.imageFor(ep.streamUrl, if (size == "w780") 780 else 400)
+    ?: ep.imageUrl?.takeIf { it.isNotBlank() }
     ?: series.backdropUrl?.takeIf { it.isNotBlank() } ?: series.posterUrl?.takeIf { it.isNotBlank() }
 
 @Composable

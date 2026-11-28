@@ -132,9 +132,9 @@ import tv.own.owntv.core.live.LiveKey
 fun MoviesScreen(
     onFullscreen: () -> Unit,
     onChildFocused: () -> Unit,
+    modifier: Modifier = Modifier,
     restoreFocus: Boolean = false,
     onRestored: () -> Unit = {},
-    modifier: Modifier = Modifier,
     /**
      * Pins the grid to one folder and takes the category rail away — how More → Favourites and
      * More → History show films without a second copy of this grid existing.
@@ -1345,6 +1345,9 @@ fun MoviesScreen(
                     contextMovie = null; setTmdbNameMovie = m
                 })
             }
+            add(MenuAction(tv.own.owntv.core.menu.CHECK_THEINTRODB_ACTION, stringResource(R.string.content_check_theintrodb), OwnTVIcon.SKIP_NEXT, group = VodGroupDetails) {
+                contextMovie = null; tv.own.owntv.features.settings.TheIntroDbCheckRequests.movie(m)
+            })
             add(MenuAction("delete_subtitles", stringResource(R.string.content_delete_subtitles), OwnTVIcon.SUBTITLE, group = VodGroupDetails) {
                 if (contextMovieSubs.isNotEmpty()) showDeleteSubs = true
             })

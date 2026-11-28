@@ -258,6 +258,7 @@ private fun SlotLabel(text: String, color: Color) {
         color = color,
         fontWeight = FontWeight.Bold,
         maxLines = 1,
+        softWrap = false,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(bottom = 1.dp),
     )

@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
@@ -53,6 +54,10 @@ fun SportsScreen(
             open(m)
         }
     }
+    // From upstream: a match or league page tells the shell when focus is on it, as every tab does. Without it, focus
+    // that passed through the menu once left the shell believing the menu still held it, and the next ◀ / ▶ inside
+    // the page opened the menu over the page.
+    val pageModifier = modifier.onFocusChanged { if (it.hasFocus) onChildFocused() }
     val current = match
     val leagueKey = league
     if (leagueKey != null) {
@@ -62,7 +67,7 @@ fun SportsScreen(
             onBack = { openLeague(null) },
             active = active,
             contentStart = contentStart,
-            modifier = modifier,
+            modifier = pageModifier,
         )
     } else if (current == null) {
         SportsHubScreen(
@@ -91,7 +96,7 @@ fun SportsScreen(
             },
             active = active,
             contentStart = contentStart,
-            modifier = modifier,
+            modifier = pageModifier,
         )
         val page = vm.matchPage.collectAsStateWithLifecycle().value
         if (filters && page != null && page.hasPlaylist) {

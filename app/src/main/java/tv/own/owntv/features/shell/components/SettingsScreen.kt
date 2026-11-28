@@ -108,7 +108,7 @@ import tv.own.owntv.ui.theme.primary
 
 internal enum class TileTone { PRIMARY, SECONDARY, TERTIARY }
 
-private enum class SettingsTab { ROOT, LANGUAGE, SOURCES, EPG, BACKUP, LOCAL_SYNC, CUSTOMIZE, HOME, NETWORK, DNS, METADATA, OPEN_SUBTITLES, WEATHER, CH_NAV, PANEL_WIDTH, GUIDE_WIDTH, GLASS_EFFECT, CONTENT_MENUS, FONTS, BROWSING, SUBTITLE_STYLE, SPORTS }
+private enum class SettingsTab { ROOT, LANGUAGE, SOURCES, EPG, BACKUP, LOCAL_SYNC, CUSTOMIZE, HOME, NETWORK, DNS, METADATA, THEINTRODB, OPEN_SUBTITLES, WEATHER, CH_NAV, PANEL_WIDTH, GUIDE_WIDTH, GLASS_EFFECT, CONTENT_MENUS, FONTS, BROWSING, SUBTITLE_STYLE, SPORTS }
 
 @Composable
 private fun epgShiftLabel(minutes: Int): String {
@@ -332,7 +332,6 @@ fun SettingsScreen(
     val zapViews by settingsVm.zapViews.collectAsStateWithLifecycle()
     val backToWindow by settingsVm.backToWindow.collectAsStateWithLifecycle()
     val safeArea by settingsVm.safeArea.collectAsStateWithLifecycle()
-    val autoSkipIntro by settingsVm.autoSkipIntro.collectAsStateWithLifecycle()
     val habitLearning by settingsVm.habitLearning.collectAsStateWithLifecycle()
     val frameMeter by settingsVm.frameMeter.collectAsStateWithLifecycle()
     val osdSeconds by settingsVm.osdSeconds.collectAsStateWithLifecycle()
@@ -455,6 +454,7 @@ fun SettingsScreen(
         SettingsTab.NETWORK -> { tv.own.owntv.features.settings.NetworkSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
         SettingsTab.DNS -> { tv.own.owntv.features.settings.DnsSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
         SettingsTab.METADATA -> { tv.own.owntv.features.settings.MetadataSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
+        SettingsTab.THEINTRODB -> { tv.own.owntv.features.settings.TheIntroDbSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
         SettingsTab.OPEN_SUBTITLES -> { tv.own.owntv.features.settings.OpenSubtitlesAccountScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
         SettingsTab.WEATHER -> { tv.own.owntv.features.settings.WeatherSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
         SettingsTab.CH_NAV -> { tv.own.owntv.features.settings.ChNavSettingsScreen(onBack = { tab = SettingsTab.ROOT }, modifier = modifier) }
@@ -561,14 +561,6 @@ fun SettingsScreen(
             chip = stringResource(if (backToWindow) R.string.glcn_back_window else R.string.glcn_back_stop),
             chipTone = TileTone.PRIMARY,
             onClick = { settingsVm.toggleBackToWindow() },
-        ),
-        RootRow(
-            "glcn_auto_skip_intro", TileTone.SECONDARY, OwnTVIcon.SERIES,
-            title = stringResource(R.string.glcn_auto_skip_title),
-            desc = stringResource(R.string.glcn_auto_skip_desc),
-            chip = stringResource(if (autoSkipIntro) R.string.common_on else R.string.common_off),
-            chipTone = if (autoSkipIntro) TileTone.PRIMARY else TileTone.SECONDARY,
-            onClick = { settingsVm.toggleAutoSkipIntro() },
         ),
         RootRow(
             "glcn_osd", TileTone.SECONDARY, OwnTVIcon.CLOCK,
@@ -922,13 +914,23 @@ fun SettingsScreen(
         ),
         RootRow(
             tabRowKey(SettingsTab.METADATA), TileTone.PRIMARY, OwnTVIcon.IMAGE,
-            title = stringResource(R.string.settings_metadata), desc = stringResource(R.string.settings_metadata_root_description),
+            title = stringResource(R.string.settings_tmdb), desc = stringResource(R.string.settings_metadata_root_description),
             focus = rowFocus.getValue(SettingsTab.METADATA),
             onClick = { open(SettingsTab.METADATA) },
+            // Two services feed the library's details: TMDB (posters, plots, cast) and TheIntroDB (skip
+            // times). Each has its own screen under one heading.
+            heading = stringResource(R.string.settings_heading_metadata),
+        ),
+        RootRow(
+            tabRowKey(SettingsTab.THEINTRODB), TileTone.PRIMARY, OwnTVIcon.SKIP_NEXT,
+            title = stringResource(R.string.settings_theintrodb), desc = stringResource(R.string.settings_theintrodb_root_description),
+            focus = rowFocus.getValue(SettingsTab.THEINTRODB),
+            onClick = { open(SettingsTab.THEINTRODB) },
         ),
         RootRow(
             tabRowKey(SettingsTab.OPEN_SUBTITLES), TileTone.PRIMARY, OwnTVIcon.SUBTITLE,
             title = stringResource(R.string.settings_open_subtitles), desc = stringResource(R.string.settings_open_subtitles_description),
+            heading = stringResource(R.string.player_subtitles),
             focus = rowFocus.getValue(SettingsTab.OPEN_SUBTITLES),
             onClick = { open(SettingsTab.OPEN_SUBTITLES) },
         ),
@@ -1210,6 +1212,8 @@ fun SettingsScreen(
         SettingsSearchEntry(stringResource(R.string.settings_group_layout), stringResource(R.string.settings_browsing_lists), stringResource(R.string.settings_search_keywords_browsing), OwnTVIcon.LIST_GRID, TileTone.PRIMARY) { open(SettingsTab.BROWSING) },
             SettingsSearchEntry(stringResource(R.string.settings_group_layout), stringResource(R.string.settings_home_root), stringResource(R.string.settings_search_keywords_home), OwnTVIcon.HOME, TileTone.SECONDARY) { open(SettingsTab.HOME) },
             SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_metadata), stringResource(R.string.settings_search_keywords_metadata), OwnTVIcon.IMAGE, TileTone.PRIMARY) { open(SettingsTab.METADATA) },
+            SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_tmdb), stringResource(R.string.settings_search_keywords_metadata), OwnTVIcon.IMAGE, TileTone.PRIMARY) { open(SettingsTab.METADATA) },
+            SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_theintrodb), stringResource(R.string.settings_theintrodb_root_description), OwnTVIcon.SKIP_NEXT, TileTone.PRIMARY) { open(SettingsTab.THEINTRODB) },
             // No entries for the download folder, Backup, Local sync or Clear history. They
             // are not in Settings any more, and a result for something that is not here is a lie
             // about where it lives. The no-results state deliberately says nothing else either.
@@ -2823,6 +2827,9 @@ private fun subScreenSearchEntries(open: (SettingsTab) -> Unit): List<SettingsSe
         SettingsSearchEntry(stringResource(R.string.settings_group_appearance), stringResource(R.string.settings_custom_location), stringResource(R.string.settings_search_keywords_weather), OwnTVIcon.WEATHER, TileTone.SECONDARY) { open(SettingsTab.WEATHER) },
         SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_metadata_source), stringResource(R.string.settings_search_keywords_metadata), OwnTVIcon.IMAGE, TileTone.SECONDARY) { open(SettingsTab.METADATA) },
         SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_metadata_language), stringResource(R.string.settings_search_keywords_metadata), OwnTVIcon.IMAGE, TileTone.SECONDARY) { open(SettingsTab.METADATA) },
+        SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_skip_group), stringResource(R.string.settings_skip_part_description), OwnTVIcon.SKIP_NEXT, TileTone.SECONDARY) { open(SettingsTab.THEINTRODB) },
+        SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_skip_button_show), stringResource(R.string.settings_skip_group), OwnTVIcon.SKIP_NEXT, TileTone.SECONDARY) { open(SettingsTab.THEINTRODB) },
+        SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.settings_theintrodb_account), stringResource(R.string.settings_skip_group), OwnTVIcon.PERSON, TileTone.SECONDARY) { open(SettingsTab.THEINTRODB) },
         SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.player_subtitles_search_language), stringResource(R.string.settings_search_keywords_subtitle_appearance), OwnTVIcon.SUBTITLE, TileTone.SECONDARY) { open(SettingsTab.OPEN_SUBTITLES) },
         SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.player_subtitles_filter_title), stringResource(R.string.settings_search_keywords_subtitle_appearance), OwnTVIcon.SUBTITLE, TileTone.SECONDARY) { open(SettingsTab.OPEN_SUBTITLES) },
         SettingsSearchEntry(stringResource(R.string.settings_group_content_metadata), stringResource(R.string.player_subtitles_stay_signed_in), stringResource(R.string.settings_search_keywords_subtitle_appearance), OwnTVIcon.SUBTITLE, TileTone.SECONDARY) { open(SettingsTab.OPEN_SUBTITLES) },
@@ -3167,6 +3174,11 @@ private fun serviceRowExtras(vm: SettingsViewModel): Map<String, RowExtra> {
     LaunchedEffect(tier) { if (tier == tv.own.owntv.core.metadata.MetadataConfig.Tier.DEFAULT_WORKER) vm.refreshMetadataBudget() }
     val osVm: tv.own.owntv.features.settings.OpenSubtitlesViewModel = org.koin.androidx.compose.koinViewModel()
     val os by osVm.state.collectAsStateWithLifecycle()
+    val introKey by vm.theIntroDbApiKey.collectAsStateWithLifecycle()
+    val introStatus by vm.theIntroDbStatus.collectAsStateWithLifecycle()
+    val introQuota by vm.theIntroDbQuota.collectAsStateWithLifecycle()
+    // The allowance is only known once the service has answered; ask once if nothing has this session.
+    LaunchedEffect(Unit) { if (vm.theIntroDbQuota.value == null && vm.theIntroDbStatus.value == null) vm.checkTheIntroDb() }
     val proxy by vm.proxyConfig.collectAsStateWithLifecycle()
     val dns by vm.dnsConfig.collectAsStateWithLifecycle()
     val on = stringResource(R.string.common_on)
@@ -3213,10 +3225,21 @@ private fun serviceRowExtras(vm: SettingsViewModel): Map<String, RowExtra> {
                         tv.own.owntv.core.metadata.MetadataConfig.Tier.OWN_KEY -> R.string.settings_tier_key
                         tv.own.owntv.core.metadata.MetadataConfig.Tier.SELF_HOST -> R.string.settings_tier_self_host
                     }))
-                    // The shared service has a daily allowance; an own key or self-host has none to show.
-                    if (tier == tv.own.owntv.core.metadata.MetadataConfig.Tier.DEFAULT_WORKER && b != null) {
-                        line(stringResource(R.string.settings_allowance_day), pluralStringResource(R.plurals.settings_allowance_value, b.remainingDay, b.remainingDay, b.limitDay))
+                    // The shared service has a daily allowance. An own key or self-host has none from OwnTV,
+                    // and TMDB publishes no usage figure for a personal key, so that is what it says.
+                    if (tier == tv.own.owntv.core.metadata.MetadataConfig.Tier.DEFAULT_WORKER) {
+                        if (b != null) line(stringResource(R.string.settings_allowance_day), pluralStringResource(R.plurals.settings_allowance_value, b.remainingDay, b.remainingDay, b.limitDay))
+                    } else {
+                        line(stringResource(R.string.settings_allowance_day), stringResource(R.string.settings_allowance_unlimited))
                     }
+                }
+            },
+        ),
+        "tab_THEINTRODB" to RowExtra(
+            SettingValue.Opens(if (introKey.isBlank()) stringResource(R.string.settings_shared) else tv.own.owntv.features.settings.maskSecret(introKey)),
+            extra = {
+                Column(Modifier.padding(top = 8.mpx)) {
+                    tv.own.owntv.features.settings.TheIntroDbStatusLines(introStatus, introKey, introQuota)
                 }
             },
         ),

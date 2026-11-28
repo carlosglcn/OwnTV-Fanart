@@ -249,7 +249,6 @@ class LocalSyncViewModel(
     override fun onCleared() {
         discovery?.cancel()
         sync.stopHosting()
-        super.onCleared()
     }
 
     private fun reason(): SyncFailure =

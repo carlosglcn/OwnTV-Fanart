@@ -106,6 +106,7 @@ internal fun remoteActionLabel(action: RemoteShortcutAction): String = stringRes
         RemoteShortcutAction.TOGGLE_SUBTITLES -> R.string.glcn_remote_subtitles
         RemoteShortcutAction.NEXT_PLAYLIST -> R.string.glcn_remote_next_playlist
         RemoteShortcutAction.OPEN_PROGRAMME_INFO -> R.string.glcn_remote_programme_info
+        RemoteShortcutAction.RECORD_OR_DOWNLOAD -> R.string.settings_remote_action_record_or_download
     },
 )
 
@@ -142,4 +143,5 @@ internal fun remoteActionIcon(action: RemoteShortcutAction): OwnTVIcon = when (a
     RemoteShortcutAction.TOGGLE_SUBTITLES -> OwnTVIcon.SUBTITLE
     RemoteShortcutAction.NEXT_PLAYLIST -> OwnTVIcon.PLAYLIST
     RemoteShortcutAction.OPEN_PROGRAMME_INFO -> OwnTVIcon.INFO
+    RemoteShortcutAction.RECORD_OR_DOWNLOAD -> OwnTVIcon.REC
 }

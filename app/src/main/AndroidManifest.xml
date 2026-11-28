@@ -71,8 +71,7 @@ android:largeHeap="true"
         android:roundIcon="@mipmap/owntv_icon_eggshell"
         android:supportsRtl="true"
         android:theme="@style/Theme.OwnTV"
-        android:usesCleartextTraffic="true"
-        tools:targetApi="26">
+        android:usesCleartextTraffic="true">
 
         <!-- Exposes the downloaded update APK to the system installer. -->
         <provider
