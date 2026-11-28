@@ -37,7 +37,7 @@ import tv.own.owntv.core.database.dao.ProfileDao
 import tv.own.owntv.core.database.dao.SourceDao
 import tv.own.owntv.core.database.dao.resolveExistingProfileId
 import tv.own.owntv.core.database.entity.FavoriteEntity
-import tv.own.owntv.core.database.entity.MediaType
+import tv.own.owntv.core.model.MediaType
 import tv.own.owntv.core.live.ProviderTags
 import tv.own.owntv.core.settings.SettingsRepository
 import tv.own.owntv.core.sync.SyncActivityTracker
