@@ -1158,6 +1158,9 @@ internal fun GlideColumn(
     val fill by animateColorAsState(if (active) accent else accent.copy(alpha = 0.20f), tween(180), label = "deckFill")
     // glcn: Glass on — the lit row is the app's glass focus (tinted wash, sheen, ring), not a solid bar.
     val glassFocus = tv.own.owntv.glcn.GlassFocus.active
+    val sweep = tv.own.owntv.glcn.EmberFocus.second?.let { second ->
+        androidx.compose.ui.graphics.Brush.horizontalGradient(tv.own.owntv.glcn.EmberFocus.sweepOf(accent, second))
+    }
     val focusAccent = stageAccent
     val focusPalette = tv.own.owntv.ui.theme.LocalStagePalette.current
     val glassAlpha by androidx.compose.animation.core.animateFloatAsState(if (active) 1f else GLASS_IDLE_ALPHA, tween(180), label = "deckGlassFocus")
@@ -1192,6 +1195,9 @@ internal fun GlideColumn(
                     .graphicsLayer { translationY = glide.value - scroll.value; if (glassFocus) alpha = glassAlpha }
                     .then(
                         if (glassFocus) Modifier.drawBehind { drawStageFocus(StageFocus.FX, 14.mpx, focusAccent, focusPalette) }
+                        // glcn: in a theme whose accent is a gradient (Brasa, Alba, Ría…) the lit row carries it, as the
+                        // app's menus and buttons do — it was the one flat bar left.
+                        else if (sweep != null) Modifier.clip(RoundedCornerShape(14.mpx)).background(sweep, alpha = if (active) 1f else IDLE_SWEEP_ALPHA)
                         else Modifier.clip(RoundedCornerShape(14.mpx)).background(fill),
                     ),
             )
@@ -1246,6 +1252,8 @@ internal fun GlideColumn(
 }
 
 private const val PLAYING_WASH = 0.16f
+/** glcn: the gradient bar while the list is not the one in use (the flat bar's 20 %). */
+private const val IDLE_SWEEP_ALPHA = 0.20f
 
 @Composable
 private fun DeckChannelRow(channel: ChannelEntity, now: EpgProgrammeEntity?, playing: Boolean, lit: Boolean, showNumber: Boolean, group: String? = null) {
