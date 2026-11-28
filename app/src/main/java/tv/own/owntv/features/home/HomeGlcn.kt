@@ -46,6 +46,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
@@ -1226,6 +1227,9 @@ internal fun HomeLazyRow(
                     val b = backAnim.value
                     if (b > 0f) drawRect(veil.copy(alpha = ROW_SIT_BACK_VEIL * b))
                 }
+                // glcn: ▶ on the last card stays on it. Left to itself the search went on past the row's end and took
+                // whatever lay to the right anywhere on screen — the "Last channel" button at the top of Home.
+                .focusProperties { onExit = { if (requestedFocusDirection == androidx.compose.ui.focus.FocusDirection.Right) cancelFocusChange() } }
                 .onKeyEvent { e ->
                     if (!motion || e.key != Key.DirectionRight || e.type != KeyEventType.KeyDown) return@onKeyEvent false
                     if (focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right)) return@onKeyEvent true

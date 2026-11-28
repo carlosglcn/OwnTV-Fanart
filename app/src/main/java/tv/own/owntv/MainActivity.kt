@@ -260,6 +260,18 @@ open class MainActivity : ComponentActivity() {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         tv.own.owntv.glcn.FrameWatch.attach(this) // glcn: frame timing per screen, into the report
+        // glcn: whether Android has compiled the app's screens ahead of time yet. After an install or an update they
+        // run uncompiled until the box does its nightly tidy-up, and every screen opens slower meanwhile — the report
+        // says which state it was measured in (1 = compiled, 2 = waiting to be compiled, 0 = no profile).
+        runCatching {
+            val status = androidx.profileinstaller.ProfileVerifier.getCompilationStatusAsync()
+            status.addListener({
+                runCatching {
+                    val st = status.get()
+                    tv.own.owntv.player.LiveDiagnosticsLog.event("compiled · result=${st.profileInstallResultCode} compiledWithProfile=${st.isCompiledWithProfile} waiting=${st.hasProfileEnqueuedForCompilation()}")
+                }
+            }, { it.run() })
+        }
         // glcn: VLC / MX Player say where they stopped when they close — progress and "watched" for films and episodes.
         val externalResult = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {
             tv.own.owntv.core.player.ExternalPlayerLauncher.deliver(it.data)

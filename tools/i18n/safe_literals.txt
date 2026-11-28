@@ -30,6 +30,7 @@
 1	technical	app/src/main/java/tv/own/owntv/MainActivity.kt	activity-create
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	app off screen · playing=${tv.own.owntv.features.home.CinemaTrailer.blocked} finishing=$isFinishing changing=$isChangingConfigurations
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	back-hold
+1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	compiled · result=${st.profileInstallResultCode} compiledWithProfile=${st.isCompiledWithProfile} waiting=${st.hasProfileEnqueuedForCompilation()}
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	database probe failed: $error
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	db-probed
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	destination-ready
