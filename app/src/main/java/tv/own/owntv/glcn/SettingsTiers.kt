@@ -11,12 +11,14 @@ import tv.own.owntv.features.settings.VideoGroup
  *   open / closed state is kept per group.
  * - Fanart rows also live in the group they belong to, tagged FANART; the Fanart group keeps them all.
  * - NEW badges: [newKeys] lists the settings added or changed in this release cycle. A row loses its
- *   badge once opened, a group card once the group is entered. Bump [CYCLE] and refill [newKeys] for
- *   each release: every badge of the previous cycle disappears on its own.
+ *   badge once opened; a group card keeps it while any of its new rows is still unopened (a Fanart row
+ *   counts for the Fanart card and for its own group's). Bump [CYCLE] and refill [newKeys] for each
+ *   release: every badge of the previous cycle disappears on its own. Only rows that are always shown
+ *   and not behind "Show advanced settings", or the card would keep a badge nobody can clear.
  */
 object SettingsTiers {
     private const val FILE = "glcn_settings_tiers"
-    const val CYCLE = "2026.11a"
+    const val CYCLE = "2026.12a"
 
     /** Root rows shown only with the group's advanced part open, by group key. */
     val advanced: Map<String, Set<String>> = mapOf(
@@ -67,12 +69,19 @@ object SettingsTiers {
 
     /** This cycle's new or changed settings, with the group each sits in. */
     val newKeys: Map<String, String> = mapOf(
-        "tab_SOURCES" to "group_sources",
-        "tab_GLASS_EFFECT" to "group_appearance",
-        "glcn_home_bg" to "group_layout",
-        "glcn_trakt" to "group_sources",
-        "glcn_dream" to "group_fanart",
+        // Release of 28 Nov 2026 (it went out without its badges).
+        "glcn_style" to "group_appearance",          // Appearance: Theme, Mode, Background; Brasa, Alba, Ría
+        "glcn_top_bar_shape" to "group_layout",       // top bar in five shapes
+        "glcn_rail_shape" to "group_layout",          // side menu in four
+        "glcn_fixed_focus" to "group_layout",         // the focus stays put, the row moves
+        "glcn_brisk" to "group_layout",               // brisk response
+        "vod_layout" to "group_layout",               // Films and Series: Shelves
+        "tab_THEINTRODB" to "group_content_metadata", // skip intro, recap, credits and preview
     )
+
+    /** The groups whose card a new row lights: its own, and Fanart's too for a Fanart row. */
+    private fun groupsOf(key: String, group: String): Set<String> =
+        fanartHome[key]?.let { setOf(group, it, "group_fanart") } ?: setOf(group)
 
     /** Bumped on every change, so rows and cards reading it recompose. */
     private val version = mutableIntStateOf(0)
@@ -96,7 +105,8 @@ object SettingsTiers {
 
     fun isNewGroup(ctx: Context, group: String): Boolean {
         version.intValue
-        return newKeys.values.contains(group) && !prefs(ctx).getBoolean("seen.$CYCLE.$group", false)
+        val p = prefs(ctx)
+        return newKeys.any { (key, home) -> group in groupsOf(key, home) && !p.getBoolean("seen.$CYCLE.$key", false) }
     }
 
     fun seen(ctx: Context, key: String) {
