@@ -408,6 +408,7 @@
 1	preference-key	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	hide
 1	technical	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	mark_season
 1	technical	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	mark_series
+1	technical	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	mark_show
 1	preference-key	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	mark_watched
 1	preference-key	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	move
 1	preference-key	app/src/main/java/tv/own/owntv/features/series/SeriesScreen.kt	move_to_category

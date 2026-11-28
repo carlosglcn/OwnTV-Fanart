@@ -1323,6 +1323,14 @@ private fun SeriesGrid(
             add(MenuAction("download", stringResource(R.string.content_download_all_episodes), OwnTVIcon.DOWNLOADS, group = VodGroupLibrary) {
                 vm.askBulkDownload(s, null); contextSeries = null
             })
+            // glcn: the whole show as seen — or back to not seen — straight from its poster (from Keep watching the
+            // same action is already at the top).
+            if (fromStrip == null) {
+                val showSeen = s.id in completedSeries
+                add(MenuAction("mark_show", stringResource(if (showSeen) R.string.glcn_mark_series_unwatched else R.string.glcn_mark_series_watched), OwnTVIcon.CHECK, group = VodGroupLibrary) {
+                    vm.markShowWatched(s, !showSeen); contextSeries = null
+                })
+            }
             add(MenuAction("remove_history", stringResource(R.string.content_remove_history), OwnTVIcon.HISTORY, group = VodGroupLibrary) {
                 vm.removeFromHistory(s.id); contextSeries = null
             })

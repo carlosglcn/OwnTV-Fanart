@@ -762,11 +762,18 @@ class SeriesViewModel(
         }
     }
 
-    /** glcn: the whole show seen, from its card in Keep watching. */
-    fun markShowWatched(show: SeriesEntity) {
+    /**
+     * glcn: the whole show seen (or not seen), from its card in Keep watching or its poster's menu. A show never
+     * opened has no episodes stored yet: they are fetched first, as opening it would.
+     */
+    fun markShowWatched(show: SeriesEntity, watched: Boolean = true) {
         viewModelScope.launch {
-            val all = runCatching { seriesDao.episodesBySeries(show.id).first() }.getOrDefault(emptyList())
-            if (all.isNotEmpty()) markEpisodesWatched(all, true)
+            var all = runCatching { seriesDao.episodesBySeries(show.id).first() }.getOrDefault(emptyList())
+            if (all.isEmpty()) {
+                runCatching { seriesRepository.loadEpisodes(show) }
+                all = runCatching { seriesDao.episodesBySeries(show.id).first() }.getOrDefault(emptyList())
+            }
+            if (all.isNotEmpty()) markEpisodesWatched(all, watched)
         }
     }
 

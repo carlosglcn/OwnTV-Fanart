@@ -151,3 +151,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 🔄 **Channel lists keep the time:** time left, progress and the programme on air refresh each minute while a list stays open (the player's channel list included).
 - ⭐ **Remote shortcuts — Favourite and Record/Download** act on what is on screen (the picture, or the row under the cursor in Live TV, Films and Series) and say what they did.
 - 📺 **Also from the original:** Stalker films that would not open now say so, Force 20:9, Re-sync first among a playlist's actions, Delete for custom categories, the popup keyboard fix, and Sports no longer opens the menu over a match or league page.
+- ✅ **Series, "Mark the whole series as watched" from the poster:** hold OK on a series' poster and the menu now offers it (and "as not watched" when it already is) — before, it was only on an episode's menu and on Keep watching's cards. A series never opened fetches its episodes first.
