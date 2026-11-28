@@ -2,7 +2,9 @@ package tv.own.owntv.features.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
@@ -73,12 +75,12 @@ fun TheIntroDbSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) 
     val content = stringResource(R.string.settings_group_content_metadata)
     // The four parts, the button and the account.
     val rows = SkipKind.entries.size + 2
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize()) {
     StageFullPage(
         parents = listOf(content),
         title = stringResource(R.string.settings_theintrodb),
         count = pluralStringResource(R.plurals.settings_setting_count, rows, rows),
         onBack = onBack,
-        modifier = modifier,
         rowsFocus = firstFocus,
     ) {
         StageSettingsHeading(stringResource(R.string.settings_skip_group), null, first = true)
@@ -127,26 +129,28 @@ fun TheIntroDbSettingsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) 
             ),
         )
 
-        // The credit, the way TMDB's is given: TheIntroDB's "Powered by" badge exactly as published
-        // (never tinted or reshaped — its brand rules) and one line.
-        Column(Modifier.padding(start = 22.mpx, top = 28.mpx)) {
+    }
+        // The credit, the way TMDB's is given: TheIntroDB's "Powered by" badge exactly as published (never tinted or
+        // reshaped — its brand rules) and its lines. glcn: at the foot of the right-hand side, always in view. Under the
+        // rows it fell below the fold, and nothing there takes focus, so it could never be scrolled to and was cut off.
+        androidx.compose.foundation.layout.Row(
+            Modifier
+                .align(androidx.compose.ui.Alignment.BottomStart)
+                .padding(start = maxWidth / 1920f * 1160, bottom = 44.mpx)
+                .width(maxWidth / 1920f * 696)
+                .padding(horizontal = 8.mpx),
+            horizontalArrangement = Arrangement.spacedBy(20.mpx),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
             androidx.compose.foundation.Image(
                 painter = androidx.compose.ui.res.painterResource(R.drawable.theintrodb_logo),
                 contentDescription = stringResource(R.string.settings_theintrodb),
-                modifier = Modifier.height(96.mpx).aspectRatio(THEINTRODB_LOGO_RATIO),
+                modifier = Modifier.height(88.mpx).aspectRatio(THEINTRODB_LOGO_RATIO),
             )
-            Text(
-                stringResource(R.string.settings_theintrodb_attribution),
-                style = stageText(15, 500),
-                color = StageColors.Muted,
-                modifier = Modifier.padding(top = 10.mpx),
-            )
-            Text(
-                stringResource(R.string.settings_theintrodb_contribute),
-                style = stageText(15, 500),
-                color = StageColors.Muted,
-                modifier = Modifier.padding(top = 4.mpx),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(6.mpx)) {
+                Text(stringResource(R.string.settings_theintrodb_attribution), style = stageText(14, 500), color = StageColors.Muted)
+                Text(stringResource(R.string.settings_theintrodb_contribute), style = stageText(14, 500), color = StageColors.Dim)
+            }
         }
     }
 
