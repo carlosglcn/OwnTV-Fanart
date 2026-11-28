@@ -129,3 +129,4 @@ Versión de pruebas de OwnTV Fanart. Se instala al lado de la normal.
 - 💊 **Top bar "Pills" are names only:** the open section is the filled pill; its icon no longer comes on (it made that pill wider and pushed the others at every step).
 - 🧭 **Top bar opens on the Capsule:** a new install's top bar is the Capsule again (the Island did not fit on a 1080p screen with every name). Who already chose a shape keeps it.
 - 📺 **Live TV, Cinematic — the focus stays put:** the highlight keeps the first card's place, right under the words that describe that channel, and the channels pass under it (as Home's rows now do); "You may like" moves the same way. At the end of a row it walks to the last cards.
+- 🎭 **Live TV comes in whole too:** the page waited only for its channels, so it still opened as an empty black box that the title, the synopsis and the picture joined one by one; it now waits for the channel it opens on and its guide as well (0.7 s at most).

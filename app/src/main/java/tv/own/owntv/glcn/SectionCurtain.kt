@@ -32,7 +32,7 @@ object SectionCurtain {
         delay(SETTLE_MS)
     }
 
-    private const val MAX_WAIT_MS = 450L
+    private const val MAX_WAIT_MS = 700L
     private const val SETTLE_MS = 90L
 }
 

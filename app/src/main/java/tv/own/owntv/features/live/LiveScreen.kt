@@ -172,7 +172,9 @@ fun LiveScreen(
     val previewOnOk by vm.livePreviewOnOk.collectAsStateWithLifecycle()
     val paneChannel by vm.paneChannel.collectAsStateWithLifecycle()
     val channels = vm.channels.collectAsLazyPagingItems()
-    tv.own.owntv.glcn.SectionReady(channels.itemCount > 0)
+    // glcn: …and the channel the page opens on with its guide, or the page came in as an empty black box that the
+    // title, the words and the picture then joined one by one (a channel with no guide is not waited for long).
+    tv.own.owntv.glcn.SectionReady(channels.itemCount > 0 && previewChannel != null && nowNext != null)
     val moveState by vm.moveState.collectAsStateWithLifecycle()
     val categoryMoveState by vm.categoryMoveState.collectAsStateWithLifecycle()
 
