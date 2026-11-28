@@ -192,7 +192,17 @@ fun SportsMatchScreen(
                 }
                 // glcn: a Davis Cup tie under way: the rubber on court, its players and sets, under the tie's score.
                 if (m.leagueSlug == tv.own.owntv.core.sports.BasketDataSource.DAVIS && m.isLive && !(state.config.spoilerFree && !revealed)) {
-                    tv.own.owntv.core.sports.BasketDataSource.rubbers(m).firstOrNull { it.isLive }?.let { now ->
+                    val onCourt = tv.own.owntv.core.sports.BasketDataSource.rubbers(m).firstOrNull { it.isLive }
+                    // glcn: the tie has begun but its source has not named the rubber on court yet (it trails the first
+                    // points by a while): say so, rather than leave the place empty as if nothing told who is playing.
+                    if (onCourt == null) item(key = "davis-pending") {
+                        Text(
+                            stringResource(R.string.glcn_davis_now) + stringResource(R.string.content_epg_bits_separator) + stringResource(R.string.glcn_davis_pending),
+                            style = stageText(15, 700), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth().padding(top = 15.mpx),
+                        )
+                    }
+                    onCourt?.let { now ->
                         item(key = "davis-now") {
                             Column(Modifier.fillMaxWidth().padding(top = 15.mpx)) {
                                 Text(

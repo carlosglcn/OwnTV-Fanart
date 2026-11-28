@@ -24,13 +24,14 @@
 1	log	app/src/main/java/tv/own/owntv/BlurredBackdropLoader.kt	blur: crop/scale/blur threw ${t.javaClass.simpleName}: ${t.message}
 1	log	app/src/main/java/tv/own/owntv/BlurredBackdropLoader.kt	blur: decodeFile returned null for $path
 1	log	app/src/main/java/tv/own/owntv/BlurredBackdropLoader.kt	blur: produceState failed: ${it.javaClass.simpleName}: ${it.message}
+1	technical	app/src/main/java/tv/own/owntv/MainActivity.kt	.odex
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	OwnTVHome
 1	compiler	app/src/main/java/tv/own/owntv/MainActivity.kt	RememberReturnType
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	activity closed · finishing=$isFinishing changing=$isChangingConfigurations
 1	technical	app/src/main/java/tv/own/owntv/MainActivity.kt	activity-create
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	app off screen · playing=${tv.own.owntv.features.home.CinemaTrailer.blocked} finishing=$isFinishing changing=$isChangingConfigurations
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	back-hold
-1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	compiled · result=${st.profileInstallResultCode} compiledWithProfile=${st.isCompiledWithProfile} waiting=${st.hasProfileEnqueuedForCompilation()}
+1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	compiled · api=${android.os.Build.VERSION.SDK_INT} odex=${(odex?.length() ?: -1L) / 1024}kB apk=${apk.length() / 1024}kB updated=${(System.currentTimeMillis() - packageManager.getPackageInfo(packageName, 0).lastUpdateTime) / 60000}min ago
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	database probe failed: $error
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	db-probed
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	destination-ready
@@ -38,6 +39,7 @@
 1	technical	app/src/main/java/tv/own/owntv/MainActivity.kt	glcn_sounds
 2	technical	app/src/main/java/tv/own/owntv/MainActivity.kt	natural_once
 2	technical	app/src/main/java/tv/own/owntv/MainActivity.kt	none
+1	technical	app/src/main/java/tv/own/owntv/MainActivity.kt	oat
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	onCreate deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}
 1	log	app/src/main/java/tv/own/owntv/MainActivity.kt	onNewIntent deepLinkHost=${intent.data?.host} deepLinkType=${pendingDeepLink?.javaClass?.simpleName ?: "none"}
 1	performance	app/src/main/java/tv/own/owntv/MainActivity.kt	profile-id-loaded
@@ -1079,6 +1081,7 @@
 1	json	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	L
 1	json	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	W
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	davis-now
+1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	davis-pending
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	dm
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	dr
 1	technical	app/src/main/java/tv/own/owntv/features/sports/SportsMatchScreen.kt	lo

@@ -193,4 +193,5 @@
     <string name="glcn_look_glass">Glass</string>
     <string name="glcn_downloads_empty_title">Nothing here yet</string>
     <string name="glcn_downloads_empty_body">Your downloads and recordings appear on this page. Open a film or an episode and press Download, or press Record on a programme in the TV guide.</string>
+    <string name="glcn_davis_pending">Players to be confirmed</string>
 </resources>

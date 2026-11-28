@@ -260,18 +260,17 @@ open class MainActivity : ComponentActivity() {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         tv.own.owntv.glcn.FrameWatch.attach(this) // glcn: frame timing per screen, into the report
-        // glcn: whether Android has compiled the app's screens ahead of time yet. After an install or an update they
-        // run uncompiled until the box does its nightly tidy-up, and every screen opens slower meanwhile — the report
-        // says which state it was measured in (1 = compiled, 2 = waiting to be compiled, 0 = no profile).
-        runCatching {
-            val status = androidx.profileinstaller.ProfileVerifier.getCompilationStatusAsync()
-            status.addListener({
-                runCatching {
-                    val st = status.get()
-                    tv.own.owntv.player.LiveDiagnosticsLog.event("compiled · result=${st.profileInstallResultCode} compiledWithProfile=${st.isCompiledWithProfile} waiting=${st.hasProfileEnqueuedForCompilation()}")
-                }
-            }, { it.run() })
-        }
+        // glcn: whether Android has compiled the app's code yet. After an install or an update it runs uncompiled until
+        // the box's overnight tidy-up, and every screen opens slower meanwhile — the report says which state it was
+        // measured in. Android 11 (the SHIELD) will not tell an app outright, so the compiled file's size says it: a
+        // few hundred kB is "checked only", tens of MB is compiled.
+        Thread {
+            runCatching {
+                val apk = java.io.File(applicationInfo.sourceDir)
+                val odex = java.io.File(apk.parentFile, OAT_DIR).listFiles()?.firstNotNullOfOrNull { arch -> arch.listFiles()?.firstOrNull { it.name.endsWith(ODEX_EXT) } }
+                tv.own.owntv.player.LiveDiagnosticsLog.event("compiled · api=${android.os.Build.VERSION.SDK_INT} odex=${(odex?.length() ?: -1L) / 1024}kB apk=${apk.length() / 1024}kB updated=${(System.currentTimeMillis() - packageManager.getPackageInfo(packageName, 0).lastUpdateTime) / 60000}min ago")
+            }
+        }.start()
         // glcn: VLC / MX Player say where they stopped when they close — progress and "watched" for films and episodes.
         val externalResult = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {
             tv.own.owntv.core.player.ExternalPlayerLauncher.deliver(it.data)
@@ -747,3 +746,6 @@ private const val LAUNCH_WINDOW_RELEASE_MS = 600L
 
 /** glcn: how often automatic mode checks whether it is day or night. */
 private const val GLCN_MODE_CHECK_MS = 5 * 60_000L
+
+private const val OAT_DIR = "oat"
+private const val ODEX_EXT = ".odex"

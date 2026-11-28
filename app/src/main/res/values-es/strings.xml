@@ -195,4 +195,5 @@
     <string name="glcn_look_glass">Cristal</string>
     <string name="glcn_downloads_empty_title">Aún no hay nada</string>
     <string name="glcn_downloads_empty_body">Aquí aparecen tus descargas y grabaciones. Abre una película o un episodio y pulsa Descargar, o pulsa Grabar en un programa de la guía de TV.</string>
+    <string name="glcn_davis_pending">Jugadores por confirmar</string>
 </resources>
