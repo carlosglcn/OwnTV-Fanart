@@ -195,7 +195,7 @@
     <string name="glcn_downloads_empty_body">Your downloads and recordings appear on this page. Open a film or an episode and press Download, or press Record on a programme in the TV guide.</string>
     <string name="glcn_davis_pending">Players to be confirmed</string>
     <string name="glcn_favs_recover_title">Favourites to recover</string>
-    <string name="glcn_favs_recover_body">%1$d of the %2$d favourite channels that lost their channel are in your playlists now. Mark them as favourites again?</string>
+    <string name="glcn_favs_recover_body">Favourite channels that lost their channel and are in your playlists now: %1$d of %2$d. Mark them as favourites again?</string>
     <string name="glcn_favs_recover_yes">Recover</string>
     <string name="glcn_favs_recover_no">Not now</string>
 </resources>
