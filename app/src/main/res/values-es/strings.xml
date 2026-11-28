@@ -193,4 +193,6 @@
     <string name="glcn_kofi_short">¿Un café? Ko-fi</string>
     <string name="glcn_sports_finished">Finalizados</string>
     <string name="glcn_look_glass">Cristal</string>
+    <string name="glcn_downloads_empty_title">Aún no hay nada</string>
+    <string name="glcn_downloads_empty_body">Aquí aparecen tus descargas y grabaciones. Abre una película o un episodio y pulsa Descargar, o pulsa Grabar en un programa de la guía de TV.</string>
 </resources>

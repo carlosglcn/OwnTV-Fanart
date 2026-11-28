@@ -97,12 +97,10 @@ import tv.own.owntv.ui.theme.stageText
 import java.text.NumberFormat
 import kotlin.math.ceil
 
-/** Movies and Series hold downloads; Recordings is live TV saved by the recorder — a file of the user's all the same. */
-private enum class DownloadsTab(val labelRes: Int) {
-    RECORDINGS(R.string.recording_title),
-    MOVIES(R.string.common_nav_movies),
-    SERIES(R.string.common_nav_series),
-}
+private const val DOWNLOAD_KEYS = 1L shl 40
+/** glcn: a download's place among the page's rows — clear of the recordings' own numbers (and their rules' negative ones). */
+private fun dk(id: Long): Long = id + DOWNLOAD_KEYS
+private const val STORAGE_BAR = 300
 
 /**
  * Downloads: title + storage crumb, the Recordings · Movies · Series tabs and the
@@ -138,20 +136,22 @@ fun DownloadsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var tab by rememberSaveable { mutableStateOf(DownloadsTab.RECORDINGS) }
-    // Which tab holds which kind is core's rule: an episode download is EPISODE, which files under Series.
+    // glcn: one page instead of three tabs (two of them usually empty, and the page opened on Recordings): what is
+    // coming down now, then the recordings, the films and the episodes — a group with nothing in it is not shown.
+    // Which group holds which kind is core's rule: an episode download is EPISODE, which files under Series.
     val movies = remember(downloads) { downloads.filter { MediaFolders.folderFor(it.mediaType) == MediaFolders.MOVIES } }
     val series = remember(downloads) { downloads.filter { MediaFolders.folderFor(it.mediaType) == MediaFolders.SERIES } }
     val recorded = recordings.count { it.status == RecordingStatus.COMPLETED || it.status == RecordingStatus.RECORDING }
-    val shown = if (tab == DownloadsTab.SERIES) series else movies
-    // DOWNLOADING in queue order (the running one first, so "starts after" reads downwards), then ON THIS TV.
-    val downloading = remember(shown) {
-        shown.filter { it.status != DownloadStatus.COMPLETED }
+    // DOWNLOADING in queue order (the running one first, so "starts after" reads downwards).
+    val downloading = remember(downloads) {
+        downloads.filter { it.status != DownloadStatus.COMPLETED }
             .sortedWith(compareBy<DownloadEntity> { it.status != DownloadStatus.RUNNING }.thenBy { it.createdAt })
     }
-    val onTv = remember(shown) { shown.filter { it.status == DownloadStatus.COMPLETED } }
+    val moviesOnTv = remember(movies) { movies.filter { it.status == DownloadStatus.COMPLETED } }
+    val seriesOnTv = remember(series) { series.filter { it.status == DownloadStatus.COMPLETED } }
     // The ids in the list, top to bottom, for focus: entry, restore after playing, the neighbour after a delete.
-    val listIds: List<Long> = if (tab == DownloadsTab.RECORDINGS) recordingIdsInOrder(recordings, seriesRules) else downloading.map { it.id } + onTv.map { it.id }
+    // A download and a recording can share a number, so a download's is moved out of the recordings' range ([dk]).
+    val listIds: List<Long> = downloading.map { dk(it.id) } + recordingIdsInOrder(recordings, seriesRules) + moviesOnTv.map { dk(it.id) } + seriesOnTv.map { dk(it.id) }
 
     val rowFocus = remember { HashMap<Long, FocusRequester>() }
     fun focusOf(id: Long) = rowFocus.getOrPut(id) { FocusRequester() }
@@ -181,7 +181,7 @@ fun DownloadsScreen(
     // Returning from the player: back on the download that was played.
     LaunchedEffect(restoreFocus, listIds.size) {
         if (!restoreFocus || listIds.isEmpty()) return@LaunchedEffect
-        val id = lastPlayedId ?: recVm.lastPlayedId.value
+        val id = lastPlayedId?.let(::dk) ?: recVm.lastPlayedId.value
         withFrameNanos { }
         if (id != null && id in listIds) focusRow(id) else entry()
         onRestored()
@@ -209,8 +209,8 @@ fun DownloadsScreen(
     var listFocused by remember { mutableStateOf(false) }
     var listFocusLostAt by remember { mutableStateOf(0L) }
     val focusedGroup = lastFocusedId?.let { id ->
-        if (tab == DownloadsTab.RECORDINGS) recordings.firstOrNull { it.id == id }?.status
-        else downloads.firstOrNull { it.id == id }?.let { it.status == DownloadStatus.COMPLETED }
+        if (id < DOWNLOAD_KEYS) recordings.firstOrNull { it.id == id }?.status
+        else downloads.firstOrNull { dk(it.id) == id }?.let { it.status == DownloadStatus.COMPLETED }
     }
     LaunchedEffect(focusedGroup) {
         val id = lastFocusedId ?: return@LaunchedEffect
@@ -234,13 +234,21 @@ fun DownloadsScreen(
     val watchChoice by vm.downloadWatchChoice.collectAsStateWithLifecycle()
     val missing by vm.missingFiles.collectAsStateWithLifecycle()
 
+    // glcn: the focused download's wide picture behind the page, as in Movies — this was the one section with no art.
+    val focusedArt = lastFocusedId?.takeIf { listFocused && it >= DOWNLOAD_KEYS }?.let { id ->
+        downloads.firstOrNull { dk(it.id) == id }?.let { d -> details[d.id]?.artUrl ?: d.posterUrl }
+    }?.takeIf { it.isNotBlank() }
+
     BoxWithConstraints(modifier.fillMaxSize().onFocusChanged { if (it.hasFocus) onChildFocused() }) {
         // Horizontal geometry is a fraction of the 1920 design width, so every zoom reflows.
         val screenW = maxWidth
         fun fx(px: Int) = screenW * (px / 1920f)
 
-        // "Downloads" 46/800, then "USB drive · **57.6 GB free of 57.7 GB**".
-        Column(Modifier.padding(start = contentStart + 20.mpx, top = 52.mpx).width(fx(1300) - contentStart)) {
+        tv.own.owntv.ui.components.ArtTint(focusedArt, Modifier.matchParentSize())
+        tv.own.owntv.features.shell.components.VodCinematicBackdrop(focusedArt, series = true, Modifier.align(Alignment.TopEnd))
+
+        // "Downloads" 46/800, then the drive: its name, how much is free, and a bar of what is used.
+        Column(Modifier.padding(start = contentStart + 20.mpx, top = 52.mpx).width(fx(1100) - contentStart)) {
             Row(horizontalArrangement = Arrangement.spacedBy(22.mpx), verticalAlignment = Alignment.Bottom) {
                 Text(stringResource(R.string.content_downloads_title), style = stageText(46, 800, (-1).mpxSp), color = StageColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 storage?.let { info ->
@@ -249,14 +257,19 @@ fun DownloadsScreen(
                     val volume = remember(downloadRoot, info.usingFallback) {
                         volumeName(context, downloadRoot.takeUnless { info.usingFallback })
                     }
-                    Text(
-                        buildAnnotatedString {
-                            volume?.let { append(it); append(sep) }
-                            withStyle(SpanStyle(color = StageColors.Text)) { append(free) }
-                        },
-                        style = stageText(20, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(bottom = 3.mpx),
-                    )
+                    Column(Modifier.padding(bottom = 3.mpx)) {
+                        Text(
+                            buildAnnotatedString {
+                                volume?.let { append(it); append(sep) }
+                                withStyle(SpanStyle(color = StageColors.Text)) { append(free) }
+                            },
+                            style = stageText(20, 500), color = StageColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                        if (info.totalBytes > 0) tv.own.owntv.ui.stage.StageProgress(
+                            ((info.totalBytes - info.freeBytes).toFloat() / info.totalBytes).coerceIn(0f, 1f),
+                            Modifier.padding(top = 8.mpx).width(STORAGE_BAR.mpx), flat = true,
+                        )
+                    }
                 }
             }
             // The chosen folder is missing (USB stick out): new downloads go to the app's own folder until it is back.
@@ -269,56 +282,27 @@ fun DownloadsScreen(
             }
         }
 
-        // The fallback warning takes a line under the title; everything below moves down by it, so a focused
-        // tab's glow never sits on the warning.
+        // The fallback warning takes a line under the title; everything below moves down by it.
         val warnShift = if (storage?.usingFallback == true) 24.mpx else 0.mpx
 
-        // Tabs, 46 apart (each carries 12 of padding a side), and the Download folder tool at the list's right edge.
+        // The two tools, up beside the title: what playing does to a download on a one-stream playlist (OK steps
+        // through the three answers) and the folder downloads go to.
         Row(
-            Modifier.padding(start = contentStart + 8.mpx, top = 124.mpx + warnShift).width(fx(1856) - contentStart - 8.mpx).focusGroup(),
-            horizontalArrangement = Arrangement.spacedBy(22.mpx),
-            verticalAlignment = Alignment.Bottom,
+            Modifier.align(Alignment.TopEnd).padding(end = screenW - fx(1856), top = 66.mpx).focusGroup(),
+            horizontalArrangement = Arrangement.spacedBy(14.mpx),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            listOf(DownloadsTab.RECORDINGS to recorded, DownloadsTab.MOVIES to movies.size, DownloadsTab.SERIES to series.size).forEach { (t, n) ->
-                StageTab(
-                    label = stringResource(t.labelRes), count = n.toString(), selected = t == tab,
-                    onClick = { tab = t; scope.launch { runCatching { listState.scrollToItem(0) } } },
-                    modifier = if (t == tab) Modifier.focusRequester(tabFocus) else Modifier,
-                )
-            }
-            Spacer(Modifier.weight(1f))
-            // What playing does to a download on a one-stream playlist; OK steps through the three answers.
-            StageTool(boxed = true, 
+            StageTool(boxed = true,
                 text = stringResource(R.string.content_download_watch_setting) + stringResource(R.string.content_epg_bits_separator) +
                     stringResource(watchChoiceLabel(watchChoice)),
                 icon = OwnTVIcon.PLAY,
                 onClick = { vm.setDownloadWatchChoice(nextWatchChoice(watchChoice)) },
-                modifier = Modifier.padding(bottom = 4.mpx),
+                modifier = Modifier.focusRequester(tabFocus),
             )
-            StageTool(boxed = true, 
+            StageTool(boxed = true,
                 text = stringResource(R.string.settings_download_folder), icon = OwnTVIcon.FOLDER,
                 onClick = { showFolderPicker = true },
-                modifier = Modifier.padding(bottom = 4.mpx).focusRequester(folderFocus),
-            )
-        }
-
-        // Where this tab's files go: the folder in use plus core's fixed subfolder, right under
-        // the Download folder tool that changes it, in the free band above the Recordings card.
-        storage?.let { info ->
-            val sub = when (tab) {
-                DownloadsTab.MOVIES -> MediaFolders.MOVIES
-                DownloadsTab.SERIES -> MediaFolders.SERIES
-                DownloadsTab.RECORDINGS -> MediaFolders.TV
-            }
-            val root = remember(downloadRoot, info.usingFallback) {
-                downloadRoot.takeUnless { info.usingFallback }?.let(StorageAccess::folderLabel)
-                    ?: StorageAccess.defaultRoot(context).absolutePath
-            }
-            Text(
-                root.trimEnd('/') + "/" + sub,
-                style = stageText(16, 500), color = StageColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                textAlign = androidx.compose.ui.text.style.TextAlign.End,
-                modifier = Modifier.padding(start = fx(1100), top = 178.mpx + warnShift).width(fx(1856) - fx(1100) - 14.mpx),
+                modifier = Modifier.focusRequester(folderFocus),
             )
         }
 
@@ -329,58 +313,68 @@ fun DownloadsScreen(
             val placeable = measurable.measure(constraints.copy(minWidth = constraints.minWidth + extra * 2, maxWidth = constraints.maxWidth + extra * 2))
             layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(-extra, 0) }
         }
-        Box(Modifier.padding(start = contentStart, top = 210.mpx + warnShift).width(fx(1260) - contentStart).fillMaxSize()) {
-            if (listIds.isEmpty()) {
+        if (listIds.isEmpty()) {
+            // glcn: nothing at all — said once, in the middle of the page, with the one thing there is to do.
+            Column(
+                Modifier.align(Alignment.Center).width(fx(900)),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(stringResource(R.string.glcn_downloads_empty_title), style = stageText(34, 800), color = StageColors.Text, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 Text(
-                    stringResource(if (tab == DownloadsTab.RECORDINGS) R.string.recording_empty else R.string.content_downloads_empty),
-                    // glcn: an empty page says so in a size that can be read from the sofa, not as a footnote at the top.
-                    style = stageText(26, 600), color = StageColors.Body, modifier = Modifier.padding(start = 20.mpx, top = 70.mpx).width(fx(860)),
+                    stringResource(R.string.glcn_downloads_empty_body), style = stageText(21, 500).copy(lineHeight = 31.mpxSp), color = StageColors.Muted,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 14.mpx),
                 )
-            } else {
-                CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
-                    LazyColumn(
-                        state = listState,
-                        contentPadding = PaddingValues(start = glowRoom, end = glowRoom, bottom = 40.mpx),
-                        modifier = Modifier.fillMaxSize().then(glowWide)
-                            .onFocusChanged {
-                                if (listFocused && !it.hasFocus) listFocusLostAt = System.currentTimeMillis()
-                                listFocused = it.hasFocus
-                            }
-                            .focusGroup(),
-                    ) {
-                        if (tab == DownloadsTab.RECORDINGS) {
-                            recordingItems(
-                                recordings = recordings,
-                                seriesRules = seriesRules,
-                                focusOf = ::focusOf,
-                                onFocused = rowFocused,
-                                onPlay = { r -> recVm.play(r); if (!recExternal) onFullscreen() else wentExternal() },
-                                onStop = { r -> recVm.stop(r) },
-                                onCancel = { r -> acted(r.id); recVm.cancel(r) },
-                                onRetry = { r -> recVm.retry(r) },
-                                onDelete = { r -> confirmDelete = PendingDelete(r.id, r.title, recording = true) { recVm.delete(r) } },
-                                onStopSeries = { rule -> acted(tv.own.owntv.features.recordings.seriesRowId(rule)); recVm.stopSeries(rule) },
-                                missing = recMissing,
-                            )
-                        } else {
-                            val askDelete: (DownloadEntity) -> Unit = { d ->
-                                confirmDelete = PendingDelete(d.id, details[d.id]?.title ?: d.title, recording = false) { vm.delete(d) }
-                            }
-                            downloadGroup(R.string.content_downloads_group_downloading, downloading, first = true) { d ->
-                                DownloadItem(d, details[d.id], active?.takeIf { it.id == d.id }, downloading, vm, onFullscreen, externalPlayerOn, focusOf(d.id), askDelete, rowFocused, wentExternal, gone = d.filePath in missing)
-                            }
-                            downloadGroup(R.string.content_downloads_group_on_tv, onTv, first = downloading.isEmpty()) { d ->
-                                DownloadItem(d, details[d.id], null, downloading, vm, onFullscreen, externalPlayerOn, focusOf(d.id), askDelete, rowFocused, wentExternal, gone = d.filePath in missing)
-                            }
+                StageButton(
+                    text = stringResource(R.string.recording_open_guide), onClick = onOpenGuide, icon = OwnTVIcon.EPG,
+                    height = 58.mpx, textSize = 20, modifier = Modifier.padding(top = 26.mpx),
+                )
+            }
+        } else Box(Modifier.padding(start = contentStart, top = 150.mpx + warnShift).width(fx(1260) - contentStart).fillMaxSize()) {
+            CompositionLocalProvider(LocalBringIntoViewSpec provides edgeScrollSpec) {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(start = glowRoom, end = glowRoom, bottom = 40.mpx),
+                    modifier = Modifier.fillMaxSize().then(glowWide)
+                        .onFocusChanged {
+                            if (listFocused && !it.hasFocus) listFocusLostAt = System.currentTimeMillis()
+                            listFocused = it.hasFocus
                         }
+                        .focusGroup(),
+                ) {
+                    val askDelete: (DownloadEntity) -> Unit = { d ->
+                        confirmDelete = PendingDelete(dk(d.id), details[d.id]?.title ?: d.title, recording = false) { vm.delete(d) }
+                    }
+                    val downloadFocused: (Long) -> Unit = { rowFocused(dk(it)) }
+                    downloadGroup(R.string.content_downloads_group_downloading, downloading, first = true) { d ->
+                        DownloadItem(d, details[d.id], active?.takeIf { it.id == d.id }, downloading, vm, onFullscreen, externalPlayerOn, focusOf(dk(d.id)), askDelete, downloadFocused, wentExternal, gone = d.filePath in missing)
+                    }
+                    recordingItems(
+                        recordings = recordings,
+                        seriesRules = seriesRules,
+                        focusOf = ::focusOf,
+                        onFocused = rowFocused,
+                        onPlay = { r -> recVm.play(r); if (!recExternal) onFullscreen() else wentExternal() },
+                        onStop = { r -> recVm.stop(r) },
+                        onCancel = { r -> acted(r.id); recVm.cancel(r) },
+                        onRetry = { r -> recVm.retry(r) },
+                        onDelete = { r -> confirmDelete = PendingDelete(r.id, r.title, recording = true) { recVm.delete(r) } },
+                        onStopSeries = { rule -> acted(tv.own.owntv.features.recordings.seriesRowId(rule)); recVm.stopSeries(rule) },
+                        missing = recMissing,
+                    )
+                    downloadGroup(R.string.common_nav_movies, moviesOnTv, first = false) { d ->
+                        DownloadItem(d, details[d.id], null, downloading, vm, onFullscreen, externalPlayerOn, focusOf(dk(d.id)), askDelete, downloadFocused, wentExternal, gone = d.filePath in missing)
+                    }
+                    downloadGroup(R.string.common_nav_series, seriesOnTv, first = false) { d ->
+                        DownloadItem(d, details[d.id], null, downloading, vm, onFullscreen, externalPlayerOn, focusOf(dk(d.id)), askDelete, downloadFocused, wentExternal, gone = d.filePath in missing)
                     }
                 }
             }
         }
 
-        RecordingsCard(
+        // The recordings card keeps its corner while there are recordings and no download's picture is up there.
+        if (recordings.isNotEmpty() && focusedArt == null) RecordingsCard(
             recordings = recordings, recorded = recorded, onOpenGuide = onOpenGuide,
-            modifier = Modifier.padding(start = fx(1330), top = 236.mpx + warnShift).width(fx(526)),
+            modifier = Modifier.padding(start = fx(1330), top = 176.mpx + warnShift).width(fx(526)),
         )
     }
 

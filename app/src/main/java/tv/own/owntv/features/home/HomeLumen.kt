@@ -342,6 +342,18 @@ fun LumenHome(
                     )
                 }
             }
+            // glcn: a match has no picture of its own — its two sides' colours wash the right of the page instead, one
+            // running into the other behind the crests (the page's own veils then soften it like any backdrop).
+            shown?.match?.let { m ->
+                val (homeTone, awayTone) = tv.own.owntv.features.sports.sideColors(m)
+                val one = homeTone ?: awayTone
+                val two = awayTone ?: homeTone
+                if (one != null && two != null) Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.horizontalGradient(MATCH_WASH_FROM to Color.Transparent, MATCH_WASH_MID to one.copy(alpha = MATCH_WASH), 1f to two.copy(alpha = MATCH_WASH)),
+                    ),
+                )
+            }
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(palette.page.copy(alpha = 0.78f), palette.page.copy(alpha = 0.34f), palette.page.copy(alpha = 0f)))))
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to palette.page.copy(alpha = 0.95f))))
         }
@@ -697,6 +709,10 @@ private fun DockMatchFacts(m: Match, vm: SportsViewModel) {
 }
 
 private const val MATCH_SCORE_DASH = " – "
+/** glcn: a match's colour wash — where it starts across the page, where the home colour is whole, how strong. */
+private const val MATCH_WASH_FROM = 0.3f
+private const val MATCH_WASH_MID = 0.66f
+private const val MATCH_WASH = 0.5f
 private const val MATCH_FACT_SEP = ", "
 private const val MATCH_FACT_DOT = "  ·  "
 
