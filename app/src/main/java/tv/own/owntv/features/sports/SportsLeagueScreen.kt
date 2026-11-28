@@ -166,6 +166,7 @@ private fun Modifier.readByKeys(state: androidx.compose.foundation.lazy.LazyList
     val focused = remember { mutableStateOf(false) }
     val step = with(androidx.compose.ui.platform.LocalDensity.current) { READ_STEP.toPx() }
     val frame = stageAccent.ink.copy(alpha = 0.55f)
+    val glide = tv.own.owntv.ui.theme.ownTvTween<Float>(READ_MS)
     return this
         .onFocusChanged { focused.value = it.isFocused }
         .onPreviewKeyEvent { e ->
@@ -174,7 +175,7 @@ private fun Modifier.readByKeys(state: androidx.compose.foundation.lazy.LazyList
             if (!focused.value || (!down && !up)) return@onPreviewKeyEvent false
             if (if (down) !state.canScrollForward else !state.canScrollBackward) return@onPreviewKeyEvent false
             if (e.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) scope.launch {
-                state.animateScrollBy(if (down) step else -step, tv.own.owntv.ui.theme.ownTvTween(READ_MS))
+                state.animateScrollBy(if (down) step else -step, glide)
             }
             true
         }
