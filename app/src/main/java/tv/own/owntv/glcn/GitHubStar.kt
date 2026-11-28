@@ -127,19 +127,12 @@ internal fun GitHubStarCard(onClose: () -> Unit) {
                         StageButton(stringResource(R.string.glcn_star_done), onClick = close, height = 48.mpx, textSize = 17)
                     }
                 }
-                // glcn: Ko-fi as a second, smaller way to help — in the same card, never a prompt of its own.
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.mpx)) {
-                    Image(
-                        painter = androidx.compose.ui.res.painterResource(R.drawable.glcn_kofi_qr), contentDescription = stringResource(R.string.glcn_kofi_title),
-                        modifier = Modifier.size(width = 132.mpx, height = 151.mpx).clip(RoundedCornerShape(12.mpx)).background(Color.White),
-                    )
-                    Text(stringResource(R.string.glcn_kofi_short), style = stageText(14, 700), color = StageColors.Muted, maxLines = 1)
-                }
+                // glcn: one code only (GitHub). Ko-fi lives in About › Community, not in this card.
             }
         }
     }
 }
 
-/** glcn: the Ko-fi page (About's tile and the star card's second code). */
+/** glcn: the Ko-fi page (About › Community tile). */
 const val GLCN_KOFI = "ko-fi.com/galcn10"
 const val GLCN_KOFI_URL = "https://ko-fi.com/galcn10"
